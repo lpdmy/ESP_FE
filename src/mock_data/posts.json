@@ -1,0 +1,58 @@
+[
+   {
+      "id": 1,
+      "user": {
+         "name": "Trần Văn Nam",
+         "avatar": "/placeholder.svg?height=40&width=40"
+      },
+      "content": "Hôm nay có buổi thực hành thí nghiệm Hóa học rất thú vị! Các bạn có thích môn Hóa không? 🧪⚗️",
+      "image": "/placeholder.svg?height=300&width=400",
+      "likes": 24,
+      "comments": [
+         {
+            "user": "Lê Thị Hoa",
+            "text": "Mình cũng rất thích môn Hóa! Thí nghiệm nào vậy bạn?"
+         },
+         {
+            "user": "Phạm Minh Tuấn",
+            "text": "Trông hay quá, mình cũng muốn tham gia 😍"
+         }
+      ]
+   },
+   {
+      "id": 2,
+      "user": {
+         "name": "Lê Thị Mai",
+         "avatar": "/placeholder.svg?height=40&width=40"
+      },
+      "content": "Cuối tuần vui vẻ cùng bạn bè tại công viên! Thời tiết đẹp quá 🌞🌳",
+      "image": "/placeholder.svg?height=300&width=400",
+      "likes": 18,
+      "comments": [
+         {
+            "user": "Nguyễn Văn Đức",
+            "text": "Nhóm mình vui quá! Lần sau rủ mình nha 😊"
+         }
+      ]
+   },
+   {
+      "id": 3,
+      "user": {
+         "name": "Hoàng Minh Khôi",
+         "avatar": "/placeholder.svg?height=40&width=40"
+      },
+      "content": "Vừa hoàn thành dự án lập trình web đầu tiên! Cảm ơn thầy cô và các bạn đã hỗ trợ 💻✨",
+      "image": "/placeholder.svg?height=300&width=400",
+      "likes": 32,
+      "comments": [
+         {
+            "user": "Nguyễn Minh Anh",
+            "text": "Chúc mừng bạn! Dự án trông rất chuyên nghiệp 👏"
+         },
+         {
+            "user": "Trần Thị Lan",
+            "text": "Bạn có thể chia sẻ kinh nghiệm học lập trình không?"
+         }
+      ]
+   }
+]
