@@ -8,7 +8,6 @@ export default function App() {
         {/* Trang trước khi đăng nhập */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
-  
 
         {/* Trang admin */}
         <Route path="/admin" element={<Admin />} />

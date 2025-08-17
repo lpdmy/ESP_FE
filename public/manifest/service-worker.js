@@ -99,4 +99,4 @@ self.addEventListener('fetch', (event) => {
             // Ví dụ: trả về trang offline.html
          })
    );
-}); 
+});
