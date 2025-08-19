@@ -1,91 +1,97 @@
-"use client"
-
-import { PlusOutlined, PictureOutlined, VideoCameraOutlined, SmileOutlined } from "@ant-design/icons"
-import { Button, Card, Input, Avatar } from "antd"
+import { Plus, Image, Video, Smile } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import PostCard from "@LandingPage/PostCard"
 
 export default function NewsFeed() {
   return (
     <div className="space-y-6">
-      {/* Welcome Banner */}
-      <div className="text-center py-8">
-        <h1 className="text-5xl font-bold mb-4">
-          <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">
-            Chào mừng đến với EduSephia
-          </span>
-        </h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          Nền tảng kết nối học sinh THPT FPT School - Nơi chia sẻ, học hỏi và sáng tạo
-        </p>
-      </div>
-
-      {/* Post Creation Box */}
-      <Card className="p-6">
+      {/* Create Post */}
+      <Card className="p-4 bg-white/80 backdrop-blur-sm border border-orange-100">
         <div className="flex items-start space-x-3">
-          <Avatar size={48} className="bg-orange-500">
-            <span className="text-white font-bold text-lg">A</span>
-          </Avatar>
-          <div className="flex-1">
-            <Input
-              placeholder="Chia sẻ hoạt động học tập, nghệ thuật của bạn..."
-              className="text-base mb-4"
-              size="large"
-            />
-            <div className="flex items-center justify-between">
+          <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+            <span className="text-white font-bold">A</span>
+          </div>
+                      <div className="flex-1">
+              <textarea
+                placeholder="Chia sẻ hoạt động học tập, nghệ thuật của bạn..."
+                className="w-full p-3 border border-gray-200 rounded-md text-base resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                rows={3}
+              />
+            <div className="flex items-center justify-between mt-3">
               <div className="flex items-center space-x-4">
-                <Button type="text" icon={<PictureOutlined />} className="flex items-center space-x-2">
-                  <span>Ảnh</span>
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                  <Image className="h-4 w-4 mr-2" />
+                  Ảnh
                 </Button>
-                <Button type="text" icon={<VideoCameraOutlined />} className="flex items-center space-x-2">
-                  <span>Video</span>
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                  <Video className="h-4 w-4 mr-2" />
+                  Video
                 </Button>
-                <Button type="text" icon={<SmileOutlined />} className="flex items-center space-x-2">
-                  <span>Cảm xúc</span>
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                  <Smile className="h-4 w-4 mr-2" />
+                  Cảm xúc
                 </Button>
               </div>
-              <Button 
-                type="primary" 
-                icon={<PlusOutlined />}
-                className="bg-gradient-to-r from-orange-500 to-orange-600 border-0 h-10 px-6 font-medium"
-              >
-                + Đăng bài
+              <Button className="bg-gradient-to-r from-orange-500 to-yellow-500 border-0 text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Đăng bài
               </Button>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* Example Post */}
-      <Card className="p-6">
-        <div className="flex items-start space-x-3">
-          <Avatar size={48} className="bg-orange-500">
-            <span className="text-white font-bold text-lg">T</span>
-          </Avatar>
-          <div className="flex-1">
-            <div className="flex items-center space-x-2 mb-2">
-              <span className="font-semibold text-gray-800">Trần Thị B</span>
-              <span className="text-gray-500">•</span>
-              <span className="text-gray-500">12A2</span>
-              <span className="text-gray-500">•</span>
-              <span className="text-gray-500">2 giờ trước</span>
-            </div>
-            
-            <div className="mb-3">
-              <span className="inline-block bg-blue-500 text-white text-xs px-2 py-1 rounded mr-2">Blockchain</span>
-              <span className="inline-block bg-purple-500 text-white text-xs px-2 py-1 rounded">Cuộc thi</span>
-            </div>
-            
-            <p className="text-gray-800 mb-4">
-              Vừa hoàn thành tác phẩm vẽ tranh cho cuộc thi 'Màu sắc tuổi trẻ' Mong mọi người ủng hộ em nhé!
-            </p>
-            
-            {/* Image Placeholder */}
-            <div className="bg-gray-100 rounded-lg p-8 text-center border-2 border-dashed border-gray-300">
-              <PictureOutlined className="text-4xl text-gray-400 mb-2" />
-              <p className="text-gray-500">Hình ảnh</p>
-            </div>
-          </div>
-        </div>
-      </Card>
+      {/* Posts */}
+      <PostCard
+        author="Trần Thị B"
+        class="12A2"
+        time="2 giờ trước"
+        content="Vừa hoàn thành tác phẩm vẽ tranh cho cuộc thi 'Màu sắc tuổi trẻ' 🎨 Mong mọi người ủng hộ em nhé!"
+        image="/placeholder.svg?height=300&width=500"
+        likes={24}
+        comments={8}
+        shares={3}
+        isVerified={true}
+        contestEntry={true}
+      />
+
+      <PostCard
+        author="Lê Văn C"
+        class="11A3"
+        time="4 giờ trước"
+        content="Workshop 'Lập trình Blockchain' hôm nay thật bổ ích! Cảm ơn thầy cô và các bạn đã tham gia 🚀 #BlockchainEducation #FPTSchool"
+        likes={18}
+        comments={12}
+        shares={5}
+        isVerified={true}
+      />
+
+      <PostCard
+        author="Phạm Thị D"
+        class="12A1"
+        time="1 ngày trước"
+        content="Chúc mừng đội văn nghệ lớp mình đã giành giải nhất cuộc thi 'Tài năng trẻ FPT' 🏆 Cảm ơn sự ủng hộ của mọi người!"
+        image="/placeholder.svg?height=250&width=400"
+        likes={45}
+        comments={20}
+        shares={8}
+        isVerified={true}
+      />
+
+      <PostCard
+        author="Hoàng Văn E"
+        class="10A4"
+        time="2 ngày trước"
+        content="Tác phẩm nhiếp ảnh 'Góc nhìn tuổi trẻ' của em tham gia cuộc thi nhiếp ảnh năm nay. Mọi người cho em ý kiến nhé! 📸"
+        image="/placeholder.svg?height=350&width=500"
+        likes={32}
+        comments={15}
+        shares={6}
+        isVerified={true}
+        contestEntry={true}
+      />
     </div>
   )
 }

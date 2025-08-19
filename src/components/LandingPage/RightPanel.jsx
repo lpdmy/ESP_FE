@@ -1,109 +1,194 @@
-"use client"
-
-import { CalendarOutlined, TrophyOutlined, CrownOutlined, RiseOutlined, TeamOutlined } from "@ant-design/icons"
-import { Button, Card, Badge, Progress } from "antd"
+import { Calendar, Trophy, Award, TrendingUp, Users } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { useState } from "react"
+import EventRegistrationModal from "./EventRegistrationModal"
 
 export default function RightPanel() {
+  const [selectedEvent, setSelectedEvent] = useState(null)
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false)
+
   const upcomingEvents = [
     {
       title: "Workshop AI & Machine Learning",
-      date: "15/12/2024 - 14:00 - 17:00",
+      description:
+        "Khám phá thế giới trí tuệ nhân tạo và machine learning với các chuyên gia hàng đầu. Học sinh sẽ được thực hành với các công cụ AI hiện đại.",
+      date: "15/12/2024",
+      time: "14:00 - 17:00",
       location: "Phòng Lab AI - Tầng 3",
-      participants: 18,
       maxParticipants: 30,
-      buttonText: "Đăng ký"
+      currentParticipants: 18,
+      category: "Công nghệ",
+      color: "orange",
     },
     {
       title: "Cuộc thi Thiết kế Logo",
-      date: "18/12/2024 - 09:00 - 12:00",
+      description:
+        "Cuộc thi sáng tạo logo cho các câu lạc bộ trong trường. Cơ hội thể hiện tài năng thiết kế và nhận giải thưởng hấp dẫn.",
+      date: "18/12/2024",
+      time: "09:00 - 12:00",
       location: "Phòng Mỹ thuật - Tầng 2",
-      participants: 32,
       maxParticipants: 50,
-      buttonText: "Đăng ký"
+      currentParticipants: 32,
+      category: "Nghệ thuật",
+      color: "yellow",
     },
     {
       title: "Hội thảo Blockchain",
-      date: "20/12/2024 - 15:30 - 18:00",
+      description:
+        "Tìm hiểu về công nghệ blockchain và ứng dụng trong giáo dục. Được hướng dẫn bởi các kỹ sư từ các công ty công nghệ hàng đầu.",
+      date: "20/12/2024",
+      time: "15:30 - 18:00",
       location: "Hội trường lớn - Tầng 1",
-      participants: 67,
       maxParticipants: 100,
-      buttonText: "Đăng ký"
-    }
+      currentParticipants: 67,
+      category: "Công nghệ",
+      color: "green",
+    },
   ]
 
-  const leaderboard = [
-    { name: "Nguyễn Thị E", class: "12A1", score: 450 },
-    { name: "Trần Văn F", class: "11A2", score: 420 },
-    { name: "Lê Thị G", class: "12A3", score: 380 },
-    { name: "Phạm Văn H", class: "11A1", score: 350 }
-  ]
+  const handleEventRegistration = (event) => {
+    setSelectedEvent(event)
+    setShowRegistrationModal(true)
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Upcoming Events */}
-      <Card title="Sự kiện sắp tới" className="shadow-sm">
-        <div className="space-y-4">
+      <Card className="p-4">
+        <div className="flex items-center space-x-2 mb-3">
+          <Calendar className="h-5 w-5 text-orange-500" />
+          <h3 className="font-semibold text-gray-900">Sự kiện sắp tới</h3>
+        </div>
+        <div className="space-y-3">
           {upcomingEvents.map((event, index) => (
-            <div key={index} className="border-b border-gray-100 pb-4 last:border-b-0">
-              <h4 className="font-semibold text-gray-800 mb-2">{event.title}</h4>
-              <div className="text-sm text-gray-600 space-y-1 mb-3">
-                <div className="flex items-center space-x-2">
-                  <CalendarOutlined className="text-orange-500" />
-                  <span>{event.date}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <TeamOutlined className="text-orange-500" />
-                  <span>{event.location}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RiseOutlined className="text-orange-500" />
-                  <span>{event.participants}/{event.maxParticipants} người tham gia</span>
+            <div key={index} className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+              <div className="flex items-start space-x-3">
+                <div className={`w-2 h-2 bg-${event.color}-500 rounded-full mt-2`}></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">{event.title}</p>
+                  <p className="text-xs text-gray-500">
+                    {event.date} - {event.time}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">{event.location}</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-gray-500">
+                      {event.currentParticipants}/{event.maxParticipants} người tham gia
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-6 px-2 border-orange-200 text-orange-600 hover:bg-orange-50 bg-transparent"
+                      onClick={() => handleEventRegistration(event)}
+                    >
+                      Đăng ký
+                    </Button>
+                  </div>
                 </div>
               </div>
-              <Button 
-                type="primary" 
-                size="small"
-                className="bg-orange-500 border-0 hover:bg-orange-600"
-              >
-                {event.buttonText}
-              </Button>
             </div>
           ))}
-          <Button 
-            type="text" 
-            className="w-full text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-          >
-            Xem tất cả
-          </Button>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full mt-3 border-orange-200 text-orange-600 hover:bg-orange-50 bg-transparent"
+        >
+          Xem tất cả
+        </Button>
       </Card>
 
       {/* Leaderboard */}
-      <Card title="Bảng xếp hạng" className="shadow-sm">
+      <Card className="p-4">
+        <div className="flex items-center space-x-2 mb-3">
+          <Trophy className="h-5 w-5 text-yellow-500" />
+          <h3 className="font-semibold text-gray-900">Bảng xếp hạng</h3>
+        </div>
         <div className="space-y-3">
-          {leaderboard.map((user, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                  index === 0 ? 'bg-yellow-500 text-white' :
-                  index === 1 ? 'bg-gray-400 text-white' :
-                  index === 2 ? 'bg-orange-600 text-white' :
-                  'bg-gray-300 text-gray-700'
-                }`}>
-                  {index + 1}
-                </div>
-                <div>
-                  <div className="font-medium text-gray-800">{user.name}</div>
-                  <div className="text-sm text-gray-500">{user.class}</div>
-                </div>
+          {[
+            { name: "Nguyễn Thị E", class: "12A1", points: 450, rank: 1 },
+            { name: "Trần Văn F", class: "11A2", points: 420, rank: 2 },
+            { name: "Lê Thị G", class: "12A3", points: 380, rank: 3 },
+            { name: "Phạm Văn H", class: "11A1", points: 350, rank: 4 },
+          ].map((student, index) => (
+            <div key={index} className="flex items-center space-x-3">
+              <div
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                  student.rank === 1
+                    ? "bg-yellow-500 text-white"
+                    : student.rank === 2
+                      ? "bg-gray-400 text-white"
+                      : student.rank === 3
+                        ? "bg-orange-600 text-white"
+                        : "bg-gray-200 text-gray-600"
+                }`}
+              >
+                {student.rank}
               </div>
-              <div className="text-right">
-                <div className="font-bold text-orange-600">{user.score}</div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">{student.name}</p>
+                <p className="text-xs text-gray-500">{student.class}</p>
               </div>
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                {student.points}
+              </Badge>
             </div>
           ))}
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full mt-3 border-orange-200 text-orange-600 hover:bg-orange-50 bg-transparent"
+        >
+          <TrendingUp className="h-4 w-4 mr-2" />
+          Xem bảng xếp hạng
+        </Button>
       </Card>
+
+      {/* Active Contests */}
+      <Card className="p-4">
+        <div className="flex items-center space-x-2 mb-3">
+          <Award className="h-5 w-5 text-purple-500" />
+          <h3 className="font-semibold text-gray-900">Cuộc thi đang diễn ra</h3>
+        </div>
+        <div className="space-y-3">
+          <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
+            <h4 className="text-sm font-medium text-gray-900">Cuộc thi Nhiếp ảnh</h4>
+            <p className="text-xs text-gray-600 mt-1">Còn 5 ngày để nộp bài</p>
+            <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center space-x-1">
+                <Users className="h-3 w-3 text-gray-500" />
+                <span className="text-xs text-gray-500">24 tham gia</span>
+              </div>
+              <Badge className="bg-purple-500 text-white text-xs">Đang diễn ra</Badge>
+            </div>
+          </div>
+          <div className="p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg">
+            <h4 className="text-sm font-medium text-gray-900">Hackathon 2024</h4>
+            <p className="text-xs text-gray-600 mt-1">Còn 12 ngày để đăng ký</p>
+            <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center space-x-1">
+                <Users className="h-3 w-3 text-gray-500" />
+                <span className="text-xs text-gray-500">8 đội tham gia</span>
+              </div>
+              <Badge className="bg-blue-500 text-white text-xs">Sắp diễn ra</Badge>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Event Registration Modal */}
+      {selectedEvent && (
+        <EventRegistrationModal
+          isOpen={showRegistrationModal}
+          onClose={() => {
+            setShowRegistrationModal(false)
+            setSelectedEvent(null)
+          }}
+          event={selectedEvent}
+        />
+      )}
     </div>
   )
 }

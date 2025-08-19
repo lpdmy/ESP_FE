@@ -1,18 +1,18 @@
-"use client"
+import { Home, Users, Calendar, Trophy, Crown, Settings, BookOpen, Camera } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
-import { UserOutlined, HomeOutlined, CalendarOutlined, TrophyOutlined, CrownOutlined, SettingOutlined, LogoutOutlined, TeamOutlined, FileTextOutlined, BarChartOutlined } from "@ant-design/icons"
-import { Button, Card, Avatar, Badge } from "antd"
-
-export default function Sidebar({ activeTab, onTabChange }) {
-  const navigationItems = [
-    { id: "home", label: "Trang chủ", icon: HomeOutlined, count: null },
-    { id: "friends", label: "Bạn bè", icon: TeamOutlined, count: 24 },
-    { id: "events", label: "Sự kiện", icon: CalendarOutlined, count: 5 },
-    { id: "contests", label: "Cuộc thi", icon: TrophyOutlined, count: 3 },
-    { id: "works", label: "Tác phẩm của tôi", icon: FileTextOutlined, count: null },
-    { id: "achievements", label: "Thành tích", icon: CrownOutlined, count: null },
-    { id: "activity", label: "Hoạt động", icon: BarChartOutlined, count: null },
-    { id: "settings", label: "Cài đặt", icon: SettingOutlined, count: null },
+export default function Sidebar() {
+  const menuItems = [
+    { icon: Home, label: "Trang chủ", active: true },
+    { icon: Users, label: "Bạn bè", count: 24 },
+    { icon: Calendar, label: "Sự kiện", count: 5 },
+    { icon: Trophy, label: "Cuộc thi", count: 3 },
+    { icon: Camera, label: "Tác phẩm của tôi" },
+    { icon: Crown, label: "Thành tích" },
+    { icon: BookOpen, label: "Hoạt động" },
+    { icon: Settings, label: "Cài đặt" },
   ]
 
   return (
@@ -47,27 +47,19 @@ export default function Sidebar({ activeTab, onTabChange }) {
       {/* Navigation Menu */}
       <Card className="p-2">
         <nav className="space-y-1">
-          {navigationItems.map((item) => {
-            const IconComponent = item.icon
-            return (
-              <Button
-                key={item.id}
-                type={activeTab === item.id ? "primary" : "text"}
-                className={`w-full justify-start ${
-                  activeTab === item.id
-                    ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
-                    : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"
-                }`}
-                icon={<IconComponent className="h-5 w-5 mr-3" />}
-                onClick={() => onTabChange(item.id)}
-              >
-                <span className="flex-1 text-left">{item.label}</span>
-                {item.count && (
-                  <Badge count={item.count} className="bg-orange-500 text-white text-xs" />
-                )}
-              </Button>
-            )
-          })}
+          {menuItems.map((item, index) => (
+            <Button
+              key={index}
+              variant={item.active ? "default" : "ghost"}
+              className={`w-full justify-start ${item.active ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"}`}
+            >
+              <item.icon className="h-5 w-5 mr-3" />
+              <span className="flex-1 text-left">{item.label}</span>
+              {item.count && (
+                <Badge className="bg-orange-500 text-white text-xs ml-auto">{item.count}</Badge>
+              )}
+            </Button>
+          ))}
         </nav>
       </Card>
     </div>

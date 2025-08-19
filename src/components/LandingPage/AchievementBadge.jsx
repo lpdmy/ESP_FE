@@ -1,6 +1,4 @@
-"use client"
-
-import { TrophyOutlined, StarOutlined, CrownOutlined } from "@ant-design/icons"
+import { Award, Star, Trophy } from "lucide-react"
 
 export default function AchievementBadge({
   type,
@@ -9,17 +7,6 @@ export default function AchievementBadge({
   icon = "award",
   glowing = false,
 }) {
-  const getIcon = () => {
-    switch (icon) {
-      case "star":
-        return <StarOutlined className="h-4 w-4" />
-      case "trophy":
-        return <TrophyOutlined className="h-4 w-4" />
-      default:
-        return <CrownOutlined className="h-4 w-4" />
-    }
-  }
-
   const getBadgeStyle = () => {
     switch (type) {
       case "gold":
@@ -31,7 +18,18 @@ export default function AchievementBadge({
       case "special":
         return "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
       default:
-        return "bg-gradient-orange text-white"
+        return "bg-gradient-to-r from-orange-500 to-yellow-500 text-white"
+    }
+  }
+
+  const getIcon = () => {
+    switch (icon) {
+      case "star":
+        return <Star className="h-4 w-4" />
+      case "trophy":
+        return <Trophy className="h-4 w-4" />
+      default:
+        return <Award className="h-4 w-4" />
     }
   }
 

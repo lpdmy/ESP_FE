@@ -1,16 +1,26 @@
-"use client"
-
 import { useState } from "react"
-import { CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined, TeamOutlined, CloseOutlined } from "@ant-design/icons"
-import { Button, Card, Input, Form, Badge } from "antd"
-
-const { TextArea } = Input
+import { Calendar, Clock, MapPin, Users, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
 
 export default function EventRegistrationModal({ isOpen, onClose, event }) {
-  const [form] = Form.useForm()
+  const [formData, setFormData] = useState({
+    fullName: "",
+    studentId: "",
+    class: "",
+    email: "",
+    phone: "",
+    reason: "",
+  })
+
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault()
     setIsSubmitting(true)
 
     // Simulate API call
@@ -20,6 +30,13 @@ export default function EventRegistrationModal({ isOpen, onClose, event }) {
     onClose()
     // Show success message
     alert("Đăng ký sự kiện thành công! Bạn sẽ nhận được email xác nhận.")
+  }
+
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    })
   }
 
   if (!isOpen) return null
@@ -36,8 +53,8 @@ export default function EventRegistrationModal({ isOpen, onClose, event }) {
               <h2 className="text-2xl font-bold text-gray-900 mb-2">{event.title}</h2>
               <Badge className="bg-orange-100 text-orange-700">{event.category}</Badge>
             </div>
-            <Button type="text" size="small" onClick={onClose}>
-              <CloseOutlined className="h-5 w-5" />
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-5 w-5" />
             </Button>
           </div>
 
@@ -47,19 +64,19 @@ export default function EventRegistrationModal({ isOpen, onClose, event }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <CalendarOutlined className="h-4 w-4 text-orange-500" />
+                <Calendar className="h-4 w-4 text-orange-500" />
                 <span>{event.date}</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <ClockCircleOutlined className="h-4 w-4 text-orange-500" />
+                <Clock className="h-4 w-4 text-orange-500" />
                 <span>{event.time}</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <EnvironmentOutlined className="h-4 w-4 text-orange-500" />
+                <MapPin className="h-4 w-4 text-orange-500" />
                 <span>{event.location}</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <TeamOutlined className="h-4 w-4 text-orange-500" />
+                <Users className="h-4 w-4 text-orange-500" />
                 <span>
                   {event.currentParticipants}/{event.maxParticipants} người tham gia
                 </span>
@@ -74,59 +91,82 @@ export default function EventRegistrationModal({ isOpen, onClose, event }) {
           </div>
 
           {/* Registration Form */}
-          <Form form={form} onFinish={handleSubmit} layout="vertical" className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Form.Item
-                name="fullName"
-                label="Họ và tên"
-                rules={[{ required: true, message: 'Vui lòng nhập họ và tên!' }]}
-              >
-                <Input />
-              </Form.Item>
-              <Form.Item
-                name="studentId"
-                label="Mã số học sinh"
-                rules={[{ required: true, message: 'Vui lòng nhập mã số học sinh!' }]}
-              >
-                <Input />
-              </Form.Item>
+              <div>
+                <Label htmlFor="fullName">Họ và tên *</Label>
+                <Input
+                  id="fullName"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleInputChange}
+                  required
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="studentId">Mã số học sinh *</Label>
+                <Input
+                  id="studentId"
+                  name="studentId"
+                  value={formData.studentId}
+                  onChange={handleInputChange}
+                  required
+                  className="mt-1"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Form.Item
-                name="class"
-                label="Lớp"
-                rules={[{ required: true, message: 'Vui lòng nhập lớp!' }]}
-              >
-                <Input placeholder="VD: 12A1" />
-              </Form.Item>
-              <Form.Item
-                name="email"
-                label="Email"
-                rules={[
-                  { required: true, message: 'Vui lòng nhập email!' },
-                  { type: 'email', message: 'Email không hợp lệ!' }
-                ]}
-              >
-                <Input />
-              </Form.Item>
+              <div>
+                <Label htmlFor="class">Lớp *</Label>
+                <Input
+                  id="class"
+                  name="class"
+                  value={formData.class}
+                  onChange={handleInputChange}
+                  required
+                  className="mt-1"
+                  placeholder="VD: 12A1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                  className="mt-1"
+                />
+              </div>
             </div>
 
-            <Form.Item name="phone" label="Số điện thoại">
-              <Input />
-            </Form.Item>
+            <div>
+              <Label htmlFor="phone">Số điện thoại</Label>
+              <Input id="phone" name="phone" value={formData.phone} onChange={handleInputChange} className="mt-1" />
+            </div>
 
-            <Form.Item name="reason" label="Lý do tham gia">
-              <TextArea
+            <div>
+              <Label htmlFor="reason">Lý do tham gia</Label>
+              <Textarea
+                id="reason"
+                name="reason"
+                value={formData.reason}
+                onChange={handleInputChange}
+                className="mt-1"
                 rows={3}
                 placeholder="Chia sẻ lý do bạn muốn tham gia sự kiện này..."
               />
-            </Form.Item>
+            </div>
 
             {/* Submit Buttons */}
             <div className="flex space-x-3 pt-4">
               <Button
                 type="button"
+                variant="outline"
                 onClick={onClose}
                 className="flex-1 bg-transparent"
                 disabled={isSubmitting}
@@ -134,16 +174,14 @@ export default function EventRegistrationModal({ isOpen, onClose, event }) {
                 Hủy
               </Button>
               <Button
-                type="primary"
-                htmlType="submit"
+                type="submit"
                 className="flex-1 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white"
                 disabled={isSubmitting || spotsLeft === 0}
-                loading={isSubmitting}
               >
-                {spotsLeft === 0 ? "Hết chỗ" : "Đăng ký ngay"}
+                {isSubmitting ? "Đang đăng ký..." : spotsLeft === 0 ? "Hết chỗ" : "Đăng ký ngay"}
               </Button>
             </div>
-          </Form>
+          </form>
         </div>
       </Card>
     </div>

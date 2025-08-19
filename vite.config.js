@@ -78,6 +78,7 @@ export default defineConfig({
    resolve: {
       alias: {
          '@': path.resolve(__dirname, './src'),
+         '@LandingPage': path.resolve(__dirname, './src/components/LandingPage'),
       },
    },
    server: {
@@ -87,9 +88,10 @@ export default defineConfig({
       strictPort: true,
       proxy: {
          '/api': {
-            target: 'http://localhost:8080',
+            target: 'https://localhost:7056',
             changeOrigin: true,
             secure: false,
+            rewrite: (path) => path.replace(/^\/api/, '/api')
          }
       },
    },

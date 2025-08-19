@@ -1,8 +1,8 @@
-"use client"
-
 import { useState } from "react"
-import { CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined, TeamOutlined, EyeOutlined, BookOutlined } from "@ant-design/icons"
-import { Button, Card, Badge, Modal } from "antd"
+import { Calendar, Clock, MapPin, Users } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import EventRegistrationModal from "./EventRegistrationModal"
 
 export default function EventCard({
@@ -11,213 +11,103 @@ export default function EventCard({
   date,
   time,
   location,
-  participants,
   maxParticipants,
+  currentParticipants,
   category,
   image,
+  status,
 }) {
-  const [showDetails, setShowDetails] = useState(false)
-  const [showRegistration, setShowRegistration] = useState(false)
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false)
 
-  const getCategoryColor = (cat) => {
-    switch (cat) {
-      case "Công nghệ":
-        return "blue"
-      case "Nghệ thuật":
-        return "purple"
-      case "Thể thao":
-        return "green"
-      case "Học thuật":
-        return "orange"
-      default:
-        return "default"
+  const getStatusBadge = () => {
+    switch (status) {
+      case "upcoming":
+        return <Badge className="bg-blue-500 text-white">Sắp diễn ra</Badge>
+      case "ongoing":
+        return <Badge className="bg-green-500 text-white">Đang diễn ra</Badge>
+      case "ended":
+        return <Badge className="bg-gray-500 text-white">Đã kết thúc</Badge>
     }
   }
 
-  const spotsLeft = maxParticipants - participants
-  const isFull = spotsLeft === 0
-  const isAlmostFull = spotsLeft <= 5 && spotsLeft > 0
+  const spotsLeft = maxParticipants - currentParticipants
 
   return (
     <>
-      <Card
-        className="h-full hover:shadow-lg transition-all duration-300 bg-white/80 backdrop-blur-sm border border-orange-100"
-        cover={
-          <div className="relative h-48 overflow-hidden">
+      <Card className="overflow-hidden hover-lift card-shine bg-white/90 backdrop-blur-sm border border-orange-100">
+        {image && (
+          <div className="h-48 overflow-hidden">
             <img
-              src={image || "/placeholder.svg"}
+              src={image || "/placeholder.svg?height=200&width=400&query=workshop event"}
               alt={title}
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
             />
-            <div className="absolute top-3 right-3">
-              <Badge color={getCategoryColor(category)}>
-                {category}
-              </Badge>
-            </div>
-            {isAlmostFull && (
-              <div className="absolute top-3 left-3">
-                <Badge color="warning" text={`Còn ${spotsLeft} chỗ!`} />
-              </div>
-            )}
-            {isFull && (
-              <div className="absolute top-3 left-3">
-                <Badge color="error" text="Hết chỗ" />
-              </div>
-            )}
           </div>
-        }
-        actions={[
-          <Button
-            key="view"
-            type="text"
-            size="small"
-            icon={<EyeOutlined className="h-4 w-4" />}
-            onClick={() => setShowDetails(true)}
-          >
-            Chi tiết
-          </Button>,
-          <Button
-            key="register"
-            type="primary"
-            size="small"
-            disabled={isFull}
-            icon={<BookOutlined className="h-4 w-4" />}
-            onClick={() => setShowRegistration(true)}
-            className={isFull ? "opacity-50" : ""}
-          >
-            {isFull ? "Hết chỗ" : "Đăng ký"}
-          </Button>,
-        ]}
-      >
-        <Card.Meta
-          title={
-            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-              {title}
-            </h3>
-          }
-          description={
-            <div className="space-y-3">
-              <p className="text-gray-600 text-sm line-clamp-3">{description}</p>
-              
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2 text-sm text-gray-500">
-                  <CalendarOutlined className="h-4 w-4 text-orange-500" />
-                  <span>{date}</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-500">
-                  <ClockCircleOutlined className="h-4 w-4 text-orange-500" />
-                  <span>{time}</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-500">
-                  <EnvironmentOutlined className="h-4 w-4 text-orange-500" />
-                  <span className="line-clamp-1">{location}</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-500">
-                  <TeamOutlined className="h-4 w-4 text-orange-500" />
-                  <span>
-                    {participants}/{maxParticipants} người tham gia
-                  </span>
-                </div>
-              </div>
+        )}
 
-              {/* Progress Bar */}
-              <div className="mt-3">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Đã đăng ký</span>
-                  <span>{Math.round((participants / maxParticipants) * 100)}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-orange-500 to-yellow-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${(participants / maxParticipants) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          }
-        />
-      </Card>
+        <div className="p-4">
+          <div className="flex items-start justify-between mb-3">
+            <h3 className="font-bold text-lg text-gray-900 gradient-text">{title}</h3>
+            {getStatusBadge()}
+          </div>
 
-      {/* Event Details Modal */}
-      <Modal
-        title={title}
-        open={showDetails}
-        onCancel={() => setShowDetails(false)}
-        footer={[
-          <Button key="close" onClick={() => setShowDetails(false)}>
-            Đóng
-          </Button>,
-          <Button
-            key="register"
-            type="primary"
-            disabled={isFull}
-            onClick={() => {
-              setShowDetails(false)
-              setShowRegistration(true)
-            }}
-            className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 border-0"
-          >
-            {isFull ? "Hết chỗ" : "Đăng ký ngay"}
-          </Button>,
-        ]}
-        width={600}
-      >
-        <div className="space-y-4">
-          <img
-            src={image || "/placeholder.svg"}
-            alt={title}
-            className="w-full h-64 object-cover rounded-lg"
-          />
-          <p className="text-gray-700 leading-relaxed">{description}</p>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <CalendarOutlined className="h-5 w-5 text-orange-500" />
-              <span className="text-gray-700">{date}</span>
+          <Badge variant="secondary" className="bg-orange-100 text-orange-700 mb-3">
+            {category}
+          </Badge>
+
+          <p className="text-gray-600 text-sm mb-4 leading-relaxed">{description}</p>
+
+          <div className="space-y-2 mb-4">
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <Calendar className="h-4 w-4" />
+              <span>{date}</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <ClockCircleOutlined className="h-5 w-5 text-orange-500" />
-              <span className="text-gray-700">{time}</span>
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <Clock className="h-4 w-4" />
+              <span>{time}</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <EnvironmentOutlined className="h-5 w-5 text-orange-500" />
-              <span className="text-gray-700">{location}</span>
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <MapPin className="h-4 w-4" />
+              <span>{location}</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <TeamOutlined className="h-5 w-5 text-orange-500" />
-              <span className="text-gray-700">
-                {participants}/{maxParticipants} người tham gia
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <Users className="h-4 w-4" />
+              <span>
+                {currentParticipants}/{maxParticipants} người tham gia
               </span>
             </div>
           </div>
 
-          {isAlmostFull && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-yellow-800 text-sm">
-                ⚠️ Chỉ còn {spotsLeft} suất tham gia! Hãy đăng ký sớm.
-              </p>
+          {spotsLeft <= 10 && spotsLeft > 0 && (
+            <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-xs text-yellow-800">⚠️ Chỉ còn {spotsLeft} suất!</p>
             </div>
           )}
-        </div>
-      </Modal>
 
-      {/* Event Registration Modal */}
-      {showRegistration && (
-        <EventRegistrationModal
-          isOpen={showRegistration}
-          onClose={() => setShowRegistration(false)}
-          event={{
-            title,
-            description,
-            date,
-            time,
-            location,
-            maxParticipants,
-            currentParticipants: participants,
-            category,
-          }}
-        />
-      )}
+          <Button
+            className="w-full btn-primary"
+            disabled={status === "ended" || spotsLeft === 0}
+            onClick={() => setShowRegistrationModal(true)}
+          >
+            {status === "ended" ? "Đã kết thúc" : spotsLeft === 0 ? "Hết chỗ" : "Đăng ký tham gia"}
+          </Button>
+        </div>
+      </Card>
+
+      <EventRegistrationModal
+        isOpen={showRegistrationModal}
+        onClose={() => setShowRegistrationModal(false)}
+        event={{
+          title,
+          description,
+          date,
+          time,
+          location,
+          maxParticipants,
+          currentParticipants,
+          category,
+        }}
+      />
     </>
   )
 }

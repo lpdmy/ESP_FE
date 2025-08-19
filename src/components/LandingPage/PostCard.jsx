@@ -1,13 +1,7 @@
-"use client";
-
-import {
-  HeartOutlined,
-  MessageOutlined,
-  ShareAltOutlined,
-  MoreOutlined,
-  SafetyCertificateOutlined,
-} from "@ant-design/icons";
-import { Button, Card, Badge } from "antd";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Shield } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
 export default function PostCard({
   author,
@@ -27,27 +21,18 @@ export default function PostCard({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full flex items-center justify-center">
-            <span className="text-white font-semibold text-sm">
-              {author ? author.charAt(0) : "?"}
-            </span>
+            <span className="text-white font-semibold text-sm">{author ? author.charAt(0) : "?"}</span>
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h4 className="font-semibold text-gray-900">
-                {author || "Ẩn danh"}
-              </h4>
+              <h4 className="font-semibold text-gray-900">{author || "Ẩn danh"}</h4>
               {isVerified && (
-                <Badge
-                  className="bg-blue-500 text-white text-xs"
-                  icon={<SafetyCertificateOutlined className="h-3 w-3 mr-1" />}
-                >
+                <Badge className="bg-blue-500 text-white text-xs" icon={<Shield className="h-3 w-3" />}>
                   Blockchain
                 </Badge>
               )}
               {contestEntry && (
-                <Badge className="bg-purple-500 text-white text-xs">
-                  Cuộc thi
-                </Badge>
+                <Badge className="bg-purple-500 text-white text-xs">Cuộc thi</Badge>
               )}
             </div>
             <p className="text-sm text-gray-500">
@@ -55,8 +40,8 @@ export default function PostCard({
             </p>
           </div>
         </div>
-        <Button type="text" size="small">
-          <MoreOutlined className="h-4 w-4 text-gray-400" />
+        <Button variant="ghost" size="sm">
+          <MoreHorizontal className="h-4 w-4 text-gray-400" />
         </Button>
       </div>
 
@@ -66,52 +51,32 @@ export default function PostCard({
       {/* Image */}
       {image && (
         <div className="mb-4 rounded-lg overflow-hidden border border-gray-200">
-          <div className="h-64 bg-gray-100 flex items-center justify-center">
-            <div className="text-gray-400 text-center">
-              <div className="text-4xl mb-2">📷</div>
-              <div className="text-sm">Hình ảnh</div>
-            </div>
-          </div>
+          <img src={image || "/placeholder.svg"} alt="Post content" className="w-full h-auto object-cover" />
         </div>
       )}
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
         <div className="flex items-center space-x-6">
-          <Button
-            type="text"
-            size="small"
-            className="text-gray-600 hover:text-red-500 hover:bg-red-50 transition-colors"
-            icon={<HeartOutlined className="h-4 w-4 mr-2" />}
-          >
+          <Button variant="ghost" size="sm" className="text-gray-600 hover:text-red-500 hover:bg-red-50 transition-colors">
+            <Heart className="h-4 w-4 mr-2" />
             <span className="text-sm font-medium">{likes}</span>
           </Button>
-          <Button
-            type="text"
-            size="small"
-            className="text-gray-600 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-            icon={<MessageOutlined className="h-4 w-4 mr-2" />}
-          >
+          <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-500 hover:bg-blue-50 transition-colors">
+            <MessageCircle className="h-4 w-4 mr-2" />
             <span className="text-sm font-medium">{comments}</span>
           </Button>
-          <Button
-            type="text"
-            size="small"
-            className="text-gray-600 hover:text-green-500 hover:bg-green-50 transition-colors"
-            icon={<ShareAltOutlined className="h-4 w-4 mr-2" />}
-          >
+          <Button variant="ghost" size="sm" className="text-gray-600 hover:text-green-500 hover:bg-green-50 transition-colors">
+            <Share2 className="h-4 w-4 mr-2" />
             <span className="text-sm font-medium">{shares}</span>
           </Button>
         </div>
         {contestEntry && (
-          <Button
-            size="small"
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-          >
+          <Button size="sm" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
             Bình chọn
           </Button>
         )}
       </div>
     </Card>
-  );
+  )
 }
