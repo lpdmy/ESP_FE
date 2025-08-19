@@ -9,14 +9,14 @@ export default defineConfig({
       react(),
       VitePWA({
          registerType: 'prompt',
-         includeAssets: ['favicon.ico', 'logo.svg', '/logo/*.png'],
+         includeAssets: ['favicon.ico', 'logo.svg', '/logo/*.png', '/assets/*.svg'],
          manifest: {
-            name: 'POS Bahung - Hệ thống quản lý bán hàng',
-            short_name: 'POS Bahung',
-            description: 'Hệ thống quản lý bán hàng dành cho doanh nghiệp vừa và nhỏ',
-            theme_color: '#4a90e2',
+            name: 'EduSephia - Nền tảng kết nối học sinh FPT School',
+            short_name: 'EduSephia',
+            description: 'Nền tảng kết nối, chia sẻ và học tập dành cho học sinh THPT FPT School',
+            theme_color: '#f97316',
             background_color: '#ffffff',
-            start_url: '/login',
+            start_url: '/',
             display: 'standalone',
             icons: [
                {
@@ -60,10 +60,24 @@ export default defineConfig({
                   options: {
                      cacheName: 'api-cache',
                      expiration: {
-                        maxEntries: 10,
-                        maxAgeSeconds: 60 * 60 // <== 1 hour
+                        maxEntries: 20,
+                        maxAgeSeconds: 60 * 60 * 2 // <== 2 hours for educational content
                      },
-                     networkTimeoutSeconds: 10
+                     networkTimeoutSeconds: 15
+                  }
+               },
+               {
+                  urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+                  handler: 'CacheFirst',
+                  options: {
+                     cacheName: 'google-fonts-cache',
+                     expiration: {
+                        maxEntries: 15,
+                        maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+                     },
+                     cacheableResponse: {
+                        statuses: [0, 200]
+                     }
                   }
                }
             ]
@@ -91,8 +105,37 @@ export default defineConfig({
             target: 'https://localhost:7056',
             changeOrigin: true,
             secure: false,
-            rewrite: (path) => path.replace(/^\/api/, '/api')
+            rewrite: (path) => path.replace(/^\/api/, '/api'),
+            configure: (proxy, options) => {
+               proxy.on('error', (err, req, res) => {
+                  console.log('proxy error', err);
+               });
+               proxy.on('proxyReq', (proxyReq, req, res) => {
+                  console.log('Sending Request to the Target:', req.method, req.url);
+               });
+               proxy.on('proxyRes', (proxyRes, req, res) => {
+                  console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+               });
+            }
          }
       },
    },
+   build: {
+      outDir: 'dist',
+      sourcemap: false,
+      rollupOptions: {
+         output: {
+            manualChunks: {
+               vendor: ['react', 'react-dom'],
+               ui: ['lucide-react'],
+               antd: ['antd']
+            }
+         }
+      },
+      chunkSizeWarningLimit: 1000
+   },
+   optimizeDeps: {
+      include: ['react', 'react-dom', 'lucide-react'],
+      exclude: ['antd']
+   }
 }); 
