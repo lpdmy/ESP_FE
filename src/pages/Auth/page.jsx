@@ -18,6 +18,7 @@ export default function AuthPage() {
 
  useEffect(() => {
     async function fetchTest() {
+      console.log("Current hostname:", window.location.hostname);
       try {
         const result = await test();
         setTestResult(result);
