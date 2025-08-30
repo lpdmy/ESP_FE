@@ -1,12 +1,12 @@
-import { Routes, Route } from "react-router-dom";
-import LandingPage from "../pages/page";
-import AuthPage from "../pages/Auth/page";
+import { Routes } from "react-router-dom";
+import { landingRoutes } from "./LandingRoutes";
+import { authRoutes } from "./AuthRoutes";
 
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<AuthPage />} />
+      {...landingRoutes}
+      {...authRoutes}
     </Routes>
   );
 }
