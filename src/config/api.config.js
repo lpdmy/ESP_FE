@@ -1,7 +1,7 @@
 // API Configuration
 export const API_CONFIG = {
    // Base URLs
-   BASE_URL: import.meta.env.PROD ? '/api' : 'https://localhost:7056/api',
+   BASE_URL: import.meta.env.PROD ? '/api' : 'https://localhost:7084/api',
 
    // Auth endpoints
    AUTH: {
@@ -37,10 +37,22 @@ export const getAuthHeaders = (token) => ({
 });
 
 // API Response Handler
-export const handleApiResponse = async (response) => {
-   if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-   }
-   return response.json();
-};
+export async function handleApiResponse(response) {
+  const contentType = response.headers.get("content-type");
+  if (!response.ok) {
+    // Nếu là JSON thì parse, không thì trả về text
+    if (contentType && contentType.includes("application/json")) {
+      const errorData = await response.json();
+      throw errorData;
+    } else {
+      const errorText = await response.text();
+      throw new Error(errorText);
+    }
+  }
+  // Nếu là JSON thì parse, không thì trả về text
+  if (contentType && contentType.includes("application/json")) {
+    return response.json();
+  } else {
+    return response.text();
+  }
+}

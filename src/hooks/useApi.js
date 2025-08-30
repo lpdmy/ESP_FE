@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
-import { authService, userService, courseService } from '../services/api.service';
+import { authService } from '../services/auth.service';
+import { userService } from '../services/user.service';
+import { courseService } from '../services/course.service';
 
 export const useApi = () => {
    const [loading, setLoading] = useState(false);
@@ -31,6 +33,10 @@ export const useApi = () => {
 
    const importFile = useCallback(async (file, token) => {
       return executeApiCall(authService.importFile.bind(authService), file, token);
+   }, [executeApiCall]);
+
+   const test = useCallback(async (token) => {
+      return executeApiCall(authService.test.bind(authService), token);
    }, [executeApiCall]);
 
    // User methods
@@ -84,6 +90,7 @@ export const useApi = () => {
       login,
       getMe,
       importFile,
+      test,
 
       // User methods
       getAllUsers,
