@@ -1,4 +1,4 @@
-# PWA Demo: POS Bahung
+# PWA Demo: EduSphere
 
 Đây là dự án Progressive Web App (PWA) có khả năng hoạt động offline và cài đặt lên màn hình chính.
 
@@ -43,7 +43,7 @@ npm run dev
 ## Cấu trúc dự án
 
 ```
-POS_BAHUNG_FE/
+EduSphere_FE/
 ├── public/                  # Tài nguyên tĩnh
 │   ├── icons/               # Các icon cho PWA
 │   ├── logo.svg             # Logo chính

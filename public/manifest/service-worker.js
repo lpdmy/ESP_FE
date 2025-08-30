@@ -1,11 +1,11 @@
 // =================================================================
-// SERVICE WORKER CHO POS BAHUNG
+// SERVICE WORKER CHO POS ESP
 // =================================================================
 // File này xử lý:
 // 1. Cache và cung cấp nội dung khi offline
 // =================================================================
 
-const CACHE_NAME = 'pos-bahung-v1';
+const CACHE_NAME = 'esp-v1';
 
 // Danh sách tài nguyên cần lưu vào cache để sử dụng offline
 // Đây là các tệp quan trọng để ứng dụng khởi động được khi không có mạng

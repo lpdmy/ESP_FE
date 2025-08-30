@@ -1,4 +1,4 @@
-# Thư mục public trong dự án POS_BAHUNG_FE
+# Thư mục public trong dự án EDUSPHERE_FE
 
 Thư mục này chứa các tài nguyên tĩnh được phục vụ trực tiếp mà không cần qua quá trình biên dịch. Đây là các file quan trọng cho PWA (Progressive Web App).
 
@@ -10,9 +10,9 @@ File này định nghĩa các thuộc tính cho Progressive Web App, cho phép n
 
 ```json
 {
-  "name": "POS Bahung - Hệ thống quản lý bán hàng",  // Tên đầy đủ của ứng dụng
-  "short_name": "POS Bahung",                        // Tên ngắn hiển thị dưới biểu tượng
-  "description": "Hệ thống quản lý bán hàng dành cho doanh nghiệp vừa và nhỏ",
+  "name": "EduSphere - Hệ thống quản lý hoạt động học đường",  // Tên đầy đủ của ứng dụng
+  "short_name": "EduSphere",                        // Tên ngắn hiển thị dưới biểu tượng
+  "description": "Hệ thống quản lý hoạt động học đường",
   "start_url": "/login",                             // URL khởi động khi mở ứng dụng
   "display": "standalone",                           // Hiển thị như ứng dụng native
   "background_color": "#ffffff",                     // Màu nền khi ứng dụng đang tải
@@ -87,7 +87,7 @@ Các biến thể và kích thước khác nhau của logo ứng dụng.
 ### Cập nhật Service Worker:
 
 1. Khi thay đổi cache strategy:
-   - Tăng version trong `CACHE_NAME` (ví dụ: 'pos-bahung-v2')
+   - Tăng version trong `CACHE_NAME` (ví dụ: 'esp-v2')
    - Cập nhật danh sách `urlsToCache` nếu có tài nguyên mới
 
 2. Khi sửa đổi lớn:
