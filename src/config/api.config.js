@@ -1,7 +1,7 @@
 // API Configuration
 export const API_CONFIG = {
    // Base URLs
-   BASE_URL: import.meta.env.PROD ? import.meta.env.API_URL : 'https://localhost:7084/api',
+   BASE_URL: import.meta.env.PROD ? import.meta.env.VITE_BASE_API_URL : 'https://localhost:7084/api',
 
    // Auth endpoints
    AUTH: {
