@@ -12,7 +12,9 @@ export const API_CONFIG = {
     LOGIN: '/auth/login',
     GET_ME: '/auth/GetMe',
     IMPORT_FILE: '/auth/ImportFile',
-    TEST: '/auth/Test'
+    ONE_TIME_LOGIN: '/auth/one-time-login',
+    CHANGE_PASSWORD_OTL: '/auth/change-password-otl',
+    TEST: '/auth/Test',
   },
 
   // User endpoints (khi bạn thêm UserController)

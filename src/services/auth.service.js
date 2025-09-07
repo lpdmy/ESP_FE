@@ -14,10 +14,18 @@ export class AuthService extends ApiService {
     return this.uploadFile(API_CONFIG.AUTH.IMPORT_FILE, file, token);
   }
 
-  async test() {
+  async oneTimeLogin(token) {
+    return this.get(API_CONFIG.AUTH.ONE_TIME_LOGIN+`?token=${token}`);
+  }
+
+  async changePasswordOtl(request) {
+    return this.post(API_CONFIG.AUTH.CHANGE_PASSWORD_OTL, request);
+  }
+
+  async test(token) {
     await new Promise(resolve => setTimeout(resolve, 2000));
-    return this.get(API_CONFIG.AUTH.TEST);
-}
+    return this.get(API_CONFIG.AUTH.TEST, token);
+  }
 }
 
 export const authService = new AuthService();

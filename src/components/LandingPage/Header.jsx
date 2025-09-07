@@ -15,7 +15,7 @@ export default function Header() {
           <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-xl">E</span>
           </div>
-          <span className="text-2xl font-bold text-gray-800">EduSephia</span>
+          <span className="text-2xl font-bold text-gray-800">EduSphere</span>
         </div>
 
         {/* Search Bar */}

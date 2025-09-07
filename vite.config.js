@@ -11,8 +11,8 @@ export default defineConfig({
          registerType: 'prompt',
          includeAssets: ['favicon.ico', 'logo.svg', '/logo/*.png', '/assets/*.svg'],
          manifest: {
-            name: 'EduSephia - Nền tảng kết nối học sinh FPT School',
-            short_name: 'EduSephia',
+            name: 'EduSphere - Nền tảng kết nối học sinh FPT School',
+            short_name: 'EduSphere',
             description: 'Nền tảng kết nối, chia sẻ và học tập dành cho học sinh THPT FPT School',
             theme_color: '#f97316',
             background_color: '#ffffff',

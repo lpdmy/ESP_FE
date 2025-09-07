@@ -11,7 +11,7 @@ export default function HomePage() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Welcome Banner */}
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold gradient-text mb-2">Chào mừng đến với EduSephia</h1>
+          <h1 className="text-4xl font-bold gradient-text mb-2">Chào mừng đến với EduSphere</h1>
           <p className="text-gray-600 text-lg">
             Nền tảng kết nối học sinh THPT FPT School - Nơi chia sẻ, học hỏi và sáng tạo
           </p>

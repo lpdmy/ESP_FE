@@ -1,39 +1,34 @@
 import { useState, useCallback } from 'react';
 import { authService } from '../services/auth.service';
+import { executeApiCall } from './executeApiCall';
 
 export const useAuthApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const executeApiCall = useCallback(async (apiCall, ...args) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await apiCall(...args);
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
+  const login = useCallback(async (credentials) => {
+    return executeApiCall(authService.login.bind(authService), [credentials], { setLoading, setError });
   }, []);
 
-  const login = useCallback(async (credentials) => {
-    return executeApiCall(authService.login.bind(authService), credentials);
-  }, [executeApiCall]);
+  const getMe = useCallback(async () => {
+    return executeApiCall(authService.getMe.bind(authService), [], { setLoading, setError });
+  }, []);
 
-  const getMe = useCallback(async (token) => {
-    return executeApiCall(authService.getMe.bind(authService), token);
-  }, [executeApiCall]);
+  const importFile = useCallback(async (file) => {
+    return executeApiCall(authService.importFile.bind(authService), [file], { setLoading, setError });
+  }, []);
 
-  const importFile = useCallback(async (file, token) => {
-    return executeApiCall(authService.importFile.bind(authService), file, token);
-  }, [executeApiCall]);
+  const oneTimeLogin = useCallback(async (token) => {
+    return executeApiCall(authService.oneTimeLogin.bind(authService), [token], { setLoading, setError });
+  }, []);
 
-  const test = useCallback(async (token) => {
-    return executeApiCall(authService.test.bind(authService), token);
-  }, [executeApiCall]);
+  const changePasswordOtl = useCallback(async (request) => {
+    return executeApiCall(authService.changePasswordOtl.bind(authService), [request], { setLoading, setError });
+  }, []);
+
+  const test = useCallback(async () => {
+    return executeApiCall(authService.test.bind(authService), [], { setLoading, setError });
+  }, []);
 
   return {
     loading,
@@ -42,6 +37,8 @@ export const useAuthApi = () => {
     getMe,
     importFile,
     test,
+    oneTimeLogin,
+    changePasswordOtl,
     clearError: () => setError(null)
   };
 };

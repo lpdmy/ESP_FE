@@ -14,8 +14,6 @@ const LoginForm = () => {
     
     try {
       const result = await login(credentials);
-      console.log('Login successful:', result);
-      
       // Lưu token vào localStorage hoặc state management
       if (result.token) {
         localStorage.setItem('authToken', result.token);
