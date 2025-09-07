@@ -6,35 +6,55 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Eye, EyeOff, ArrowLeft, User, Mail, Lock, GraduationCap } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useAuthApi } from "../../hooks/useAuthApi";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setUser } from "../../store/user/userSlice";
+import { ROUTES } from "@/common/constants/routes"
+import { ROLE } from "@/common/constants/roles"
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  //TO DO: Delete example test API call
-  const { test, loading, error } = useAuthApi();
-  const [testResult, setTestResult] = useState(null);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
- useEffect(() => {
-    async function fetchTest() {
-      console.log("Current hostname:", window.location.hostname);
-      try {
-        const result = await test();
-        setTestResult(result);
-        console.log("Test API result:", result.name);
-      } catch (err) {
-        console.error("Test API error:", err);
-      }
-    }
-    fetchTest();
-  }, [test]);
+  //TO DO: Delete example test API call
+  const { test, loading, error, login, getMe } = useAuthApi();
+  const [testResult, setTestResult] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
     // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    setIsLoading(false)
+  }
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setIsLoading(true)
+    setLoginError("");
+    try {
+      const result = await login({ username: loginEmail, password: loginPassword });
+       if (result?.data?.accessToken) {
+        localStorage.setItem("token", result.data.accessToken);
+        localStorage.setItem("refreshToken", result.data.refreshToken);
+        const resultUser = await getMe();
+        dispatch(setUser(resultUser?.data));
+        if (resultUser?.data.role == ROLE.ADMIN) {
+          navigate(ROUTES.ADMIN.USER_MANAGEMENT);
+        } 
+        else {
+          navigate(ROUTES.LANDING.HOME);
+        }
+    }
+    } catch (err) {
+      setLoginError(err.message || "Đăng nhập thất bại");
+    }
     setIsLoading(false)
   }
 
@@ -69,7 +89,7 @@ export default function AuthPage() {
           </Link>
           <div className="flex items-center justify-center mb-4">
             <GraduationCap className="w-12 h-12 text-orange-500 mr-3" />
-            <h1 className="text-3xl font-bold gradient-text">EduSephia</h1>
+            <h1 className="text-3xl font-bold gradient-text">EduSphere</h1>
           </div>
           <p className="text-gray-600">Nền tảng kết nối học sinh THPT FPT School</p>
         </div>
@@ -86,7 +106,7 @@ export default function AuthPage() {
                 <CardDescription>Chào mừng bạn quay trở lại!</CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="login-email">Email</Label>
                     <div className="relative">
@@ -97,6 +117,8 @@ export default function AuthPage() {
                         placeholder="your.email@fpt.edu.vn"
                         className="pl-10 focus:ring-2 focus:ring-orange-500 border-gray-200"
                         required
+                        value={loginEmail}
+                        onChange={e => setLoginEmail(e.target.value)}
                       />
                     </div>
                   </div>
@@ -111,6 +133,8 @@ export default function AuthPage() {
                         placeholder="Nhập mật khẩu"
                         className="pl-10 pr-10 focus:ring-2 focus:ring-orange-500 border-gray-200"
                         required
+                        value={loginPassword}
+                        onChange={e => setLoginPassword(e.target.value)}
                       />
                       <button
                         type="button"
@@ -132,8 +156,12 @@ export default function AuthPage() {
                     </a>
                   </div>
 
-                  <Button type="submit" className="w-full btn-primary h-12 text-lg font-semibold" disabled={isLoading}>
-                    {isLoading ? (
+                  {loginError && (
+                    <div className="text-red-500 text-sm text-center">{loginError}</div>
+                  )}
+
+                  <Button type="submit" className="w-full btn-primary h-12 text-lg font-semibold" disabled={loading}>
+                    {loading ? (
                       <div className="flex items-center">
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                         Đang đăng nhập...
@@ -282,7 +310,7 @@ export default function AuthPage() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500">
-          <p>© 2024 EduSephia - Nền tảng học tập THPT FPT School</p>
+          <p>© 2024 EduSphere - Nền tảng học tập THPT FPT School</p>
         </div>
       </div>
     </div>
