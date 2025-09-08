@@ -29,6 +29,7 @@ export default function UserManagement() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { createUser } = useAuthApi();
+  const [isDropdownOpen, setDropdownOpen] = useState(false)
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -211,7 +212,7 @@ export default function UserManagement() {
                     <TableCell className="text-gray-600">{user.lastActive}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                         <DropdownMenuTrigger onClick={() => setDropdownOpen(!isDropdownOpen)}>
                           <Button variant="ghost" className="h-8 w-8 p-0">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
