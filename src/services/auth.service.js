@@ -22,6 +22,10 @@ export class AuthService extends ApiService {
     return this.post(API_CONFIG.AUTH.CHANGE_PASSWORD_OTL, request);
   }
 
+  async createUser(request) {
+    return this.post(API_CONFIG.AUTH.CREATE_USER, request);
+  }
+
   async test(token) {
     await new Promise(resolve => setTimeout(resolve, 2000));
     return this.get(API_CONFIG.AUTH.TEST, token);

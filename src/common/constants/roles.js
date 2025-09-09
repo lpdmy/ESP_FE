@@ -6,8 +6,8 @@ export const ROLE = {
 
 export const ROLE_LABELS = {
   [ROLE.ADMIN]: "Admin",
-  [ROLE.TEACHER]: "Teacher",
-  [ROLE.STUDENT]: "Student",
+  [ROLE.TEACHER]: "Giáo viên",
+  [ROLE.STUDENT]: "Học sinh",
 };
 
 export const ROLE_COLORS = {
