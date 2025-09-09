@@ -14,6 +14,7 @@ export const API_CONFIG = {
     IMPORT_FILE: '/auth/ImportFile',
     ONE_TIME_LOGIN: '/auth/one-time-login',
     CHANGE_PASSWORD_OTL: '/auth/change-password-otl',
+    CREATE_USER: '/auth/create-user',
     TEST: '/auth/Test',
   },
 

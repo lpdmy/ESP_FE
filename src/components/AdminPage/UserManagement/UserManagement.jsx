@@ -7,6 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, MoreHorizontal, Eye, Edit, Trash2, UserPlus, Upload } from "lucide-react"
+import AddUserDialog from "./AddUserDialog"
+import { useAuthApi } from "@/hooks/useAuthApi"
+import { USER_MESSAGES } from "@/common/constants/messages"
+import { toast } from "react-toastify";
 
 const mockUsers = [
   { id: 1, name: "Nguyễn Văn An", email: "an.nguyen@fpt.edu.vn", role: "Student", status: "Active", joinDate: "2024-01-15", lastActive: "2024-03-20", club: "Programming Club" },
@@ -26,6 +30,7 @@ export default function UserManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { createUser } = useAuthApi();
   const [isDropdownOpen, setDropdownOpen] = useState(false)
+
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -65,6 +70,21 @@ export default function UserManagement() {
     }
   }
 
+  const handleCreateUser = async (newUser) => {
+    setIsLoading(true);
+    try {
+      await createUser(newUser);
+      setIsSuccess(true);
+      setUsers([...users, newUser])
+      setIsModalOpen(false)
+      toast.success(USER_MESSAGES.CREATE_SUCCESS);s
+    } catch (err) {
+      toast.error(USER_MESSAGES.SYSTEM_ERROR +  err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -87,10 +107,11 @@ export default function UserManagement() {
               Import from Excel
             </Button>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add New User
-          </Button>
+          <AddUserDialog
+            open={isModalOpen}
+            onOpenChange={setIsModalOpen}
+            onCreateUser={handleCreateUser}
+          />
         </div>
       </div>
 
