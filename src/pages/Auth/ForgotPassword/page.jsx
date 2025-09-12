@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <a
-            href="/auth"
+            href="/auth/login"
             className="inline-flex items-center text-orange-600 hover:text-orange-700 mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -134,7 +134,7 @@ export default function ForgotPasswordPage() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500">
-          <p>© 2024 EduSephia - Nền tảng học tập THPT FPT School</p>
+          <p>© 2025 EduShpere - Nền tảng học tập THPT FPT School</p>
         </div>
       </div>
     </div>
