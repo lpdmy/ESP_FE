@@ -8,10 +8,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { clearUser } from "@/store/user/userSlice";
+import { ROUTES } from "@/common/constants/routes";
 
 export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
   const user = useSelector((state) => state.user.user);
+  const [isDropdownOpen, setDropdownOpen] = useState(false)
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    dispatch(clearUser());
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
+
+    navigate(ROUTES.LOGIN);
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
@@ -44,7 +60,7 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
 
           {/* User Profile Dropdown */}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger onClick={() => setDropdownOpen(!isDropdownOpen)}>
               <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-100">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="/admin-avatar.png" />
@@ -63,7 +79,7 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
                 Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600">
+              <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
               </DropdownMenuItem>
