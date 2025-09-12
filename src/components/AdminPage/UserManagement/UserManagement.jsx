@@ -162,26 +162,26 @@ export default function UserManagement() {
                 className="pl-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px] !bg-white/15 !backdrop-blur-lg !border-white/30 hover:!bg-white/25 transition-all duration-300 !rounded-xl !shadow-lg focus-visible:!border-white/30 focus-visible:!ring-0 focus-visible:!ring-offset-0">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent className="!bg-white/15 !backdrop-blur-xl !border-white/30 !shadow-2xl !rounded-xl">
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
+            <Select 
+              value={statusFilter} 
+              onValueChange={setStatusFilter}
+              className="w-full sm:w-[180px] !bg-white/15 !backdrop-blur-lg !border-white/30 hover:!bg-white/25 transition-all duration-300 !rounded-xl !shadow-lg focus-visible:!border-white/30 focus-visible:!ring-0 focus-visible:!ring-offset-0"
+              placeholder="Filter by status"
+            >
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
             </Select>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full sm:w-[180px] !bg-white/15 !backdrop-blur-lg !border-white/30 hover:!bg-white/25 transition-all duration-300 !rounded-xl !shadow-lg focus-visible:!border-white/30 focus-visible:!ring-0 focus-visible:!ring-offset-0">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent className="!bg-white/15 !backdrop-blur-xl !border-white/30 !shadow-2xl !rounded-xl">
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="student">Student</SelectItem>
-                <SelectItem value="moderator">Moderator</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-              </SelectContent>
+            <Select 
+              value={roleFilter} 
+              onValueChange={setRoleFilter}
+              className="w-full sm:w-[180px] !bg-white/15 !backdrop-blur-lg !border-white/30 hover:!bg-white/25 transition-all duration-300 !rounded-xl !shadow-lg focus-visible:!border-white/30 focus-visible:!ring-0 focus-visible:!ring-offset-0"
+              placeholder="Filter by role"
+            >
+              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="student">Student</SelectItem>
+              <SelectItem value="moderator">Moderator</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
             </Select>
           </div>
 
@@ -215,12 +215,11 @@ export default function UserManagement() {
                         console.log(`Dropdown for user ${user.id} is ${open ? 'opening' : 'closing'}`)
                         setOpenDropdownId(open ? user.id : null)
                       }}>
-                        <DropdownMenuTrigger asChild>
-                          <div className="">
-                            <Button
-                              variant="ghost"
-                              className="h-14 w-14 p-2 hover:bg-gray-100 focus:bg-gray-100"
-                            >
+                        <DropdownMenuTrigger>
+                          <Button
+                            variant="ghost"
+                            className="h-14 w-14 p-2 hover:bg-gray-100 focus:bg-gray-100"
+                          >
                             <span className="sr-only">Open menu</span>
                             {openDropdownId === user.id ? (
                               // Icon minus khi mở
@@ -236,8 +235,7 @@ export default function UserManagement() {
                                 <line x1="8" y1="12" x2="16" y2="12" />
                               </svg>
                             )}
-                            </Button>
-                          </div>
+                          </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
