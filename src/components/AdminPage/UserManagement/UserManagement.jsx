@@ -29,7 +29,7 @@ export default function UserManagement() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { createUser } = useAuthApi();
-  const [isDropdownOpen, setDropdownOpen] = useState(false)
+  const [openDropdownId, setOpenDropdownId] = useState(null)
 
 
   const filteredUsers = users.filter((user) => {
@@ -77,7 +77,7 @@ export default function UserManagement() {
       setIsSuccess(true);
       setUsers([...users, newUser])
       setIsModalOpen(false)
-      toast.success(USER_MESSAGES.CREATE_SUCCESS);s
+      toast.success(USER_MESSAGES.CREATE_SUCCESS);
     } catch (err) {
       toast.error(USER_MESSAGES.SYSTEM_ERROR +  err.message);
     } finally {
@@ -118,25 +118,25 @@ export default function UserManagement() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="mt-4 p-4">
             <div className="text-2xl font-bold text-gray-900">{users.length}</div>
             <p className="text-sm text-gray-600">Total Users</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="mt-4 p-4">
             <div className="text-2xl font-bold text-green-600">{users.filter((u) => u.status === "Active").length}</div>
             <p className="text-sm text-gray-600">Active Users</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="mt-4 p-4">
             <div className="text-2xl font-bold text-blue-600">{users.filter((u) => u.role === "Student").length}</div>
             <p className="text-sm text-gray-600">Students</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="mt-4 p-4">
             <div className="text-2xl font-bold text-purple-600">
               {users.filter((u) => u.role === "Admin" || u.role === "Moderator").length}
             </div>
@@ -164,20 +164,20 @@ export default function UserManagement() {
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px] !bg-white/15 !backdrop-blur-lg !border-white/30 hover:!bg-white/25 transition-all duration-300 !rounded-xl !shadow-lg focus-visible:!border-white/30 focus-visible:!ring-0 focus-visible:!ring-offset-0">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="!bg-white/15 !backdrop-blur-xl !border-white/30 !shadow-2xl !rounded-xl">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px] !bg-white/15 !backdrop-blur-lg !border-white/30 hover:!bg-white/25 transition-all duration-300 !rounded-xl !shadow-lg focus-visible:!border-white/30 focus-visible:!ring-0 focus-visible:!ring-offset-0">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="!bg-white/15 !backdrop-blur-xl !border-white/30 !shadow-2xl !rounded-xl">
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="student">Student</SelectItem>
                 <SelectItem value="moderator">Moderator</SelectItem>
@@ -187,48 +187,78 @@ export default function UserManagement() {
           </div>
 
           {/* Users Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Club</TableHead>
-                  <TableHead>Join Date</TableHead>
-                  <TableHead>Last Active</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+          <div>
+            <Table variant="admin">
+              <TableHeader variant="admin">
+                <TableRow variant="admin">
+                  <TableHead variant="admin">Name</TableHead>
+                  <TableHead variant="admin">Email</TableHead>
+                  <TableHead variant="admin">Role</TableHead>
+                  <TableHead variant="admin">Status</TableHead>
+                  <TableHead variant="admin">Club</TableHead>
+                  <TableHead variant="admin">Join Date</TableHead>
+                  <TableHead variant="admin">Last Active</TableHead>
+                  <TableHead variant="admin" className="text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody variant="admin">
                 {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell className="text-gray-600">{user.email}</TableCell>
-                    <TableCell>{getRoleBadge(user.role)}</TableCell>
-                    <TableCell>{getStatusBadge(user.status)}</TableCell>
-                    <TableCell className="text-gray-600">{user.club}</TableCell>
-                    <TableCell className="text-gray-600">{user.joinDate}</TableCell>
-                    <TableCell className="text-gray-600">{user.lastActive}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                         <DropdownMenuTrigger onClick={() => setDropdownOpen(!isDropdownOpen)}>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                  <TableRow key={user.id} variant="admin">
+                    <TableCell variant="admin" className="font-medium">{user.name}</TableCell>
+                    <TableCell variant="admin" className="text-gray-600">{user.email}</TableCell>
+                    <TableCell variant="admin">{getRoleBadge(user.role)}</TableCell>
+                    <TableCell variant="admin">{getStatusBadge(user.status)}</TableCell>
+                    <TableCell variant="admin" className="text-gray-600">{user.club}</TableCell>
+                    <TableCell variant="admin" className="text-gray-600">{user.joinDate}</TableCell>
+                    <TableCell variant="admin" className="text-gray-600">{user.lastActive}</TableCell>
+                    <TableCell variant="admin" className="text-center">
+                      <DropdownMenu onOpenChange={(open) => {
+                        console.log(`Dropdown for user ${user.id} is ${open ? 'opening' : 'closing'}`)
+                        setOpenDropdownId(open ? user.id : null)
+                      }}>
+                        <DropdownMenuTrigger asChild>
+                          <div className="">
+                            <Button
+                              variant="ghost"
+                              className="h-14 w-14 p-2 hover:bg-gray-100 focus:bg-gray-100"
+                            >
+                            <span className="sr-only">Open menu</span>
+                            {openDropdownId === user.id ? (
+                              // Icon minus khi mở
+                              <svg className="h-5 w-5 text-gray-500 hover:text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="8" y1="12" x2="16" y2="12" />
+                              </svg>
+                            ) : (
+                              // Icon plus khi đóng
+                              <svg className="h-5 w-5 text-gray-500 hover:text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="16" />
+                                <line x1="8" y1="12" x2="16" y2="12" />
+                              </svg>
+                            )}
+                            </Button>
+                          </div>
+
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                        <DropdownMenuContent
+                          align="end"
+                          sideOffset={8}
+                        >
+                          <DropdownMenuItem className="gap-2 px-2.5 py-2">
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
+                          <DropdownMenuItem className="gap-2 px-2.5 py-2">
+                            <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                              <path d="M12.4445 19.6875H20.9445M14.4443 5.68747L5.44587 14.6859C4.78722 15.3446 4.26719 16.1441 4.10888 17.062C3.94903 17.9888 3.89583 19.139 4.44432 19.6875C4.99281 20.236 6.14299 20.1828 7.0698 20.0229C7.98772 19.8646 8.78722 19.3446 9.44587 18.6859L18.4443 9.68747M14.4443 5.68747C14.4443 5.68747 17.4443 2.68747 19.4443 4.68747C21.4443 6.68747 18.4443 9.68747 18.4443 9.68747M14.4443 5.68747L18.4443 9.68747" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
                             Edit User
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteUser(user.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
+                          <DropdownMenuItem className="gap-2 px-2.5 py-2 text-red-600" onClick={() => handleDeleteUser(user.id)}>
+                            <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                              <path d="M8 6H19C19.5523 6 20 6.44772 20 7V17C20 17.5523 19.5523 18 19 18H8L2 12L5 9M16 9L13.0001 11.9999M13.0001 11.9999L10 15M13.0001 11.9999L10.0002 9M13.0001 11.9999L16.0002 15" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
                             Delete User
                           </DropdownMenuItem>
                         </DropdownMenuContent>

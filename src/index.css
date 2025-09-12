@@ -153,10 +153,19 @@
   background: #ea580c;
 }
 
-/* Smooth animations */
-* {
+/* Ensure scrollbar is always visible */
+body {
+  overflow-y: scroll !important;
+}
+
+/* Smooth animations - Exclude Radix UI components and scrollbar to avoid conflicts */
+*:not([data-radix-dropdown-menu-content]):not([data-radix-select-content]):not([data-radix-popper-content-wrapper]):not([data-radix-dialog-content]):not([data-radix-tooltip-content]):not(::-webkit-scrollbar):not(::-webkit-scrollbar-thumb):not(::-webkit-scrollbar-track) {
   transition: all 0.2s ease-in-out;
 }
+
+
+
+
 
 /* Gradient text */
 .gradient-text {
@@ -302,4 +311,5 @@
     @apply bg-background text-foreground;
   }
 }
+
 
