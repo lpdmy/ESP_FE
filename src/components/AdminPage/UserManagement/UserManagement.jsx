@@ -31,6 +31,7 @@ export default function UserManagement() {
   const { createUser } = useAuthApi();
   const [openDropdownId, setOpenDropdownId] = useState(null)
 
+
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -238,6 +239,7 @@ export default function UserManagement() {
                             )}
                             </Button>
                           </div>
+
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"

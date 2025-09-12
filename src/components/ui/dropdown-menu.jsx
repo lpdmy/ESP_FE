@@ -16,6 +16,7 @@ const DropdownMenuTrigger = React.forwardRef(
   )
 )
 DropdownMenuTrigger.displayName = "DropdownMenuTrigger"
+
 const DropdownMenuGroup = DropdownMenuPrimitive.Group
 const DropdownMenuPortal = DropdownMenuPrimitive.Portal
 
@@ -46,6 +47,7 @@ const DropdownMenuContent = React.forwardRef(
           "data-[side=top]:slide-in-from-bottom-2",
           "data-[side=left]:slide-in-from-right-2",
           "data-[side=right]:slide-in-from-left-2",
+
           className
         )}
         {...props}
@@ -64,6 +66,7 @@ const DropdownMenuItem = React.forwardRef(
         "transition-colors duration-200",
         "focus:bg-gray-100 focus:text-gray-900",
         "hover:bg-blue-50 hover:text-gray-900",
+
         className
       )}
       {...props}
