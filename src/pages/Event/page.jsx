@@ -1,6 +1,6 @@
 import { useState } from "react"
 import Header from "@/components/LandingPage/Header"
-import Sidebar from "@/components/LandingPage/sidebar"
+import Sidebar from "@/components/LandingPage/Sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
