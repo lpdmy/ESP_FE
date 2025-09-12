@@ -2,8 +2,9 @@ import { Bell, Search, User, Menu, Calendar, Trophy, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-
+import { useNavigate } from "react-router-dom"
 export default function Header() {
+  const navigate = useNavigate()
   return (
     <header className="bg-white shadow-sm border-b border-gray-100 px-6 py-4 sticky top-0 z-50">
       <div className="flex items-center justify-between">
@@ -31,7 +32,9 @@ export default function Header() {
 
         {/* Navigation Icons */}
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" className="flex items-center space-x-2 hover:bg-orange-50">
+          <Button variant="ghost" className="flex items-center space-x-2 hover:bg-orange-50"
+          onClick={() => navigate("/activity/list-event")}
+          >
             <Calendar className="h-4 w-4" />
             <span>Sự kiện</span>
           </Button>

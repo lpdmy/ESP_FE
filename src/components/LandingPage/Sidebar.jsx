@@ -2,12 +2,13 @@ import { Home, Users, Calendar, Trophy, Crown, Settings, BookOpen, Camera } from
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-
+import { useNavigate } from "react-router-dom"
 export default function Sidebar() {
+  const navigate = useNavigate();
   const menuItems = [
     { icon: Home, label: "Trang chủ", active: true },
     { icon: Users, label: "Bạn bè", count: 24 },
-    { icon: Calendar, label: "Sự kiện", count: 5 },
+    { icon: Calendar, label: "Sự kiện", count: 5,path: "/activity/list-event" },
     { icon: Trophy, label: "Cuộc thi", count: 3 },
     { icon: Camera, label: "Tác phẩm của tôi" },
     { icon: Crown, label: "Thành tích" },
@@ -49,6 +50,7 @@ export default function Sidebar() {
         <nav className="space-y-1">
           {menuItems.map((item, index) => (
             <Button
+            onClick={() => navigate(item.path)}
               key={index}
               variant={item.active ? "default" : "ghost"}
               className={`w-full justify-start ${item.active ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"}`}

@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "title": "Hội thảo Khởi nghiệp Công nghệ 2024",
+    "description": "Tìm hiểu về xu hướng khởi nghiệp công nghệ và cơ hội việc làm trong tương lai",
+    "date": "2024-01-15",
+    "time": "14:00 - 17:00",
+    "location": "Hội trường A - FPT School Hà Nội",
+    "organizer": "CLB Khởi nghiệp FPT",
+    "participants": 156,
+    "maxParticipants": 200,
+    "category": "workshop",
+    "status": "upcoming",
+    "image": "/tech-workshop.jpg",
+    "tags": ["Công nghệ", "Khởi nghiệp", "Tương lai"]
+  },
+  {
+    "id": 2,
+    "title": "Cuộc thi Lập trình FPT Code Challenge",
+    "description": "Cuộc thi lập trình dành cho học sinh THPT với giải thưởng hấp dẫn",
+    "date": "2024-01-20",
+    "time": "09:00 - 18:00",
+    "location": "Phòng Lab - FPT School TP.HCM",
+    "organizer": "Khoa Công nghệ Thông tin",
+    "participants": 89,
+    "maxParticipants": 100,
+    "category": "competition",
+    "status": "upcoming",
+    "image": "/coding-contest.jpg",
+    "tags": ["Lập trình", "Cuộc thi", "Giải thưởng"]
+  },
+  {
+    "id": 3,
+    "title": "Đêm nhạc Acoustic - Thanh xuân FPT",
+    "description": "Đêm nhạc acoustic với sự tham gia của các tài năng âm nhạc từ học sinh FPT",
+    "date": "2024-01-25",
+    "time": "19:00 - 22:00",
+    "location": "Sân khấu ngoài trời - FPT School Đà Nẵng",
+    "organizer": "CLB Âm nhạc FPT",
+    "participants": 234,
+    "maxParticipants": 300,
+    "category": "entertainment",
+    "status": "upcoming",
+    "image": "/music-night.jpg",
+    "tags": ["Âm nhạc", "Acoustic", "Giải trí"]
+  },
+  {
+    "id": 4,
+    "title": "Workshop Thiết kế UI/UX",
+    "description": "Học cách thiết kế giao diện người dùng và trải nghiệm người dùng chuyên nghiệp",
+    "date": "2024-01-30",
+    "time": "13:00 - 16:00",
+    "location": "Phòng Design Lab - FPT School Hà Nội",
+    "organizer": "CLB Thiết kế FPT",
+    "participants": 67,
+    "maxParticipants": 80,
+    "category": "workshop",
+    "status": "upcoming",
+    "image": "/design-workshop.jpg",
+    "tags": ["Thiết kế", "UI/UX", "Sáng tạo"]
+  }
+]

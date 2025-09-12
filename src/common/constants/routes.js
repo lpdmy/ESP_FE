@@ -9,4 +9,7 @@ export const ROUTES = {
   ADMIN: {
     USER_MANAGEMENT: "/admin/users",
   },
+  Activity:{
+    LIST_EVENT : "/activity/list-event",
+  }
 };
