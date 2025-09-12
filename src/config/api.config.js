@@ -1,11 +1,12 @@
 // API Configuration
 export const API_CONFIG = {
   // Base URLs
-  BASE_URL: import.meta.env.PROD
-    ? (window.location.hostname.includes('lemon-cliff-00e25c800.2.azurestaticapps.net')
-      ?  'https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net/api'
-      : 'test') 
-      : 'https://localhost:7084/api',
+   BASE_URL:
+    window.location.hostname.includes("edusphere-dev")
+      ? "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net/api"
+      : window.location.hostname.includes("localhost")
+      ? "https://localhost:7084/api"
+      : "https://esp-test-api.yourdomain.com/api",
 
   // Auth endpoints
   AUTH: {
