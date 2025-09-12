@@ -44,8 +44,8 @@ export default function ForgotPasswordPage() {
             Quay lại đăng nhập
           </a>
           <div className="flex items-center justify-center mb-4">
-            <GraduationCap className="w-12 h-12 text-orange-500 mr-3" />
-            <h1 className="text-3xl font-bold gradient-text">EduSephia</h1>
+            <GraduationCap className="w-12 h-12 text-orange-500 mr-3"/>
+            <h1 className="text-3xl font-bold gradient-text">EduSphere</h1>
           </div>
           <p className="text-gray-600">Nền tảng kết nối học sinh THPT FPT School</p>
         </div>
