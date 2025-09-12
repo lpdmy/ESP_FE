@@ -2,6 +2,7 @@ import { Home, Users, Calendar, Trophy, Crown, Settings, BookOpen, Camera } from
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+
 export default function Sidebar() {
   const menuItems = [
     { icon: Home, label: "Trang chủ", active: true },

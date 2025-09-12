@@ -2,6 +2,7 @@ import { Bell, Search, User, Menu, Calendar, Trophy, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+
 export default function Header() {
   return (
     <header className="bg-white shadow-sm border-b border-gray-100 px-6 py-4 sticky top-0 z-50">
