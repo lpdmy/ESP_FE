@@ -2,7 +2,7 @@
   {
     "id": 1,
     "title": "Hội thảo Khởi nghiệp Công nghệ 2024",
-    "description": "Tìm hiểu về xu hướng khởi nghiệp công nghệ và cơ hội việc làm trong tương lai",
+    "description": "Tìm hiểu về xu hướng khởi nghiệp công nghệ và cơ hội việc làm trong tương lai. Workshop sẽ có sự tham gia của các chuyên gia hàng đầu trong lĩnh vực công nghệ.",
     "date": "2024-01-15",
     "time": "14:00 - 17:00",
     "location": "Hội trường A - FPT School Hà Nội",
@@ -12,12 +12,18 @@
     "category": "workshop",
     "status": "upcoming",
     "image": "/tech-workshop.jpg",
-    "tags": ["Công nghệ", "Khởi nghiệp", "Tương lai"]
+    "tags": ["Công nghệ", "Khởi nghiệp", "Tương lai"],
+    "rules": [
+      "Mang theo laptop cá nhân",
+      "Đăng ký trước 24h",
+      "Tham gia đầy đủ các phiên",
+      "Hoàn thành bài tập nhóm"
+    ]
   },
   {
     "id": 2,
     "title": "Cuộc thi Lập trình FPT Code Challenge",
-    "description": "Cuộc thi lập trình dành cho học sinh THPT với giải thưởng hấp dẫn",
+    "description": "Cuộc thi lập trình dành cho học sinh THPT với giải thưởng hấp dẫn. Thí sinh sẽ giải quyết các bài toán thuật toán và lập trình trong thời gian quy định.",
     "date": "2024-01-20",
     "time": "09:00 - 18:00",
     "location": "Phòng Lab - FPT School TP.HCM",
@@ -25,14 +31,21 @@
     "participants": 89,
     "maxParticipants": 100,
     "category": "competition",
-    "status": "upcoming",
+    "status": "active",
     "image": "/coding-contest.jpg",
-    "tags": ["Lập trình", "Cuộc thi", "Giải thưởng"]
+    "prize": "10.000 Start Point",
+    "tags": ["Lập trình", "Cuộc thi", "Giải thưởng"],
+    "rules": [
+      "Thí sinh phải là học sinh THPT FPT School",
+      "Sử dụng ngôn ngữ lập trình: C++, Java, Python",
+      "Thời gian làm bài: 6 tiếng",
+      "Không được sử dụng internet trong quá trình thi"
+    ]
   },
   {
     "id": 3,
     "title": "Đêm nhạc Acoustic - Thanh xuân FPT",
-    "description": "Đêm nhạc acoustic với sự tham gia của các tài năng âm nhạc từ học sinh FPT",
+    "description": "Đêm nhạc acoustic với sự tham gia của các tài năng âm nhạc từ học sinh FPT. Một đêm đầy cảm xúc với những giai điệu nhẹ nhàng.",
     "date": "2024-01-25",
     "time": "19:00 - 22:00",
     "location": "Sân khấu ngoài trời - FPT School Đà Nẵng",
@@ -42,12 +55,18 @@
     "category": "entertainment",
     "status": "upcoming",
     "image": "/music-night.jpg",
-    "tags": ["Âm nhạc", "Acoustic", "Giải trí"]
+    "tags": ["Âm nhạc", "Acoustic", "Giải trí"],
+    "rules": [
+      "Không mang đồ ăn thức uống từ bên ngoài",
+      "Giữ trật tự trong suốt chương trình",
+      "Không sử dụng flash khi chụp ảnh",
+      "Tham gia các hoạt động tương tác"
+    ]
   },
   {
     "id": 4,
     "title": "Workshop Thiết kế UI/UX",
-    "description": "Học cách thiết kế giao diện người dùng và trải nghiệm người dùng chuyên nghiệp",
+    "description": "Học cách thiết kế giao diện người dùng và trải nghiệm người dùng chuyên nghiệp. Workshop thực hành với các công cụ thiết kế hiện đại.",
     "date": "2024-01-30",
     "time": "13:00 - 16:00",
     "location": "Phòng Design Lab - FPT School Hà Nội",
@@ -57,6 +76,12 @@
     "category": "workshop",
     "status": "upcoming",
     "image": "/design-workshop.jpg",
-    "tags": ["Thiết kế", "UI/UX", "Sáng tạo"]
+    "tags": ["Thiết kế", "UI/UX", "Sáng tạo"],
+    "rules": [
+      "Cài đặt Figma trước khi tham gia",
+      "Mang theo laptop có cấu hình tốt",
+      "Tham gia đầy đủ 3 tiếng",
+      "Hoàn thành project cuối khóa"
+    ]
   }
 ]

@@ -20,7 +20,7 @@ import {
   Code,
   Heart,
 } from "lucide-react"
-
+import { useNavigate } from "react-router-dom"
 // Import mock data từ JSON
 import mockEvents from "@/mock_data/events.json"
 
@@ -32,6 +32,14 @@ const categoryIcons = {
   tech: Code,
   social: Heart,
 }
+const categoryLabels = {
+  workshop: "Hội thảo",
+  competition: "Cuộc thi",
+  entertainment: "Giải trí",
+  art: "Nghệ thuật",
+  tech: "Công nghệ",
+  social: "Xã hội",
+};
 
 const categoryColors = {
   workshop: "bg-blue-100 text-blue-700 border-blue-200",
@@ -43,6 +51,7 @@ const categoryColors = {
 }
 
 export default function EventsPage() {
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedDate, setSelectedDate] = useState(null)
 
@@ -141,7 +150,7 @@ export default function EventsPage() {
                         className={selectedCategory === category ? "btn-primary" : "bg-white/50"}
                       >
                         <Icon className="w-4 h-4 mr-1" />
-                        {category}
+                        {categoryLabels[category] || category}
                       </Button>
                     ))}
                   </CardContent>
@@ -165,10 +174,10 @@ export default function EventsPage() {
                                 </h3>
                                 <p className="text-gray-600 mb-3">{event.description}</p>
                               </div>
-                              <Badge className={categoryColors[event.category]}>
-                                <IconComponent className="w-3 h-3 mr-1" />
-                                {event.category}
-                              </Badge>
+                              <Badge className={`${categoryColors[event.category]} whitespace-nowrap flex items-center`}>
+  <IconComponent className="w-5 h-5 mr-3" />
+  {categoryLabels[event.category] || event.category}
+</Badge>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-gray-600">
                               <div className="flex items-center">
@@ -200,7 +209,9 @@ export default function EventsPage() {
                                 </span>
                               </div>
                               <div className="flex gap-2">
-                                <Button variant="outline" size="sm" className="bg-white/50">
+                                <Button variant="outline" size="sm" className="bg-white/50"
+                                 onClick={() => navigate(`/activity/detail/${event.id}`)}
+                                >
                                   Chi tiết
                                 </Button>
                                 <Button size="sm" className="btn-primary">

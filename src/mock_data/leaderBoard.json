@@ -1,0 +1,12 @@
+[
+  { "rank": 1, "name": "Nguyễn Văn An", "score": 950, "avatar": "NA", "isCurrentUser": false },
+  { "rank": 2, "name": "Trần Thị Bình", "score": 920, "avatar": "TB", "isCurrentUser": false },
+  { "rank": 3, "name": "Lê Hoàng Cường", "score": 890, "avatar": "LC", "isCurrentUser": false },
+  { "rank": 4, "name": "Phạm Minh Đức", "score": 870, "avatar": "PD", "isCurrentUser": true },
+  { "rank": 5, "name": "Võ Thị Hoa", "score": 850, "avatar": "VH", "isCurrentUser": false },
+  { "rank": 6, "name": "Đặng Văn Khoa", "score": 830, "avatar": "DK", "isCurrentUser": false },
+  { "rank": 7, "name": "Bùi Thị Lan", "score": 810, "avatar": "BL", "isCurrentUser": false },
+  { "rank": 8, "name": "Hoàng Văn Minh", "score": 790, "avatar": "HM", "isCurrentUser": false },
+  { "rank": 9, "name": "Ngô Thị Nga", "score": 770, "avatar": "NN", "isCurrentUser": false },
+  { "rank": 10, "name": "Phan Văn Phúc", "score": 750, "avatar": "PP", "isCurrentUser": false }
+]
