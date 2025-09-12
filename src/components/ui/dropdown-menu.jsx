@@ -4,18 +4,6 @@ import { cn } from "@/lib/utils"
 // DropdownMenuTrigger - Trigger component
 const DropdownMenuTrigger = React.forwardRef(
   ({ className, children, asChild = false, ...props }, ref) => {
-    if (asChild && React.isValidElement(children)) {
-      return React.cloneElement(children, {
-        ref,
-        className: cn(
-          "focus:outline-none focus:ring-0 focus:ring-offset-0 cursor-pointer",
-          className,
-          children.props.className
-        ),
-        ...props
-      })
-    }
-    
     return (
       <div
         ref={ref}
@@ -40,7 +28,6 @@ const DropdownMenuContent = React.forwardRef(
         ref={ref}
         className={cn(
           "z-50 min-w-[160px] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg",
-          "animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
           className
         )}
         {...props}
@@ -128,27 +115,30 @@ const DropdownMenu = ({ children, onOpenChange, ...props }) => {
     }
   }, [open, onOpenChange])
 
-  // Extract trigger and content from children
-  const trigger = React.Children.toArray(children).find(child => 
-    React.isValidElement(child) && child.type === DropdownMenuTrigger
-  )
-  const content = React.Children.toArray(children).find(child => 
-    React.isValidElement(child) && child.type === DropdownMenuContent
-  )
-
+  // Render children directly without complex extraction
   return (
     <div ref={dropdownRef} className="relative inline-block" {...props}>
-      {React.cloneElement(trigger, {
-        onClick: (e) => {
-          e.stopPropagation()
-          handleOpenChange(!open)
+      {React.Children.map(children, (child) => {
+        if (React.isValidElement(child)) {
+          if (child.type === DropdownMenuTrigger) {
+            return React.cloneElement(child, {
+              onClick: (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                handleOpenChange(!open)
+              }
+            })
+          }
+          if (child.type === DropdownMenuContent && open) {
+            return (
+              <div className="absolute right-0 top-full mt-1 z-50">
+                {child}
+              </div>
+            )
+          }
         }
+        return null
       })}
-      {open && content && (
-        <div className="absolute right-0 top-full mt-1 z-50">
-          {content}
-        </div>
-      )}
     </div>
   )
 }

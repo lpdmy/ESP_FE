@@ -1,4 +1,5 @@
 import * as React from "react"
+import { Table as AntTable } from "antd"
 import { cn } from "@/lib/utils"
 
 function Table({
@@ -8,8 +9,55 @@ function Table({
   actions,
   headerClassName,
   variant = "default",
+  columns,
+  dataSource,
   ...props
 }) {
+  // If columns and dataSource are provided, use Ant Design Table
+  if (columns && dataSource) {
+    return (
+      <div
+        data-slot="table-container"
+        className={cn(
+          "relative w-full overflow-x-auto",
+          variant === "admin"
+            ? "rounded-2xl border border-gray-200 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.10)]"
+            : "rounded-md border shadow-sm",
+        )}
+      >
+        {(title || description || actions) && (
+          <div className={cn("w-full py-4 flex items-start justify-between px-6", headerClassName)}>
+            <div className="flex flex-col gap-1.5">
+              {title && (
+                <div className="text-[20px] leading-7 font-semibold text-[#0A0A0A]">
+                  {title}
+                </div>
+              )}
+              {description && (
+                <div className="text-sm leading-5 font-normal text-[#737373]">
+                  {description}
+                </div>
+              )}
+            </div>
+            {actions && (
+              <div className="flex items-center gap-2">
+                {actions}
+              </div>
+            )}
+          </div>
+        )}
+        <AntTable
+          columns={columns}
+          dataSource={dataSource}
+          className={cn("w-full", className)}
+          pagination={false}
+          {...props}
+        />
+      </div>
+    )
+  }
+
+  // Fallback to regular table for backward compatibility
   return (
     <div
       data-slot="table-container"
