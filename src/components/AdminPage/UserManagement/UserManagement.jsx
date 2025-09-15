@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, MoreHorizontal, Eye, Edit, Trash2, UserPlus, Upload } from "lucide-react"
+import { Search, MoreHorizontal, Eye, Edit, Trash2, UserPlus, Upload, ChevronDown } from "lucide-react"
 import AddUserDialog from "./AddUserDialog"
 import { useAuthApi } from "@/hooks/useAuthApi"
 import { USER_MESSAGES } from "@/common/constants/messages"
@@ -28,9 +27,8 @@ export default function UserManagement() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [openActionDropdownId, setOpenActionDropdownId] = useState(null)
   const { createUser } = useAuthApi();
-  const [openDropdownId, setOpenDropdownId] = useState(null)
-
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -48,9 +46,9 @@ export default function UserManagement() {
 
   const getStatusBadge = (status) =>
     status === "Active" ? (
-      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 rounded-full px-2 py-1 text-xs font-medium">Active</Badge>
     ) : (
-      <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Inactive</Badge>
+      <Badge className="bg-red-100 text-red-800 hover:bg-red-100 rounded-full px-2 py-1 text-xs font-medium">Inactive</Badge>
     )
 
   const getRoleBadge = (role) => {
@@ -59,7 +57,7 @@ export default function UserManagement() {
       Moderator: "bg-blue-100 text-blue-800 hover:bg-blue-100",
       Student: "bg-gray-100 text-gray-800 hover:bg-gray-100",
     }
-    return <Badge className={roleColors[role] || roleColors.Student}>{role}</Badge>
+    return <Badge className={`${roleColors[role] || roleColors.Student} rounded-full px-2 py-1 text-xs font-medium`}>{role}</Badge>
   }
 
   const handleExcelImport = (event) => {
@@ -86,70 +84,57 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+        <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
           <p className="text-gray-600 mt-1">Manage and monitor all platform users</p>
         </div>
-        <div className="flex gap-3">
-          <div className="relative">
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleExcelImport}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              id="excel-import"
-            />
-            <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 bg-transparent">
-              <Upload className="h-4 w-4 mr-2" />
-              Import from Excel
+          <Button 
+            onClick={() => setIsModalOpen(true)}
+            className="!bg-blue-600 hover:!bg-blue-600 !text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          >
+            <UserPlus className="h-4 w-4" />
+            Add New User
             </Button>
-          </div>
-          <AddUserDialog
-            open={isModalOpen}
-            onOpenChange={setIsModalOpen}
-            onCreateUser={handleCreateUser}
-          />
-        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="mt-4 p-4">
-            <div className="text-2xl font-bold text-gray-900">{users.length}</div>
-            <p className="text-sm text-gray-600">Total Users</p>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="bg-white rounded-lg border border-gray-200 shadow-sm pt-6">
+            <CardContent className="p-6">
+              <div className="text-3xl font-bold text-gray-900">{users.length}</div>
+              <p className="text-sm text-gray-500 mt-1">Total Users</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="mt-4 p-4">
-            <div className="text-2xl font-bold text-green-600">{users.filter((u) => u.status === "Active").length}</div>
-            <p className="text-sm text-gray-600">Active Users</p>
+          <Card className="bg-white rounded-lg border border-gray-200 shadow-sm pt-6">
+            <CardContent className="p-6">
+              <div className="text-3xl font-bold text-green-600">{users.filter((u) => u.status === "Active").length}</div>
+              <p className="text-sm text-gray-500 mt-1">Active Users</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="mt-4 p-4">
-            <div className="text-2xl font-bold text-blue-600">{users.filter((u) => u.role === "Student").length}</div>
-            <p className="text-sm text-gray-600">Students</p>
+          <Card className="bg-white rounded-lg border border-gray-200 shadow-sm pt-6">
+            <CardContent className="p-6">
+              <div className="text-3xl font-bold text-blue-600">{users.filter((u) => u.role === "Student").length}</div>
+              <p className="text-sm text-gray-500 mt-1">Students</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="mt-4 p-4">
-            <div className="text-2xl font-bold text-purple-600">
+          <Card className="bg-white rounded-lg border border-gray-200 shadow-sm pt-6">
+            <CardContent className="p-6">
+              <div className="text-3xl font-bold text-purple-600">
               {users.filter((u) => u.role === "Admin" || u.role === "Moderator").length}
             </div>
-            <p className="text-sm text-gray-600">Staff</p>
+              <p className="text-sm text-gray-500 mt-1">Staff</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters + Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Users</CardTitle>
-          <CardDescription>Search and filter users by various criteria</CardDescription>
+        {/* Users Table Section */}
+        <Card className="bg-white rounded-xl shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-semibold text-gray-900">Users</CardTitle>
+            <CardDescription className="text-gray-600">Search and filter users by various criteria</CardDescription>
         </CardHeader>
         <CardContent>
           {/* Filters */}
@@ -160,121 +145,146 @@ export default function UserManagement() {
                 placeholder="Search by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                  className="pl-10 h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px] !bg-white/15 !backdrop-blur-lg !border-white/30 hover:!bg-white/25 transition-all duration-300 !rounded-xl !shadow-lg focus-visible:!border-white/30 focus-visible:!ring-0 focus-visible:!ring-offset-0">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent className="!bg-white/15 !backdrop-blur-xl !border-white/30 !shadow-2xl !rounded-xl">
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full sm:w-[180px] !bg-white/15 !backdrop-blur-lg !border-white/30 hover:!bg-white/25 transition-all duration-300 !rounded-xl !shadow-lg focus-visible:!border-white/30 focus-visible:!ring-0 focus-visible:!ring-offset-0">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent className="!bg-white/15 !backdrop-blur-xl !border-white/30 !shadow-2xl !rounded-xl">
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="student">Student</SelectItem>
-                <SelectItem value="moderator">Moderator</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-              </SelectContent>
-            </Select>
+              
+              {/* Status Filter Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="w-full sm:w-[180px] h-10 justify-between !text-gray-600 !border-gray-300 hover:!text-blue-600 hover:!border-blue-600 hover:!bg-blue-50"
+                  >
+                    {statusFilter === "all" ? "All Status" : statusFilter === "active" ? "Active" : "Inactive"}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[180px]">
+                  <DropdownMenuItem onClick={() => setStatusFilter("all")}>
+                    All Status
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("active")}>
+                    Active
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("inactive")}>
+                    Inactive
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Role Filter Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="w-full sm:w-[180px] h-10 justify-between !text-gray-600 !border-gray-300 hover:!text-blue-600 hover:!border-blue-600 hover:!bg-blue-50"
+                  >
+                    {roleFilter === "all" ? "All Roles" : 
+                     roleFilter === "student" ? "Student" :
+                     roleFilter === "moderator" ? "Moderator" : "Admin"}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[180px]">
+                  <DropdownMenuItem onClick={() => setRoleFilter("all")}>
+                    All Roles
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setRoleFilter("student")}>
+                    Student
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setRoleFilter("moderator")}>
+                    Moderator
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setRoleFilter("admin")}>
+                    Admin
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
           </div>
 
           {/* Users Table */}
-          <div>
-            <Table variant="admin">
-              <TableHeader variant="admin">
-                <TableRow variant="admin">
-                  <TableHead variant="admin">Name</TableHead>
-                  <TableHead variant="admin">Email</TableHead>
-                  <TableHead variant="admin">Role</TableHead>
-                  <TableHead variant="admin">Status</TableHead>
-                  <TableHead variant="admin">Club</TableHead>
-                  <TableHead variant="admin">Join Date</TableHead>
-                  <TableHead variant="admin">Last Active</TableHead>
-                  <TableHead variant="admin" className="text-center">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody variant="admin">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Name</th>
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Email</th>
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Role</th>
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Status</th>
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Club</th>
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Join Date</th>
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Last Active</th>
+                    <th className="text-center font-medium text-gray-900 py-3 px-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
                 {filteredUsers.map((user) => (
-                  <TableRow key={user.id} variant="admin">
-                    <TableCell variant="admin" className="font-medium">{user.name}</TableCell>
-                    <TableCell variant="admin" className="text-gray-600">{user.email}</TableCell>
-                    <TableCell variant="admin">{getRoleBadge(user.role)}</TableCell>
-                    <TableCell variant="admin">{getStatusBadge(user.status)}</TableCell>
-                    <TableCell variant="admin" className="text-gray-600">{user.club}</TableCell>
-                    <TableCell variant="admin" className="text-gray-600">{user.joinDate}</TableCell>
-                    <TableCell variant="admin" className="text-gray-600">{user.lastActive}</TableCell>
-                    <TableCell variant="admin" className="text-center">
-                      <DropdownMenu onOpenChange={(open) => {
-                        console.log(`Dropdown for user ${user.id} is ${open ? 'opening' : 'closing'}`)
-                        setOpenDropdownId(open ? user.id : null)
-                      }}>
-                        <DropdownMenuTrigger asChild>
-                          <div className="">
-                            <Button
-                              variant="ghost"
-                              className="h-14 w-14 p-2 hover:bg-gray-100 focus:bg-gray-100"
-                            >
-                            <span className="sr-only">Open menu</span>
-                            {openDropdownId === user.id ? (
-                              // Icon minus khi mở
-                              <svg className="h-5 w-5 text-gray-500 hover:text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                                <line x1="8" y1="12" x2="16" y2="12" />
-                              </svg>
-                            ) : (
-                              // Icon plus khi đóng
-                              <svg className="h-5 w-5 text-gray-500 hover:text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                                <line x1="12" y1="8" x2="12" y2="16" />
-                                <line x1="8" y1="12" x2="16" y2="12" />
-                              </svg>
-                            )}
-                            </Button>
-                          </div>
-
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          sideOffset={8}
-                        >
-                          <DropdownMenuItem className="gap-2 px-2.5 py-2">
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2 px-2.5 py-2">
-                            <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                              <path d="M12.4445 19.6875H20.9445M14.4443 5.68747L5.44587 14.6859C4.78722 15.3446 4.26719 16.1441 4.10888 17.062C3.94903 17.9888 3.89583 19.139 4.44432 19.6875C4.99281 20.236 6.14299 20.1828 7.0698 20.0229C7.98772 19.8646 8.78722 19.3446 9.44587 18.6859L18.4443 9.68747M14.4443 5.68747C14.4443 5.68747 17.4443 2.68747 19.4443 4.68747C21.4443 6.68747 18.4443 9.68747 18.4443 9.68747M14.4443 5.68747L18.4443 9.68747" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                            Edit User
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2 px-2.5 py-2 text-red-600" onClick={() => handleDeleteUser(user.id)}>
-                            <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                              <path d="M8 6H19C19.5523 6 20 6.44772 20 7V17C20 17.5523 19.5523 18 19 18H8L2 12L5 9M16 9L13.0001 11.9999M13.0001 11.9999L10 15M13.0001 11.9999L10.0002 9M13.0001 11.9999L16.0002 15" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                            Delete User
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
+                    <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-4 px-4 font-medium text-gray-900">{user.name}</td>
+                      <td className="py-4 px-4 text-gray-600">{user.email}</td>
+                      <td className="py-4 px-4">{getRoleBadge(user.role)}</td>
+                      <td className="py-4 px-4">{getStatusBadge(user.status)}</td>
+                      <td className="py-4 px-4 text-gray-600">{user.club}</td>
+                      <td className="py-4 px-4 text-gray-600">{user.joinDate}</td>
+                      <td className="py-4 px-4 text-gray-600">{user.lastActive}</td>
+                <td className="py-4 px-4 text-center">
+                  <DropdownMenu onOpenChange={(open) => setOpenActionDropdownId(open ? user.id : null)}>
+                    <DropdownMenuTrigger asChild>
+                      <div className="cursor-pointer hover:bg-blue-100 rounded-full p-2 transition-colors">
+                        {openActionDropdownId === user.id ? (
+                          <svg className="h-6 w-6 text-blue-600 hover:text-blue-700" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 20 20">
+                            <circle cx="10" cy="10" r="8" />
+                            <line x1="6" y1="10" x2="14" y2="10" />
+                          </svg>
+                        ) : (
+                          <svg className="h-6 w-6 text-blue-600 hover:text-blue-700" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 20 20">
+                            <circle cx="10" cy="10" r="8" />
+                            <line x1="10" y1="5" x2="10" y2="15" />
+                            <line x1="5" y1="10" x2="15" y2="10" />
+                          </svg>
+                        )}
+                      </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center gap-2">
+                        <Edit className="h-4 w-4" />
+                        Edit User
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="flex items-center gap-2 text-red-600 focus:text-red-600" 
+                        onClick={() => handleDeleteUser(user.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete User
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </td>
+                    </tr>
                 ))}
-              </TableBody>
-            </Table>
+                </tbody>
+              </table>
           </div>
 
           {filteredUsers.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No users found matching your criteria.</div>
+              <div className="text-center py-12 text-gray-500">
+                <p>No users found matching your criteria.</p>
+              </div>
           )}
         </CardContent>
       </Card>
+
+        {/* Add User Dialog */}
+        <AddUserDialog
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+          onCreateUser={handleCreateUser}
+        />
     </div>
   )
 }

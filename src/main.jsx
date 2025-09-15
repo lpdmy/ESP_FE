@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import "antd/dist/reset.css";
+// import "antd/dist/reset.css"; // Commented out - not needed in v5
 import "./index.css";
 import "./styles/landing.css";
 import App from "@/App.jsx";

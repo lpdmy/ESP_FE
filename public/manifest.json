@@ -1,0 +1,27 @@
+{
+   "name": "EduSphere - Hệ thống quản lí hoạt động học đường",
+   "short_name": "EduSphere",
+   "description": "Hệ thống quản lý hoạt động học đường",
+   "start_url": "/login",
+   "display": "standalone",
+   "background_color": "#ffffff",
+   "theme_color": "#4a90e2",
+   "gcm_sender_id": "103953800507",
+   "icons": [
+      {
+         "src": "/logo.svg",
+         "sizes": "192x192 512x512",
+         "type": "image/svg+xml",
+         "purpose": "any maskable"
+      }
+   ],
+   "prefer_related_applications": false,
+   "related_applications": [],
+   "orientation": "portrait",
+   "lang": "vi-VN",
+   "categories": [
+      "business",
+      "productivity"
+   ],
+   "screenshots": []
+}
