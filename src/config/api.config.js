@@ -19,13 +19,25 @@ export const API_CONFIG = {
     TEST: '/auth/Test',
   },
 
-  // User endpoints (khi bạn thêm UserController)
+  // User endpoints
   USER: {
-    GET_ALL: '/user',
-    GET_BY_ID: '/user/{id}',
+    GET_ALL: '/user/get-all',
+    GET_BY_ID: '/user/get-by-id',
     CREATE: '/user',
-    UPDATE: '/user/{id}',
-    DELETE: '/user/{id}'
+    UPDATE: '/user/update',
+    DELETE: '/user/delete',
+    STUDENT_PROFILE: '/user/student-profile',
+  },
+
+  // UserProfile endpoints
+  USER_PROFILE: {
+    MY_PROFILE: '/userprofile/my-profile',
+    ALL_PROFILES: '/userprofile/all',
+    PROFILE_BY_ID: '/userprofile/{id}',
+    CREATE_PROFILE: '/userprofile',
+    UPDATE_PROFILE: '/userprofile/{id}',
+    DELETE_PROFILE: '/userprofile/{id}',
+    CHECK_PROFILE_EXISTS: '/userprofile/{id}/exists',
   },
 
   // Course endpoints (khi bạn thêm CourseController)
@@ -35,6 +47,10 @@ export const API_CONFIG = {
     CREATE: '/course',
     UPDATE: '/course/{id}',
     DELETE: '/course/{id}'
+  },
+
+  UPLOAD: {
+    UPLOAD_IMAGE: '/upload'
   }
 };
 
