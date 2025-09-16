@@ -1,9 +1,7 @@
 import React from "react"
-import { Avatar as AntAvatar } from "antd"
-
 import { cn } from "@/lib/utils"
 
-// Avatar - Root component (compatible with Radix API)
+// Avatar - Root component
 const Avatar = React.forwardRef(({ className, ...props }, ref) => (
   <div
     ref={ref}
@@ -14,28 +12,46 @@ const Avatar = React.forwardRef(({ className, ...props }, ref) => (
 Avatar.displayName = "Avatar"
 
 // AvatarImage - Image component
-const AvatarImage = React.forwardRef(({ className, src, alt, ...props }, ref) => (
-  <AntAvatar
-    ref={ref}
-    src={src}
-    className={cn("aspect-square h-full w-full", className)}
-    {...props}
-  />
-))
+const AvatarImage = React.forwardRef(({ className, src, alt, ...props }, ref) => {
+  const [imageError, setImageError] = React.useState(false)
+  
+  // Reset error state when src changes
+  React.useEffect(() => {
+    setImageError(false)
+  }, [src])
+  
+  if (imageError || !src || src === "") {
+    return null
+  }
+  
+  return (
+    <img
+      ref={ref}
+      src={src}
+      alt={alt}
+      className={cn("aspect-square h-full w-full object-cover", className)}
+      onError={() => {
+        console.log('Image load error, src:', src)
+        setImageError(true)
+      }}
+      {...props}
+    />
+  )
+})
 AvatarImage.displayName = "AvatarImage"
 
 // AvatarFallback - Fallback component
 const AvatarFallback = React.forwardRef(({ className, children, ...props }, ref) => (
-  <AntAvatar
+  <div
     ref={ref}
     className={cn(
-      "flex h-full w-full items-center justify-center rounded-full bg-muted",
+      "flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-yellow-400 text-white font-bold",
       className
     )}
     {...props}
   >
     {children}
-  </AntAvatar>
+  </div>
 ))
 AvatarFallback.displayName = "AvatarFallback"
 

@@ -1,0 +1,56 @@
+export const COMMON_MESSAGES = {
+  SUCCESS: {
+    SAVED: "Lưu thành công!",
+    UPDATED: "Cập nhật thành công!",
+    DELETED: "Xóa thành công!",
+    CREATED: "Tạo thành công!",
+    UPLOADED: "Tải lên thành công!",
+  },
+  ERROR: {
+    GENERIC: "Đã xảy ra lỗi. Vui lòng thử lại.",
+    NETWORK_ERROR: "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối.",
+    UNAUTHORIZED: "Bạn không có quyền thực hiện hành động này.",
+    FORBIDDEN: "Truy cập bị từ chối.",
+    NOT_FOUND: "Không tìm thấy dữ liệu.",
+    SERVER_ERROR: "Lỗi máy chủ. Vui lòng thử lại sau.",
+  },
+  WARNING: {
+    UNSAVED_CHANGES: "Bạn có thay đổi chưa được lưu.",
+    CONFIRM_DELETE: "Bạn có chắc chắn muốn xóa?",
+    CONFIRM_ACTION: "Bạn có chắc chắn muốn thực hiện hành động này?",
+  },
+  INFO: {
+    NO_DATA: "Không có dữ liệu",
+    LOADING: "Đang tải...",
+    PROCESSING: "Đang xử lý...",
+  },
+  BUTTON: {
+    SAVE: "Lưu",
+    CANCEL: "Hủy",
+    DELETE: "Xóa",
+    EDIT: "Chỉnh sửa",
+    CREATE: "Tạo mới",
+    UPDATE: "Cập nhật",
+    BACK: "Quay lại",
+    NEXT: "Tiếp theo",
+    PREVIOUS: "Trước đó",
+    CONFIRM: "Xác nhận",
+    CLOSE: "Đóng",
+    SUBMIT: "Gửi",
+    RESET: "Đặt lại",
+  },
+  LOADING: {
+    GENERIC: "Đang tải...",
+    PROCESSING: "Đang xử lý...",
+    SAVING: "Đang lưu...",
+    DELETING: "Đang xóa...",
+    UPLOADING: "Đang tải lên...",
+  },
+  VALIDATION: {
+    REQUIRED: "Trường này là bắt buộc",
+    INVALID_FORMAT: "Định dạng không hợp lệ",
+    TOO_SHORT: "Quá ngắn",
+    TOO_LONG: "Quá dài",
+    INVALID_VALUE: "Giá trị không hợp lệ",
+  }
+};
