@@ -1,4 +1,4 @@
-import { API_CONFIG, getAuthHeaders, handleApiResponse } from '../config/api.config';
+import { API_CONFIG, getAuthHeaders, handleApiResponse } from '@/config/api.config';
 
 export class ApiService {
   constructor() {

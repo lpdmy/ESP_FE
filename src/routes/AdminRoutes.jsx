@@ -1,9 +1,12 @@
 import { Route } from "react-router-dom";
-import UsersPage from "../pages/Admin/UserManagement/page";
+import UserManagementPage from "@/pages/Admin/UserManagementPage";
+import DashboardPage from "@/pages/Admin/DashboardPage";
 import { ROLE } from "@/common/constants/roles";
 import ProtectedRoute from "./ProtectedRoute";
+
 export const adminRoutes = [
     // <Route element={<ProtectedRoute allowedRoles={[ROLE.ADMIN]} />}>
-        <Route key="user-management" path="/admin/users" element={<UsersPage />} />
+        <Route key="admin-dashboard" path="/admin" element={<DashboardPage />} />,
+        <Route key="user-management" path="/admin/users" element={<UserManagementPage />} />
     // </Route>
 ];

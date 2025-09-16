@@ -98,7 +98,13 @@ export default defineConfig({
    resolve: {
       alias: {
          '@': path.resolve(__dirname, './src'),
-         '@LandingPage': path.resolve(__dirname, './src/components/LandingPage'),
+         '@common': path.resolve(__dirname, './src/common'),
+         '@features': path.resolve(__dirname, './src/features'),
+         '@pages': path.resolve(__dirname, './src/pages'),
+         '@auth': path.resolve(__dirname, './src/features/auth'),
+         '@admin': path.resolve(__dirname, './src/features/admin'),
+         '@landing': path.resolve(__dirname, './src/features/landing'),
+         '@LandingPage': path.resolve(__dirname, './src/features/landing/components'),
       },
    },
    server: {
