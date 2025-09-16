@@ -90,8 +90,8 @@
   }
 }
 
-/* Smooth transitions */
-* {
+/* Smooth transitions - Exclude Radix UI components to avoid conflicts */
+*:not([data-radix-dropdown-menu-content]):not([data-radix-select-content]):not([data-radix-popper-content-wrapper]):not([data-radix-dialog-content]):not([data-radix-tooltip-content]) {
   transition: all 0.2s ease-in-out;
 }
 

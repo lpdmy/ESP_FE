@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, MoreHorizontal, Eye, Edit, Trash2, UserPlus, Upload } from "lucide-react"
+import { Search, MoreHorizontal, Eye, Edit, Trash2, UserPlus, Upload, ChevronDown } from "lucide-react"
 import AddUserDialog from "./AddUserDialog"
 import { useAuthApi } from "@/hooks/useAuthApi"
 import { USER_MESSAGES } from "@/common/constants/messages"
@@ -28,9 +27,8 @@ export default function UserManagement() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [openActionDropdownId, setOpenActionDropdownId] = useState(null)
   const { createUser } = useAuthApi();
-  const [isDropdownOpen, setDropdownOpen] = useState(false)
-
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -48,9 +46,9 @@ export default function UserManagement() {
 
   const getStatusBadge = (status) =>
     status === "Active" ? (
-      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 rounded-full px-2 py-1 text-xs font-medium">Active</Badge>
     ) : (
-      <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Inactive</Badge>
+      <Badge className="bg-red-100 text-red-800 hover:bg-red-100 rounded-full px-2 py-1 text-xs font-medium">Inactive</Badge>
     )
 
   const getRoleBadge = (role) => {
@@ -59,7 +57,7 @@ export default function UserManagement() {
       Moderator: "bg-blue-100 text-blue-800 hover:bg-blue-100",
       Student: "bg-gray-100 text-gray-800 hover:bg-gray-100",
     }
-    return <Badge className={roleColors[role] || roleColors.Student}>{role}</Badge>
+    return <Badge className={`${roleColors[role] || roleColors.Student} rounded-full px-2 py-1 text-xs font-medium`}>{role}</Badge>
   }
 
   const handleExcelImport = (event) => {
@@ -77,7 +75,7 @@ export default function UserManagement() {
       setIsSuccess(true);
       setUsers([...users, newUser])
       setIsModalOpen(false)
-      toast.success(USER_MESSAGES.CREATE_SUCCESS);s
+      toast.success(USER_MESSAGES.CREATE_SUCCESS);
     } catch (err) {
       toast.error(USER_MESSAGES.SYSTEM_ERROR +  err.message);
     } finally {
@@ -86,70 +84,57 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+        <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
           <p className="text-gray-600 mt-1">Manage and monitor all platform users</p>
         </div>
-        <div className="flex gap-3">
-          <div className="relative">
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleExcelImport}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              id="excel-import"
-            />
-            <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 bg-transparent">
-              <Upload className="h-4 w-4 mr-2" />
-              Import from Excel
+          <Button 
+            onClick={() => setIsModalOpen(true)}
+            className="!bg-blue-600 hover:!bg-blue-600 !text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          >
+            <UserPlus className="h-4 w-4" />
+            Add New User
             </Button>
-          </div>
-          <AddUserDialog
-            open={isModalOpen}
-            onOpenChange={setIsModalOpen}
-            onCreateUser={handleCreateUser}
-          />
-        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-gray-900">{users.length}</div>
-            <p className="text-sm text-gray-600">Total Users</p>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="bg-white rounded-lg border border-gray-200 shadow-sm pt-6">
+            <CardContent className="p-6">
+              <div className="text-3xl font-bold text-gray-900">{users.length}</div>
+              <p className="text-sm text-gray-500 mt-1">Total Users</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">{users.filter((u) => u.status === "Active").length}</div>
-            <p className="text-sm text-gray-600">Active Users</p>
+          <Card className="bg-white rounded-lg border border-gray-200 shadow-sm pt-6">
+            <CardContent className="p-6">
+              <div className="text-3xl font-bold text-green-600">{users.filter((u) => u.status === "Active").length}</div>
+              <p className="text-sm text-gray-500 mt-1">Active Users</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">{users.filter((u) => u.role === "Student").length}</div>
-            <p className="text-sm text-gray-600">Students</p>
+          <Card className="bg-white rounded-lg border border-gray-200 shadow-sm pt-6">
+            <CardContent className="p-6">
+              <div className="text-3xl font-bold text-blue-600">{users.filter((u) => u.role === "Student").length}</div>
+              <p className="text-sm text-gray-500 mt-1">Students</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-purple-600">
+          <Card className="bg-white rounded-lg border border-gray-200 shadow-sm pt-6">
+            <CardContent className="p-6">
+              <div className="text-3xl font-bold text-purple-600">
               {users.filter((u) => u.role === "Admin" || u.role === "Moderator").length}
             </div>
-            <p className="text-sm text-gray-600">Staff</p>
+              <p className="text-sm text-gray-500 mt-1">Staff</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters + Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Users</CardTitle>
-          <CardDescription>Search and filter users by various criteria</CardDescription>
+        {/* Users Table Section */}
+        <Card className="bg-white rounded-xl shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-semibold text-gray-900">Users</CardTitle>
+            <CardDescription className="text-gray-600">Search and filter users by various criteria</CardDescription>
         </CardHeader>
         <CardContent>
           {/* Filters */}
@@ -160,91 +145,146 @@ export default function UserManagement() {
                 placeholder="Search by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                  className="pl-10 h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="student">Student</SelectItem>
-                <SelectItem value="moderator">Moderator</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-              </SelectContent>
-            </Select>
+              
+              {/* Status Filter Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="w-full sm:w-[180px] h-10 justify-between !text-gray-600 !border-gray-300 hover:!text-blue-600 hover:!border-blue-600 hover:!bg-blue-50"
+                  >
+                    {statusFilter === "all" ? "All Status" : statusFilter === "active" ? "Active" : "Inactive"}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[180px]">
+                  <DropdownMenuItem onClick={() => setStatusFilter("all")}>
+                    All Status
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("active")}>
+                    Active
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("inactive")}>
+                    Inactive
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Role Filter Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="w-full sm:w-[180px] h-10 justify-between !text-gray-600 !border-gray-300 hover:!text-blue-600 hover:!border-blue-600 hover:!bg-blue-50"
+                  >
+                    {roleFilter === "all" ? "All Roles" : 
+                     roleFilter === "student" ? "Student" :
+                     roleFilter === "moderator" ? "Moderator" : "Admin"}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[180px]">
+                  <DropdownMenuItem onClick={() => setRoleFilter("all")}>
+                    All Roles
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setRoleFilter("student")}>
+                    Student
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setRoleFilter("moderator")}>
+                    Moderator
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setRoleFilter("admin")}>
+                    Admin
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
           </div>
 
           {/* Users Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Club</TableHead>
-                  <TableHead>Join Date</TableHead>
-                  <TableHead>Last Active</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Name</th>
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Email</th>
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Role</th>
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Status</th>
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Club</th>
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Join Date</th>
+                    <th className="text-left font-medium text-gray-900 py-3 px-4">Last Active</th>
+                    <th className="text-center font-medium text-gray-900 py-3 px-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
                 {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell className="text-gray-600">{user.email}</TableCell>
-                    <TableCell>{getRoleBadge(user.role)}</TableCell>
-                    <TableCell>{getStatusBadge(user.status)}</TableCell>
-                    <TableCell className="text-gray-600">{user.club}</TableCell>
-                    <TableCell className="text-gray-600">{user.joinDate}</TableCell>
-                    <TableCell className="text-gray-600">{user.lastActive}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                         <DropdownMenuTrigger onClick={() => setDropdownOpen(!isDropdownOpen)}>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit User
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteUser(user.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete User
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
+                    <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-4 px-4 font-medium text-gray-900">{user.name}</td>
+                      <td className="py-4 px-4 text-gray-600">{user.email}</td>
+                      <td className="py-4 px-4">{getRoleBadge(user.role)}</td>
+                      <td className="py-4 px-4">{getStatusBadge(user.status)}</td>
+                      <td className="py-4 px-4 text-gray-600">{user.club}</td>
+                      <td className="py-4 px-4 text-gray-600">{user.joinDate}</td>
+                      <td className="py-4 px-4 text-gray-600">{user.lastActive}</td>
+                <td className="py-4 px-4 text-center">
+                  <DropdownMenu onOpenChange={(open) => setOpenActionDropdownId(open ? user.id : null)}>
+                    <DropdownMenuTrigger asChild>
+                      <div className="cursor-pointer hover:bg-blue-100 rounded-full p-2 transition-colors">
+                        {openActionDropdownId === user.id ? (
+                          <svg className="h-6 w-6 text-blue-600 hover:text-blue-700" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 20 20">
+                            <circle cx="10" cy="10" r="8" />
+                            <line x1="6" y1="10" x2="14" y2="10" />
+                          </svg>
+                        ) : (
+                          <svg className="h-6 w-6 text-blue-600 hover:text-blue-700" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 20 20">
+                            <circle cx="10" cy="10" r="8" />
+                            <line x1="10" y1="5" x2="10" y2="15" />
+                            <line x1="5" y1="10" x2="15" y2="10" />
+                          </svg>
+                        )}
+                      </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center gap-2">
+                        <Edit className="h-4 w-4" />
+                        Edit User
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="flex items-center gap-2 text-red-600 focus:text-red-600" 
+                        onClick={() => handleDeleteUser(user.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete User
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </td>
+                    </tr>
                 ))}
-              </TableBody>
-            </Table>
+                </tbody>
+              </table>
           </div>
 
           {filteredUsers.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No users found matching your criteria.</div>
+              <div className="text-center py-12 text-gray-500">
+                <p>No users found matching your criteria.</p>
+              </div>
           )}
         </CardContent>
       </Card>
+
+        {/* Add User Dialog */}
+        <AddUserDialog
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+          onCreateUser={handleCreateUser}
+        />
     </div>
   )
 }
