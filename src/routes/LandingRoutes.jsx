@@ -1,6 +1,6 @@
 import { Route } from "react-router-dom";
-import LandingPage from "../pages/page";
+import HomePage from "@/pages/Landing/HomePage";
 
 export const landingRoutes = [
-  <Route key="landing" path="/" element={<LandingPage />} />
+  <Route key="landing" path="/" element={<HomePage />} />
 ];

@@ -1,5 +1,5 @@
 import { ApiService } from './api.service';
-import { API_CONFIG } from '../config/api.config';
+import { API_CONFIG } from '@/config/api.config';
 
 export class CourseService extends ApiService {
   async getAllCourses(token) {
