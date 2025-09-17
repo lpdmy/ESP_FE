@@ -1,9 +1,27 @@
-import { Bell, Search, User, Menu, Calendar, Trophy, Star } from "lucide-react"
+import { Bell, Search, User, Menu, Calendar, Trophy, Star, LogOut, Settings } from "lucide-react"
 import { Button } from "@/common/components/ui/button"
 import { Badge } from "@/common/components/ui/badge"
 import { Input } from "@/common/components/ui/input"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/common/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar"
+import { useDispatch, useSelector } from "react-redux"
+import { useNavigate } from "react-router-dom"
+
+import { clearUser } from "@/store/user/userSlice";
+import { ROUTES } from "@/common/constants/routes";
 
 export default function Header() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const user = useSelector((state) => state.user.user);
+
+  const handleLogout = () => {
+    dispatch(clearUser());
+    localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
+    navigate(ROUTES.LOGIN);
+  };
+  
   return (
     <header className="bg-white shadow-sm border-b border-gray-100 px-6 py-4 sticky top-0 z-50">
       <div className="flex items-center justify-between">
@@ -50,12 +68,32 @@ export default function Header() {
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">3</span>
             </Button>
           </Badge>
-          <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-              <User className="h-5 w-5 text-white" />
-            </div>
-            <span className="hidden md:block font-medium text-gray-800">Nguyễn Văn A</span>
-          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-100">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src="../../../../public/icon/avatar-default-svgrepo-com.svg" />
+                </Avatar>
+                <span className="hidden md:block text-sm font-medium text-gray-700">{user?.username || "Guest"}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem>
+                <User className="mr-2 h-4 w-4" />
+                Trang cá nhân
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                Cài đặt
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Đăng xuất
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>
