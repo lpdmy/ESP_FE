@@ -15,4 +15,8 @@ export const ROUTES = {
     PROFILE: "/profile",
     EDIT: "/profile/edit",
   },
+  ACTIVITY:{
+    LIST_EVENT : "/activity/list-event",
+    ACTIVITY_DETAIL : "/activity/detail/:id",
+  },
 };

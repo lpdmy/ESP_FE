@@ -11,6 +11,7 @@ export default function AppRoutes() {
       {...authRoutes}
       {...adminRoutes}
       {...profileRoutes}
+      {...activityRoutes}
     </Routes>
   );
 }
