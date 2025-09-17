@@ -1,3 +1,5 @@
+import { Bell, Search, User, Menu, Calendar, Trophy, Star } from "lucide-react"
+import { Link } from "react-router-dom"
 import { Bell, Search, User, Menu, Calendar, Trophy, Star, LogOut, Settings } from "lucide-react"
 import { Bell, Search, User, Menu, Calendar, Trophy, Star } from "lucide-react"
 import { Link } from "react-router-dom"
@@ -71,6 +73,15 @@ export default function Header() {
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">3</span>
             </Button>
           </Badge>
+          <Link
+            to={ROUTES.USER_PROFILE.PROFILE}
+            className="flex items-center space-x-2 cursor-pointer rounded-lg px-2 py-1 hover:bg-orange-50 transition-colors"
+          >
+            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+              <User className="h-5 w-5 text-white" />
+            </div>
+            <span className="hidden md:block font-medium text-gray-800">Nguyễn Văn A</span>
+          </Link>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
