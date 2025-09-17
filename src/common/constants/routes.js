@@ -11,4 +11,8 @@ export const ROUTES = {
   ADMIN: {
     USER_MANAGEMENT: "/admin/users",
   },
+  USER_PROFILE: {
+    PROFILE: "/profile",
+    EDIT: "/profile/edit",
+  },
 };
