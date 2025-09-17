@@ -1,8 +1,5 @@
-import { Bell, Search, User, Menu, Calendar, Trophy, Star } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Bell, Search, User, Menu, Calendar, Trophy, Star, LogOut, Settings } from "lucide-react"
-import { Bell, Search, User, Menu, Calendar, Trophy, Star } from "lucide-react"
-import { Link } from "react-router-dom"
 import { Button } from "@/common/components/ui/button"
 import { Badge } from "@/common/components/ui/badge"
 import { Input } from "@/common/components/ui/input"
@@ -13,7 +10,6 @@ import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 
 import { clearUser } from "@/store/user/userSlice";
-import { ROUTES } from "@/common/constants/routes";
 
 export default function Header() {
   const dispatch = useDispatch();
@@ -26,7 +22,7 @@ export default function Header() {
     localStorage.removeItem("refreshToken");
     navigate(ROUTES.LOGIN);
   };
-  
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-100 px-6 py-4 sticky top-0 z-50">
       <div className="flex items-center justify-between">
@@ -73,16 +69,6 @@ export default function Header() {
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">3</span>
             </Button>
           </Badge>
-          <Link
-            to={ROUTES.USER_PROFILE.PROFILE}
-            className="flex items-center space-x-2 cursor-pointer rounded-lg px-2 py-1 hover:bg-orange-50 transition-colors"
-          >
-            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-              <User className="h-5 w-5 text-white" />
-            </div>
-            <span className="hidden md:block font-medium text-gray-800">Nguyễn Văn A</span>
-          </Link>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-100">
@@ -94,8 +80,13 @@ export default function Header() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                Trang cá nhân
+                <Link
+                  to={ROUTES.USER_PROFILE.PROFILE}
+                  className="inline-flex items-center"
+                >
+                  <User className="mr-3 h-4 w-4" />
+                  Trang cá nhân
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Settings className="mr-2 h-4 w-4" />
