@@ -11,7 +11,8 @@ export const useAuthApi = () => {
   }, []);
 
   const getMe = useCallback(async () => {
-    return executeApiCall(authService.getMe.bind(authService), [], { setLoading, setError });
+    const token = localStorage.getItem('token');
+    return executeApiCall(authService.getMe.bind(authService), [token], { setLoading, setError });
   }, []);
 
   const importFile = useCallback(async (file) => {
