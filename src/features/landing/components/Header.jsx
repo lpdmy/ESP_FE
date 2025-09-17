@@ -35,7 +35,7 @@ export default function Header() {
         {/* Navigation Icons */}
         <div className="flex items-center space-x-4">
           <Button variant="ghost" className="flex items-center space-x-2 hover:bg-orange-50"
-          onClick={() => navigate("/activity/list-event")}
+          onClick={() => navigate(ROUTES.ACTIVITY.LIST_ACTIVITY)}
           >
             <Calendar className="h-4 w-4" />
             <span>Sự kiện</span>

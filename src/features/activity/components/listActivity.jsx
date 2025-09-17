@@ -1,11 +1,9 @@
 import { useState } from "react"
-import Header from "@/components/LandingPage/Header"
-import Sidebar from "@/components/LandingPage/Sidebar"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/activity/components/tab"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/common/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
+import { Badge } from "@/common/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/common/components/ui/tabs"
+import { Avatar, AvatarFallback } from "@/common/components/ui/avatar"
 import {
   Calendar,
   Clock,
@@ -22,7 +20,7 @@ import {
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 // Import mock data từ JSON
-import mockEvents from "@/mock_data/events.json"
+import mockEvents from "@/mock_data/activity.json"
 
 const categoryIcons = {
   workshop: BookOpen,
@@ -77,15 +75,8 @@ export default function ListActivity() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
-      <Header />
-
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Sidebar */}
-          <div className="lg:col-span-3">
-            <Sidebar />
-          </div>
-
           {/* Main Content */}
           <div className="lg:col-span-9">
             {/* Page Header */}
