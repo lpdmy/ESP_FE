@@ -352,7 +352,6 @@ export default function EditStudentProfile() {
               loadingText={toast.PROFILE_MESSAGES.LOADING.SAVING_CHANGES}
               className="flex-1 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-medium py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
             >
-              <Save className="w-4 h-4 mr-2" />
               {toast.PROFILE_MESSAGES.BUTTON.SAVE}
             </LoadingButton>
             <Button

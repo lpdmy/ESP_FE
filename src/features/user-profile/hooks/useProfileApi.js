@@ -9,7 +9,6 @@ export function useProfileApi() {
 
   // Use refs to create stable function references
   const getMyProfileRef = useRef(async () => {
-    console.log('useProfileApi getMyProfile called');
     const token = localStorage.getItem('token');
     return executeApiCall(userService.getMyProfile.bind(userService), [token], { setLoading: setProfileLoading, setError });
   });

@@ -58,17 +58,6 @@ export default function StudentProfile() {
     }, []); // Empty dependency array to run only once
 
 
-
-    if (!profile) {
-        return (
-            <div className="max-w-4xl mx-auto px-4 py-6">
-                <div className="text-center">
-                    <div className="text-lg text-gray-500">{toast.PROFILE_MESSAGES.ERROR.PROFILE_LOAD_FAILED}</div>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <>
             <LoadingOverlay
@@ -76,7 +65,7 @@ export default function StudentProfile() {
                 text={toast.PROFILE_MESSAGES.LOADING.PROFILE}
                 variant="primary"
             />
-            {profileLoading ? (
+            {!profile ? (
                 <div className="max-w-4xl mx-auto px-4 py-6">
                     <LoadingCard text={toast.PROFILE_MESSAGES.LOADING.PROFILE} className="h-64" variant="primary" />
                 </div>
