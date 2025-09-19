@@ -15,4 +15,7 @@ export const ROUTES = {
     PROFILE: "/profile",
     EDIT: "/profile/edit",
   },
+  ONBOARDING: {
+    ONBOARDING: "/onboarding",
+  },
 };
