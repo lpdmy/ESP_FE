@@ -50,7 +50,7 @@ export default function Sidebar() {
         <nav className="space-y-1">
           {menuItems.map((item, index) => (
             <Button
-              onClick={navigate(item.path)}
+              onClick={() => navigate(item.path)}
               key={index}
               variant={item.active ? "default" : "ghost"}
               className={`w-full justify-start ${item.active ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"}`}

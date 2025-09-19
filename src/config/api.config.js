@@ -51,6 +51,10 @@ export const API_CONFIG = {
 
   UPLOAD: {
     UPLOAD_IMAGE: '/upload'
+  },
+  ACTIVITY:{
+    GET_ALL:'/activity',
+    GET_BY_ID:'/activity/{id}'
   }
 };
 
