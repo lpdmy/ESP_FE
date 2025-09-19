@@ -64,8 +64,6 @@ export default function AuthForm() {
 
   return (
     <div className="flex items-center justify-center p-4">
-
-
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-orange-200 to-yellow-200 rounded-full opacity-20 float-animation"></div>
