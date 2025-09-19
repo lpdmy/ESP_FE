@@ -1,10 +1,11 @@
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/common/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card";
 import { Badge } from "@/common/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/common/components/ui/avatar";
-import mockEvents from "@/mock_data/activity.json";
-import mockLeaderboardData from "@/mock_data/leaderBoard.json"
+import mockLeaderboardData from "@/mock_data/leaderBoard.json";
+import { useActivityApi } from "../hooks/useActivityApi";
 import {
   Calendar,
   Clock,
@@ -21,6 +22,7 @@ import {
   Code,
   Heart,
 } from "lucide-react";
+
 const categoryIcons = {
   workshop: BookOpen,
   competition: Trophy,
@@ -40,16 +42,46 @@ const categoryColors = {
 
 export default function ActivityDetailPage() {
   const { id } = useParams();
-  const event = mockEvents.find(e => e.id === parseInt(id, 10));
   const navigate = useNavigate();
-const mockLeaderboard = mockLeaderboardData
-  if (!event) {
+  const {
+    activityLoading,
+    getActivityDetail,
+    error,
+  } = useActivityApi();
+
+  const [activity, setActivity] = useState(null);
+
+  const mockLeaderboard = mockLeaderboardData;
+  useEffect(() => {
+  if (!id) return;
+  console.log("Fetching detail for id:", id);
+  const fetchDetail = async () => {
+    try {
+      const data = await getActivityDetail(parseInt(id, 10));
+      console.log("API result:", data.data);
+      setActivity(data.data);
+    } catch (err) {
+      console.error("Lỗi khi gọi getActivityDetail:", err);
+    }
+  };
+  fetchDetail();
+}, []);
+  if (activityLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Đang tải...</p>
+      </div>
+    );
+  }
+
+  // nếu lỗi
+  if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
-        <Header />
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Không tìm thấy sự kiện</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Có lỗi xảy ra</h1>
+            <p className="text-red-600 mb-4">{error.message || "Không thể tải thông tin sự kiện."}</p>
             <Button onClick={() => navigate(-1)}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Quay lại
@@ -60,6 +92,15 @@ const mockLeaderboard = mockLeaderboardData
     );
   }
 
+  // nếu không có activity (ví dụ id sai)
+  if (!activity) {
+    return null; // hoặc hiển thị "Không tìm thấy sự kiện"
+  }
+
+  // Dữ liệu activity từ API
+  const event = activity;
+
+  // Các helper functions
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("vi-VN", {
@@ -115,7 +156,7 @@ const mockLeaderboard = mockLeaderboardData
     }
   };
 
-  const IconComponent = categoryIcons[event.category];
+  const IconComponent = categoryIcons[event.category] || (() => null);
   const isCompetition = event.category === "competition";
 
   return (
@@ -154,14 +195,14 @@ const mockLeaderboard = mockLeaderboardData
                     <Calendar className="w-5 h-5 mr-3 text-orange-500" />
                     <div>
                       <p className="text-sm font-medium">Ngày tổ chức</p>
-                      <p className="text-sm">{formatDate(event.date)}</p>
+                      <p className="text-sm">{formatDate(event.startDate)}</p>
                     </div>
                   </div>
                   <div className="flex items-center text-gray-600">
                     <Clock className="w-5 h-5 mr-3 text-blue-500" />
                     <div>
-                      <p className="text-sm font-medium">Thời gian</p>
-                      <p className="text-sm">{event.time}</p>
+                      <p className="text-sm font-medium">Ngày kết thúc</p>
+                      <p className="text-sm">{formatDate(event.endDate)}</p>
                     </div>
                   </div>
                   <div className="flex items-center text-gray-600">
@@ -187,7 +228,7 @@ const mockLeaderboard = mockLeaderboardData
                     <div className="flex items-center text-gray-600">
                       <Users className="w-5 h-5 mr-2" />
                       <span>
-                        {event.participants}/{event.maxParticipants} người tham gia
+                        {event.numberOfParticipants}/{event.maxParticipants} người tham gia
                       </span>
                     </div>
                     <div className="flex items-center text-gray-600">
@@ -204,10 +245,10 @@ const mockLeaderboard = mockLeaderboardData
                   </Button>
                 </div>
                 {event?.tags?.map((tag, index) => (
-  <Badge key={index} variant="secondary" className="text-xs">
-    {tag}
-  </Badge>
-))}
+                  <Badge key={index} variant="secondary" className="text-xs mr-2">
+                    {tag}
+                  </Badge>
+                ))}
               </CardContent>
             </Card>
 
@@ -223,7 +264,7 @@ const mockLeaderboard = mockLeaderboardData
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-3">
-                      {event.rules.map((rule, index) => (
+                      {event.rules?.map((rule, index) => (
                         <li key={index} className="flex items-start">
                           <span className="w-6 h-6 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">
                             {index + 1}

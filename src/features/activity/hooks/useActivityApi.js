@@ -11,8 +11,20 @@ export function useActivityApi() {
     async (pageNumber = 1, pageSize = 10, search = null) => {
       const token = localStorage.getItem('token');
       return executeApiCall(
-        activityService.getAllActivities.bind(activityService), // chú ý service phải có getAllActivities
+        activityService.getAllActivities.bind(activityService), 
         [pageNumber, pageSize, search, token],
+        { setLoading: setActivityLoading, setError }
+      );
+    },
+    [activityService]
+  );
+  const getActivityDetail = useCallback(
+    async (activityId) => {
+      if (!activityId) throw new Error('Missing activityId');
+      const token = localStorage.getItem('token');
+      return executeApiCall(
+        activityService.getActivityById.bind(activityService),
+        [activityId, token],
         { setLoading: setActivityLoading, setError }
       );
     },
@@ -20,11 +32,11 @@ export function useActivityApi() {
   );
 
   const clearError = useCallback(() => setError(null), []);
-
   return {
-    activityLoading,
-    error,
     getAllActivity,
+    getActivityDetail,
+    error,
+    activityLoading,
     clearError,
   };
 }
