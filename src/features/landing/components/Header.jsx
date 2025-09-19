@@ -82,15 +82,20 @@ export default function Header() {
               <DropdownMenuItem>
                 <Link
                   to={ROUTES.USER_PROFILE.PROFILE}
-                  className="inline-flex items-center"
+                  className="inline-flex items-center w-full"
                 >
                   <User className="mr-3 h-4 w-4" />
                   Trang cá nhân
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                Cài đặt
+                <Link
+                    to={ROUTES.AUTH.CHANGEPASSWORD}
+                    className="inline-flex items-center w-full"
+                  >
+                <Settings className="mr-3 h-4 w-4" />
+                  Cài đặt
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-red-600" onClick={handleLogout}>

@@ -27,6 +27,14 @@ export const useAuthApi = () => {
     return executeApiCall(authService.changePasswordOtl.bind(authService), [request], { setLoading, setError });
   }, []);
 
+  const changePassword = useCallback(async (request) => {
+    return executeApiCall(authService.changePassword.bind(authService), [request], { setLoading, setError });
+  }, []);
+
+  const forgotPassword = useCallback(async (request) => {
+    return executeApiCall(authService.forgotPassword.bind(authService), [request], { setLoading, setError });
+  }, []);
+
   const createUser = useCallback(async (request) => {
     return executeApiCall(authService.createUser.bind(authService), [request], { setLoading, setError });
   }, []);
@@ -44,6 +52,8 @@ export const useAuthApi = () => {
     test,
     oneTimeLogin,
     changePasswordOtl,
+    changePassword,
+    forgotPassword,
     createUser,
     clearError: () => setError(null)
   };

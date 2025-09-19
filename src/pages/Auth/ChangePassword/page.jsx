@@ -1,10 +1,10 @@
 import ChangePasswordForm from "@/features/auth/components/ChangePasswordForm"
-import MainLayout from "@/common/components/layout/MainLayout"
+import LandingLayout from "@/common/components/layout/LandingLayout"
 
 export default function ChangePasswordPage() {
   return (
-    <MainLayout>
+    <LandingLayout>
       <ChangePasswordForm />
-    </MainLayout>
+    </LandingLayout>
   )
 }
