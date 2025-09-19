@@ -152,9 +152,9 @@ export default function AuthForm() {
                       <input type="checkbox" className="mr-2 rounded border-gray-300" />
                       Ghi nhớ đăng nhập
                     </label>
-                    <a href="#" className="text-orange-600 hover:text-orange-700">
+                    <Link to={ROUTES.AUTH.FORGETPASSWORD} className="text-orange-600 hover:text-orange-700">
                       Quên mật khẩu?
-                    </a>
+                    </Link>
                   </div>
 
                   {loginError && (
