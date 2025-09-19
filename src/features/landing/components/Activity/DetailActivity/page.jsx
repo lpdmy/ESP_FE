@@ -160,11 +160,7 @@ export default function ActivityDetailPage() {
   const isCompetition = event.category === "competition";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-9">
+    <div className="w-full">
             {/* Back Button */}
             <div className="mb-6">
               <Button variant="outline" onClick={() => navigate(-1)} className="bg-white/50 hover:bg-white/80">
@@ -344,9 +340,6 @@ export default function ActivityDetailPage() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

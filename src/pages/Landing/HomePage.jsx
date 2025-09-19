@@ -1,4 +1,4 @@
-import LandingContent from "@/features/landing/components/LandingContent"
+import LandingContent from "@/features/landing/components/LandingContent/page"
 import LandingLayout from "@/common/components/layout/LandingLayout"
 
 export default function HomePage() {

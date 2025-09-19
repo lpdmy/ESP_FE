@@ -18,7 +18,7 @@ import {
 import { useNavigate } from "react-router-dom"
 // Import mock data từ JSON
 import mockEvents from "@/mock_data/activity.json"
-import { useActivityApi } from "../hooks/useActivityApi"
+import { useActivityApi } from "../../../hooks/useActivityApi"
 const categoryIcons = {
   activity: BookOpen,
   competition: Trophy,
@@ -94,11 +94,7 @@ useEffect(() => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-9">
+    <div className="w-full">
             {/* Page Header */}
             <div className="mb-6 flex items-center justify-between">
               <div>
@@ -256,9 +252,7 @@ useEffect(() => {
                 </div>
               </TabsContent>
             </Tabs>
-          </div>
-        </div>
-      </div>
+      
       <div className="flex justify-center items-center mt-6 gap-2">
   <Button
     size="sm"
