@@ -16,7 +16,7 @@ export default function NewsFeed() {
                       <div className="flex-1">
               <textarea
                 placeholder="Chia sẻ hoạt động học tập, nghệ thuật của bạn..."
-                className="w-full p-3 border border-gray-200 rounded-md text-base resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full p-3 mt-3 border border-gray-200 rounded-md text-base resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 rows={3}
               />
             <div className="flex items-center justify-between mt-3">
