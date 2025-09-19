@@ -31,11 +31,10 @@ export default function ResetPasswordForm() {
     const location = useLocation();
     const navigate = useNavigate();
     const dispatch = useDispatch();
-    const { oneTimeLogin, changePasswordOtl, getMe } = useAuthApi();
+    const { oneTimeLogin, changePasswordOtl, getMe, loading } = useAuthApi();
 
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [error, setError] = useState("");
     const [password, setPassword] = useState("");
@@ -77,7 +76,6 @@ export default function ResetPasswordForm() {
             return;
         }
 
-        setIsLoading(true);
         try {
             const result = await changePasswordOtl({
                 token,
@@ -97,8 +95,6 @@ export default function ResetPasswordForm() {
             setIsSuccess(true);
         } catch (err) {
             toast.error(err.message || "Có lỗi xảy ra");
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -274,10 +270,10 @@ export default function ResetPasswordForm() {
                                 type="submit"
                                 className="w-full btn-primary h-12 text-lg font-semibold"
                                 disabled={
-                                    isLoading || !password || !confirmPassword
+                                    loading || !password || !confirmPassword
                                 }
                             >
-                                {isLoading
+                                {loading
                                     ? "Đang cập nhật..."
                                     : "Cập nhật mật khẩu"}
                             </Button>

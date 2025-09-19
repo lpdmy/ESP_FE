@@ -22,6 +22,15 @@ export class AuthService extends ApiService {
     return this.post(API_CONFIG.AUTH.CHANGE_PASSWORD_OTL, request);
   }
 
+  async changePassword(request) {
+    const token = localStorage.getItem('token');
+    return this.post(API_CONFIG.AUTH.CHANGE_PASSWORD, request, token);
+  }
+
+  async forgotPassword(request) {
+    return this.post(API_CONFIG.AUTH.FORGOT_PASSWORD, request);
+  }
+
   async createUser(request) {
     return this.post(API_CONFIG.AUTH.CREATE_USER, request);
   }

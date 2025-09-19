@@ -3,7 +3,7 @@ import { Button } from "@/common/components/ui/button"
 import { Input } from "@/common/components/ui/input"
 import { Label } from "@/common/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/common/components/ui/card"
-import { Eye, EyeOff, ArrowLeft, User, Mail, Lock, GraduationCap } from "lucide-react"
+import { Eye, EyeOff, User, Mail, Lock, GraduationCap, ArrowRight } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useAuthApi } from "@/features/auth/hooks/useAuthApi";
 import { useNavigate } from "react-router-dom";
@@ -40,18 +40,18 @@ export default function AuthForm() {
     setLoginError("");
     try {
       const result = await login({ username: loginEmail, password: loginPassword });
-       if (result?.data?.accessToken) {
+      if (result?.data?.accessToken) {
         localStorage.setItem("token", result.data.accessToken);
         localStorage.setItem("refreshToken", result.data.refreshToken);
         const resultUser = await getMe();
         dispatch(setUser(resultUser?.data));
         if (resultUser?.data.role == ROLE.ADMIN) {
           navigate(ROUTES.ADMIN.USER_MANAGEMENT);
-        } 
+        }
         else {
           navigate(ROUTES.LANDING.HOME);
         }
-    }
+      }
     } catch (err) {
       setLoginError(err.message || "Đăng nhập thất bại");
     }
@@ -64,6 +64,8 @@ export default function AuthForm() {
 
   return (
     <div className="flex items-center justify-center p-4">
+
+
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-orange-200 to-yellow-200 rounded-full opacity-20 float-animation"></div>
@@ -77,23 +79,24 @@ export default function AuthForm() {
         ></div>
       </div>
 
-      <div className="w-full max-w-md relative z-10">
+      <div className="w-[550px] max-w-md relative z-10">
         {/* Header */}
-        <div className="text-center mb-8">
-          <Link
-            href="/"
-            className="inline-flex items-center text-orange-600 hover:text-orange-700 mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại trang chủ
-          </Link>
+        <div className="text-center my-5">
           <div className="flex items-center justify-center mb-4">
             <GraduationCap className="w-12 h-12 text-orange-500 mr-3" />
             <h1 className="text-3xl font-bold gradient-text">EduSphere</h1>
           </div>
           <p className="text-gray-600">Nền tảng kết nối học sinh THPT FPT School</p>
         </div>
-
+        <div className="text-center mb-3 text-sm text-gray-500">
+          <Link
+            to={ROUTES.ONBOARDING.ONBOARDING}
+            className="inline-flex items-center text-orange-600 hover:text-orange-700 text-sm font-medium transition-colors"
+          >
+            <ArrowRight className="w-4 h-4 mr-1" />
+            Xem giới thiệu
+          </Link>
+        </div>
         {/* Auth Card */}
         <Card className="glass hover-lift card-shine overflow-hidden">
           <div className="relative">
@@ -171,18 +174,6 @@ export default function AuthForm() {
                     )}
                   </Button>
                 </form>
-
-                <div className="mt-6 text-center">
-                  <p className="text-gray-600">
-                    Chưa có tài khoản?{" "}
-                    <button
-                      onClick={toggleAuthMode}
-                      className="text-orange-600 hover:text-orange-700 font-semibold transition-colors"
-                    >
-                      Đăng ký ngay
-                    </button>
-                  </p>
-                </div>
               </CardContent>
             </div>
 
@@ -310,7 +301,7 @@ export default function AuthForm() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500">
-          <p>© 2024 EduSphere - Nền tảng học tập THPT FPT School</p>
+          <p>© 2025 EduSphere - Nền tảng học tập THPT FPT School</p>
         </div>
       </div>
     </div>
