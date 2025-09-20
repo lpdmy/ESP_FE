@@ -225,6 +225,10 @@ body {
   background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
 }
 
+.bg-gradient-green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
 /* Hover effects */
 .hover-lift {
   transition: transform 0.3s ease, box-shadow 0.3s ease;

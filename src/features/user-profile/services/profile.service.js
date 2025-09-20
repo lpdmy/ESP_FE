@@ -34,6 +34,15 @@ export class UserService extends ApiService {
   async updateMyPersonalInfo(personalInfoData, token) {
     return this.put(API_CONFIG.USER_PROFILE.MY_PROFILE, personalInfoData, token);
   }
+
+  // Teacher Profile methods
+  async getMyTeacherProfile(token) {
+    return this.get(API_CONFIG.USER_PROFILE.MY_TEACHER_PROFILE, token);
+  }
+
+  async updateMyTeacherProfile(teacherProfileData, token) {
+    return this.put(API_CONFIG.USER_PROFILE.UPDATE_TEACHER_PROFILE, teacherProfileData, token);
+  }
 }
 
 export const userService = new UserService();
