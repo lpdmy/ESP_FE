@@ -20,6 +20,10 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  const toggleDropdown = () => {
+    setDropdownOpen(!isDropdownOpen);
+  };
+
   const handleLogout = () => {
     dispatch(clearUser());
 
@@ -47,7 +51,7 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">ES</span>
             </div>
-            <h1 className="text-xl font-semibold text-gray-900">EduSphere</h1>
+            <h1 className="text-xl font-semibold text-gray-900">EduSphere Quản trị</h1>
           </div>
         </div>
 
@@ -60,8 +64,8 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
 
           {/* User Profile Dropdown */}
           <DropdownMenu>
-            <DropdownMenuTrigger onClick={() => setDropdownOpen(!isDropdownOpen)}>
-              <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-100">
+            <DropdownMenuTrigger onClick={toggleDropdown}>
+              <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-100" data-dropdown-trigger="true">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="/admin-avatar.png" />
                   <AvatarFallback className="bg-blue-100 text-blue-600">AD</AvatarFallback>
@@ -69,7 +73,13 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
                 <span className="text-sm font-medium text-gray-700">{user ? user.username : "Guest"}</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent 
+              align="end" 
+              className="w-56 mt-2"
+              isOpen={isDropdownOpen}
+              onClose={() => setDropdownOpen(false)}
+              sideOffset={8}
+            >
               <DropdownMenuItem>
                 <User className="mr-2 h-4 w-4" />
                 Profile

@@ -1,36 +1,65 @@
 // src/components/AdminPage/AdminSidebar.jsx
 
 import { Link, useLocation } from "react-router-dom"
-import { LayoutDashboard, Users, Users2, MessageSquare, ChevronLeft, Trophy } from "lucide-react"
+import { LayoutDashboard, Users, Users2, MessageSquare, ChevronLeft, Trophy, GraduationCap,
+  Star,
+  UserCog,
+  Bell,
+  Shield } from "lucide-react"
 import { Button } from "@/common/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ROUTES } from "@/common/constants/routes"
 
 const navigation = [
   {
-    name: "Dashboard",
+    name: "Tổng quan",
     href: "/admin",
     icon: LayoutDashboard,
   },
   {
-    name: "User Management",
+    name: "Quản lý người dùng",
     href: ROUTES.ADMIN.USER_MANAGEMENT,
     icon: Users,
   },
   {
-    name: "Activities & Contests",
+    name: "Hoạt động & Cuộc thi",
     href: "/admin/activities",
     icon: Trophy,
   },
   {
-    name: "Clubs & Classes",
+    name: "Câu lạc bộ",
     href: "/admin/clubs",
     icon: Users2,
   },
   {
-    name: "Posts & Comments",
+    name: "Lớp học",
+    href: "/admin/classes",
+    icon: GraduationCap,
+  },
+  {
+    name: "Bài viết & Bình luận",
     href: "/admin/posts",
     icon: MessageSquare,
+  },
+  {
+    name: "Điểm thưởng và Phần thưởng",
+    href: "/admin/rewards",
+    icon: Star,
+  },
+  {
+    name: "Quản lý nhân sự",
+    href: "/admin/staff",
+    icon: UserCog,
+  },
+  {
+    name: "Thông báo",
+    href: "/admin/notifications",
+    icon: Bell,
+  },
+  {
+    name: "Trung tâm kiểm duyệt",
+    href: "/admin/notifications",
+    icon: Shield,
   },
 ]
 
