@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui
 import { Badge } from "@/common/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/common/components/ui/avatar";
 import mockLeaderboardData from "@/mock_data/leaderBoard.json";
-import { useActivityApi } from "../hooks/useActivityApi";
+import { LoadingOverlay } from '@/common/components/ui/loading';
 import {
   Calendar,
   Clock,
@@ -22,23 +22,7 @@ import {
   Code,
   Heart,
 } from "lucide-react";
-
-const categoryIcons = {
-  workshop: BookOpen,
-  competition: Trophy,
-  entertainment: Music,
-  art: Palette,
-  tech: Code,
-  social: Heart,
-};
-const categoryColors = {
-  workshop: "bg-blue-100 text-blue-700 border-blue-200",
-  competition: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  entertainment: "bg-purple-100 text-purple-700 border-purple-200",
-  art: "bg-pink-100 text-pink-700 border-pink-200",
-  tech: "bg-green-100 text-green-700 border-green-200",
-  social: "bg-red-100 text-red-700 border-red-200",
-};
+import { useActivityApi } from "@/features/landing/hooks/useActivityApi";
 
 export default function ActivityDetailPage() {
   const { id } = useParams();
@@ -48,9 +32,7 @@ export default function ActivityDetailPage() {
     getActivityDetail,
     error,
   } = useActivityApi();
-
   const [activity, setActivity] = useState(null);
-
   const mockLeaderboard = mockLeaderboardData;
   useEffect(() => {
   if (!id) return;
@@ -66,15 +48,6 @@ export default function ActivityDetailPage() {
   };
   fetchDetail();
 }, []);
-  if (activityLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Đang tải...</p>
-      </div>
-    );
-  }
-
-  // nếu lỗi
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
@@ -91,16 +64,8 @@ export default function ActivityDetailPage() {
       </div>
     );
   }
-
-  // nếu không có activity (ví dụ id sai)
-  if (!activity) {
-    return null; // hoặc hiển thị "Không tìm thấy sự kiện"
-  }
-
-  // Dữ liệu activity từ API
-  const event = activity;
-
-  // Các helper functions
+  const event = activity ?? {};
+  const isCompetition = event.category === 1;
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("vi-VN", {
@@ -110,20 +75,6 @@ export default function ActivityDetailPage() {
       day: "numeric",
     });
   };
-
-  const getStatusBadge = () => {
-    switch (event.status) {
-      case "active":
-        return <Badge className="bg-green-500 text-white">Đang diễn ra</Badge>;
-      case "upcoming":
-        return <Badge className="bg-blue-500 text-white">Sắp diễn ra</Badge>;
-      case "ended":
-        return <Badge className="bg-gray-500 text-white">Đã kết thúc</Badge>;
-      default:
-        return null;
-    }
-  };
-
   const getRankIcon = (rank) => {
     switch (rank) {
       case 1:
@@ -136,31 +87,10 @@ export default function ActivityDetailPage() {
         return <span className="w-5 h-5 flex items-center justify-center text-sm font-semibold text-gray-600">#{rank}</span>;
     }
   };
-
-  const getCategoryLabel = (category) => {
-    switch (category) {
-      case "workshop":
-        return "Workshop";
-      case "competition":
-        return "Cuộc thi";
-      case "entertainment":
-        return "Giải trí";
-      case "art":
-        return "Nghệ thuật";
-      case "tech":
-        return "Công nghệ";
-      case "social":
-        return "Xã hội";
-      default:
-        return category;
-    }
-  };
-
-  const IconComponent = categoryIcons[event.category] || (() => null);
-  const isCompetition = event.category === "competition";
-
+  
   return (
     <div className="w-full">
+        {activityLoading && <LoadingOverlay isLoading={true} />}
             {/* Back Button */}
             <div className="mb-6">
               <Button variant="outline" onClick={() => navigate(-1)} className="bg-white/50 hover:bg-white/80">
@@ -171,19 +101,14 @@ export default function ActivityDetailPage() {
 
             {/* Event Header */}
             <Card className="glass hover-lift mb-6">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
+              <CardContent className="pb-6 pt-6 pl-6 pr-6 py-3 bg-white border-2 border-orange-200 p-4 rounded-lg">
+                <div className="flex items-start justify-between mb-4 ">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
+                    <div className="flex items-center gap-3 mb-3 ">
                       <h1 className="text-3xl font-bold gradient-text">{event.title}</h1>
-                      <Badge className={categoryColors[event.category]}>
-                        <IconComponent className="w-3 h-3 mr-1" />
-                        {getCategoryLabel(event.category)}
-                      </Badge>
                     </div>
                     <p className="text-gray-600 text-lg leading-relaxed">{event.description}</p>
                   </div>
-                  {getStatusBadge()}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -220,25 +145,29 @@ export default function ActivityDetailPage() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center text-gray-600">
-                      <Users className="w-5 h-5 mr-2" />
-                      <span>
-                        {event.numberOfParticipants}/{event.maxParticipants} người tham gia
-                      </span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Target className="w-5 h-5 mr-2" />
-                      <span>Tổ chức bởi {event.organizer}</span>
-                    </div>
-                  </div>
-                  <Button className="btn-primary" disabled={event.status === "ended"}>
-                    {event.status === "active"
-                      ? "Tham gia ngay"
-                      : event.status === "upcoming"
-                      ? "Đăng ký"
-                      : "Đã kết thúc"}
+              <div className="flex flex-col space-y-4">
+              <div className="flex items-center text-gray-600">
+                <Users className="w-5 h-5 mr-2" />
+                <span>
+                  {event.numberOfParticipants}/{event.maxParticipants} người tham gia
+                </span>
+              </div>
+              <div className="flex items-center text-gray-600">
+                <Target className="w-5 h-5 mr-2" />
+                <span>Tổ chức bởi {event.organizer}</span>
+              </div>
+            </div>
+                  <div className="flex gap-2">
+                   {new Date(event.endRegisterDate) > new Date() ? (
+                   <Button size="sm" className="btn-primary">
+                    Đăng ký
+                    </Button>
+                   ) : (
+                    <Button size="sm" variant="outline" disabled>
+                     Hết thời gian
                   </Button>
+                 )}
+                 </div>
                 </div>
                 {event?.tags?.map((tag, index) => (
                   <Badge key={index} variant="secondary" className="text-xs mr-2">
@@ -258,25 +187,29 @@ export default function ActivityDetailPage() {
                       {isCompetition ? "Thể lệ cuộc thi" : "Quy định tham gia"}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3">
-                      {event.rules?.map((rule, index) => (
-                        <li key={index} className="flex items-start">
-                          <span className="w-6 h-6 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">
-                            {index + 1}
-                          </span>
-                          <span className="text-sm text-gray-600 leading-relaxed">{rule}</span>
-                        </li>
-                      ))}
-                    </ul>
+
+                  <CardContent className="pb-6 pt-6 pl-6 pr-6 py-3 bg-white border-2 border-orange-200 p-4 rounded-lg">
+                    {event.rules && event.rules.length > 0 ? (
+                      <ul className="space-y-3">
+                        {event.rules.map((rule, index) => (
+                          <li key={index} className="flex items-start">
+                            <span className="w-6 h-6 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">
+                              {index + 1}
+                            </span>
+                            <span className="text-sm text-gray-600 leading-relaxed">{rule}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-m text-gray-500 italic">Không có quy định</p>
+                    )}
                   </CardContent>
                 </Card>
               </div>
-
               {/* Leaderboard */}
               {isCompetition && (
-                <div className="lg:col-span-2">
-                  <Card className="glass">
+                <div className="lg:col-span-2 ">
+                  <Card className="glass ">
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
                         <div className="flex items-center">
@@ -288,7 +221,7 @@ export default function ActivityDetailPage() {
                         </Badge>
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pb-6 pt-6 pl-6 pr-6 py-3 bg-white border-2 border-orange-200 p-4 rounded-lg">
                       <div className="space-y-2">
                         {mockLeaderboard.map((participant) => (
                           <div
@@ -303,7 +236,7 @@ export default function ActivityDetailPage() {
                               <div className="flex items-center justify-center w-8">
                                 {getRankIcon(participant.rank)}
                               </div>
-                              <Avatar className="w-8 h-8">
+                              <Avatar className="w-10 h-10">
                                 <AvatarFallback className="text-xs font-semibold">
                                   {participant.avatar}
                                 </AvatarFallback>

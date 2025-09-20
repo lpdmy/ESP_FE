@@ -25,7 +25,7 @@ export function useActivityApi() {
       return executeApiCall(
         activityService.getActivityById.bind(activityService),
         [activityId, token],
-        { setLoading: setActivityLoading, setError }
+        { setLoading:setActivityLoading, setError }
       );
     },
     [activityService]
