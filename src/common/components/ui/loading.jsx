@@ -78,6 +78,23 @@ export function LoadingOverlay({
     </div>
   )
 }
+export function LoadingOverlayListActivity({ 
+  isLoading, 
+  className = "",
+  variant = "default"
+}) {
+  if (!isLoading) return null;
+
+  return (
+    <div className={`absolute inset-0 bg-gradient-to-br from-orange-50 via-yellow-50 to-white flex items-center justify-center z-10 ${className}`}>
+     <div className="backdrop-blur-md  animate-in fade-in-0 zoom-in-95 duration-300">
+        <Loading size="lg" variant={variant} />
+      </div>
+    </div>
+  );
+}
+
+
 
 export function LoadingButton({ 
   isLoading, 

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui
 import { Badge } from "@/common/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/common/components/ui/avatar";
 import mockLeaderboardData from "@/mock_data/leaderBoard.json";
-import { LoadingOverlay } from '@/common/components/ui/loading';
+import { LoadingOverlayListActivity } from '@/common/components/ui/loading';
 import {
   Calendar,
   Clock,
@@ -90,7 +90,7 @@ export default function ActivityDetailPage() {
   
   return (
     <div className="w-full">
-        {activityLoading && <LoadingOverlay isLoading={true} />}
+        {activityLoading && <LoadingOverlayListActivity isLoading={true} />}
             {/* Back Button */}
             <div className="mb-6">
               <Button variant="outline" onClick={() => navigate(-1)} className="bg-white/50 hover:bg-white/80">

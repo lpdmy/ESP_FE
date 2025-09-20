@@ -5,7 +5,7 @@ import { Badge } from "@/common/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/common/components/ui/tabs"
 import { Avatar, AvatarFallback } from "@/common/components/ui/avatar"
 import { useToast } from "@/common/hooks/useToast"
-import { LoadingOverlay } from '@/common/components/ui/loading';
+import { LoadingOverlayListActivity } from '@/common/components/ui/loading';
 import {
   Calendar,
   Clock,
@@ -90,7 +90,7 @@ useEffect(() => {
 
   return (
     <div className="w-full">
-           {activityLoading && <LoadingOverlay isLoading={true} />}
+           
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold gradient-text mb-2">Sự kiện</h1>
@@ -149,95 +149,97 @@ useEffect(() => {
                     ))}
                   </CardContent>
                 </Card>
-                {/* Events list */}
-                <div className="space-y-6">
-                  {filteredEvents.map((event) => {
-                    const cat = categoryMap[event.category] || categoryMap[1]
-                    const IconComponent = cat.icon
-                    return (
-                      <Card key={event.id} className="glass hover-lift card-shine">
-                        <CardContent className="p-6 flex flex-col lg:flex-row gap-6 bg-white pt-6">
-                          <div className="lg:w-48 h-32 bg-gradient-orange rounded-lg flex items-center justify-center">
-                            <IconComponent className="w-12 h-12 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                                  {event.title}
-                                </h3>
-                                <p className="text-gray-600 mb-3">{event.description}</p>
-                              </div>
-                              <Badge className={`${categoryColors[event.category]} whitespace-nowrap flex items-center !p-2.5`}>
-                                  <IconComponent className="w-5 h-5 mr-3" />
-                                  {categoryLabels[event.category] || event.category}
-                              </Badge>
-                            </div>
-                            <div className="grid grid-cols-1 gap-4 mb-4 text-gray-600">
-                              <div className="flex items-center text-gray-600">
-                              <Calendar className="w-5 h-5 mr-3 " />
-                              <div>
-                              <p className="text-sm font-medium">Ngày đăng ký</p>
-                              <p className="text-sm">{formatDate(event.registerDate)} - {formatDate(event.endRegisterDate)}</p>
-                              </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                  <div className="flex items-center">
-                                    <MapPin className="w-4 h-4 mr-2" />
-                                    <div>
-                                    <p className="text-sm font-medium">Địa điểm tổ chức</p>
-                                    <p className="text-sm">{event.location}</p>
-                                    </div>
-                              </div>
-                              <div className="flex items-center">
-                                    <Users className="w-4 h-4 mr-2" />
-                                    {event.numberOfParticipants}/{event.maxParticipants} người tham gia
-                              </div>
-                              </div>
-                              </div>
-                              <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <Avatar className="w-6 h-6">
-                                  <AvatarFallback className="text-xs">
-                                    {event.organizer.charAt(0)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm text-gray-600">
-                                  Tổ chức bởi {event.organizer}
-                                </span>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button variant="outline" size="sm" className="bg-white/50"
-                                 onClick={() => navigate(`/activity/detail/${event.id}`)}
-                                >
-                                  Chi tiết
-                                </Button>
-                                <div className="flex gap-2">
-                                  {new Date(event.endRegisterDate) > new Date() ? (
-                                    <Button size="sm" className="btn-primary">
-                                      Đăng ký
-                                    </Button>
-                                  ) : (
-                                    <Button size="sm" variant="outline" disabled>
-                                      Hết thời gian
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            {/* <div className="flex flex-wrap gap-2 mt-3">
-                              {event.tags.map((tag, i) => (
-                                <Badge key={i} variant="secondary" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div> */}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
+                <div className="relative min-h-[200px]">
+  {activityLoading ? (
+    <LoadingOverlayListActivity isLoading={true} />
+  ) : (
+    <div className="space-y-6">
+      {filteredEvents.map((event) => {
+        const cat = categoryMap[event.category] || categoryMap[1];
+        const IconComponent = cat.icon;
+        return (
+          <Card key={event.id} className="glass hover-lift card-shine">
+            <CardContent className="p-6 flex flex-col lg:flex-row gap-6 bg-white pt-6">
+              <div className="lg:w-48 h-32 bg-gradient-orange rounded-lg flex items-center justify-center">
+                <IconComponent className="w-12 h-12 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                      {event.title}
+                    </h3>
+                    <p className="text-gray-600 mb-3">{event.description}</p>
+                  </div>
+                  <Badge className={`${categoryColors[event.category]} whitespace-nowrap flex items-center !p-2.5`}>
+                    <IconComponent className="w-5 h-5 mr-3" />
+                    {categoryLabels[event.category] || event.category}
+                  </Badge>
                 </div>
+                <div className="grid grid-cols-1 gap-4 mb-4 text-gray-600">
+                  <div className="flex items-center text-gray-600">
+                    <Calendar className="w-5 h-5 mr-3" />
+                    <div>
+                      <p className="text-sm font-medium">Ngày đăng ký</p>
+                      <p className="text-sm">
+                        {formatDate(event.registerDate)} - {formatDate(event.endRegisterDate)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center">
+                      <MapPin className="w-4 h-4 mr-2" />
+                      <div>
+                        <p className="text-sm font-medium">Địa điểm tổ chức</p>
+                        <p className="text-sm">{event.location}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <Users className="w-4 h-4 mr-2" />
+                      {event.numberOfParticipants}/{event.maxParticipants} người tham gia
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Avatar className="w-6 h-6">
+                      <AvatarFallback className="text-xs">
+                        {event.organizer.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-gray-600">
+                      Tổ chức bởi {event.organizer}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-white/50"
+                      onClick={() => navigate(`/activity/detail/${event.id}`)}
+                    >
+                      Chi tiết
+                    </Button>
+                    {new Date(event.endRegisterDate) > new Date() ? (
+                      <Button size="sm" className="btn-primary">
+                        Đăng ký
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" disabled>
+                        Hết thời gian
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  )}
+                </div>
+
               </TabsContent>
             </Tabs>
       
