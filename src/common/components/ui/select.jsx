@@ -1,177 +1,158 @@
-import React from "react"
-import { cn } from "@/lib/utils"
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronDown } from 'lucide-react';
 
-// Select - Root component (compatible with Radix API)
-function Select({
-  value,
-  onValueChange,
-  defaultValue,
-  children,
-  className,
-  placeholder,
-  ...props
-}) {
+export const Select = ({ value, onValueChange, children, className = "", ...props }) => {
   return (
-    <div className={cn("relative", className)}>
-      <select
-        value={value}
-        onChange={(e) => onValueChange?.(e.target.value)}
-        defaultValue={defaultValue}
-        className={cn(
-          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-          className
-        )}
-        {...props}
-      >
-        {placeholder && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        )}
-        {React.Children.map(children, (child) => {
-          if (React.isValidElement(child) && child.type === SelectItem) {
-            return (
-              <option key={child.props.value} value={child.props.value}>
-                {child.props.children}
-              </option>
-            )
-          }
-          return null
-        })}
-      </select>
-    </div>
-  )
-}
-
-// SelectGroup - Group component (not needed for Ant Design)
-function SelectGroup({
-  children,
-  ...props
-}) {
-  return (
-    <div {...props}>
+    <div className={`relative ${className}`} {...props}>
       {children}
     </div>
-  )
-}
+  );
+};
 
-// SelectValue - Value component (not needed for Ant Design)
-function SelectValue({
-  placeholder,
-  ...props
-}) {
+export const SelectTrigger = ({ children, className = "", ...props }) => {
+  const baseClasses = "flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:cursor-not-allowed disabled:opacity-50";
+  const classes = `${baseClasses} ${className}`;
+  
   return (
-    <span {...props}>
+    <button type="button" className={classes} {...props}>
+      {children}
+      <ChevronDown className="h-4 w-4 opacity-50" />
+    </button>
+  );
+};
+
+export const SelectValue = ({ placeholder, className = "", ...props }) => {
+  return (
+    <span className={`block truncate ${className}`} {...props}>
       {placeholder}
     </span>
-  )
-}
+  );
+};
 
-// SelectTrigger - Trigger component (not needed for Ant Design)
-function SelectTrigger({
-  className,
-  children,
-  ...props
-}) {
+export const SelectContent = ({ children, className = "", ...props }) => {
+  const baseClasses = "absolute z-50 min-w-[8rem] overflow-hidden rounded-md border border-gray-200 bg-white p-1 shadow-md mt-1 w-full";
+  const classes = `${baseClasses} ${className}`;
+  
   return (
-    <div className={cn("w-full", className)} {...props}>
+    <div className={classes} {...props}>
       {children}
     </div>
-  )
-}
+  );
+};
 
-// SelectContent - Content component (not needed for Ant Design)
-function SelectContent({
-  className,
-  children,
-  ...props
-}){
+export const SelectItem = ({ children, className = "", onSelect, ...props }) => {
+  const baseClasses = "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 px-2 text-sm outline-none hover:bg-orange-50 hover:text-orange-900 focus:bg-orange-50 focus:text-orange-900";
+  const classes = `${baseClasses} ${className}`;
+  
   return (
-    <div className={cn("w-full", className)} {...props}>
-      {children}
-    </div>
-  )
-}
-
-// SelectLabel - Label component (not needed for Ant Design)
-function SelectLabel({
-  className,
-  children,
-  ...props
-}) {
-  return (
-    <div className={cn("text-sm font-medium text-gray-700 mb-1", className)} {...props}>
-      {children}
-    </div>
-  )
-}
-
-// SelectItem - Item component (not needed for Ant Design)
-function SelectItem({
-  className,
-  children,
-  value,
-  ...props
-}) {
-  return (
-    <div
-      className={cn("w-full", className)}
-      data-value={value}
+    <div 
+      className={classes} 
+      onClick={onSelect}
       {...props}
     >
       {children}
     </div>
-  )
-}
+  );
+};
 
-// SelectSeparator - Separator component (not needed for Ant Design)
-function SelectSeparator({
-  className,
-  ...props
-}) {
+// Hook để tạo Select component hoạt động
+export const useSelect = (initialValue = "") => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [value, setValue] = useState(initialValue);
+  const triggerRef = useRef(null);
+  const contentRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (triggerRef.current && !triggerRef.current.contains(event.target) &&
+          contentRef.current && !contentRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  return {
+    isOpen,
+    setIsOpen,
+    value,
+    setValue,
+    triggerRef,
+    contentRef
+  };
+};
+
+// Component chính để sử dụng
+export const SimpleSelect = ({ 
+  value, 
+  onValueChange, 
+  placeholder = "Chọn...", 
+  options = [], 
+  className = "",
+  disabled = false
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedValue, setSelectedValue] = useState(value || "");
+  const triggerRef = useRef(null);
+
+  useEffect(() => {
+    setSelectedValue(value || "");
+  }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (triggerRef.current && !triggerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleSelect = (optionValue) => {
+    setSelectedValue(optionValue);
+    onValueChange && onValueChange(optionValue);
+    setIsOpen(false);
+  };
+
+  const selectedOption = options.find(opt => opt.value === selectedValue);
+
   return (
-    <div
-      className={cn("border-t border-gray-200 my-1", className)}
-      {...props}
-    />
-  )
-}
-
-// SelectScrollUpButton - Scroll up button (not needed for Ant Design)
-function SelectScrollUpButton({
-  className,
-  ...props
-}) {
-  return (
-    <div
-      className={cn("hidden", className)}
-      {...props}
-    />
-  )
-}
-
-// SelectScrollDownButton - Scroll down button (not needed for Ant Design)
-function SelectScrollDownButton({
-  className,
-  ...props
-}) {
-  return (
-    <div
-      className={cn("hidden", className)}
-      {...props}
-    />
-  )
-}
-
-export {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectScrollDownButton,
-  SelectScrollUpButton,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-}
+    <div className={`relative ${className}`} ref={triggerRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
+      >
+        <span className="block truncate text-left">
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute z-50 min-w-full overflow-hidden rounded-md border border-gray-200 bg-white p-1 shadow-lg mt-1">
+          {options.map((option) => (
+            <div
+              key={option.value}
+              onClick={() => handleSelect(option.value)}
+              className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 px-2 text-sm outline-none hover:bg-blue-50 hover:text-blue-900 ${
+                selectedValue === option.value ? 'bg-blue-100 text-blue-900' : ''
+              }`}
+            >
+              {option.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};

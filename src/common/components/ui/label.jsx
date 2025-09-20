@@ -1,18 +1,13 @@
 import React from 'react';
 
-export const Label = ({ 
-  children, 
-  className = "", 
-  htmlFor,
-  ...props 
-}) => {
-  const baseClasses = "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70";
+export const Label = ({ children, className = "", htmlFor, ...props }) => {
+  const baseClasses = "text-sm font-medium leading-none text-gray-700 select-none";
   const classes = `${baseClasses} ${className}`;
   
   return (
-    <label
+    <label 
       htmlFor={htmlFor}
-      className={classes}
+      className={classes} 
       {...props}
     >
       {children}
