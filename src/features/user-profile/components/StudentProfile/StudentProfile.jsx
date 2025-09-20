@@ -27,7 +27,7 @@ import {
 import { Link } from "react-router-dom"
 import { ROUTES } from "@/common/constants/routes"
 import { useState, useEffect } from "react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/common/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, useDropdownMenu } from "@/common/components/ui/dropdown-menu"
 import PostCard from "@/features/landing/components/PostCard"
 import { Textarea } from "@/common/components/ui/textarea"
 
@@ -36,6 +36,7 @@ export default function StudentProfile() {
     const [extraData, setExtraData] = useState({});
     const [sortBy, setSortBy] = useState("newest");
     const [postContent, setPostContent] = useState("");
+    const { isOpen: isSortDropdownOpen, openMenu: openSortDropdown, closeMenu: closeSortDropdown, toggleMenu: toggleSortDropdown } = useDropdownMenu(false);
     const toast = useToast();
 
     // Profile API hook
@@ -428,17 +429,23 @@ export default function StudentProfile() {
                                 </Card>
 
                                 {/* Sort Controls */}
-                                <Card className="p-4 bg-white border-blue-200 relative z-40">
+                                <Card className="p-4 bg-white border-orange-200 relative z-40">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <FileText className="w-5 h-5 text-blue-600" />
+                                            <FileText className="w-5 h-5 text-orange-600" />
                                             <h3 className="text-lg font-semibold text-gray-800">Bài đăng</h3>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm text-gray-600 hidden sm:block">Sắp xếp:</span>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs">
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="sm" 
+                                                        className="h-8 px-3 text-xs"
+                                                        onClick={toggleSortDropdown}
+                                                        data-dropdown-trigger
+                                                    >
                                                         {sortBy === "newest" && "Mới nhất"}
                                                         {sortBy === "oldest" && "Cũ nhất"}
                                                         {sortBy === "most_liked" && "Nhiều lượt thích"}
@@ -446,28 +453,45 @@ export default function StudentProfile() {
                                                         <ChevronDown className="w-3 h-3 ml-1" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="z-50 bg-white shadow-lg border border-gray-200">
+                                                <DropdownMenuContent 
+                                                    align="end" 
+                                                    className="z-50 bg-white shadow-lg border border-gray-200"
+                                                    isOpen={isSortDropdownOpen}
+                                                    onClose={closeSortDropdown}
+                                                >
                                                     <DropdownMenuItem 
-                                                        onClick={() => setSortBy("newest")}
-                                                        className={`cursor-pointer ${sortBy === "newest" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
+                                                        onClick={() => {
+                                                            setSortBy("newest");
+                                                            closeSortDropdown();
+                                                        }}
+                                                        className={`cursor-pointer ${sortBy === "newest" ? "bg-orange-50 text-orange-600" : "hover:bg-gray-50"}`}
                                                     >
                                                         Mới nhất
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem 
-                                                        onClick={() => setSortBy("oldest")}
-                                                        className={`cursor-pointer ${sortBy === "oldest" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
+                                                        onClick={() => {
+                                                            setSortBy("oldest");
+                                                            closeSortDropdown();
+                                                        }}
+                                                        className={`cursor-pointer ${sortBy === "oldest" ? "bg-orange-50 text-orange-600" : "hover:bg-gray-50"}`}
                                                     >
                                                         Cũ nhất
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem 
-                                                        onClick={() => setSortBy("most_liked")}
-                                                        className={`cursor-pointer ${sortBy === "most_liked" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
+                                                        onClick={() => {
+                                                            setSortBy("most_liked");
+                                                            closeSortDropdown();
+                                                        }}
+                                                        className={`cursor-pointer ${sortBy === "most_liked" ? "bg-orange-50 text-orange-600" : "hover:bg-gray-50"}`}
                                                     >
                                                         Nhiều lượt thích
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem 
-                                                        onClick={() => setSortBy("most_commented")}
-                                                        className={`cursor-pointer ${sortBy === "most_commented" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
+                                                        onClick={() => {
+                                                            setSortBy("most_commented");
+                                                            closeSortDropdown();
+                                                        }}
+                                                        className={`cursor-pointer ${sortBy === "most_commented" ? "bg-orange-50 text-orange-600" : "hover:bg-gray-50"}`}
                                                     >
                                                         Nhiều bình luận
                                                     </DropdownMenuItem>

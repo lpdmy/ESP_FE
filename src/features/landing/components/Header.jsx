@@ -5,7 +5,7 @@ import { Badge } from "@/common/components/ui/badge"
 import { Input } from "@/common/components/ui/input"
 import { ROUTES } from "@/common/constants/routes"
 import { ROLE } from "@/common/constants/roles"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/common/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, useDropdownMenu } from "@/common/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
@@ -16,6 +16,7 @@ export default function Header() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.user.user);
+  const { isOpen, openMenu, closeMenu, toggleMenu } = useDropdownMenu(false);
 
   const handleLogout = () => {
     dispatch(clearUser());
@@ -89,7 +90,12 @@ export default function Header() {
           {/* User Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-3 hover:bg-gray-50 rounded-xl px-3 py-2 transition-all duration-200">
+              <Button 
+                variant="ghost" 
+                className="flex items-center gap-3 hover:bg-gray-50 rounded-xl px-3 py-2 transition-all duration-200"
+                onClick={toggleMenu}
+                data-dropdown-trigger
+              >
                 <Avatar className="h-9 w-9 ring-2 ring-orange-200 hover:ring-orange-300 transition-all">
                   <AvatarImage src={user?.avatarUrl || null} alt="Avatar" />
                   <AvatarFallback className="bg-gradient-to-br from-orange-400 to-orange-500 text-white font-semibold">
@@ -110,7 +116,12 @@ export default function Header() {
                 </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64 p-2 bg-white/95 backdrop-blur-md border-gray-200/50 shadow-xl rounded-xl">
+            <DropdownMenuContent 
+              align="end" 
+              className="w-64 p-2 bg-white/95 backdrop-blur-md border-gray-200/50 shadow-xl rounded-xl"
+              isOpen={isOpen}
+              onClose={closeMenu}
+            >
               <div className="px-3 py-2 border-b border-gray-100">
                 <div className="text-sm font-semibold text-gray-800">
                   {user?.firstName && user?.lastName 
@@ -121,7 +132,10 @@ export default function Header() {
                   {user?.email || "Chưa cập nhật email"}
                 </div>
               </div>
-              <DropdownMenuItem className="rounded-lg hover:bg-orange-50 hover:text-orange-600 transition-colors">
+              <DropdownMenuItem 
+                className="rounded-lg hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                onClick={closeMenu}
+              >
                 <Link
                   to={getProfileRoute()}
                   className="inline-flex items-center w-full px-3 py-2"
@@ -130,7 +144,10 @@ export default function Header() {
                   <span className="font-medium">Trang cá nhân</span>
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg hover:bg-orange-50 hover:text-orange-600 transition-colors">
+              <DropdownMenuItem 
+                className="rounded-lg hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                onClick={closeMenu}
+              >
                 <Link
                   to={ROUTES.AUTH.CHANGEPASSWORD}
                   className="inline-flex items-center w-full px-3 py-2"
@@ -142,7 +159,10 @@ export default function Header() {
               <div className="border-t border-gray-100 my-1"></div>
               <DropdownMenuItem 
                 className="rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors"
-                onClick={handleLogout}
+                onClick={() => {
+                  closeMenu();
+                  handleLogout();
+                }}
               >
                 <LogOut className="mr-3 h-4 w-4" />
                 <span className="font-medium">Đăng xuất</span>
