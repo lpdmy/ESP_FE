@@ -1,10 +1,10 @@
 import EditStudentProfile from '@/features/user-profile/components/StudentProfile/EditStudentProfile';
-import SidebarLayout from '@/common/components/layout/SidebarLayout';
+import LandingLayout from '@/common/components/layout/LandingLayout';
 
 export default function EditStudentProfilePage() {
   return (
-    <SidebarLayout>
+    <LandingLayout>
       <EditStudentProfile />
-    </SidebarLayout>
+    </LandingLayout>
   );
 }

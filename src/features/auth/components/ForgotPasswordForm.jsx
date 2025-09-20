@@ -7,6 +7,8 @@ import { LoadingOverlay } from "@/common/components/ui/loading"
 import { ArrowLeft, Mail, GraduationCap, CheckCircle } from "lucide-react"
 import { useAuthApi } from "@/features/auth/hooks/useAuthApi"
 import { useToast } from "@/common/hooks/useToast"
+import { Link } from "react-router-dom"
+import { ROUTES } from "@/common/constants/routes"
 
 export default function ForgotPasswordForm() {
   const [isEmailSent, setIsEmailSent] = useState(false)
@@ -113,9 +115,9 @@ export default function ForgotPasswordForm() {
                 <div className="mt-6 text-center">
                   <p className="text-gray-600">
                     Nhớ lại mật khẩu?{" "}
-                    <a href="/auth" className="text-orange-600 hover:text-orange-700 font-semibold transition-colors">
+                    <Link to={ROUTES.AUTH.LOGIN} className="text-orange-600 hover:text-orange-700 font-semibold transition-colors">
                       Đăng nhập ngay
-                    </a>
+                    </Link>
                   </p>
                 </div>
               </CardContent>

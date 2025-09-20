@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/common/components/ui/input"
 import { Button } from "@/common/components/ui/button"
 import { Plus } from "lucide-react"
@@ -7,6 +7,11 @@ import { Label } from "@/common/components/ui/label"
 export default function InteractiveTags({ label, initialTags = [], popularTags = [], onChange, iconMap = {} }) {
     const [selectedTags, setSelectedTags] = useState(initialTags)
     const [newTag, setNewTag] = useState("")
+
+    // Update selectedTags when initialTags changes
+    useEffect(() => {
+        setSelectedTags(initialTags)
+    }, [initialTags, label])
 
     const tagColorsArray = [
         "from-orange-400 to-yellow-400",

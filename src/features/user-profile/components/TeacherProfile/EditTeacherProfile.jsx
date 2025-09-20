@@ -13,33 +13,34 @@ import { useAuthApi } from "@/features/auth/hooks/useAuthApi"
 import { useToast } from "@/common/hooks/useToast"
 import { ROUTES } from "@/common/constants/routes"
 import { uploadImage } from "@/common/utils/upload"
-import { Star, BookOpen, Music, Film, Camera, Coffee, Globe, Save, X, Trash2 } from "lucide-react"
-import InteractiveTags from "./InteractiveTags"
+import { Star, BookOpen, Music, Film, Camera, Coffee, Globe, Save, X, Trash2, GraduationCap, Code, Database, Shield, Computer } from "lucide-react"
+import InteractiveTags from "../StudentProfile/InteractiveTags"
 import { setUser } from "@/store/user/userSlice"
 
-export default function EditStudentProfile() {
+export default function EditTeacherProfile() {
   const navigate = useNavigate()
   const toast = useToast()
   const dispatch = useDispatch()
   
   // Profile API hook
-  const { profileLoading, saveLoading, getMyProfile, updateMyPersonalInfo } = useProfileApi()
+  const { profileLoading, saveLoading, getMyTeacherProfile, updateMyTeacherProfile } = useProfileApi()
   const { getMe } = useAuthApi()
   const [uploadLoading, setUploadLoading] = useState(false)
 
   const [formData, setFormData] = useState({
-    studentId: "",
+    teacherId: "",
     name: "",
-    class: "",
+    department: "",
+    position: "",
     email: "",
     bio: "",
     birthDate: "",
     phoneNumber: "",
     avatarUrl: "",
-    interests: [],
-    strengths: [],
-    favoriteSubjects: [],
-    personality: []
+    specializations: [],
+    researchAreas: [],
+    teachingSubjects: [],
+    certifications: []
   })
 
   const [avatarPreview, setAvatarPreview] = useState("")
@@ -49,43 +50,51 @@ export default function EditStudentProfile() {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const response = await getMyProfile();
+        const response = await getMyTeacherProfile();
         const profile = response.data;
         
-        // Parse ExtraJson if it exists
+        
         let extraData = {};
-        if (profile.extraJson) {
+        if (profile.extraJson && profile.extraJson !== null && profile.extraJson !== 'null') {
           try {
-            extraData = JSON.parse(profile.extraJson);
+            // Handle both string and already parsed JSON
+            extraData = typeof profile.extraJson === 'string' 
+              ? JSON.parse(profile.extraJson) 
+              : profile.extraJson;
           } catch (e) {
-            console.warn('Failed to parse ExtraJson:', e);
+            extraData = {};
           }
+        } else {
+          extraData = {};
         }
 
-        setFormData({
-          studentId: profile.studentNumber || "",
+        const newFormData = {
+          teacherId: profile.teacherCode || "",
           name: profile.firstName && profile.lastName ? `${profile.firstName} ${profile.lastName}` : "",
-          class: profile.classGroupName || "",
+          department: profile.department || "",
+          position: profile.position || "",
           email: profile.email || "",
           bio: profile.bio || "",
           birthDate: profile.birthDate ? profile.birthDate.split('T')[0] : "",
           phoneNumber: profile.phoneNumber || "",
           avatarUrl: profile.avatarUrl || "",
-          interests: extraData.interests || [],
-          strengths: extraData.strengths || [],
-          favoriteSubjects: extraData.favoriteSubjects || [],
-          personality: extraData.personality || []
-        });
+          specializations: extraData.specializations || [],
+          researchAreas: extraData.researchAreas || [],
+          teachingSubjects: extraData.teachingSubjects || [],
+          certifications: extraData.certifications || []
+        };
+
+        setFormData(newFormData);
 
         setAvatarPreview(profile.avatarUrl || "");
       } catch (error) {
-        console.error('Error loading profile:', error);
+        console.error('Error loading teacher profile:', error);
         toast.profileLoadFailed();
       }
     };
 
     loadProfile();
-  }, []); // Empty dependency array to run only once
+  }, []);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -132,16 +141,13 @@ export default function EditStudentProfile() {
       return true; // Allow empty phone number
     }
     
-    // Remove all spaces and special characters
     const cleanPhone = phoneNumber.replace(/\D/g, '');
     
-    // Check if it starts with 0 and has exactly 10 digits
     return /^0\d{9}$/.test(cleanPhone);
   };
 
   const handleSave = async () => {
     try {
-      // Validate phone number
       if (formData.phoneNumber && !validatePhoneNumber(formData.phoneNumber)) {
         setPhoneError("Số điện thoại phải bắt đầu bằng 0 và có đúng 10 chữ số");
         return;
@@ -149,7 +155,6 @@ export default function EditStudentProfile() {
 
       let avatarUrl = formData.avatarUrl;
       
-      // Upload avatar if there's a new file
       if (avatarFile) {
         setUploadLoading(true);
         try {
@@ -163,23 +168,23 @@ export default function EditStudentProfile() {
         }
       }
 
-      // Clean phone number before saving
       const cleanPhoneNumber = formData.phoneNumber ? formData.phoneNumber.replace(/\D/g, '') : null;
 
       const payload = {
         bio: formData.bio,
-        extraJson: JSON.stringify({
-          interests: formData.interests,
-          strengths: formData.strengths,
-          favoriteSubjects: formData.favoriteSubjects,
-          personality: formData.personality
-        }),
         avatarUrl,
         birthDate: formData.birthDate ? new Date(formData.birthDate).toISOString() : null,
         phoneNumber: cleanPhoneNumber,
+        extraJson: JSON.stringify({
+          specializations: formData.specializations,
+          researchAreas: formData.researchAreas,
+          teachingSubjects: formData.teachingSubjects,
+          certifications: formData.certifications
+        }),
       };
 
-      const result = await updateMyPersonalInfo(payload);
+
+      const result = await updateMyTeacherProfile(payload);
       
       // Reload user profile to update store
       try {
@@ -192,35 +197,36 @@ export default function EditStudentProfile() {
       }
       
       toast.profileUpdated();
-      navigate(ROUTES.USER_PROFILE.PROFILE);
+      navigate(ROUTES.USER_PROFILE.TEACHER_PROFILE);
     } catch (error) {
-      console.error("Error saving profile:", error);
+      console.error("Error saving teacher profile:", error);
       toast.profileSaveFailed();
     }
   };
 
   const handleCancel = () => {
-    navigate(ROUTES.USER_PROFILE.PROFILE)
+    navigate(ROUTES.USER_PROFILE.TEACHER_PROFILE)
   }
+
 
   return (
     <>
       <LoadingOverlay 
         isLoading={profileLoading || uploadLoading || saveLoading} 
-        text={profileLoading ? toast.PROFILE_MESSAGES.LOADING.PROFILE : uploadLoading ? toast.PROFILE_MESSAGES.LOADING.AVATAR_UPLOAD : saveLoading ? toast.PROFILE_MESSAGES.LOADING.SAVING_CHANGES : toast.COMMON_MESSAGES.LOADING.PROCESSING} 
+        text={profileLoading ? "Đang tải thông tin giảng viên..." : uploadLoading ? "Đang tải lên ảnh đại diện..." : saveLoading ? "Đang lưu thay đổi..." : "Đang xử lý..."} 
         variant="primary"
       />
       
       {profileLoading ? (
         <div className="max-w-4xl mx-auto px-4 py-6">
-          <LoadingCard text={toast.PROFILE_MESSAGES.LOADING.PROFILE} className="h-64" variant="primary" />
+          <LoadingCard text="Đang tải thông tin giảng viên..." className="h-64" variant="primary" />
         </div>
       ) : (
       
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent">
-            Chỉnh sửa Hồ sơ
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            Chỉnh sửa Hồ sơ Giảng viên
           </h1>
           <p className="text-gray-600 mt-2">Cập nhật thông tin cá nhân của bạn</p>
         </div>
@@ -235,7 +241,7 @@ export default function EditStudentProfile() {
                   src={avatarPreview || ""} 
                   alt="Profile" 
                 />
-                <AvatarFallback className="bg-gradient-to-br from-orange-400 to-yellow-400 text-white text-2xl font-bold">
+                <AvatarFallback className="bg-gradient-to-br from-blue-400 to-indigo-400 text-white text-2xl font-bold">
                   {formData.name
                     .split(" ")
                     .map((n) => n[0])
@@ -267,26 +273,25 @@ export default function EditStudentProfile() {
             </div>
             
             <div className="text-center mt-3">
-              <p className="text-sm text-gray-500 mb-1">{toast.PROFILE_MESSAGES.LABELS.AVATAR_UPLOAD}</p>
-              <p className="text-xs text-gray-400">{toast.PROFILE_MESSAGES.LABELS.AVATAR_FORMAT}</p>
+              <p className="text-sm text-gray-500 mb-1">Tải lên ảnh đại diện</p>
+              <p className="text-xs text-gray-400">JPG, PNG tối đa 5MB</p>
             </div>
           </div>
-
 
           {/* Form fields */}
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="studentId">{toast.PROFILE_MESSAGES.LABELS.STUDENT_ID}</Label>
+                <Label htmlFor="teacherId">Mã giảng viên</Label>
                 <Input
-                  id="studentId"
-                  value={formData.studentId}
+                  id="teacherId"
+                  value={formData.teacherId}
                   disabled
                   className="cursor-not-allowed !bg-gray-100"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="name">{toast.PROFILE_MESSAGES.LABELS.FULL_NAME}</Label>
+                <Label htmlFor="name">Họ và tên</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -295,16 +300,25 @@ export default function EditStudentProfile() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="class">{toast.PROFILE_MESSAGES.LABELS.CLASS}</Label>
+                <Label htmlFor="department">Khoa</Label>
                 <Input
-                  id="class"
-                  value={formData.class}
+                  id="department"
+                  value={formData.department}
                   disabled
                   className="cursor-not-allowed !bg-gray-100"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">{toast.PROFILE_MESSAGES.LABELS.EMAIL}</Label>
+                <Label htmlFor="position">Chức vụ</Label>
+                <Input
+                  id="position"
+                  value={formData.position}
+                  disabled
+                  className="cursor-not-allowed !bg-gray-100"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -317,7 +331,7 @@ export default function EditStudentProfile() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="birthDate">{toast.PROFILE_MESSAGES.LABELS.BIRTH_DATE}</Label>
+                <Label htmlFor="birthDate">Ngày sinh</Label>
                 <Input
                   id="birthDate"
                   type="date"
@@ -326,7 +340,7 @@ export default function EditStudentProfile() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phoneNumber">{toast.PROFILE_MESSAGES.LABELS.PHONE_NUMBER}</Label>
+                <Label htmlFor="phoneNumber">Số điện thoại</Label>
                 <Input
                   id="phoneNumber"
                   value={formData.phoneNumber}
@@ -343,45 +357,101 @@ export default function EditStudentProfile() {
               </div>
             </div>
 
-
-
             <div className="space-y-2">
-              <Label htmlFor="bio">{toast.PROFILE_MESSAGES.LABELS.BIO}</Label>
+              <Label htmlFor="bio">Giới thiệu bản thân</Label>
               <Textarea
                 id="bio"
                 value={formData.bio}
                 onChange={(e) => handleInputChange("bio", e.target.value)}
-                placeholder={toast.PROFILE_MESSAGES.PLACEHOLDER.BIO}
+                placeholder="Viết vài dòng giới thiệu về bản thân, kinh nghiệm giảng dạy..."
               />
             </div>
 
-            {/* Interactive tags */}
+            {/* Interactive tags for specializations */}
             <InteractiveTags
-              label={toast.PROFILE_MESSAGES.LABELS.INTERESTS}
-              initialTags={formData.interests}
+              label="Chuyên môn"
+              initialTags={formData.specializations}
               popularTags={[
-                "Lập trình",
-                "AI",
-                "Robotics",
-                "Thể thao",
-                "Âm nhạc",
-                "Điện ảnh",
-                "Nhiếp ảnh",
-                "Du lịch",
-                "Cà phê",
+                "Tin học văn phòng",
+                "Lập trình Scratch",
+                "Thiết kế đồ họa",
+                "Tin học cơ bản",
+                "Sử dụng Internet",
+                "Bảo mật thông tin",
+                "Kỹ năng số",
+                "Ứng dụng di động",
+                "Giáo dục công nghệ",
               ]}
               iconMap={{
-                "AI": Star,
-                "Lập trình": BookOpen,
-                "Robotics": Star,
-                "Thể thao": Music,
-                "Âm nhạc": Music,
-                "Điện ảnh": Film,
-                "Nhiếp ảnh": Camera,
-                "Du lịch": Globe,
-                "Cà phê": Coffee,
+                "Tin học văn phòng": BookOpen,
+                "Lập trình Scratch": Code,
+                "Thiết kế đồ họa": Star,
+                "Tin học cơ bản": BookOpen,
+                "Sử dụng Internet": Globe,
+                "Bảo mật thông tin": Shield,
+                "Kỹ năng số": Star,
+                "Ứng dụng di động": Star,
+                "Giáo dục công nghệ": BookOpen,
               }}
-              onChange={(tags) => handleInputChange("interests", tags)}
+              onChange={(tags) => handleInputChange("specializations", tags)}
+            />
+
+            {/* Interactive tags for research areas */}
+            <InteractiveTags
+              label="Sở thích & Nghiên cứu"
+              initialTags={formData.researchAreas}
+              popularTags={[
+                "Phương pháp dạy học",
+                "Ứng dụng CNTT trong giáo dục",
+                "Giáo dục STEM",
+                "Sáng tạo công nghệ",
+                "Nghiên cứu học sinh",
+                "Phát triển kỹ năng số",
+                "Giáo dục trực tuyến",
+                "Đổi mới sư phạm",
+                "Tâm lý học đường",
+              ]}
+              iconMap={{
+                "Phương pháp dạy học": BookOpen,
+                "Ứng dụng CNTT trong giáo dục": Globe,
+                "Giáo dục STEM": Star,
+                "Sáng tạo công nghệ": Code,
+                "Nghiên cứu học sinh": Star,
+                "Phát triển kỹ năng số": Star,
+                "Giáo dục trực tuyến": Globe,
+                "Đổi mới sư phạm": BookOpen,
+                "Tâm lý học đường": Star,
+              }}
+              onChange={(tags) => handleInputChange("researchAreas", tags)}
+            />
+
+            {/* Interactive tags for teaching subjects */}
+            <InteractiveTags
+              label="Môn học giảng dạy"
+              initialTags={formData.teachingSubjects}
+              popularTags={[
+                "Tin học 10",
+                "Tin học 11", 
+                "Tin học 12",
+                "Lập trình Scratch",
+                "Tin học văn phòng",
+                "Sử dụng Internet",
+                "Thiết kế web cơ bản",
+                "Ứng dụng tin học",
+                "Tin học ứng dụng",
+              ]}
+              iconMap={{
+                "Tin học 10": BookOpen,
+                "Tin học 11": BookOpen,
+                "Tin học 12": BookOpen,
+                "Lập trình Scratch": Code,
+                "Tin học văn phòng": BookOpen,
+                "Sử dụng Internet": Globe,
+                "Thiết kế web cơ bản": Globe,
+                "Ứng dụng tin học": Star,
+                "Tin học ứng dụng": Star,
+              }}
+              onChange={(tags) => handleInputChange("teachingSubjects", tags)}
             />
           </div>
 
@@ -390,10 +460,10 @@ export default function EditStudentProfile() {
             <LoadingButton
               onClick={handleSave}
               isLoading={saveLoading || uploadLoading}
-              loadingText={toast.PROFILE_MESSAGES.LOADING.SAVING_CHANGES}
-              className="flex-1 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-medium py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
+              loadingText="Đang lưu thay đổi..."
+              className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-medium py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
             >
-              {toast.PROFILE_MESSAGES.BUTTON.SAVE}
+              Lưu thay đổi
             </LoadingButton>
             <Button
               onClick={handleCancel}
@@ -402,7 +472,7 @@ export default function EditStudentProfile() {
               disabled={saveLoading || uploadLoading}
             >
               <X className="w-4 h-4 mr-2" />
-              {toast.PROFILE_MESSAGES.BUTTON.CANCEL}
+              Hủy
             </Button>
           </div>
         </CardContent>

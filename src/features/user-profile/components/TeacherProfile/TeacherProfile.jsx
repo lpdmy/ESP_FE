@@ -17,6 +17,9 @@ import {
     Heart,
     Code,
     Book,
+    GraduationCap,
+    Users,
+    BookOpen,
     FileText,
     ChevronDown,
     Image,
@@ -31,7 +34,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import PostCard from "@/features/landing/components/PostCard"
 import { Textarea } from "@/common/components/ui/textarea"
 
-export default function StudentProfile() {
+export default function TeacherProfile() {
     const [profile, setProfile] = useState(null);
     const [extraData, setExtraData] = useState({});
     const [sortBy, setSortBy] = useState("newest");
@@ -39,61 +42,71 @@ export default function StudentProfile() {
     const toast = useToast();
 
     // Profile API hook
-    const { profileLoading, getMyProfile } = useProfileApi();
-
+    const { profileLoading, getMyTeacherProfile } = useProfileApi();
 
     useEffect(() => {
         const loadProfile = async () => {
             try {
-                const response = await getMyProfile();
+                const response = await getMyTeacherProfile();
                 const profileData = response.data;
                 setProfile(profileData);
 
                 // Parse ExtraJson if it exists
-                if (profileData.extraJson) {
+                
+                if (profileData.extraJson && profileData.extraJson !== null && profileData.extraJson !== 'null') {
                     try {
-                        const parsed = JSON.parse(profileData.extraJson);
+                        // Handle both string and already parsed JSON
+                        const parsed = typeof profileData.extraJson === 'string' 
+                            ? JSON.parse(profileData.extraJson) 
+                            : profileData.extraJson;
                         setExtraData(parsed);
                     } catch (e) {
                         console.warn('Failed to parse ExtraJson:', e);
                         setExtraData({});
                     }
+                } else {
+                    // Set default empty data structure for display
+                    setExtraData({
+                        specializations: [],
+                        researchAreas: [],
+                        teachingSubjects: [],
+                        certifications: []
+                    });
                 }
             } catch (error) {
-                console.error('Error loading profile:', error);
+                console.error('Error loading teacher profile:', error);
                 toast.profileLoadFailed();
             }
         };
 
         loadProfile();
-    }, []); // Empty dependency array to run only once
-
+    }, []);
 
     return (
         <>
             <LoadingOverlay
                 isLoading={profileLoading}
-                text={toast.PROFILE_MESSAGES.LOADING.PROFILE}
+                text="Đang tải thông tin giảng viên..."
                 variant="primary"
             />
             {!profile ? (
                 <div className="max-w-4xl mx-auto px-4 py-6">
-                    <LoadingCard text={toast.PROFILE_MESSAGES.LOADING.PROFILE} className="h-64" variant="primary" />
+                    <LoadingCard text="Đang tải thông tin giảng viên..." className="h-64" variant="primary" />
                 </div>
             ) : (
                 <div className="max-w-4xl mx-auto px-4 py-6">
-                    <Card className="mt-6 mb-6 hover-lift card-shine bg-white/80 backdrop-blur-sm border-orange-200">
+                    <Card className="mt-6 mb-6 hover-lift card-shine bg-white/80 backdrop-blur-sm border-blue-200">
                         <CardContent className="p-6 pt-6">
                             <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
                                 <div className="flex items-center gap-4">
-                                    <Avatar className="w-24 h-24 border-4 border-orange-200">
-                                        <AvatarImage src={profile.avatarUrl || ""} alt="Profile" />
-                                        <AvatarFallback className="bg-gradient-to-br from-orange-400 to-yellow-400 text-white text-2xl font-bold">
-                                            {profile.firstName && profile.lastName
-                                                ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
-                                                : profile.username ? profile.username[0].toUpperCase() : 'U'}
-                                        </AvatarFallback>
-                                    </Avatar>
+                                     <Avatar className="w-24 h-24 border-4 border-blue-200">
+                                         <AvatarImage src={profile.avatarUrl || null} alt="Profile" />
+                                         <AvatarFallback className="bg-gradient-to-br from-blue-400 to-indigo-400 text-white text-2xl font-bold">
+                                             {profile.firstName && profile.lastName
+                                                 ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
+                                                 : profile.username ? profile.username[0].toUpperCase() : 'T'}
+                                         </AvatarFallback>
+                                     </Avatar>
 
                                     <div className="space-y-2">
                                         <h1 className="text-2xl font-bold text-gray-800">
@@ -102,20 +115,25 @@ export default function StudentProfile() {
                                                 : profile.username || 'Chưa có tên'}
                                         </h1>
                                         <div className="flex flex-wrap gap-2">
-                                            {profile.classGroupName && (
-                                                <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                                                    {profile.classGroupName}
+                                            {profile.teacherCode && (
+                                                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                                                    {profile.teacherCode}
                                                 </Badge>
                                             )}
-                                            {profile.studentNumber && (
-                                                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                                                    {profile.studentNumber}
+                                            {profile.department && (
+                                                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                                    {profile.department}
+                                                </Badge>
+                                            )}
+                                            {profile.position && (
+                                                <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                                                    {profile.position}
                                                 </Badge>
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                                            <span className="font-semibold text-orange-600">Hồ sơ học sinh</span>
+                                            <GraduationCap className="w-5 h-5 text-blue-500 fill-current" />
+                                            <span className="font-semibold text-blue-600">Hồ sơ giáo viên</span>
                                         </div>
                                     </div>
                                 </div>
@@ -125,24 +143,23 @@ export default function StudentProfile() {
                                     <div className="grid grid-cols-3 gap-4 text-center">
                                         <div className="space-y-1">
                                             <div className="flex items-center justify-center">
-                                                <Calendar className="w-4 h-4 text-orange-500 mr-1" />
-                                                <span className="text-2xl font-bold text-gray-800">15</span>
+                                                <Users className="w-4 h-4 text-blue-500 mr-1" />
+                                                <span className="text-2xl font-bold text-gray-800">35</span>
                                             </div>
-                                            <p className="text-sm text-gray-600">{toast.PROFILE_MESSAGES.LABELS.EVENTS}</p>
+                                            <p className="text-sm text-gray-600">Học sinh</p>
                                         </div>
                                         <div className="space-y-1">
                                             <div className="flex items-center justify-center">
-                                                <Trophy className="w-4 h-4 text-yellow-500 mr-1" />
-                                                <span className="text-2xl font-bold text-gray-800">8</span>
+                                                <BookOpen className="w-4 h-4 text-green-500 mr-1" />
+                                                <span className="text-2xl font-bold text-gray-800">3</span>
                                             </div>
-                                            <p className="text-sm text-gray-600">{toast.PROFILE_MESSAGES.LABELS.AWARDS}</p>
+                                            <p className="text-sm text-gray-600">Lớp học</p>
                                         </div>
                                     </div>
 
-                                    <Link to={ROUTES.USER_PROFILE.EDIT}>
-                                        <Button className="btn-primary flex items-center gap-2">
+                                    <Link to={ROUTES.USER_PROFILE.EDIT_TEACHER}>
+                                        <Button className="btn-primary flex items-center gap-2 !px-6 !py-3">
                                             <Edit className="w-4 h-4" />
-                                            {toast.PROFILE_MESSAGES.BUTTON.EDIT}
                                         </Button>
                                     </Link>
                                 </div>
@@ -155,30 +172,30 @@ export default function StudentProfile() {
                         <TabsList className="grid w-full grid-cols-4 mb-6 bg-white/80 backdrop-blur-sm">
                             <TabsTrigger value="introduction" className="flex items-center justify-center gap-2">
                                 <User className="w-4 h-4" />
-                                {toast.PROFILE_MESSAGES.LABELS.INTRODUCTION}
+                                Giới thiệu
                             </TabsTrigger>
                             <TabsTrigger value="posts" className="flex items-center justify-center gap-2">
                                 <FileText className="w-4 h-4" />
                                 Bài đăng
                             </TabsTrigger>
-                            <TabsTrigger value="activities" className="flex items-center justify-center gap-2">
-                                <Activity className="w-4 h-4" />
-                                {toast.PROFILE_MESSAGES.LABELS.ACTIVITIES}
+                            <TabsTrigger value="teaching" className="flex items-center justify-center gap-2">
+                                <BookOpen className="w-4 h-4" />
+                                Giảng dạy
                             </TabsTrigger>
                             <TabsTrigger value="achievements" className="flex items-center justify-center gap-2">
                                 <Trophy className="w-4 h-4" />
-                                {toast.PROFILE_MESSAGES.LABELS.ACHIEVEMENTS}
+                                Thành tích
                             </TabsTrigger>
                         </TabsList>
 
                         {/* Giới thiệu */}
                         <TabsContent value="introduction">
                             <div className="grid gap-6">
-                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-orange-200">
+                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-blue-200">
                                     <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-orange-700">
+                                        <CardTitle className="flex items-center gap-2 text-blue-700">
                                             <User className="w-5 h-5" />
-                                            {toast.PROFILE_MESSAGES.LABELS.PERSONAL_INFO}
+                                            Thông tin cá nhân
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
@@ -191,18 +208,18 @@ export default function StudentProfile() {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
                                                 <div>
                                                     <h4 className="font-semibold text-gray-800 mb-2">Thông tin liên hệ</h4>
-                                                    <div className="space-y-1 text-sm text-gray-600">
-                                                        <p><span className="font-medium">Email:</span> {profile.email || 'Chưa cập nhật'}</p>
-                                                        <p><span className="font-medium">Số điện thoại:</span> {profile.phoneNumber || 'Chưa cập nhật'}</p>
-                                                        <p><span className="font-medium">Ngày sinh:</span> {profile.birthDate ? new Date(profile.birthDate).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</p>
-                                                    </div>
+                                                     <div className="space-y-1 text-sm text-gray-600">
+                                                         <p><span className="font-medium">Email:</span> {profile.email || 'Chưa cập nhật'}</p>
+                                                         <p><span className="font-medium">Số điện thoại:</span> {profile.phoneNumber || null || 'Chưa cập nhật'}</p>
+                                                         <p><span className="font-medium">Ngày sinh:</span> {profile.birthDate ? new Date(profile.birthDate).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</p>
+                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-semibold text-gray-800 mb-2">Thông tin học tập</h4>
+                                                    <h4 className="font-semibold text-gray-800 mb-2">Thông tin nghề nghiệp</h4>
                                                     <div className="space-y-1 text-sm text-gray-600">
-                                                        <p><span className="font-medium">Mã số học sinh:</span> {profile.studentNumber || 'Chưa cập nhật'}</p>
-                                                        <p><span className="font-medium">Năm nhập học:</span> {profile.enrollmentYear || 'Chưa cập nhật'}</p>
-                                                        <p><span className="font-medium">Lớp:</span> {profile.classGroupName || 'Chưa cập nhật'}</p>
+                                                        <p><span className="font-medium">Mã giảng viên:</span> {profile.teacherCode || 'Chưa cập nhật'}</p>
+                                                        <p><span className="font-medium">Khoa:</span> {profile.department || 'Chưa cập nhật'}</p>
+                                                        <p><span className="font-medium">Chức vụ:</span> {profile.position || 'Chưa cập nhật'}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -210,73 +227,90 @@ export default function StudentProfile() {
                                     </CardContent>
                                 </Card>
 
-                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-orange-200">
+                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-blue-200">
                                     <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-orange-700">
+                                        <CardTitle className="flex items-center gap-2 text-blue-700">
                                             <Heart className="w-5 h-5" />
-                                            {toast.PROFILE_MESSAGES.LABELS.INTERESTS_CONCERNS}
+                                            Chuyên môn & Sở thích
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="flex flex-wrap gap-2">
-                                            {extraData.interests && extraData.interests.length > 0 ? (
-                                                extraData.interests.map((interest, index) => (
-                                                    <Badge key={index} className="bg-gradient-orange text-white flex items-center gap-1">
-                                                        <Code className="w-3 h-3" />
-                                                        {interest}
-                                                    </Badge>
-                                                ))
-                                            ) : (
-                                                <p className="text-gray-500 italic">Chưa có sở thích nào được cập nhật.</p>
-                                            )}
+                                        <div className="space-y-4">
+                                            {/* Specializations */}
+                                            <div>
+                                                <h4 className="font-semibold text-gray-800 mb-2">Chuyên môn</h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {extraData.specializations && extraData.specializations.length > 0 ? (
+                                                        extraData.specializations.map((specialization, index) => (
+                                                            <Badge key={index} className="bg-gradient-blue text-white flex items-center gap-1">
+                                                                <Code className="w-3 h-3" />
+                                                                {specialization}
+                                                            </Badge>
+                                                        ))
+                                                    ) : (
+                                                        <p className="text-gray-500 italic">Chưa có chuyên môn nào được cập nhật.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Teaching Subjects */}
+                                            <div>
+                                                <h4 className="font-semibold text-gray-800 mb-2">Môn học giảng dạy</h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {extraData.teachingSubjects && extraData.teachingSubjects.length > 0 ? (
+                                                        extraData.teachingSubjects.map((subject, index) => (
+                                                            <Badge key={index} className="bg-gradient-green text-white flex items-center gap-1">
+                                                                <BookOpen className="w-3 h-3" />
+                                                                {subject}
+                                                            </Badge>
+                                                        ))
+                                                    ) : (
+                                                        <p className="text-gray-500 italic">Chưa có môn học nào được cập nhật.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Research Areas */}
+                                            <div>
+                                                <h4 className="font-semibold text-gray-800 mb-2">Lĩnh vực nghiên cứu</h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {extraData.researchAreas && extraData.researchAreas.length > 0 ? (
+                                                        extraData.researchAreas.map((area, index) => (
+                                                            <Badge key={index} className="bg-gradient-purple text-white flex items-center gap-1">
+                                                                <Star className="w-3 h-3" />
+                                                                {area}
+                                                            </Badge>
+                                                        ))
+                                                    ) : (
+                                                        <p className="text-gray-500 italic">Chưa có lĩnh vực nghiên cứu nào được cập nhật.</p>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>
                             </div>
                         </TabsContent>
 
-                        {/* Hoạt động */}
-                        <TabsContent value="activities">
+                        {/* Giảng dạy */}
+                        <TabsContent value="teaching">
                             <div className="space-y-4">
-                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-orange-200">
-                                    <CardContent className="pt-4 !p-4">
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold text-gray-800">
-                                                    Tham gia cuộc thi Lập trình FPT Code Challenge
-                                                </h3>
-                                                <p className="text-sm text-gray-600 mt-1">
-                                                    Đạt giải Nhì với dự án website quản lý thư viện
-                                                </p>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    <Calendar className="w-4 h-4 text-gray-400" />
-                                                    <span className="text-sm text-gray-500">15/03/2024</span>
-                                                    <Badge variant="outline" className="text-xs">
-                                                        Cuộc thi
-                                                    </Badge>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-orange-200">
-                                    <CardContent className="!p-4">
+                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-blue-200">
+                                    <CardContent className="pt-4 p-4">
                                         <div className="flex items-start gap-3">
                                             <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
                                             <div className="flex-1">
                                                 <h3 className="font-semibold text-gray-800">
-                                                    Chia sẻ bài viết: "Hướng dẫn React cho người mới bắt đầu"
+                                                    Giảng dạy môn "Tin học"
                                                 </h3>
                                                 <p className="text-sm text-gray-600 mt-1">
-                                                    Bài viết nhận được 45 lượt thích và 12 bình luận
+                                                    Lớp 10A1 - 35 học sinh
                                                 </p>
                                                 <div className="flex items-center gap-2 mt-2">
                                                     <Calendar className="w-4 h-4 text-gray-400" />
-                                                    <span className="text-sm text-gray-500">10/03/2024</span>
+                                                    <span className="text-sm text-gray-500">Học kỳ 1 - 2024</span>
                                                     <Badge variant="outline" className="text-xs">
-                                                        Bài đăng
+                                                        Đang giảng dạy
                                                     </Badge>
                                                 </div>
                                             </div>
@@ -284,20 +318,43 @@ export default function StudentProfile() {
                                     </CardContent>
                                 </Card>
 
-                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-orange-200">
+                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-blue-200">
                                     <CardContent className="!p-4">
                                         <div className="flex items-start gap-3">
                                             <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                                             <div className="flex-1">
                                                 <h3 className="font-semibold text-gray-800">
-                                                    Tham gia sự kiện "Workshop AI & Machine Learning"
+                                                    Chủ nhiệm lớp 10A1
                                                 </h3>
-                                                <p className="text-sm text-gray-600 mt-1">Học về các ứng dụng AI trong giáo dục</p>
+                                                <p className="text-sm text-gray-600 mt-1">
+                                                    35 học sinh - Hướng dẫn hoạt động ngoại khóa
+                                                </p>
                                                 <div className="flex items-center gap-2 mt-2">
                                                     <Calendar className="w-4 h-4 text-gray-400" />
-                                                    <span className="text-sm text-gray-500">05/03/2024</span>
+                                                    <span className="text-sm text-gray-500">2024</span>
                                                     <Badge variant="outline" className="text-xs">
-                                                        Sự kiện
+                                                        Chủ nhiệm
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-blue-200">
+                                    <CardContent className="!p-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
+                                            <div className="flex-1">
+                                                <h3 className="font-semibold text-gray-800">
+                                                    Tổ chức hoạt động "Tin học vui"
+                                                </h3>
+                                                <p className="text-sm text-gray-600 mt-1">Tham gia: 120 học sinh</p>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <Calendar className="w-4 h-4 text-gray-400" />
+                                                    <span className="text-sm text-gray-500">15/03/2024</span>
+                                                    <Badge variant="outline" className="text-xs">
+                                                        Ngoại khóa
                                                     </Badge>
                                                 </div>
                                             </div>
@@ -310,68 +367,68 @@ export default function StudentProfile() {
                         {/* Thành tích */}
                         <TabsContent value="achievements">
                             <div className="grid gap-6">
-                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-orange-200">
+                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-blue-200">
                                     <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-orange-700">
+                                        <CardTitle className="flex items-center gap-2 text-blue-700">
                                             <Award className="w-5 h-5" />
-                                            {toast.PROFILE_MESSAGES.LABELS.BADGES_EARNED}
+                                            Chứng chỉ & Bằng cấp
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                            <div className="text-center p-4 rounded-lg bg-gradient-orange text-white achievement-glow">
-                                                <Trophy className="w-8 h-8 mx-auto mb-2" />
-                                                <p className="text-sm font-semibold">Code Master</p>
-                                                <p className="text-xs opacity-90">Giải Nhì Lập trình</p>
+                                            <div className="text-center p-4 rounded-lg bg-gradient-blue text-white achievement-glow">
+                                                <GraduationCap className="w-8 h-8 mx-auto mb-2" />
+                                                <p className="text-sm font-semibold">Cử nhân</p>
+                                                <p className="text-xs opacity-90">Sư phạm Tin học</p>
                                             </div>
-                                            <div className="text-center p-4 rounded-lg bg-gradient-blue text-white">
+                                            <div className="text-center p-4 rounded-lg bg-gradient-green text-white">
                                                 <Star className="w-8 h-8 mx-auto mb-2" />
-                                                <p className="text-sm font-semibold">Rising Star</p>
-                                                <p className="text-xs opacity-90">1000+ Star Points</p>
+                                                <p className="text-sm font-semibold">Giáo viên dạy giỏi</p>
+                                                <p className="text-xs opacity-90">Cấp tỉnh 2023</p>
                                             </div>
                                             <div className="text-center p-4 rounded-lg bg-gradient-purple text-white">
-                                                <Heart className="w-8 h-8 mx-auto mb-2" />
-                                                <p className="text-sm font-semibold">Helper</p>
-                                                <p className="text-xs opacity-90">Giúp đỡ bạn bè</p>
+                                                <Trophy className="w-8 h-8 mx-auto mb-2" />
+                                                <p className="text-sm font-semibold">Giáo viên chủ nhiệm giỏi</p>
+                                                <p className="text-xs opacity-90">2023</p>
                                             </div>
                                             <div className="text-center p-4 rounded-lg bg-yellow-500 text-white">
                                                 <Book className="w-8 h-8 mx-auto mb-2" />
-                                                <p className="text-sm font-semibold">Scholar</p>
-                                                <p className="text-xs opacity-90">Điểm cao</p>
+                                                <p className="text-sm font-semibold">Chứng chỉ</p>
+                                                <p className="text-xs opacity-90">ICDL, MOS</p>
                                             </div>
                                         </div>
                                     </CardContent>
                                 </Card>
 
-                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-orange-200">
+                                <Card className="hover-lift bg-white/80 backdrop-blur-sm border-blue-200">
                                     <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-orange-700">
+                                        <CardTitle className="flex items-center gap-2 text-blue-700">
                                             <Star className="w-5 h-5" />
-                                            {toast.PROFILE_MESSAGES.LABELS.POINTS_HISTORY}
+                                            Lịch sử đánh giá
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
                                         <div className="space-y-3">
                                             <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                                                 <div>
-                                                    <p className="font-semibold text-green-800">+200 Star Points</p>
-                                                    <p className="text-sm text-green-600">Giải Nhì cuộc thi lập trình</p>
+                                                    <p className="font-semibold text-green-800">Đánh giá xuất sắc</p>
+                                                    <p className="text-sm text-green-600">Môn Tin học - Học kỳ 1/2024</p>
                                                 </div>
-                                                <span className="text-sm text-gray-500">15/03/2024</span>
+                                                <span className="text-sm text-gray-500">4.8/5.0</span>
                                             </div>
                                             <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                                                 <div>
-                                                    <p className="font-semibold text-blue-800">+50 Star Points</p>
-                                                    <p className="text-sm text-blue-600">Bài viết được nhiều lượt thích</p>
+                                                    <p className="font-semibold text-blue-800">Phản hồi tích cực</p>
+                                                    <p className="text-sm text-blue-600">Hoạt động Tin học vui</p>
                                                 </div>
-                                                <span className="text-sm text-gray-500">10/03/2024</span>
+                                                <span className="text-sm text-gray-500">95% hài lòng</span>
                                             </div>
-                                            <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                                            <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
                                                 <div>
-                                                    <p className="font-semibold text-orange-800">+30 Star Points</p>
-                                                    <p className="text-sm text-orange-600">Tham gia Workshop AI</p>
+                                                    <p className="font-semibold text-purple-800">Học sinh đạt thành tích cao</p>
+                                                    <p className="text-sm text-purple-600">15 học sinh giỏi môn Tin học</p>
                                                 </div>
-                                                <span className="text-sm text-gray-500">05/03/2024</span>
+                                                <span className="text-sm text-gray-500">2024</span>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -389,12 +446,12 @@ export default function StudentProfile() {
                                             <span className="text-white font-bold text-sm">
                                                 {profile?.firstName && profile?.lastName 
                                                     ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
-                                                    : profile?.username ? profile.username[0].toUpperCase() : 'S'}
+                                                    : profile?.username ? profile.username[0].toUpperCase() : 'T'}
                                             </span>
                                         </div>
                                         <div className="flex-1">
                                             <Textarea
-                                                placeholder="Chia sẻ hoạt động học tập, sở thích và thành tích của bạn..."
+                                                placeholder="Chia sẻ hoạt động giảng dạy, sự kiện và thành tích của bạn..."
                                                 value={postContent}
                                                 onChange={(e) => setPostContent(e.target.value)}
                                                 className="w-full p-3 mt-3 border border-gray-200 rounded-md text-base resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
@@ -482,11 +539,26 @@ export default function StudentProfile() {
                                     author={profile?.firstName && profile?.lastName 
                                         ? `${profile.firstName} ${profile.lastName}` 
                                         : profile?.username || "Tôi"}
-                                    class={profile?.studentId || "Học sinh"}
-                                    time="1 giờ trước"
-                                    content="Vừa hoàn thành bài tập lập trình Python! Cảm giác khi code chạy được thật tuyệt vời 🐍 #Python #LậpTrình #HọcTập"
-                                    likes={12}
-                                    comments={5}
+                                    class={profile?.teacherCode || "Giáo viên"}
+                                    time="30 phút trước"
+                                    content="Chia sẻ kinh nghiệm dạy Tin học cho học sinh THPT. Các phương pháp giảng dạy hiệu quả và cách khuyến khích học sinh tìm hiểu công nghệ 🎓 #GiáoDục #TinHọc"
+                                    likes={8}
+                                    comments={3}
+                                    shares={1}
+                                    isVerified={true}
+                                    isMyPost={true}
+                                />
+
+                                <PostCard
+                                    author={profile?.firstName && profile?.lastName 
+                                        ? `${profile.firstName} ${profile.lastName}` 
+                                        : profile?.username || "Tôi"}
+                                    class={profile?.teacherCode || "Giáo viên"}
+                                    time="2 giờ trước"
+                                    content="Tổ chức thành công workshop 'Lập trình Scratch cho học sinh' với 45 em tham gia. Cảm ơn các em đã nhiệt tình tham gia! 🚀 #Scratch #LậpTrình"
+                                    image="/Picturemockdata/DSC04766.jpg"
+                                    likes={15}
+                                    comments={7}
                                     shares={2}
                                     isVerified={true}
                                     isMyPost={true}
@@ -496,12 +568,25 @@ export default function StudentProfile() {
                                     author={profile?.firstName && profile?.lastName 
                                         ? `${profile.firstName} ${profile.lastName}` 
                                         : profile?.username || "Tôi"}
-                                    class={profile?.studentId || "Học sinh"}
-                                    time="3 giờ trước"
-                                    content="Tham gia cuộc thi 'Sáng tạo ứng dụng di động' với nhóm bạn. Ý tưởng app học tiếng Anh đang được phát triển! 📱 #AppDevelopment #TiếngAnh"
-                                    image="/Picturemockdata/DSC04766.jpg"
-                                    likes={18}
-                                    comments={8}
+                                    class={profile?.teacherCode || "Giáo viên"}
+                                    time="1 ngày trước"
+                                    content="Thông báo về cuộc thi 'Sáng tạo ứng dụng di động' dành cho học sinh khối 11-12. Hạn nộp bài: 15/12/2024. Giải thưởng hấp dẫn đang chờ đón! 🏆"
+                                    likes={23}
+                                    comments={12}
+                                    shares={5}
+                                    isVerified={true}
+                                    isMyPost={true}
+                                />
+
+                                <PostCard
+                                    author={profile?.firstName && profile?.lastName 
+                                        ? `${profile.firstName} ${profile.lastName}` 
+                                        : profile?.username || "Tôi"}
+                                    class={profile?.teacherCode || "Giáo viên"}
+                                    time="3 ngày trước"
+                                    content="Chia sẻ tài liệu học tập về 'An toàn thông tin trên Internet' cho học sinh. Các em hãy tải về và học tập nhé! 📚 #AnToànThôngTin #HọcTập"
+                                    likes={19}
+                                    comments={6}
                                     shares={3}
                                     isVerified={true}
                                     isMyPost={true}
@@ -511,47 +596,21 @@ export default function StudentProfile() {
                                     author={profile?.firstName && profile?.lastName 
                                         ? `${profile.firstName} ${profile.lastName}` 
                                         : profile?.username || "Tôi"}
-                                    class={profile?.studentId || "Học sinh"}
-                                    time="1 ngày trước"
-                                    content="Chia sẻ kinh nghiệm học môn Toán. Phương pháp giải bài tập hiệu quả và cách ghi nhớ công thức! 📚 #Toán #HọcTập #ChiaSẻ"
-                                    likes={25}
-                                    comments={12}
+                                    class={profile?.teacherCode || "Giáo viên"}
+                                    time="1 tuần trước"
+                                    content="Kết quả bài kiểm tra giữa kỳ môn Tin học 12. Chúc mừng các em đạt điểm cao! Những em chưa đạt yêu cầu hãy cố gắng hơn nữa 💪 #KếtQuảThi #TinHọc12"
+                                    likes={31}
+                                    comments={18}
                                     shares={4}
                                     isVerified={true}
                                     isMyPost={true}
                                 />
 
-                                <PostCard
-                                    author={profile?.firstName && profile?.lastName 
-                                        ? `${profile.firstName} ${profile.lastName}` 
-                                        : profile?.username || "Tôi"}
-                                    class={profile?.studentId || "Học sinh"}
-                                    time="2 ngày trước"
-                                    content="Workshop 'Tìm hiểu AI và Machine Learning' hôm nay thật bổ ích! Hiểu thêm về tương lai của công nghệ 🤖 #AI #MachineLearning #Workshop"
-                                    likes={31}
-                                    comments={15}
-                                    shares={6}
-                                    isVerified={true}
-                                    isMyPost={true}
-                                />
-
-                                <PostCard
-                                    author={profile?.firstName && profile?.lastName 
-                                        ? `${profile.firstName} ${profile.lastName}` 
-                                        : profile?.username || "Tôi"}
-                                    class={profile?.studentId || "Học sinh"}
-                                    time="3 ngày trước"
-                                    content="Kết quả thi giữa kỳ môn Tin học: 9.5 điểm! Cảm ơn thầy cô và bạn bè đã hỗ trợ em trong quá trình học tập 🎉 #ThànhTích #TinHọc #CảmƠn"
-                                    likes={42}
-                                    comments={20}
-                                    shares={8}
-                                    isVerified={true}
-                                    isMyPost={true}
-                                />
                             </div>
                         </TabsContent>
                     </Tabs>
                 </div>
             )}
-        </>)
-    }
+        </>
+    )
+}
