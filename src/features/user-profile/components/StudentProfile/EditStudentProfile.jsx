@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { useDispatch } from "react-redux"
 import { Button } from "@/common/components/ui/button"
 import { Input } from "@/common/components/ui/input"
 import { Textarea } from "@/common/components/ui/textarea"
@@ -8,18 +9,22 @@ import { Card, CardContent } from "@/common/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar"
 import { Loading, LoadingOverlay, LoadingButton, LoadingCard } from "@/common/components/ui/loading"
 import { useProfileApi } from "@/features/user-profile/hooks/useProfileApi"
+import { useAuthApi } from "@/features/auth/hooks/useAuthApi"
 import { useToast } from "@/common/hooks/useToast"
 import { ROUTES } from "@/common/constants/routes"
 import { uploadImage } from "@/common/utils/upload"
 import { Star, BookOpen, Music, Film, Camera, Coffee, Globe, Save, X, Trash2 } from "lucide-react"
 import InteractiveTags from "./InteractiveTags"
+import { setUser } from "@/store/user/userSlice"
 
 export default function EditStudentProfile() {
   const navigate = useNavigate()
   const toast = useToast()
+  const dispatch = useDispatch()
   
   // Profile API hook
   const { profileLoading, saveLoading, getMyProfile, updateMyPersonalInfo } = useProfileApi()
+  const { getMe } = useAuthApi()
   const [uploadLoading, setUploadLoading] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -39,6 +44,7 @@ export default function EditStudentProfile() {
 
   const [avatarPreview, setAvatarPreview] = useState("")
   const [avatarFile, setAvatarFile] = useState(null)
+  const [phoneError, setPhoneError] = useState("")
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -83,6 +89,11 @@ export default function EditStudentProfile() {
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+    
+    // Clear phone error when user starts typing
+    if (field === "phoneNumber") {
+      setPhoneError("")
+    }
   }
 
   const handleAvatarChange = (event) => {
@@ -104,7 +115,6 @@ export default function EditStudentProfile() {
       const reader = new FileReader()
       reader.onload = (e) => {
         if (e.target) {
-          console.log('Setting avatar preview:', e.target.result)
           setAvatarPreview(e.target.result)
         }
       }
@@ -117,8 +127,26 @@ export default function EditStudentProfile() {
     setAvatarPreview(formData.avatarUrl || "")
   }
 
+  const validatePhoneNumber = (phoneNumber) => {
+    if (!phoneNumber || phoneNumber.trim() === '') {
+      return true; // Allow empty phone number
+    }
+    
+    // Remove all spaces and special characters
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    
+    // Check if it starts with 0 and has exactly 10 digits
+    return /^0\d{9}$/.test(cleanPhone);
+  };
+
   const handleSave = async () => {
     try {
+      // Validate phone number
+      if (formData.phoneNumber && !validatePhoneNumber(formData.phoneNumber)) {
+        setPhoneError("Số điện thoại phải bắt đầu bằng 0 và có đúng 10 chữ số");
+        return;
+      }
+
       let avatarUrl = formData.avatarUrl;
       
       // Upload avatar if there's a new file
@@ -126,7 +154,6 @@ export default function EditStudentProfile() {
         setUploadLoading(true);
         try {
           avatarUrl = await uploadImage(avatarFile);
-          console.log("Upload avatar thành công:", avatarUrl);
         } catch (uploadError) {
           console.error("Lỗi upload avatar:", uploadError);
           toast.avatarUploadFailed();
@@ -135,6 +162,9 @@ export default function EditStudentProfile() {
           setUploadLoading(false);
         }
       }
+
+      // Clean phone number before saving
+      const cleanPhoneNumber = formData.phoneNumber ? formData.phoneNumber.replace(/\D/g, '') : null;
 
       const payload = {
         bio: formData.bio,
@@ -146,12 +176,21 @@ export default function EditStudentProfile() {
         }),
         avatarUrl,
         birthDate: formData.birthDate ? new Date(formData.birthDate).toISOString() : null,
-        phoneNumber: formData.phoneNumber,
+        phoneNumber: cleanPhoneNumber,
       };
 
       const result = await updateMyPersonalInfo(payload);
       
-      console.log("Đã lưu thành công:", result);
+      // Reload user profile to update store
+      try {
+        const updatedUser = await getMe();
+        if (updatedUser?.data) {
+          dispatch(setUser(updatedUser.data));
+        }
+      } catch (error) {
+        console.error("Error reloading user profile:", error);
+      }
+      
       toast.profileUpdated();
       navigate(ROUTES.USER_PROFILE.PROFILE);
     } catch (error) {
@@ -163,9 +202,6 @@ export default function EditStudentProfile() {
   const handleCancel = () => {
     navigate(ROUTES.USER_PROFILE.PROFILE)
   }
-
-  console.log('Current avatarPreview:', avatarPreview);
-  console.log('Current avatarFile:', avatarFile);
 
   return (
     <>
@@ -198,8 +234,6 @@ export default function EditStudentProfile() {
                 <AvatarImage 
                   src={avatarPreview || ""} 
                   alt="Profile" 
-                  onLoad={() => console.log('Avatar image loaded')}
-                  onError={() => console.log('Avatar image error')}
                 />
                 <AvatarFallback className="bg-gradient-to-br from-orange-400 to-yellow-400 text-white text-2xl font-bold">
                   {formData.name
@@ -297,8 +331,15 @@ export default function EditStudentProfile() {
                   id="phoneNumber"
                   value={formData.phoneNumber}
                   onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
-                  placeholder={toast.PROFILE_MESSAGES.PLACEHOLDER.PHONE_NUMBER}
+                  placeholder="0123456789"
+                  maxLength={10}
+                  className={phoneError ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                 />
+                {phoneError ? (
+                  <p className="text-xs text-red-500">{phoneError}</p>
+                ) : (
+                  <p className="text-xs text-gray-500">Nhập số điện thoại bắt đầu bằng 0 và có đúng 10 chữ số</p>
+                )}
               </div>
             </div>
 

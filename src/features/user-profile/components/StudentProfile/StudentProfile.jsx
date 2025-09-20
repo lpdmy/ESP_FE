@@ -17,14 +17,25 @@ import {
     Heart,
     Code,
     Book,
+    FileText,
+    ChevronDown,
+    Image,
+    Video,
+    Smile,
+    Plus,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { ROUTES } from "@/common/constants/routes"
 import { useState, useEffect } from "react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/common/components/ui/dropdown-menu"
+import PostCard from "@/features/landing/components/PostCard"
+import { Textarea } from "@/common/components/ui/textarea"
 
 export default function StudentProfile() {
     const [profile, setProfile] = useState(null);
     const [extraData, setExtraData] = useState({});
+    const [sortBy, setSortBy] = useState("newest");
+    const [postContent, setPostContent] = useState("");
     const toast = useToast();
 
     // Profile API hook
@@ -104,7 +115,7 @@ export default function StudentProfile() {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                                            <span className="font-semibold text-orange-600">Student Profile</span>
+                                            <span className="font-semibold text-orange-600">Hồ sơ học sinh</span>
                                         </div>
                                     </div>
                                 </div>
@@ -141,16 +152,20 @@ export default function StudentProfile() {
 
                     {/* Profile Tabs */}
                     <Tabs defaultValue="introduction" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 mb-6 bg-white/80 backdrop-blur-sm">
-                            <TabsTrigger value="introduction" className="flex items-center gap-2">
+                        <TabsList className="grid w-full grid-cols-4 mb-6 bg-white/80 backdrop-blur-sm">
+                            <TabsTrigger value="introduction" className="flex items-center justify-center gap-2">
                                 <User className="w-4 h-4" />
                                 {toast.PROFILE_MESSAGES.LABELS.INTRODUCTION}
                             </TabsTrigger>
-                            <TabsTrigger value="activities" className="flex items-center gap-2">
+                            <TabsTrigger value="posts" className="flex items-center justify-center gap-2">
+                                <FileText className="w-4 h-4" />
+                                Bài đăng
+                            </TabsTrigger>
+                            <TabsTrigger value="activities" className="flex items-center justify-center gap-2">
                                 <Activity className="w-4 h-4" />
                                 {toast.PROFILE_MESSAGES.LABELS.ACTIVITIES}
                             </TabsTrigger>
-                            <TabsTrigger value="achievements" className="flex items-center gap-2">
+                            <TabsTrigger value="achievements" className="flex items-center justify-center gap-2">
                                 <Trophy className="w-4 h-4" />
                                 {toast.PROFILE_MESSAGES.LABELS.ACHIEVEMENTS}
                             </TabsTrigger>
@@ -224,7 +239,7 @@ export default function StudentProfile() {
                         <TabsContent value="activities">
                             <div className="space-y-4">
                                 <Card className="hover-lift bg-white/80 backdrop-blur-sm border-orange-200">
-                                    <CardContent className="pt-4 p-4">
+                                    <CardContent className="pt-4 !p-4">
                                         <div className="flex items-start gap-3">
                                             <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
                                             <div className="flex-1">
@@ -247,7 +262,7 @@ export default function StudentProfile() {
                                 </Card>
 
                                 <Card className="hover-lift bg-white/80 backdrop-blur-sm border-orange-200">
-                                    <CardContent className="p-4">
+                                    <CardContent className="!p-4">
                                         <div className="flex items-start gap-3">
                                             <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
                                             <div className="flex-1">
@@ -270,7 +285,7 @@ export default function StudentProfile() {
                                 </Card>
 
                                 <Card className="hover-lift bg-white/80 backdrop-blur-sm border-orange-200">
-                                    <CardContent className="p-4">
+                                    <CardContent className="!p-4">
                                         <div className="flex items-start gap-3">
                                             <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                                             <div className="flex-1">
@@ -363,8 +378,180 @@ export default function StudentProfile() {
                                 </Card>
                             </div>
                         </TabsContent>
+
+                        {/* Bài đăng của tôi */}
+                        <TabsContent value="posts">
+                            <div className="space-y-6">
+                                {/* Create Post - Editable */}
+                                <Card className="p-4 bg-white/80 backdrop-blur-sm border border-orange-100">
+                                    <div className="flex items-start space-x-3">
+                                        <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full flex items-center justify-center">
+                                            <span className="text-white font-bold text-sm">
+                                                {profile?.firstName && profile?.lastName 
+                                                    ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
+                                                    : profile?.username ? profile.username[0].toUpperCase() : 'S'}
+                                            </span>
+                                        </div>
+                                        <div className="flex-1">
+                                            <Textarea
+                                                placeholder="Chia sẻ hoạt động học tập, sở thích và thành tích của bạn..."
+                                                value={postContent}
+                                                onChange={(e) => setPostContent(e.target.value)}
+                                                className="w-full p-3 mt-3 border border-gray-200 rounded-md text-base resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                                rows={3}
+                                            />
+                                            <div className="flex items-center justify-between mt-3">
+                                                <div className="flex items-center space-x-4">
+                                                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                                                        <Image className="h-4 w-4 mr-2" />
+                                                        Ảnh
+                                                    </Button>
+                                                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                                                        <Video className="h-4 w-4 mr-2" />
+                                                        Video
+                                                    </Button>
+                                                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                                                        <Smile className="h-4 w-4 mr-2" />
+                                                        Cảm xúc
+                                                    </Button>
+                                                </div>
+                                                <Button 
+                                                    className="bg-gradient-to-r from-orange-500 to-yellow-500 border-0 text-white"
+                                                    disabled={!postContent.trim()}
+                                                >
+                                                    <Plus className="h-4 w-4 mr-2" />
+                                                    Đăng bài
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+
+                                {/* Sort Controls */}
+                                <Card className="p-4 bg-white border-blue-200 relative z-40">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <FileText className="w-5 h-5 text-blue-600" />
+                                            <h3 className="text-lg font-semibold text-gray-800">Bài đăng</h3>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-gray-600 hidden sm:block">Sắp xếp:</span>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs">
+                                                        {sortBy === "newest" && "Mới nhất"}
+                                                        {sortBy === "oldest" && "Cũ nhất"}
+                                                        {sortBy === "most_liked" && "Nhiều lượt thích"}
+                                                        {sortBy === "most_commented" && "Nhiều bình luận"}
+                                                        <ChevronDown className="w-3 h-3 ml-1" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="z-50 bg-white shadow-lg border border-gray-200">
+                                                    <DropdownMenuItem 
+                                                        onClick={() => setSortBy("newest")}
+                                                        className={`cursor-pointer ${sortBy === "newest" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
+                                                    >
+                                                        Mới nhất
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem 
+                                                        onClick={() => setSortBy("oldest")}
+                                                        className={`cursor-pointer ${sortBy === "oldest" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
+                                                    >
+                                                        Cũ nhất
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem 
+                                                        onClick={() => setSortBy("most_liked")}
+                                                        className={`cursor-pointer ${sortBy === "most_liked" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
+                                                    >
+                                                        Nhiều lượt thích
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem 
+                                                        onClick={() => setSortBy("most_commented")}
+                                                        className={`cursor-pointer ${sortBy === "most_commented" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
+                                                    >
+                                                        Nhiều bình luận
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </div>
+                                </Card>
+
+                                {/* My Posts */}
+                                <PostCard
+                                    author={profile?.firstName && profile?.lastName 
+                                        ? `${profile.firstName} ${profile.lastName}` 
+                                        : profile?.username || "Tôi"}
+                                    class={profile?.studentId || "Học sinh"}
+                                    time="1 giờ trước"
+                                    content="Vừa hoàn thành bài tập lập trình Python! Cảm giác khi code chạy được thật tuyệt vời 🐍 #Python #LậpTrình #HọcTập"
+                                    likes={12}
+                                    comments={5}
+                                    shares={2}
+                                    isVerified={true}
+                                    isMyPost={true}
+                                />
+
+                                <PostCard
+                                    author={profile?.firstName && profile?.lastName 
+                                        ? `${profile.firstName} ${profile.lastName}` 
+                                        : profile?.username || "Tôi"}
+                                    class={profile?.studentId || "Học sinh"}
+                                    time="3 giờ trước"
+                                    content="Tham gia cuộc thi 'Sáng tạo ứng dụng di động' với nhóm bạn. Ý tưởng app học tiếng Anh đang được phát triển! 📱 #AppDevelopment #TiếngAnh"
+                                    image="/Picturemockdata/DSC04766.jpg"
+                                    likes={18}
+                                    comments={8}
+                                    shares={3}
+                                    isVerified={true}
+                                    isMyPost={true}
+                                />
+
+                                <PostCard
+                                    author={profile?.firstName && profile?.lastName 
+                                        ? `${profile.firstName} ${profile.lastName}` 
+                                        : profile?.username || "Tôi"}
+                                    class={profile?.studentId || "Học sinh"}
+                                    time="1 ngày trước"
+                                    content="Chia sẻ kinh nghiệm học môn Toán. Phương pháp giải bài tập hiệu quả và cách ghi nhớ công thức! 📚 #Toán #HọcTập #ChiaSẻ"
+                                    likes={25}
+                                    comments={12}
+                                    shares={4}
+                                    isVerified={true}
+                                    isMyPost={true}
+                                />
+
+                                <PostCard
+                                    author={profile?.firstName && profile?.lastName 
+                                        ? `${profile.firstName} ${profile.lastName}` 
+                                        : profile?.username || "Tôi"}
+                                    class={profile?.studentId || "Học sinh"}
+                                    time="2 ngày trước"
+                                    content="Workshop 'Tìm hiểu AI và Machine Learning' hôm nay thật bổ ích! Hiểu thêm về tương lai của công nghệ 🤖 #AI #MachineLearning #Workshop"
+                                    likes={31}
+                                    comments={15}
+                                    shares={6}
+                                    isVerified={true}
+                                    isMyPost={true}
+                                />
+
+                                <PostCard
+                                    author={profile?.firstName && profile?.lastName 
+                                        ? `${profile.firstName} ${profile.lastName}` 
+                                        : profile?.username || "Tôi"}
+                                    class={profile?.studentId || "Học sinh"}
+                                    time="3 ngày trước"
+                                    content="Kết quả thi giữa kỳ môn Tin học: 9.5 điểm! Cảm ơn thầy cô và bạn bè đã hỗ trợ em trong quá trình học tập 🎉 #ThànhTích #TinHọc #CảmƠn"
+                                    likes={42}
+                                    comments={20}
+                                    shares={8}
+                                    isVerified={true}
+                                    isMyPost={true}
+                                />
+                            </div>
+                        </TabsContent>
                     </Tabs>
                 </div>
             )}
         </>)
-}
+    }

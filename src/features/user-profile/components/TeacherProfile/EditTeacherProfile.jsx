@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { useDispatch } from "react-redux"
 import { Button } from "@/common/components/ui/button"
 import { Input } from "@/common/components/ui/input"
 import { Textarea } from "@/common/components/ui/textarea"
@@ -8,18 +9,22 @@ import { Card, CardContent } from "@/common/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar"
 import { Loading, LoadingOverlay, LoadingButton, LoadingCard } from "@/common/components/ui/loading"
 import { useProfileApi } from "@/features/user-profile/hooks/useProfileApi"
+import { useAuthApi } from "@/features/auth/hooks/useAuthApi"
 import { useToast } from "@/common/hooks/useToast"
 import { ROUTES } from "@/common/constants/routes"
 import { uploadImage } from "@/common/utils/upload"
 import { Star, BookOpen, Music, Film, Camera, Coffee, Globe, Save, X, Trash2, GraduationCap, Code, Database, Shield, Computer } from "lucide-react"
 import InteractiveTags from "../StudentProfile/InteractiveTags"
+import { setUser } from "@/store/user/userSlice"
 
 export default function EditTeacherProfile() {
   const navigate = useNavigate()
   const toast = useToast()
+  const dispatch = useDispatch()
   
   // Profile API hook
   const { profileLoading, saveLoading, getMyTeacherProfile, updateMyTeacherProfile } = useProfileApi()
+  const { getMe } = useAuthApi()
   const [uploadLoading, setUploadLoading] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -40,6 +45,7 @@ export default function EditTeacherProfile() {
 
   const [avatarPreview, setAvatarPreview] = useState("")
   const [avatarFile, setAvatarFile] = useState(null)
+  const [phoneError, setPhoneError] = useState("")
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -92,6 +98,11 @@ export default function EditTeacherProfile() {
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+    
+    // Clear phone error when user starts typing
+    if (field === "phoneNumber") {
+      setPhoneError("")
+    }
   }
 
   const handleAvatarChange = (event) => {
@@ -125,11 +136,25 @@ export default function EditTeacherProfile() {
     setAvatarPreview(formData.avatarUrl || "")
   }
 
+  const validatePhoneNumber = (phoneNumber) => {
+    if (!phoneNumber || phoneNumber.trim() === '') {
+      return true; // Allow empty phone number
+    }
+    
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    
+    return /^0\d{9}$/.test(cleanPhone);
+  };
+
   const handleSave = async () => {
     try {
+      if (formData.phoneNumber && !validatePhoneNumber(formData.phoneNumber)) {
+        setPhoneError("Số điện thoại phải bắt đầu bằng 0 và có đúng 10 chữ số");
+        return;
+      }
+
       let avatarUrl = formData.avatarUrl;
       
-      // Upload avatar if there's a new file
       if (avatarFile) {
         setUploadLoading(true);
         try {
@@ -143,11 +168,13 @@ export default function EditTeacherProfile() {
         }
       }
 
+      const cleanPhoneNumber = formData.phoneNumber ? formData.phoneNumber.replace(/\D/g, '') : null;
+
       const payload = {
         bio: formData.bio,
         avatarUrl,
         birthDate: formData.birthDate ? new Date(formData.birthDate).toISOString() : null,
-        phoneNumber: formData.phoneNumber,
+        phoneNumber: cleanPhoneNumber,
         extraJson: JSON.stringify({
           specializations: formData.specializations,
           researchAreas: formData.researchAreas,
@@ -158,6 +185,16 @@ export default function EditTeacherProfile() {
 
 
       const result = await updateMyTeacherProfile(payload);
+      
+      // Reload user profile to update store
+      try {
+        const updatedUser = await getMe();
+        if (updatedUser?.data) {
+          dispatch(setUser(updatedUser.data));
+        }
+      } catch (error) {
+        console.error("Error reloading user profile:", error);
+      }
       
       toast.profileUpdated();
       navigate(ROUTES.USER_PROFILE.TEACHER_PROFILE);
@@ -308,8 +345,15 @@ export default function EditTeacherProfile() {
                   id="phoneNumber"
                   value={formData.phoneNumber}
                   onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
-                  placeholder="Nhập số điện thoại"
+                  placeholder="0123456789"
+                  maxLength={10}
+                  className={phoneError ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                 />
+                {phoneError ? (
+                  <p className="text-xs text-red-500">{phoneError}</p>
+                ) : (
+                  <p className="text-xs text-gray-500">Nhập số điện thoại bắt đầu bằng 0 và có đúng 10 chữ số</p>
+                )}
               </div>
             </div>
 
@@ -328,55 +372,55 @@ export default function EditTeacherProfile() {
               label="Chuyên môn"
               initialTags={formData.specializations}
               popularTags={[
-                "Lập trình C#",
-                "Lập trình Java",
-                "Machine Learning",
-                "Web Development",
-                "Mobile Development",
-                "Database Design",
-                "Software Engineering",
-                "AI & Deep Learning",
-                "Cloud Computing",
+                "Tin học văn phòng",
+                "Lập trình Scratch",
+                "Thiết kế đồ họa",
+                "Tin học cơ bản",
+                "Sử dụng Internet",
+                "Bảo mật thông tin",
+                "Kỹ năng số",
+                "Ứng dụng di động",
+                "Giáo dục công nghệ",
               ]}
               iconMap={{
-                "Lập trình C#": Code,
-                "Lập trình Java": Code,
-                "Machine Learning": Star,
-                "Web Development": Globe,
-                "Mobile Development": Star,
-                "Database Design": Database,
-                "Software Engineering": BookOpen,
-                "AI & Deep Learning": Star,
-                "Cloud Computing": Globe,
+                "Tin học văn phòng": BookOpen,
+                "Lập trình Scratch": Code,
+                "Thiết kế đồ họa": Star,
+                "Tin học cơ bản": BookOpen,
+                "Sử dụng Internet": Globe,
+                "Bảo mật thông tin": Shield,
+                "Kỹ năng số": Star,
+                "Ứng dụng di động": Star,
+                "Giáo dục công nghệ": BookOpen,
               }}
               onChange={(tags) => handleInputChange("specializations", tags)}
             />
 
             {/* Interactive tags for research areas */}
             <InteractiveTags
-              label="Lĩnh vực nghiên cứu"
+              label="Sở thích & Nghiên cứu"
               initialTags={formData.researchAreas}
               popularTags={[
-                "Trí tuệ nhân tạo",
-                "Học máy",
-                "Xử lý ngôn ngữ tự nhiên",
-                "Computer Vision",
-                "Blockchain",
-                "IoT",
-                "Cybersecurity",
-                "Data Science",
-                "Big Data",
+                "Phương pháp dạy học",
+                "Ứng dụng CNTT trong giáo dục",
+                "Giáo dục STEM",
+                "Sáng tạo công nghệ",
+                "Nghiên cứu học sinh",
+                "Phát triển kỹ năng số",
+                "Giáo dục trực tuyến",
+                "Đổi mới sư phạm",
+                "Tâm lý học đường",
               ]}
               iconMap={{
-                "Trí tuệ nhân tạo": Star,
-                "Học máy": Star,
-                "Xử lý ngôn ngữ tự nhiên": BookOpen,
-                "Computer Vision": Camera,
-                "Blockchain": Code,
-                "IoT": Globe,
-                "Cybersecurity": Shield,
-                "Data Science": Database,
-                "Big Data": Database,
+                "Phương pháp dạy học": BookOpen,
+                "Ứng dụng CNTT trong giáo dục": Globe,
+                "Giáo dục STEM": Star,
+                "Sáng tạo công nghệ": Code,
+                "Nghiên cứu học sinh": Star,
+                "Phát triển kỹ năng số": Star,
+                "Giáo dục trực tuyến": Globe,
+                "Đổi mới sư phạm": BookOpen,
+                "Tâm lý học đường": Star,
               }}
               onChange={(tags) => handleInputChange("researchAreas", tags)}
             />
@@ -386,26 +430,26 @@ export default function EditTeacherProfile() {
               label="Môn học giảng dạy"
               initialTags={formData.teachingSubjects}
               popularTags={[
-                "Lập trình C#",
-                "Lập trình Java",
-                "Cấu trúc dữ liệu",
-                "Thuật toán",
-                "Cơ sở dữ liệu",
-                "Mạng máy tính",
-                "Hệ điều hành",
-                "Phân tích thiết kế hệ thống",
-                "Lập trình Web",
+                "Tin học 10",
+                "Tin học 11", 
+                "Tin học 12",
+                "Lập trình Scratch",
+                "Tin học văn phòng",
+                "Sử dụng Internet",
+                "Thiết kế web cơ bản",
+                "Ứng dụng tin học",
+                "Tin học ứng dụng",
               ]}
               iconMap={{
-                "Lập trình C#": Code,
-                "Lập trình Java": Code,
-                "Cấu trúc dữ liệu": Database,
-                "Thuật toán": BookOpen,
-                "Cơ sở dữ liệu": Database,
-                "Mạng máy tính": Globe,
-                "Hệ điều hành": Computer,
-                "Phân tích thiết kế hệ thống": BookOpen,
-                "Lập trình Web": Globe,
+                "Tin học 10": BookOpen,
+                "Tin học 11": BookOpen,
+                "Tin học 12": BookOpen,
+                "Lập trình Scratch": Code,
+                "Tin học văn phòng": BookOpen,
+                "Sử dụng Internet": Globe,
+                "Thiết kế web cơ bản": Globe,
+                "Ứng dụng tin học": Star,
+                "Tin học ứng dụng": Star,
               }}
               onChange={(tags) => handleInputChange("teachingSubjects", tags)}
             />

@@ -20,14 +20,25 @@ import {
     GraduationCap,
     Users,
     BookOpen,
+    FileText,
+    ChevronDown,
+    Image,
+    Video,
+    Smile,
+    Plus,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { ROUTES } from "@/common/constants/routes"
 import { useState, useEffect } from "react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/common/components/ui/dropdown-menu"
+import PostCard from "@/features/landing/components/PostCard"
+import { Textarea } from "@/common/components/ui/textarea"
 
 export default function TeacherProfile() {
     const [profile, setProfile] = useState(null);
     const [extraData, setExtraData] = useState({});
+    const [sortBy, setSortBy] = useState("newest");
+    const [postContent, setPostContent] = useState("");
     const toast = useToast();
 
     // Profile API hook
@@ -122,7 +133,7 @@ export default function TeacherProfile() {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <GraduationCap className="w-5 h-5 text-blue-500 fill-current" />
-                                            <span className="font-semibold text-blue-600">Teacher Profile</span>
+                                            <span className="font-semibold text-blue-600">Hồ sơ giáo viên</span>
                                         </div>
                                     </div>
                                 </div>
@@ -144,13 +155,6 @@ export default function TeacherProfile() {
                                             </div>
                                             <p className="text-sm text-gray-600">Lớp học</p>
                                         </div>
-                                        <div className="space-y-1">
-                                            <div className="flex items-center justify-center">
-                                                <Trophy className="w-4 h-4 text-yellow-500 mr-1" />
-                                                <span className="text-2xl font-bold text-gray-800">8</span>
-                                            </div>
-                                            <p className="text-sm text-gray-600">Năm kinh nghiệm</p>
-                                        </div>
                                     </div>
 
                                     <Link to={ROUTES.USER_PROFILE.EDIT_TEACHER}>
@@ -165,16 +169,20 @@ export default function TeacherProfile() {
 
                     {/* Profile Tabs */}
                     <Tabs defaultValue="introduction" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 mb-6 bg-white/80 backdrop-blur-sm">
-                            <TabsTrigger value="introduction" className="flex items-center gap-2">
+                        <TabsList className="grid w-full grid-cols-4 mb-6 bg-white/80 backdrop-blur-sm">
+                            <TabsTrigger value="introduction" className="flex items-center justify-center gap-2">
                                 <User className="w-4 h-4" />
                                 Giới thiệu
                             </TabsTrigger>
-                            <TabsTrigger value="teaching" className="flex items-center gap-2">
+                            <TabsTrigger value="posts" className="flex items-center justify-center gap-2">
+                                <FileText className="w-4 h-4" />
+                                Bài đăng
+                            </TabsTrigger>
+                            <TabsTrigger value="teaching" className="flex items-center justify-center gap-2">
                                 <BookOpen className="w-4 h-4" />
                                 Giảng dạy
                             </TabsTrigger>
-                            <TabsTrigger value="achievements" className="flex items-center gap-2">
+                            <TabsTrigger value="achievements" className="flex items-center justify-center gap-2">
                                 <Trophy className="w-4 h-4" />
                                 Thành tích
                             </TabsTrigger>
@@ -425,6 +433,179 @@ export default function TeacherProfile() {
                                         </div>
                                     </CardContent>
                                 </Card>
+                            </div>
+                        </TabsContent>
+
+                        {/* Bài đăng của tôi */}
+                        <TabsContent value="posts">
+                            <div className="space-y-6">
+                                {/* Create Post - Editable */}
+                                <Card className="p-4 bg-white/80 backdrop-blur-sm border border-orange-100">
+                                    <div className="flex items-start space-x-3">
+                                        <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full flex items-center justify-center">
+                                            <span className="text-white font-bold text-sm">
+                                                {profile?.firstName && profile?.lastName 
+                                                    ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
+                                                    : profile?.username ? profile.username[0].toUpperCase() : 'T'}
+                                            </span>
+                                        </div>
+                                        <div className="flex-1">
+                                            <Textarea
+                                                placeholder="Chia sẻ hoạt động giảng dạy, sự kiện và thành tích của bạn..."
+                                                value={postContent}
+                                                onChange={(e) => setPostContent(e.target.value)}
+                                                className="w-full p-3 mt-3 border border-gray-200 rounded-md text-base resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                                rows={3}
+                                            />
+                                            <div className="flex items-center justify-between mt-3">
+                                                <div className="flex items-center space-x-4">
+                                                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                                                        <Image className="h-4 w-4 mr-2" />
+                                                        Ảnh
+                                                    </Button>
+                                                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                                                        <Video className="h-4 w-4 mr-2" />
+                                                        Video
+                                                    </Button>
+                                                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                                                        <Smile className="h-4 w-4 mr-2" />
+                                                        Cảm xúc
+                                                    </Button>
+                                                </div>
+                                                <Button 
+                                                    className="bg-gradient-to-r from-orange-500 to-yellow-500 border-0 text-white"
+                                                    disabled={!postContent.trim()}
+                                                >
+                                                    <Plus className="h-4 w-4 mr-2" />
+                                                    Đăng bài
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+
+                                {/* Sort Controls */}
+                                <Card className="p-4 bg-white border-blue-200 relative z-40">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <FileText className="w-5 h-5 text-blue-600" />
+                                            <h3 className="text-lg font-semibold text-gray-800">Bài đăng</h3>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-gray-600 hidden sm:block">Sắp xếp:</span>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs">
+                                                        {sortBy === "newest" && "Mới nhất"}
+                                                        {sortBy === "oldest" && "Cũ nhất"}
+                                                        {sortBy === "most_liked" && "Nhiều lượt thích"}
+                                                        {sortBy === "most_commented" && "Nhiều bình luận"}
+                                                        <ChevronDown className="w-3 h-3 ml-1" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="z-50 bg-white shadow-lg border border-gray-200">
+                                                    <DropdownMenuItem 
+                                                        onClick={() => setSortBy("newest")}
+                                                        className={`cursor-pointer ${sortBy === "newest" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
+                                                    >
+                                                        Mới nhất
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem 
+                                                        onClick={() => setSortBy("oldest")}
+                                                        className={`cursor-pointer ${sortBy === "oldest" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
+                                                    >
+                                                        Cũ nhất
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem 
+                                                        onClick={() => setSortBy("most_liked")}
+                                                        className={`cursor-pointer ${sortBy === "most_liked" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
+                                                    >
+                                                        Nhiều lượt thích
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem 
+                                                        onClick={() => setSortBy("most_commented")}
+                                                        className={`cursor-pointer ${sortBy === "most_commented" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
+                                                    >
+                                                        Nhiều bình luận
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </div>
+                                </Card>
+
+                                {/* My Posts */}
+                                <PostCard
+                                    author={profile?.firstName && profile?.lastName 
+                                        ? `${profile.firstName} ${profile.lastName}` 
+                                        : profile?.username || "Tôi"}
+                                    class={profile?.teacherCode || "Giáo viên"}
+                                    time="30 phút trước"
+                                    content="Chia sẻ kinh nghiệm dạy Tin học cho học sinh THPT. Các phương pháp giảng dạy hiệu quả và cách khuyến khích học sinh tìm hiểu công nghệ 🎓 #GiáoDục #TinHọc"
+                                    likes={8}
+                                    comments={3}
+                                    shares={1}
+                                    isVerified={true}
+                                    isMyPost={true}
+                                />
+
+                                <PostCard
+                                    author={profile?.firstName && profile?.lastName 
+                                        ? `${profile.firstName} ${profile.lastName}` 
+                                        : profile?.username || "Tôi"}
+                                    class={profile?.teacherCode || "Giáo viên"}
+                                    time="2 giờ trước"
+                                    content="Tổ chức thành công workshop 'Lập trình Scratch cho học sinh' với 45 em tham gia. Cảm ơn các em đã nhiệt tình tham gia! 🚀 #Scratch #LậpTrình"
+                                    image="/Picturemockdata/DSC04766.jpg"
+                                    likes={15}
+                                    comments={7}
+                                    shares={2}
+                                    isVerified={true}
+                                    isMyPost={true}
+                                />
+
+                                <PostCard
+                                    author={profile?.firstName && profile?.lastName 
+                                        ? `${profile.firstName} ${profile.lastName}` 
+                                        : profile?.username || "Tôi"}
+                                    class={profile?.teacherCode || "Giáo viên"}
+                                    time="1 ngày trước"
+                                    content="Thông báo về cuộc thi 'Sáng tạo ứng dụng di động' dành cho học sinh khối 11-12. Hạn nộp bài: 15/12/2024. Giải thưởng hấp dẫn đang chờ đón! 🏆"
+                                    likes={23}
+                                    comments={12}
+                                    shares={5}
+                                    isVerified={true}
+                                    isMyPost={true}
+                                />
+
+                                <PostCard
+                                    author={profile?.firstName && profile?.lastName 
+                                        ? `${profile.firstName} ${profile.lastName}` 
+                                        : profile?.username || "Tôi"}
+                                    class={profile?.teacherCode || "Giáo viên"}
+                                    time="3 ngày trước"
+                                    content="Chia sẻ tài liệu học tập về 'An toàn thông tin trên Internet' cho học sinh. Các em hãy tải về và học tập nhé! 📚 #AnToànThôngTin #HọcTập"
+                                    likes={19}
+                                    comments={6}
+                                    shares={3}
+                                    isVerified={true}
+                                    isMyPost={true}
+                                />
+
+                                <PostCard
+                                    author={profile?.firstName && profile?.lastName 
+                                        ? `${profile.firstName} ${profile.lastName}` 
+                                        : profile?.username || "Tôi"}
+                                    class={profile?.teacherCode || "Giáo viên"}
+                                    time="1 tuần trước"
+                                    content="Kết quả bài kiểm tra giữa kỳ môn Tin học 12. Chúc mừng các em đạt điểm cao! Những em chưa đạt yêu cầu hãy cố gắng hơn nữa 💪 #KếtQuảThi #TinHọc12"
+                                    likes={31}
+                                    comments={18}
+                                    shares={4}
+                                    isVerified={true}
+                                    isMyPost={true}
+                                />
+
                             </div>
                         </TabsContent>
                     </Tabs>
