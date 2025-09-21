@@ -1,30 +1,36 @@
-import { Home, Users, Calendar, Trophy, Crown, Settings, BookOpen, Camera } from "lucide-react"
 import { Button } from "@/common/components/ui/button"
 import { Card } from "@/common/components/ui/card"
 import { Badge } from "@/common/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar"
+import { useSelector } from "react-redux"
+import { SIDEBAR_NAVIGATION, SIDEBAR_DEFAULT_TAB } from "@/common/constants/sidebar"
 
-export default function Sidebar() {
-  const menuItems = [
-    { icon: Home, label: "Trang chủ", active: true },
-    { icon: Users, label: "Bạn bè", count: 24 },
-    { icon: Calendar, label: "Sự kiện", count: 5 },
-    { icon: Trophy, label: "Cuộc thi", count: 3 },
-    { icon: Camera, label: "Tác phẩm của tôi" },
-    { icon: Crown, label: "Thành tích" },
-    { icon: BookOpen, label: "Hoạt động" },
-    { icon: Settings, label: "Cài đặt" },
-  ]
+export default function Sidebar({ activeTab = SIDEBAR_DEFAULT_TAB }) {
+  const user = useSelector((state) => state.user.user);
+  
+  const userName = user?.firstName && user?.lastName 
+    ? `${user.firstName} ${user.lastName}` 
+    : user?.username || "Người dùng";
+  
+  const userAvatar = user?.firstName && user?.lastName
+    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+    : user?.username ? user.username[0].toUpperCase() : 'U';
+  
+  const menuItems = SIDEBAR_NAVIGATION;
 
   return (
     <div className="space-y-4">
       {/* Profile Card */}
       <Card className="p-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-white">
         <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-            <span className="font-bold text-lg">A</span>
-          </div>
+          <Avatar className="w-12 h-12 ring-2 ring-white/30">
+            <AvatarImage src={user?.avatarUrl || null} alt="User Avatar" />
+            <AvatarFallback className="bg-white/20 text-white font-bold text-lg">
+              {userAvatar}
+            </AvatarFallback>
+          </Avatar>
           <div>
-            <h3 className="font-semibold">Nguyễn Văn A</h3>
+            <h3 className="font-semibold">{userName}</h3>
             <p className="text-sm opacity-90">Lớp 12A1 - FPT School</p>
           </div>
         </div>
@@ -47,19 +53,22 @@ export default function Sidebar() {
       {/* Navigation Menu */}
       <Card className="p-2">
         <nav className="space-y-1">
-          {menuItems.map((item, index) => (
-            <Button
-              key={index}
-              variant={item.active ? "default" : "ghost"}
-              className={`w-full justify-start ${item.active ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"}`}
-            >
-              <item.icon className="h-5 w-5 mr-3" />
-              <span className="flex-1 text-left">{item.label}</span>
-              {item.count && (
-                <Badge className="bg-orange-500 text-white text-xs ml-auto">{item.count}</Badge>
-              )}
-            </Button>
-          ))}
+          {menuItems.map((item, index) => {
+            const isActive = item.label === activeTab;
+            return (
+              <Button
+                key={index}
+                variant={isActive ? "default" : "ghost"}
+                className={`w-full justify-start ${isActive ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"}`}
+              >
+                <item.icon className="h-5 w-5 mr-3" />
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.count && (
+                  <Badge className="bg-orange-500 text-white text-xs ml-auto">{item.count}</Badge>
+                )}
+              </Button>
+            );
+          })}
         </nav>
       </Card>
     </div>

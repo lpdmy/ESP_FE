@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/common/components/ui
 import { Loading, LoadingOverlay, LoadingCard } from "@/common/components/ui/loading"
 import { useToast } from "@/common/hooks/useToast"
 import { useProfileApi } from "@/features/user-profile/hooks/useProfileApi"
+import CreatePostInput from "@/features/landing/post/CreatePostInput"
+import CreatePostModal from "@/features/landing/post/CreatePostModal"
 import {
     Edit,
     Star,
@@ -36,6 +38,7 @@ export default function StudentProfile() {
     const [extraData, setExtraData] = useState({});
     const [sortBy, setSortBy] = useState("newest");
     const [postContent, setPostContent] = useState("");
+    const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
     const { isOpen: isSortDropdownOpen, openMenu: openSortDropdown, closeMenu: closeSortDropdown, toggleMenu: toggleSortDropdown } = useDropdownMenu(false);
     const toast = useToast();
 
@@ -69,6 +72,14 @@ export default function StudentProfile() {
         loadProfile();
     }, []); // Empty dependency array to run only once
 
+    // CreatePostModal handlers
+    const handleOpenCreatePostModal = () => {
+        setIsCreatePostModalOpen(true);
+    };
+
+    const handleCloseCreatePostModal = () => {
+        setIsCreatePostModalOpen(false);
+    };
 
     return (
         <>
@@ -383,50 +394,8 @@ export default function StudentProfile() {
                         {/* Bài đăng của tôi */}
                         <TabsContent value="posts">
                             <div className="space-y-6">
-                                {/* Create Post - Editable */}
-                                <Card className="p-4 bg-white/80 backdrop-blur-sm border border-orange-100">
-                                    <div className="flex items-start space-x-3">
-                                        <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full flex items-center justify-center">
-                                            <span className="text-white font-bold text-sm">
-                                                {profile?.firstName && profile?.lastName 
-                                                    ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
-                                                    : profile?.username ? profile.username[0].toUpperCase() : 'S'}
-                                            </span>
-                                        </div>
-                                        <div className="flex-1">
-                                            <Textarea
-                                                placeholder="Chia sẻ hoạt động học tập, sở thích và thành tích của bạn..."
-                                                value={postContent}
-                                                onChange={(e) => setPostContent(e.target.value)}
-                                                className="w-full p-3 mt-3 border border-gray-200 rounded-md text-base resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                                rows={3}
-                                            />
-                                            <div className="flex items-center justify-between mt-3">
-                                                <div className="flex items-center space-x-4">
-                                                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
-                                                        <Image className="h-4 w-4 mr-2" />
-                                                        Ảnh
-                                                    </Button>
-                                                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
-                                                        <Video className="h-4 w-4 mr-2" />
-                                                        Video
-                                                    </Button>
-                                                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
-                                                        <Smile className="h-4 w-4 mr-2" />
-                                                        Cảm xúc
-                                                    </Button>
-                                                </div>
-                                                <Button 
-                                                    className="bg-gradient-to-r from-orange-500 to-yellow-500 border-0 text-white"
-                                                    disabled={!postContent.trim()}
-                                                >
-                                                    <Plus className="h-4 w-4 mr-2" />
-                                                    Đăng bài
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Card>
+                                {/* Create Post Input */}
+                                <CreatePostInput onOpenModal={handleOpenCreatePostModal} />
 
                                 {/* Sort Controls */}
                                 <Card className="p-4 bg-white border-orange-200 relative z-40">
@@ -577,5 +546,11 @@ export default function StudentProfile() {
                     </Tabs>
                 </div>
             )}
+
+            {/* Create Post Modal */}
+            <CreatePostModal 
+                isOpen={isCreatePostModalOpen}
+                onClose={handleCloseCreatePostModal}
+            />
         </>)
     }

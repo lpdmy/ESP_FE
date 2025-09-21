@@ -1,13 +1,26 @@
 import React, { useState } from 'react';
 import { Card } from '@/common/components/ui/card';
-import { Avatar, AvatarFallback } from '@/common/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/common/components/ui/avatar';
 import { ImageIcon } from 'lucide-react';
+import { useSelector } from 'react-redux';
 
-const CreatePostInput = ({ userName, userAvatar, onOpenModal }) => {
+const CreatePostInput = ({ onOpenModal }) => {
+  // Get user data from Redux store
+  const user = useSelector((state) => state.user.user);
+  
+  // Computed user values
+  const userName = user?.firstName && user?.lastName 
+    ? `${user.firstName} ${user.lastName}` 
+    : user?.username || "Người dùng";
+  
+  const userAvatar = user?.firstName && user?.lastName
+    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+    : user?.username ? user.username[0].toUpperCase() : 'U';
   return (
     <Card className="p-4 bg-gradient-to-r from-white to-orange-50/30 backdrop-blur-sm border border-orange-100 shadow-sm hover:shadow-md transition-all duration-200">
       <div className="flex items-center space-x-3 mb-3">
         <Avatar className="h-12 w-12 ring-2 ring-orange-200">
+          <AvatarImage src={user?.avatarUrl || null} alt="Avatar" />
           <AvatarFallback className="bg-gradient-to-r from-orange-400 to-yellow-400 text-white font-semibold">
             {userAvatar}
           </AvatarFallback>

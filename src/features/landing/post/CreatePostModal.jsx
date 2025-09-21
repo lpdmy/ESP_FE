@@ -18,10 +18,12 @@ import { Button } from "@/common/components/ui/button";
 import { Card } from "@/common/components/ui/card";
 import { Textarea } from "@/common/components/ui/textarea";
 import { Input } from "@/common/components/ui/input";
-import { Avatar, AvatarFallback } from "@/common/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar";
 import EmojiPicker from "@/common/components/emoji-picker";
 import GifSearchModal from "@/common/components/gif-search-modal";
 import { POST_MESSAGES } from "@/common/constants/messages/post";
+import { useSelector } from "react-redux";
+import { ROLE } from "@/common/constants/roles";
 
 // Constants
 const POPULAR_HASHTAGS = [
@@ -102,9 +104,19 @@ const PRIVACY_OPTIONS = [
 const CreatePostModal = ({
   isOpen,
   onClose,
-  userName = "Người dùng",
-  userAvatar = "A",
 }) => {
+  // Get user data from Redux store
+  const user = useSelector((state) => state.user.user);
+  
+  // Computed user values
+  const userName = user?.firstName && user?.lastName 
+    ? `${user.firstName} ${user.lastName}` 
+    : user?.username || "Người dùng";
+  
+  const userAvatar = user?.firstName && user?.lastName
+    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+    : user?.username ? user.username[0].toUpperCase() : 'U';
+  
   // State
   const [formData, setFormData] = useState({
     title: "",
@@ -113,7 +125,7 @@ const CreatePostModal = ({
     hashtagInput: "",
     privacy: "public",
   });
-
+  
   const [uiState, setUiState] = useState({
     showHashtagSuggestions: false,
     showPrivacyDropdown: false,
@@ -130,7 +142,7 @@ const CreatePostModal = ({
     showImageTooltip: false,
     showGifTooltip: false,
   });
-
+  
   const [attachments, setAttachments] = useState({
     selectedMedia: [],
     selectedGif: null,
@@ -159,10 +171,10 @@ const CreatePostModal = ({
     formData.hashtags.length > 0 ||
     attachments.hasAttachment;
   const hasDraftContent = Boolean(
-    formData.title.trim() ||
-    formData.content.trim() ||
-    formData.hashtags.length > 0 ||
-    attachments.selectedMedia.length > 0 ||
+    formData.title.trim() || 
+    formData.content.trim() || 
+    formData.hashtags.length > 0 || 
+    attachments.selectedMedia.length > 0 || 
     attachments.selectedGif
   );
 
@@ -381,9 +393,9 @@ const CreatePostModal = ({
 
       if (hasContent) {
         setUiState((prev) => ({ ...prev, showExitConfirm: true }));
-      } else {
-        onClose();
-      }
+    } else {
+      onClose();
+    }
     }, 100);
   };
 
@@ -458,12 +470,12 @@ const CreatePostModal = ({
         });
 
         setAttachments((prev) => ({
-          ...prev,
+      ...prev,
           selectedMedia: [], // Xóa tất cả ảnh/video
-          selectedGif: gifUrl,
-          hasAttachment: true,
-        }));
-        slideToView("compose");
+      selectedGif: gifUrl,
+      hasAttachment: true,
+    }));
+    slideToView("compose");
       }
     } else {
       setAttachments((prev) => ({
@@ -540,11 +552,11 @@ const CreatePostModal = ({
 
     if (newFiles.length > 0) {
       setAttachments((prev) => ({
-        ...prev,
-        selectedMedia: [...prev.selectedMedia, ...newFiles],
-        hasAttachment: true,
-      }));
-      slideToView("compose");
+      ...prev,
+      selectedMedia: [...prev.selectedMedia, ...newFiles],
+      hasAttachment: true,
+    }));
+    slideToView("compose");
     }
   };
 
@@ -559,7 +571,7 @@ const CreatePostModal = ({
       );
       setAttachments((prev) => ({
         ...prev,
-        selectedMedia: prev.selectedMedia.map((f) =>
+        selectedMedia: prev.selectedMedia.map((f) => 
           f.id === file.id
             ? { ...f, uploadProgress: Math.min(progress, 100) }
             : f
@@ -568,7 +580,7 @@ const CreatePostModal = ({
     }
     setAttachments((prev) => ({
       ...prev,
-      selectedMedia: prev.selectedMedia.map((f) =>
+      selectedMedia: prev.selectedMedia.map((f) => 
         f.id === file.id ? { ...f, uploadProgress: 100 } : f
       ),
     }));
@@ -688,7 +700,7 @@ const CreatePostModal = ({
     if (!uiState.isSliding) {
       // Delay nhỏ để đảm bảo DOM đã render xong
       setTimeout(() => {
-        setModalHeight("auto");
+      setModalHeight("auto");
       }, 50);
     }
   }, [uiState.currentView, uiState.isSliding]);
@@ -723,7 +735,7 @@ const CreatePostModal = ({
           className={`!py-0 relative w-full h-full md:h-auto md:max-w-3xl md:mx-4 bg-white shadow-2xl md:rounded-lg overflow-hidden modal-container modal-optimized ${uiState.isAnimating
               ? "scale-95 opacity-90"
               : "scale-100 opacity-100"
-            }`}
+          }`}
           style={{
             height:
               uiState.isSliding && fixedHeight
@@ -740,7 +752,7 @@ const CreatePostModal = ({
           <div
             ref={slideContainerRef}
             className={`h-full ${uiState.isSliding ? "opacity-70" : "opacity-100"
-              }`}
+            }`}
             style={{
               transition:
                 "opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -762,7 +774,7 @@ const CreatePostModal = ({
                     <ArrowLeft className="h-4 w-4 text-gray-700" />
                   </Button>
                 )}
-                 <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-gray-900">
                    {uiState.currentView === "compose" &&
                      POST_MESSAGES.LABELS.CREATE_POST}
                    {uiState.currentView === "emoji" &&
@@ -770,42 +782,43 @@ const CreatePostModal = ({
                    {uiState.currentView === "gif" && POST_MESSAGES.LABELS.FIND_GIF}
                    {uiState.currentView === "media" &&
                      POST_MESSAGES.LABELS.SELECT_MEDIA}
-                 </h2>
+                </h2>
                 {uiState.showSparkles &&
                   uiState.currentView === "compose" && (
-                    <Sparkles className="h-4 w-4 text-orange-500" />
-                  )}
+                  <Sparkles className="h-4 w-4 text-orange-500" />
+                )}
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
+               <Button
+                 variant="ghost"
+                 size="sm"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   handleClose(e);
                 }}
-                className="h-8 w-8 p-0 hover:bg-orange-100 rounded-full"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+                 className="h-8 w-8 p-0 hover:bg-orange-100 rounded-full"
+               >
+                 <X className="h-4 w-4" />
+               </Button>
             </div>
 
             {/* Content area */}
 
             {uiState.showDraftRestored &&
               uiState.currentView === "compose" && (
-                 <div className="bg-green-50 border-l-4 border-green-400 p-3 mx-6 mt-3 rounded">
+              <div className="bg-green-50 border-l-4 border-green-400 p-3 mx-6 mt-3 rounded">
                    <p className="text-sm text-green-700">
                      {POST_MESSAGES.NOTIFICATIONS.DRAFT_RESTORED}
                    </p>
-                 </div>
-              )}
+              </div>
+            )}
 
             {uiState.currentView === "compose" && (
               <div className="h-full">
                 <div className="flex items-center justify-between px-6 py-4 pb-3">
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-10 w-10 ring-2 ring-orange-200">
+                      <AvatarImage src={user?.avatarUrl || null} alt="Avatar" />
                       <AvatarFallback className="bg-gradient-to-r from-orange-400 to-yellow-400 text-white font-semibold">
                         {userAvatar}
                       </AvatarFallback>
@@ -837,9 +850,9 @@ const CreatePostModal = ({
                       <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20 animate-fade-in">
                         {PRIVACY_OPTIONS.map(
                           (option) => (
-                            <button
-                              key={option.value}
-                              onClick={() => {
+                          <button
+                            key={option.value}
+                            onClick={() => {
                                 setFormData(
                                   (prev) => ({
                                     ...prev,
@@ -853,13 +866,13 @@ const CreatePostModal = ({
                                     showPrivacyDropdown: false,
                                   })
                                 );
-                              }}
-                              className="w-full flex items-start space-x-3 p-3 hover:bg-orange-50 text-left transition-colors"
-                            >
+                            }}
+                            className="w-full flex items-start space-x-3 p-3 hover:bg-orange-50 text-left transition-colors"
+                          >
                               <div className="mt-0.5">
                                 {option.icon}
                               </div>
-                              <div>
+                            <div>
                                 <div className="font-medium text-gray-900">
                                   {
                                     option.label
@@ -870,8 +883,8 @@ const CreatePostModal = ({
                                     option.description
                                   }
                                 </div>
-                              </div>
-                            </button>
+                            </div>
+                          </button>
                           )
                         )}
                       </div>
@@ -880,17 +893,17 @@ const CreatePostModal = ({
                 </div>
 
                 <div className="px-6 py-4 pt-2 space-y-5 flex-1 overflow-y-auto max-h-[calc(90vh-200px)] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                     <Input
+                  <Input
                        placeholder={POST_MESSAGES.PLACEHOLDERS.ADD_TITLE}
-                       value={formData.title}
+                    value={formData.title}
                        onChange={(e) =>
                          setFormData((prev) => ({
                            ...prev,
                            title: e.target.value,
                          }))
                        }
-                       className="border-gray-200 focus:border-orange-300 focus:ring-orange-200 transition-all duration-200"
-                     />
+                    className="border-gray-200 focus:border-orange-300 focus:ring-orange-200 transition-all duration-200"
+                  />
 
                   <Textarea
                     ref={textareaRef}
@@ -908,10 +921,10 @@ const CreatePostModal = ({
 
                   {(attachments.selectedMedia.length > 0 ||
                     attachments.selectedGif) && (
-                      <div className="space-y-3">
+                    <div className="space-y-3">
                         {attachments.selectedMedia.length >
                           0 && (
-                            <div>
+                        <div>
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center space-x-2">
                                   <h4 className="text-sm font-medium text-gray-700">
@@ -998,47 +1011,47 @@ const CreatePostModal = ({
                                               file.url
                                             )
                                           }
-                                        />
-                                      ) : (
-                                        <video
+                                  />
+                                ) : (
+                                  <video
                                           src={
                                             file.url
                                           }
                                           className="w-32 h-28 object-contain rounded-lg border border-gray-200 bg-gray-50 cursor-pointer hover:opacity-80 transition-opacity"
-                                          muted
+                                    muted
                                           onClick={() =>
                                             openImageViewer(
                                               file.url
                                             )
                                           }
-                                        />
-                                      )}
+                                  />
+                                )}
 
                                       {file.uploadProgress <
                                         100 && (
-                                          <div className="absolute inset-0 bg-black/50 rounded-lg flex flex-col items-center justify-center">
-                                            <div className="w-3/4 bg-gray-200 rounded-full h-2 mb-2">
-                                              <div
-                                                className="bg-gradient-to-r from-orange-400 to-yellow-400 h-2 rounded-full transition-all duration-300 relative overflow-hidden"
+                                  <div className="absolute inset-0 bg-black/50 rounded-lg flex flex-col items-center justify-center">
+                                    <div className="w-3/4 bg-gray-200 rounded-full h-2 mb-2">
+                                      <div
+                                        className="bg-gradient-to-r from-orange-400 to-yellow-400 h-2 rounded-full transition-all duration-300 relative overflow-hidden"
                                                 style={{
                                                   width: `${file.uploadProgress}%`,
                                                 }}
-                                              >
-                                                <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                                              </div>
-                                            </div>
-                                            <span className="text-white text-xs font-medium bg-black/30 px-2 py-1 rounded">
+                                      >
+                                        <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                                      </div>
+                                    </div>
+                                    <span className="text-white text-xs font-medium bg-black/30 px-2 py-1 rounded">
                                               {Math.round(
                                                 file.uploadProgress
                                               )}
                                               %
-                                            </span>
-                                          </div>
-                                        )}
+                                    </span>
+                                  </div>
+                                )}
 
-                                      <Button
-                                        variant="destructive"
-                                        size="sm"
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
                                         className="absolute top-1 right-1 h-6 w-6 p-0 opacity-80 hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600"
                                         onClick={(
                                           e
@@ -1048,18 +1061,18 @@ const CreatePostModal = ({
                                             file.id
                                           );
                                         }}
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </Button>
-                                    </div>
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
                                   )
                                 )}
-                              </div>
-                            </div>
-                          )}
+                          </div>
+                        </div>
+                      )}
 
-                        {attachments.selectedGif && (
-                          <div>
+                      {attachments.selectedGif && (
+                        <div>
                             <div className="flex items-center justify-between mb-2">
                               <h4 className="text-sm font-medium text-gray-700">
                                 GIF đã chọn
@@ -1080,30 +1093,30 @@ const CreatePostModal = ({
                                   attachments.selectedGif ||
                                   "/placeholder.svg"
                                 }
-                                alt="Selected GIF"
+                              alt="Selected GIF"
                                 className="max-w-full h-32 object-contain rounded-lg border border-gray-200 bg-gray-50 cursor-pointer hover:opacity-80 transition-opacity"
                                 onClick={() =>
                                   openImageViewer(
                                     attachments.selectedGif
                                   )
                                 }
-                              />
-                              <Button
-                                variant="destructive"
-                                size="sm"
+                            />
+                            <Button
+                              variant="destructive"
+                              size="sm"
                                 className="absolute top-1 right-1 h-6 w-6 p-0 opacity-80 hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   removeGif();
                                 }}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
                           </div>
-                        )}
-                      </div>
-                    )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="space-y-3">
                     <div className="relative">
@@ -1147,49 +1160,49 @@ const CreatePostModal = ({
                       {uiState.showHashtagSuggestions &&
                         filteredSuggestions.length >
                         0 && (
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-40 overflow-y-auto animate-fade-in">
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-40 overflow-y-auto animate-fade-in">
                             {filteredSuggestions
                               .slice(0, 8)
                               .map((tag) => (
-                                <button
-                                  key={tag}
+                            <button
+                              key={tag}
                                   onClick={() =>
                                     addHashtag(
                                       tag
                                     )
                                   }
-                                  className="w-full text-left px-3 py-2 hover:bg-orange-50 text-sm flex items-center space-x-2 transition-colors"
-                                >
-                                  <Hash className="h-3 w-3 text-orange-400" />
+                              className="w-full text-left px-3 py-2 hover:bg-orange-50 text-sm flex items-center space-x-2 transition-colors"
+                            >
+                              <Hash className="h-3 w-3 text-orange-400" />
                                   <span>
                                     {tag}
                                   </span>
-                                </button>
-                              ))}
-                          </div>
-                        )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {formData.hashtags.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {formData.hashtags.map(
                           (tag) => (
-                            <span
-                              key={tag}
-                              className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gradient-to-r from-orange-100 to-yellow-100 text-orange-700 border border-orange-200 animate-fade-in"
-                            >
-                              #{tag}
-                              <button
+                          <span
+                            key={tag}
+                            className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gradient-to-r from-orange-100 to-yellow-100 text-orange-700 border border-orange-200 animate-fade-in"
+                          >
+                            #{tag}
+                            <button
                                 onClick={() =>
                                   removeHashtag(
                                     tag
                                   )
                                 }
-                                className="ml-2 hover:text-orange-900 transition-colors"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </span>
+                              className="ml-2 hover:text-orange-900 transition-colors"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
                           )
                         )}
                       </div>
@@ -1226,10 +1239,10 @@ const CreatePostModal = ({
                               showImageTooltip: false,
                             }));
                           }}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
                             disabled={
                               attachments.selectedGif
                                 ? true
@@ -1239,11 +1252,11 @@ const CreatePostModal = ({
                                 ? "text-gray-400 cursor-not-allowed opacity-50"
                                 : "text-gray-600 hover:text-orange-600 hover:bg-orange-50 hover:scale-105"
                               }`}
-                            onClick={slideToMedia}
-                          >
-                            <ImageIcon className="h-4 w-4 mr-2" />
+                          onClick={slideToMedia}
+                        >
+                          <ImageIcon className="h-4 w-4 mr-2" />
                             Tải lên Ảnh/Video
-                          </Button>
+                        </Button>
                         </div>
                         <Button
                           variant="ghost"
@@ -1277,9 +1290,9 @@ const CreatePostModal = ({
                             }));
                           }}
                         >
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                        <Button
+                          variant="ghost"
+                          size="sm"
                             disabled={
                               attachments
                                 .selectedMedia
@@ -1293,11 +1306,11 @@ const CreatePostModal = ({
                                 ? "text-gray-400 cursor-not-allowed opacity-50"
                                 : "text-gray-600 hover:text-orange-600 hover:bg-orange-50 hover:scale-105"
                               }`}
-                            onClick={slideToGif}
-                          >
-                            <Gift className="h-4 w-4 mr-2" />
-                            GIF
-                          </Button>
+                          onClick={slideToGif}
+                        >
+                          <Gift className="h-4 w-4 mr-2" />
+                          GIF
+                        </Button>
                         </div>
                       </div>
                     </div>
@@ -1373,7 +1386,7 @@ const CreatePostModal = ({
                       className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 h-full flex flex-col justify-center ${uiState.isDragging
                           ? "border-orange-400 bg-orange-100"
                           : "border-orange-300 hover:border-orange-400 hover:bg-orange-100/50"
-                        }`}
+                      }`}
                       onDrop={handleDrop}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}

@@ -6,7 +6,6 @@ import CreatePostModal from './CreatePostModal';
 export default function NewsFeed() {
   // 1. State declarations
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const userName = "Nguyễn Văn A"; // This would come from user context in a real app
 
   // 4. Event handlers
   const handleOpenModal = () => {
@@ -21,16 +20,12 @@ export default function NewsFeed() {
   return (
     <div className="space-y-6">
       <CreatePostInput 
-        userName={userName}
-        userAvatar="A"
         onOpenModal={handleOpenModal}
       />
 
       <CreatePostModal 
         isOpen={isModalOpen} 
         onClose={handleCloseModal} 
-        userName={userName} 
-        userAvatar="A" 
       />
 
       {/* Posts */}
