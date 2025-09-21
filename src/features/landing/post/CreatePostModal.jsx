@@ -232,7 +232,7 @@ const CreatePostModal = ({
         currentView: view,
       }));
 
-      setTimeout(() => {
+    setTimeout(() => {
         if (modalRef.current) {
           const newHeight = modalRef.current.offsetHeight;
           setModalHeight(`${newHeight}px`);
@@ -779,7 +779,7 @@ const CreatePostModal = ({
   return (
     <>
       <div
-        className="fixed inset-0 z-[9999] md:flex md:items-center md:justify-center"
+        className="!mt-0 fixed inset-0 z-[9999] md:flex md:items-center md:justify-center"
         onClick={handleBackdropClick}
       >
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
