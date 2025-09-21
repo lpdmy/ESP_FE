@@ -9,7 +9,6 @@ export function useProfileApi() {
 
   // Use refs to create stable function references
   const getMyProfileRef = useRef(async () => {
-    console.log('useProfileApi getMyProfile called');
     const token = localStorage.getItem('token');
     return executeApiCall(userService.getMyProfile.bind(userService), [token], { setLoading: setProfileLoading, setError });
   });
@@ -19,12 +18,24 @@ export function useProfileApi() {
     return executeApiCall(userService.updateMyPersonalInfo.bind(userService), [payload, token], { setLoading: setSaveLoading, setError });
   });
 
+  const getMyTeacherProfileRef = useRef(async () => {
+    const token = localStorage.getItem('token');
+    return executeApiCall(userService.getMyTeacherProfile.bind(userService), [token], { setLoading: setProfileLoading, setError });
+  });
+
+  const updateMyTeacherProfileRef = useRef(async (payload) => {
+    const token = localStorage.getItem('token');
+    return executeApiCall(userService.updateMyTeacherProfile.bind(userService), [payload, token], { setLoading: setSaveLoading, setError });
+  });
+
   return {
     profileLoading,
     saveLoading,
     error,
     getMyProfile: getMyProfileRef.current,
     updateMyPersonalInfo: updateMyPersonalInfoRef.current,
+    getMyTeacherProfile: getMyTeacherProfileRef.current,
+    updateMyTeacherProfile: updateMyTeacherProfileRef.current,
     clearError: () => setError(null)
   };
 }

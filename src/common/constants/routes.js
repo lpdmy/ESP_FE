@@ -14,5 +14,10 @@ export const ROUTES = {
   USER_PROFILE: {
     PROFILE: "/profile",
     EDIT: "/profile/edit",
+    TEACHER_PROFILE: "/profile/teacher",
+    EDIT_TEACHER: "/profile/teacher/edit",
+  },
+  ONBOARDING: {
+    ONBOARDING: "/onboarding",
   },
 };

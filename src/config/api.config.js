@@ -1,12 +1,22 @@
 // API Configuration
 export const API_CONFIG = {
   // Base URLs
-   BASE_URL:
-    window.location.hostname.includes("edusphere-dev")
-      ? "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net/api"
-      : window.location.hostname.includes("localhost")
-      ? "https://localhost:7084/api"
-      : "https://esp-test-api.yourdomain.com/api",
+  BASE_URL: (() => {
+    const hostname = window.location.hostname;
+    
+    // Development environment
+    if (hostname.includes("edusphere-dev")) {
+      return "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net/api";
+    }
+    
+    // Local development
+    if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
+      return "https://localhost:7084/api";
+    }
+    
+    // Production environment
+    return "https://esp-prod-api.yourdomain.com/api";
+  })(),
 
   // Auth endpoints
   AUTH: {
@@ -15,6 +25,8 @@ export const API_CONFIG = {
     IMPORT_FILE: '/auth/ImportFile',
     ONE_TIME_LOGIN: '/auth/one-time-login',
     CHANGE_PASSWORD_OTL: '/auth/change-password-otl',
+    CHANGE_PASSWORD: '/auth/change-password',
+    FORGOT_PASSWORD: '/auth/forgot-password',
     CREATE_USER: '/auth/create-user',
     TEST: '/auth/Test',
   },
@@ -32,10 +44,12 @@ export const API_CONFIG = {
   // UserProfile endpoints
   USER_PROFILE: {
     MY_PROFILE: '/userprofile/my-profile',
+    MY_TEACHER_PROFILE: '/userprofile/my-teacher-profile',
     ALL_PROFILES: '/userprofile/all',
     PROFILE_BY_ID: '/userprofile/{id}',
     CREATE_PROFILE: '/userprofile',
     UPDATE_PROFILE: '/userprofile/{id}',
+    UPDATE_TEACHER_PROFILE: '/userprofile/my-teacher-profile',
     DELETE_PROFILE: '/userprofile/{id}',
     CHECK_PROFILE_EXISTS: '/userprofile/{id}/exists',
   },

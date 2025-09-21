@@ -1,117 +1,190 @@
 "use client"
 
-import React from "react"
-import { Modal } from "antd"
-import { X } from "lucide-react"
-import { cn } from "@/lib/utils"
+import React, { useState, useEffect } from 'react';
+import { XIcon } from 'lucide-react';
+import { cn } from "@/lib/utils";
 
-// Dialog - Root component (compatible with Radix API)
-const Dialog = ({ children, open, onOpenChange, ...props }) => {
+function Dialog({
+  open,
+  onOpenChange,
+  children,
+  ...props
+}) {
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [open]);
+
+  if (!open) return null;
+
   return (
-    <Modal
-      open={open}
-      onCancel={() => onOpenChange?.(false)}
-      footer={null}
-      {...props}
-    >
+    <div data-slot="dialog" className="fixed inset-0 z-50 flex items-center justify-center" {...props}>
       {children}
-    </Modal>
-  )
+    </div>
+  );
 }
 
-// DialogTrigger - Trigger component
-const DialogTrigger = React.forwardRef(({ children, ...props }, ref) => (
-  <div ref={ref} {...props}>
-    {children}
-  </div>
-))
-DialogTrigger.displayName = "DialogTrigger"
-
-// DialogPortal - Portal component (not needed with Ant Design)
-const DialogPortal = ({ children }) => {
-  return <>{children}</>
+function DialogTrigger({
+  children,
+  asChild,
+  ...props
+}) {
+  if (asChild) {
+    return React.cloneElement(children, props);
+  }
+  
+  return (
+    <div data-slot="dialog-trigger" {...props}>
+      {children}
+    </div>
+  );
 }
 
-// DialogClose - Close component
-const DialogClose = React.forwardRef(({ children, ...props }, ref) => (
-  <button ref={ref} {...props}>
-    {children}
-  </button>
-))
-DialogClose.displayName = "DialogClose"
+function DialogPortal({
+  ...props
+}) {
+  return <div data-slot="dialog-portal" {...props} />;
+}
 
-// DialogOverlay - Overlay component
-const DialogOverlay = React.forwardRef(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "fixed inset-0 z-50 bg-black/50 backdrop-blur-sm",
-      "data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out",
-      className
-    )}
-    {...props}
-  />
-))
-DialogOverlay.displayName = "DialogOverlay"
+function DialogClose({
+  ...props
+}) {
+  return <div data-slot="dialog-close" {...props} />;
+}
 
-// DialogContent - Content component
-const DialogContent = React.forwardRef(({ className, children, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-white p-6 shadow-lg sm:rounded-2xl",
-      "data-[state=open]:animate-content-in data-[state=closed]:animate-content-out",
-      className
-    )}
-    {...props}
-  >
-    {children}
-    <button className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100">
-      <X className="h-5 w-5" />
-    </button>
-  </div>
-))
-DialogContent.displayName = "DialogContent"
+function DialogOverlay({
+  className,
+  ...props
+}) {
+  return (
+    <div
+      data-slot="dialog-overlay"
+      className={cn(
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+        className
+      )}
+      {...props}
+    />
+  );
+}
 
-// DialogHeader - Header component
-const DialogHeader = ({ className, ...props }) => (
-  <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props} />
-)
-DialogHeader.displayName = "DialogHeader"
+function DialogContent({
+  className,
+  children,
+  showCloseButton = true,
+  onClose,
+  ...props
+}) {
+  return (
+    <DialogPortal data-slot="dialog-portal">
+      <DialogOverlay onClick={onClose} />
+      <div
+        data-slot="dialog-content"
+        className={cn(
+          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          className
+        )}
+        onClick={(e) => e.stopPropagation()}
+        {...props}
+      >
+        {children}
+        {showCloseButton && onClose && (
+          <button
+            data-slot="dialog-close"
+            onClick={onClose}
+            className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+          >
+            <XIcon />
+            <span className="sr-only">Close</span>
+          </button>
+        )}
+      </div>
+    </DialogPortal>
+  );
+}
 
-// DialogTitle - Title component
-const DialogTitle = React.forwardRef(({ className, ...props }, ref) => (
-  <h2
-    ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
-    {...props}
-  />
-))
-DialogTitle.displayName = "DialogTitle"
+function DialogHeader({ className, ...props }) {
+  return (
+    <div
+      data-slot="dialog-header"
+      className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
+      {...props}
+    />
+  );
+}
 
-// DialogDescription - Description component
-const DialogDescription = React.forwardRef(({ className, ...props }, ref) => (
-  <p
-    ref={ref}
-    className={cn("text-sm text-gray-500", className)}
-    {...props}
-  />
-))
-DialogDescription.displayName = "DialogDescription"
+function DialogTitle({
+  className,
+  ...props
+}) {
+  return (
+    <h2
+      data-slot="dialog-title"
+      className={cn("text-lg leading-none font-semibold", className)}
+      {...props}
+    />
+  );
+}
 
-// DialogFooter - Footer component
-const DialogFooter = ({ className, ...props }) => (
-  <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)} {...props} />
-)
-DialogFooter.displayName = "DialogFooter"
+function DialogDescription({
+  className,
+  ...props
+}) {
+  return (
+    <p
+      data-slot="dialog-description"
+      className={cn("text-muted-foreground text-sm", className)}
+      {...props}
+    />
+  );
+}
+
+function DialogFooter({ className, ...props }) {
+  return (
+    <div
+      data-slot="dialog-footer"
+      className={cn(
+        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        className
+      )}
+      {...props}
+    />
+  );
+}
 
 export {
   Dialog,
-  DialogTrigger,
+  DialogClose,
   DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
   DialogDescription,
-  DialogClose
-}
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
+};
+
+// Hook để quản lý dialog dễ dàng hơn
+export const useDialog = (initialOpen = false) => {
+  const [isOpen, setIsOpen] = useState(initialOpen);
+
+  const openDialog = () => setIsOpen(true);
+  const closeDialog = () => setIsOpen(false);
+  const toggleDialog = () => setIsOpen(!isOpen);
+
+  return {
+    isOpen,
+    openDialog,
+    closeDialog,
+    toggleDialog,
+    setIsOpen
+  };
+};

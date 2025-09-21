@@ -12,7 +12,6 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-import Header from "@/features/landing/components/Header";
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
 import { Label } from "@/common/components/ui/label";
@@ -23,22 +22,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/common/components/ui/card";
+import { LoadingOverlay } from "@/common/components/ui/loading";
 import { useAuthApi } from "@/features/auth/hooks/useAuthApi";
-import { setUser } from "@/store/user/userSlice";
 import { ROUTES } from "@/common/constants/routes";
-import { ROLE } from "@/common/constants/roles";
 
 export default function ChangePasswordForm() {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { oneTimeLogin, changePasswordOtl, getMe } = useAuthApi();
+  const { oneTimeLogin, changePasswordOtl, changePassword, getMe, loading } = useAuthApi();
 
   const [showPassword, setShowPassword] = useState(false);
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState("");
 
@@ -47,28 +44,12 @@ export default function ChangePasswordForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [token, setToken] = useState("");
-  const [fullName, setFullName] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tokenParam = params.get("token");
     if (tokenParam) setToken(tokenParam);
   }, [location.search]);
-
-  useEffect(() => {
-    if (!token) return;
-
-    const fetchFullName = async () => {
-      try {
-        const result = await oneTimeLogin(token);
-        setFullName(result.data || "");
-      } catch (err) {
-        navigate(ROUTES.AUTH.LOGIN);
-        toast.error(err.message || "Có lỗi xảy ra");
-      }
-    };
-    fetchFullName();
-  }, [token, oneTimeLogin, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -83,36 +64,34 @@ export default function ChangePasswordForm() {
       return;
     }
 
-    setIsLoading(true);
     try {
-      const result = await changePasswordOtl({ token, newPassword: password });
-      if (result?.data?.accessToken) {
-        localStorage.setItem("token", result.data.accessToken);
-        localStorage.setItem("refreshToken", result.data.refreshToken);
-
-        const resultUser = await getMe();
-        dispatch(setUser(resultUser?.data));
-
-        if (resultUser?.data.role === ROLE.ADMIN) {
-          navigate(ROUTES.ADMIN.USER_MANAGEMENT);
-        } else {
-          navigate(ROUTES.LANDING.HOME);
-        }
+      const result = await changePassword({ 
+        oldPassword: oldPassword, 
+        newPassword: password,
+        confirmPassword: confirmPassword
+      });
+      
+      if (result?.data) {
+        toast.success("Đổi mật khẩu thành công!");
+        setIsSuccess(true);
       }
-      setIsSuccess(true);
     } catch (err) {
-      toast.error(err.message || "Có lỗi xảy ra");
-    } finally {
-      setIsLoading(false);
+      setError(err.message || "Có lỗi xảy ra khi đổi mật khẩu");
+      toast.error(err.message || "Có lỗi xảy ra khi đổi mật khẩu");
     }
   };
 
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white relative">
-        <Header className="relative z-20" />
         <BackgroundCircles />
-
+          <Link
+            href="/"
+            className="inline-flex items-center text-orange-600 hover:text-orange-700 mb-4 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Quay lại trang chủ
+          </Link>
         <div className="flex items-center justify-center p-4 pt-24 relative z-10">
           <div className="w-full max-w-md text-center">
             <div className="flex items-center justify-center mb-4">
@@ -127,17 +106,7 @@ export default function ChangePasswordForm() {
                 <CardTitle className="text-2xl font-bold text-gray-800">
                   Đổi mật khẩu thành công!
                 </CardTitle>
-                <CardDescription>
-                  Chào {fullName || "người dùng"}, mật khẩu của bạn đã được cập nhật.
-                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <Link to={ROUTES.AUTH.LOGIN}>
-                  <Button className="w-full btn-primary h-12 text-lg font-semibold">
-                    Đăng nhập ngay
-                  </Button>
-                </Link>
-              </CardContent>
             </Card>
           </div>
         </div>
@@ -146,11 +115,15 @@ export default function ChangePasswordForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white relative">
-      <Header className="relative z-20" />
-      <BackgroundCircles />
-
-      <div className="flex items-center justify-center p-4 pt-24 relative z-10">
+    <>
+      <LoadingOverlay
+        isLoading={loading}
+        text="Đang đổi mật khẩu..."
+        variant="primary"
+      />
+      <div>
+        <BackgroundCircles />
+        <div className="flex items-center justify-center p-4 pt-4 relative z-10">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <Link
@@ -210,16 +183,17 @@ export default function ChangePasswordForm() {
                 <Button
                   type="submit"
                   className="w-full btn-primary h-12 text-lg font-semibold"
-                  disabled={isLoading || !password || !confirmPassword}
+                  disabled={loading || !password || !confirmPassword || !oldPassword}
                 >
-                  {isLoading ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
+                  {loading ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
                 </Button>
               </form>
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

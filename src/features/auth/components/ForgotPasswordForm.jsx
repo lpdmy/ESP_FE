@@ -3,23 +3,42 @@ import { Button } from "@/common/components/ui/button"
 import { Input } from "@/common/components/ui/input"
 import { Label } from "@/common/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/common/components/ui/card"
+import { LoadingOverlay } from "@/common/components/ui/loading"
 import { ArrowLeft, Mail, GraduationCap, CheckCircle } from "lucide-react"
+import { useAuthApi } from "@/features/auth/hooks/useAuthApi"
+import { useToast } from "@/common/hooks/useToast"
+import { Link } from "react-router-dom"
+import { ROUTES } from "@/common/constants/routes"
 
 export default function ForgotPasswordForm() {
-  const [isLoading, setIsLoading] = useState(false)
   const [isEmailSent, setIsEmailSent] = useState(false)
   const [email, setEmail] = useState("")
+  const [error, setError] = useState("")
+  
+  const { forgotPassword, loading } = useAuthApi()
+  const toast = useToast()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setIsLoading(false)
-    setIsEmailSent(true)
+    setError("")
+    
+    try {
+      const result = await forgotPassword({ email })
+      if (result?.statusCode === 200) {
+        setIsEmailSent(true)
+        toast.success(result?.message || "Email đặt lại mật khẩu đã được gửi thành công!")
+      }
+    } catch (err) {
+      const errorMessage = err?.message || "Có lỗi xảy ra khi gửi email. Vui lòng thử lại."
+      setError(errorMessage)
+      toast.error(errorMessage)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white flex items-center justify-center p-4 relative">
+      <LoadingOverlay isLoading={loading} text="Đang gửi email..." />
+      
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-orange-200 to-yellow-200 rounded-full opacity-20 float-animation"></div>
@@ -75,8 +94,14 @@ export default function ForgotPasswordForm() {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full btn-primary h-12 text-lg font-semibold" disabled={isLoading}>
-                    {isLoading ? (
+                  {error && (
+                    <div className="text-red-500 text-sm text-center bg-red-50 border border-red-200 rounded-lg p-3">
+                      {error}
+                    </div>
+                  )}
+
+                  <Button type="submit" className="w-full btn-primary h-12 text-lg font-semibold" disabled={loading}>
+                    {loading ? (
                       <div className="flex items-center">
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                         Đang gửi...
@@ -90,9 +115,9 @@ export default function ForgotPasswordForm() {
                 <div className="mt-6 text-center">
                   <p className="text-gray-600">
                     Nhớ lại mật khẩu?{" "}
-                    <a href="/auth" className="text-orange-600 hover:text-orange-700 font-semibold transition-colors">
+                    <Link to={ROUTES.AUTH.LOGIN} className="text-orange-600 hover:text-orange-700 font-semibold transition-colors">
                       Đăng nhập ngay
-                    </a>
+                    </Link>
                   </p>
                 </div>
               </CardContent>
@@ -116,7 +141,10 @@ export default function ForgotPasswordForm() {
 
                 <div className="space-y-3">
                   <Button
-                    onClick={() => setIsEmailSent(false)}
+                    onClick={() => {
+                      setIsEmailSent(false)
+                      setError("")
+                    }}
                     variant="outline"
                     className="w-full border-orange-200 text-orange-600 hover:bg-orange-50"
                   >
