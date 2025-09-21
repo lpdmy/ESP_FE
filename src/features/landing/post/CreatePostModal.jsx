@@ -13,6 +13,9 @@ import {
   Heart,
   ArrowLeft,
   Upload,
+  FolderPlus,
+  Folder,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
 import { Card } from "@/common/components/ui/card";
@@ -25,7 +28,6 @@ import { POST_MESSAGES } from "@/common/constants/messages/post";
 import { useSelector } from "react-redux";
 import { ROLE } from "@/common/constants/roles";
 
-// Constants
 const POPULAR_HASHTAGS = [
   "học_tập",
   "giáo_dục",
@@ -80,6 +82,33 @@ const POPULAR_HASHTAGS = [
   "social_responsibility",
 ];
 
+const MOCK_ALBUMS = [
+  {
+    id: "1",
+    name: "Học tập",
+    thumbnail: "/Picturemockdata/DSC03778.jpg",
+    postCount: 12,
+  },
+  {
+    id: "2", 
+    name: "Hoạt động sinh viên",
+    thumbnail: "/Picturemockdata/DSC04766.jpg",
+    postCount: 8,
+  },
+  {
+    id: "3",
+    name: "Dự án nhóm",
+    thumbnail: "/Picturemockdata/IMG_1492.jpg",
+    postCount: 5,
+  },
+  {
+    id: "4",
+    name: "Kỷ niệm trường",
+    thumbnail: "/Picturemockdata/DSC03778.jpg",
+    postCount: 15,
+  },
+];
+
 const PRIVACY_OPTIONS = [
   {
     value: "public",
@@ -105,10 +134,8 @@ const CreatePostModal = ({
   isOpen,
   onClose,
 }) => {
-  // Get user data from Redux store
   const user = useSelector((state) => state.user.user);
   
-  // Computed user values
   const userName = user?.firstName && user?.lastName 
     ? `${user.firstName} ${user.lastName}` 
     : user?.username || "Người dùng";
@@ -117,7 +144,6 @@ const CreatePostModal = ({
     ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
     : user?.username ? user.username[0].toUpperCase() : 'U';
   
-  // State
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -149,10 +175,14 @@ const CreatePostModal = ({
     hasAttachment: false,
   });
 
+  const [albumState, setAlbumState] = useState({
+    selectedAlbum: null,
+    newAlbumName: "",
+  });
+
   const [modalHeight, setModalHeight] = useState("auto");
   const [fixedHeight, setFixedHeight] = useState(null);
 
-  // Refs
   const slideContainerRef = useRef(null);
   const modalRef = useRef(null);
   const toolbarRef = useRef(null);
@@ -164,7 +194,6 @@ const CreatePostModal = ({
   const currentXRef = useRef(0);
   const isDraggingSlideRef = useRef(false);
 
-  // Computed values
   const canPost =
     formData.title.trim() ||
     formData.content.trim() ||
@@ -175,38 +204,34 @@ const CreatePostModal = ({
     formData.content.trim() || 
     formData.hashtags.length > 0 || 
     attachments.selectedMedia.length > 0 || 
-    attachments.selectedGif
+    attachments.selectedGif ||
+    albumState.selectedAlbum
   );
 
   const currentPrivacy =
     PRIVACY_OPTIONS.find((option) => option.value === formData.privacy) ||
     PRIVACY_OPTIONS[0];
 
-  // Event handlers
   const slideToView = (view) => {
     if (view === uiState.currentView) return;
 
-    // Lưu height hiện tại để giữ cố định trong quá trình transition
     if (modalRef.current) {
       const currentHeight = modalRef.current.offsetHeight;
       setFixedHeight(currentHeight);
       setModalHeight(`${currentHeight}px`);
     }
 
-    // Bắt đầu transition
     setUiState((prev) => ({
       ...prev,
       isSliding: true,
     }));
 
-    // Thay đổi view sau một chút để tạo hiệu ứng fade
     setTimeout(() => {
       setUiState((prev) => ({
         ...prev,
         currentView: view,
       }));
 
-      // Tính toán height mới sau khi view đã render
       setTimeout(() => {
         if (modalRef.current) {
           const newHeight = modalRef.current.offsetHeight;
@@ -215,13 +240,11 @@ const CreatePostModal = ({
       }, 50);
     }, 150);
 
-    // Kết thúc animation sau 300ms
     setTimeout(() => {
       setUiState((prev) => ({
         ...prev,
         isSliding: false,
       }));
-      // Xóa fixedHeight và cập nhật height sau khi transition kết thúc
       setFixedHeight(null);
       setModalHeight("auto");
     }, 300);
@@ -236,7 +259,6 @@ const CreatePostModal = ({
   };
 
   const slideToMedia = () => {
-    // Mở file picker trực tiếp thay vì chuyển qua field media
     fileInputRef.current?.click();
   };
 
@@ -360,6 +382,15 @@ const CreatePostModal = ({
       setUiState((prev) => ({ ...prev, isAnimating: true }));
       setTimeout(() => {
         // TODO: Implement actual post creation API call
+        console.log("Creating post:", {
+          title: formData.title,
+          content: formData.content,
+          hashtags: formData.hashtags,
+          privacy: formData.privacy,
+          media: attachments.selectedMedia,
+          gif: attachments.selectedGif,
+          album: albumState.selectedAlbum,
+        });
         clearDraft();
         setFormData({
           title: "",
@@ -367,6 +398,15 @@ const CreatePostModal = ({
           hashtags: [],
           hashtagInput: "",
           privacy: "public",
+        });
+        setAttachments({
+          selectedMedia: [],
+          selectedGif: null,
+          hasAttachment: false,
+        });
+        setAlbumState({
+          selectedAlbum: null,
+          newAlbumName: "",
         });
         setUiState((prev) => ({ ...prev, isAnimating: false }));
         onClose();
@@ -388,7 +428,8 @@ const CreatePostModal = ({
         formData.content.trim() ||
         formData.hashtags.length > 0 ||
         attachments.selectedMedia.length > 0 ||
-        attachments.selectedGif
+        attachments.selectedGif ||
+        albumState.selectedAlbum
       );
 
       if (hasContent) {
@@ -432,6 +473,32 @@ const CreatePostModal = ({
     }
   };
 
+  const handleAlbumSelect = (album) => {
+    setAlbumState((prev) => ({ ...prev, selectedAlbum: album }));
+    slideToView("compose");
+  };
+
+  const handleCreateAlbum = () => {
+    if (albumState.newAlbumName.trim()) {
+      const newAlbum = {
+        id: Date.now().toString(),
+        name: albumState.newAlbumName.trim(),
+        thumbnail: "/Picturemockdata/DSC03778.jpg",
+        postCount: 0,
+      };
+      setAlbumState((prev) => ({ 
+        ...prev, 
+        selectedAlbum: newAlbum,
+        newAlbumName: "" 
+      }));
+      slideToView("compose");
+    }
+  };
+
+  const handleRemoveAlbum = () => {
+    setAlbumState((prev) => ({ ...prev, selectedAlbum: null }));
+  };
+
   const handleEmojiSelect = (emoji) => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -457,21 +524,19 @@ const CreatePostModal = ({
   };
 
   const handleGifSelect = (gifUrl) => {
-    // Thông báo nếu đã có ảnh/video
     if (attachments.selectedMedia.length > 0) {
       if (
         confirm(
           "Bạn đã có ảnh/video. Chọn GIF sẽ xóa ảnh/video hiện tại. Bạn có muốn tiếp tục?"
         )
       ) {
-        // Xóa tất cả ảnh/video khi chọn GIF
         attachments.selectedMedia.forEach((file) => {
           if (file.url) URL.revokeObjectURL(file.url);
         });
 
         setAttachments((prev) => ({
       ...prev,
-          selectedMedia: [], // Xóa tất cả ảnh/video
+          selectedMedia: [],
       selectedGif: gifUrl,
       hasAttachment: true,
     }));
@@ -493,7 +558,6 @@ const CreatePostModal = ({
       (f) => f.file.name
     );
 
-    // Thông báo nếu đã có GIF
     if (attachments.selectedGif) {
       if (
         !confirm(
@@ -502,7 +566,6 @@ const CreatePostModal = ({
       ) {
         return;
       }
-      // Xóa GIF khi chọn ảnh/video
       setAttachments((prev) => ({
         ...prev,
         selectedGif: null,
@@ -515,7 +578,6 @@ const CreatePostModal = ({
         return;
       }
 
-      // Tự động đổi tên file trùng
       let fileName = file.name;
       let counter = 1;
 
@@ -531,7 +593,6 @@ const CreatePostModal = ({
         counter++;
       }
 
-      // Tạo file mới với tên đã đổi
       const renamedFile = new File([file], fileName, { type: file.type });
 
       const mediaFile = {
@@ -641,7 +702,6 @@ const CreatePostModal = ({
     }));
   };
 
-  // Effects
   useEffect(() => {
     if (autoSaveTimeoutRef.current)
       clearTimeout(autoSaveTimeoutRef.current);
@@ -681,7 +741,6 @@ const CreatePostModal = ({
       setUiState((prev) => ({ ...prev, currentView: "compose" }));
   }, [isOpen]);
 
-  // Keyboard support for image viewer
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape" && uiState.showImageViewer) {
@@ -696,16 +755,13 @@ const CreatePostModal = ({
   }, [uiState.showImageViewer]);
 
   useEffect(() => {
-    // Chỉ thay đổi height khi không đang slide để tránh hiện tượng trang trống
     if (!uiState.isSliding) {
-      // Delay nhỏ để đảm bảo DOM đã render xong
       setTimeout(() => {
       setModalHeight("auto");
       }, 50);
     }
   }, [uiState.currentView, uiState.isSliding]);
 
-  // Effect để tính toán height khi modal mở
   useEffect(() => {
     if (isOpen && modalRef.current) {
       const height = modalRef.current.offsetHeight;
@@ -720,8 +776,6 @@ const CreatePostModal = ({
   );
 
   if (!isOpen) return null;
-
-  // 6. Render
   return (
     <>
       <div
@@ -748,7 +802,6 @@ const CreatePostModal = ({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Toàn bộ modal có slide animation */}
           <div
             ref={slideContainerRef}
             className={`h-full ${uiState.isSliding ? "opacity-70" : "opacity-100"
@@ -761,7 +814,6 @@ const CreatePostModal = ({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            {/* Header */}
             <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-yellow-50 sticky top-0 z-10">
               <div className="flex items-center space-x-3">
                 {uiState.currentView !== "compose" && (
@@ -782,6 +834,8 @@ const CreatePostModal = ({
                    {uiState.currentView === "gif" && POST_MESSAGES.LABELS.FIND_GIF}
                    {uiState.currentView === "media" &&
                      POST_MESSAGES.LABELS.SELECT_MEDIA}
+                   {uiState.currentView === "album-select" && "Chọn Album"}
+                   {uiState.currentView === "album-create" && "Tạo Album Mới"}
                 </h2>
                 {uiState.showSparkles &&
                   uiState.currentView === "compose" && (
@@ -802,7 +856,6 @@ const CreatePostModal = ({
                </Button>
             </div>
 
-            {/* Content area */}
 
             {uiState.showDraftRestored &&
               uiState.currentView === "compose" && (
@@ -918,6 +971,36 @@ const CreatePostModal = ({
                     className="border-gray-200 focus:border-orange-300 focus:ring-orange-200 resize-none !min-h-[150px] overflow-hidden transition-all duration-200"
                     rows={1}
                   />
+
+                    <div className="space-y-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => slideToView("album-select")}
+                      className="flex items-center space-x-2 text-sm border-orange-200 hover:bg-orange-50 hover:border-orange-300 w-full justify-start"
+                    >
+                      <FolderPlus className="h-4 w-4 text-orange-500" />
+                      <span>
+                        {albumState.selectedAlbum 
+                          ? `Album: ${albumState.selectedAlbum.name}` 
+                          : "Thêm vào album"
+                        }
+                      </span>
+                      {albumState.selectedAlbum && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveAlbum();
+                          }}
+                          className="h-4 w-4 p-0 ml-auto hover:bg-red-100"
+                        >
+                          <X className="h-3 w-3 text-red-500" />
+                        </Button>
+                      )}
+                    </Button>
+                  </div>
 
                   {(attachments.selectedMedia.length > 0 ||
                     attachments.selectedGif) && (
@@ -1410,6 +1493,109 @@ const CreatePostModal = ({
                         JPG, PNG, GIF, MP4, MOV (tối đa
                         50MB)
                       </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {uiState.currentView === "album-select" && (
+              <div className="h-full">
+                <div className="p-6 h-full overflow-y-auto max-h-[calc(90vh-200px)] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                  <div className="h-full flex flex-col">
+                    <div className="flex-1 overflow-y-auto space-y-4">
+                      <Button
+                        onClick={() => slideToView("album-create")}
+                        className="w-full flex items-center justify-center space-x-2 p-4 border-2 border-dashed border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg transition-all duration-200"
+                      >
+                        <Plus className="h-5 w-5" />
+                        <span className="font-medium">Tạo album mới</span>
+                      </Button>
+
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-medium text-gray-700">Album hiện có</h3>
+                        {MOCK_ALBUMS.map((album) => (
+                          <button
+                            key={album.id}
+                            onClick={() => handleAlbumSelect(album)}
+                            className="w-full flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-orange-50 hover:border-orange-300 transition-all duration-200 text-left"
+                          >
+                            <img
+                              src={album.thumbnail || "/placeholder.svg"}
+                              alt={album.name}
+                              className="w-12 h-12 object-cover rounded-lg border border-gray-200"
+                            />
+                            <div className="flex-1">
+                              <h4 className="font-medium text-gray-900">{album.name}</h4>
+                              <p className="text-sm text-gray-500">{album.postCount} bài đăng</p>
+                    </div>
+                            <Folder className="h-5 w-5 text-orange-500" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setAlbumState((prev) => ({ ...prev, selectedAlbum: null }));
+                        slideToView("compose");
+                      }}
+                      className="w-full mt-4 border-gray-300 text-gray-600 hover:bg-gray-50"
+                    >
+                      Không thêm vào album
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {uiState.currentView === "album-create" && (
+              <div className="h-full">
+                <div className="p-6 h-full overflow-y-auto max-h-[calc(90vh-200px)] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                  <div className="h-full flex flex-col justify-center">
+                    <div className="space-y-6">
+                      <div className="text-center">
+                        <FolderPlus className="h-16 w-16 text-orange-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">Tạo album mới</h3>
+                        <p className="text-gray-600">Đặt tên cho album của bạn</p>
+                      </div>
+
+                      <div className="space-y-4">
+                        <Input
+                          placeholder="Đặt tên album của bạn"
+                          value={albumState.newAlbumName}
+                          onChange={(e) =>
+                            setAlbumState((prev) => ({
+                              ...prev,
+                              newAlbumName: e.target.value,
+                            }))
+                          }
+                          className="border-gray-200 focus:border-orange-300 focus:ring-orange-200 transition-all duration-200"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleCreateAlbum();
+                            }
+                          }}
+                        />
+
+                        <div className="flex space-x-3">
+                          <Button
+                            onClick={() => slideToView("album-select")}
+                            variant="outline"
+                            className="flex-1 border-gray-300 text-gray-600 hover:bg-gray-50"
+                          >
+                            Hủy
+                          </Button>
+                          <Button
+                            onClick={handleCreateAlbum}
+                            disabled={!albumState.newAlbumName.trim()}
+                            className="flex-1 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white disabled:bg-gray-200 disabled:text-gray-400"
+                          >
+                            Tạo
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
