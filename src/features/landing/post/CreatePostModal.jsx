@@ -819,6 +819,7 @@ useEffect(() => {
                 ? `${fixedHeight}px`
                 : modalHeight,
             maxHeight: "90vh",
+            minHeight: "400px", // Đảm bảo modal có chiều cao tối thiểu
             transition: uiState.isSliding
               ? "height 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
               : "height 0.3s ease-out",
@@ -970,7 +971,7 @@ useEffect(() => {
                   </div>
                 </div>
 
-                <div className="px-6 py-4 pt-2 space-y-5 flex-1 overflow-y-auto max-h-[calc(90vh-200px)] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="px-6 py-4 pt-2 space-y-5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ maxHeight: 'calc(90vh - 300px)' }}>
                   <Input
                        placeholder={POST_MESSAGES.PLACEHOLDERS.ADD_TITLE}
                     value={formData.title}
@@ -1087,10 +1088,9 @@ useEffect(() => {
                               <div
                                 className="flex gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 pb-2 border-l-2 border-r-2 border-gray-100 rounded-lg px-2 bg-gray-50/30"
                                 style={{
-                                  scrollbarWidth:
-                                    "thin",
-                                  scrollbarColor:
-                                    "#9ca3af #f3f4f6",
+                                  scrollbarWidth: "thin",
+                                  scrollbarColor: "#9ca3af #f3f4f6",
+                                  maxHeight: '200px', // Giới hạn chiều cao cho container ảnh
                                 }}
                               >
                                 {attachments.selectedMedia.map(
@@ -1424,7 +1424,7 @@ useEffect(() => {
                     </div>
                   </div>
 
-                  <div className="flex justify-end pt-5 border-t border-gray-100 sticky bottom-0 bg-white">
+                  <div className="flex justify-end pt-5 border-t border-gray-100 sticky bottom-0 bg-white z-10">
                     <Button
                       onClick={handlePost}
                       disabled={
@@ -1454,7 +1454,7 @@ useEffect(() => {
 
             {uiState.currentView === "emoji" && (
               <div className="h-full">
-                <div className="p-6 h-full overflow-y-auto max-h-[calc(90vh-200px)] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ maxHeight: 'calc(90vh - 200px)' }}>
                   <div className="h-full">
                     <EmojiPicker
                       isOpen={true}
@@ -1471,7 +1471,7 @@ useEffect(() => {
 
             {uiState.currentView === "gif" && (
               <div className="h-full">
-                <div className="p-6 h-full overflow-y-auto max-h-[calc(90vh-200px)] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ maxHeight: 'calc(90vh - 200px)' }}>
                   <div className="h-full">
                     <GifSearchModal
                       isOpen={true}
@@ -1488,7 +1488,7 @@ useEffect(() => {
 
             {uiState.currentView === "media" && (
               <div className="h-full">
-                <div className="p-6 h-full overflow-y-auto max-h-[calc(90vh-200px)] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ maxHeight: 'calc(90vh - 200px)' }}>
                   <div className="h-full">
                     <div
                       className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 h-full flex flex-col justify-center ${uiState.isDragging
@@ -1526,7 +1526,7 @@ useEffect(() => {
 
             {uiState.currentView === "album-select" && (
               <div className="h-full">
-                <div className="p-6 h-full overflow-y-auto max-h-[calc(90vh-200px)] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ maxHeight: 'calc(90vh - 200px)' }}>
                   <div className="h-full flex flex-col">
                     <div className="flex-1 overflow-y-auto space-y-4">
                       <Button
@@ -1577,7 +1577,7 @@ useEffect(() => {
 
             {uiState.currentView === "album-create" && (
               <div className="h-full">
-                <div className="p-6 h-full overflow-y-auto max-h-[calc(90vh-200px)] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ maxHeight: 'calc(90vh - 200px)' }}>
                   <div className="h-full flex flex-col justify-center">
                     <div className="space-y-6">
                       <div className="text-center">
