@@ -1294,10 +1294,10 @@ const CreatePostModal = ({
                   </div>
 
                   <div className="relative">
-                    <div className="flex items-center">
+                    <div className="flex items-center justify-center">
                       <div
                         ref={toolbarRef}
-                        className="flex items-center space-x-2 overflow-x-auto scrollbar-hide px-8 py-2"
+                        className="flex items-center space-x-2 overflow-x-auto scrollbar-hide px-4 py-2 w-full"
                         style={{
                           scrollbarWidth: "none",
                           msOverflowStyle: "none",
@@ -1332,7 +1332,7 @@ const CreatePostModal = ({
                                 ? true
                                 : false
                             }
-                            className={`whitespace-nowrap flex-shrink-0 transition-all duration-200 ${attachments.selectedGif
+                            className={`whitespace-nowrap flex-shrink-0 transition-all duration-200 min-w-fit ${attachments.selectedGif
                                 ? "text-gray-400 cursor-not-allowed opacity-50"
                                 : "text-gray-600 hover:text-orange-600 hover:bg-orange-50 hover:scale-105"
                               }`}
@@ -1345,7 +1345,7 @@ const CreatePostModal = ({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 whitespace-nowrap flex-shrink-0 transition-all duration-200 hover:scale-105"
+                          className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 whitespace-nowrap flex-shrink-0 transition-all duration-200 hover:scale-105 min-w-fit"
                           onClick={slideToEmoji}
                         >
                           <Smile className="h-4 w-4 mr-2" />
@@ -1384,7 +1384,7 @@ const CreatePostModal = ({
                                 ? true
                                 : false
                             }
-                            className={`whitespace-nowrap flex-shrink-0 transition-all duration-200 ${attachments
+                            className={`whitespace-nowrap flex-shrink-0 transition-all duration-200 min-w-fit ${attachments
                                 .selectedMedia
                                 .length > 0
                                 ? "text-gray-400 cursor-not-allowed opacity-50"
