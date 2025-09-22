@@ -65,6 +65,9 @@ export const API_CONFIG = {
 
   UPLOAD: {
     UPLOAD_IMAGE: '/upload'
+  },
+  POST :{
+    CREATE_POST : '/post'
   }
 };
 

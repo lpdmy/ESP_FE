@@ -27,7 +27,7 @@ import GifSearchModal from "@/common/components/gif-search-modal";
 import { POST_MESSAGES } from "@/common/constants/messages/post";
 import { useSelector } from "react-redux";
 import { ROLE } from "@/common/constants/roles";
-
+import { usePostApi } from "./hooks/usePostApi";
 const POPULAR_HASHTAGS = [
   "học_tập",
   "giáo_dục",
@@ -111,24 +111,25 @@ const MOCK_ALBUMS = [
 
 const PRIVACY_OPTIONS = [
   {
-    value: "public",
+    value: 0,
     label: "Công khai",
     icon: <Globe className="h-4 w-4" />,
     description: "Mọi người có thể xem",
   },
   {
-    value: "friends",
+    value: 2,
     label: "Bạn bè",
     icon: <Users className="h-4 w-4" />,
     description: "Chỉ bạn bè có thể xem",
   },
   {
-    value: "private",
+    value: 1,
     label: "Chỉ mình tôi",
     icon: <Lock className="h-4 w-4" />,
     description: "Chỉ bạn có thể xem",
   },
 ];
+
 
 const CreatePostModal = ({
   isOpen,
@@ -146,12 +147,17 @@ const CreatePostModal = ({
   
   const [formData, setFormData] = useState({
     title: "",
-    content: "",
-    hashtags: [],
-    hashtagInput: "",
-    privacy: "public",
+  body: "",
+  classGroupId: null,
+  clubId: null,
+  privacyLevel: 0,
+  status: 0,
+  callToAction: "",
+  hashtags: [],
+  mentionUsernames: [],
+  attachmentUrls: [],
   });
-  
+  const { createPost, saveLoading, error } = usePostApi();
   const [uiState, setUiState] = useState({
     showHashtagSuggestions: false,
     showPrivacyDropdown: false,
@@ -196,12 +202,12 @@ const CreatePostModal = ({
 
   const canPost =
     formData.title.trim() ||
-    formData.content.trim() ||
+    formData.body.trim() ||
     formData.hashtags.length > 0 ||
     attachments.hasAttachment;
   const hasDraftContent = Boolean(
     formData.title.trim() || 
-    formData.content.trim() || 
+    formData.body.trim() || 
     formData.hashtags.length > 0 || 
     attachments.selectedMedia.length > 0 || 
     attachments.selectedGif ||
@@ -209,7 +215,7 @@ const CreatePostModal = ({
   );
 
   const currentPrivacy =
-    PRIVACY_OPTIONS.find((option) => option.value === formData.privacy) ||
+    PRIVACY_OPTIONS.find((option) => option.value === formData.privacyLevel) ||
     PRIVACY_OPTIONS[0];
 
   const slideToView = (view) => {
@@ -320,9 +326,9 @@ const CreatePostModal = ({
       setFormData((prev) => ({
         ...prev,
         title: draft.title || "",
-        content: draft.content || "",
+        body: draft.body || "",
         hashtags: draft.hashtags || [],
-        privacy: draft.privacy || "public",
+        privacyLevel: draft.privacyLevel || 0,
       }));
       setAttachments((prev) => ({
         ...prev,
@@ -377,43 +383,58 @@ const CreatePostModal = ({
     }
   };
 
-  const handlePost = () => {
-    if (canPost) {
-      setUiState((prev) => ({ ...prev, isAnimating: true }));
-      setTimeout(() => {
-        // TODO: Implement actual post creation API call
-        console.log("Creating post:", {
-          title: formData.title,
-          content: formData.content,
-          hashtags: formData.hashtags,
-          privacy: formData.privacy,
-          media: attachments.selectedMedia,
-          gif: attachments.selectedGif,
-          album: albumState.selectedAlbum,
-        });
-        clearDraft();
-        setFormData({
-          title: "",
-          content: "",
-          hashtags: [],
-          hashtagInput: "",
-          privacy: "public",
-        });
-        setAttachments({
-          selectedMedia: [],
-          selectedGif: null,
-          hasAttachment: false,
-        });
-        setAlbumState({
-          selectedAlbum: null,
-          newAlbumName: "",
-        });
-        setUiState((prev) => ({ ...prev, isAnimating: false }));
-        onClose();
-      }, 500);
+  const handlePost = async () => {
+  if (canPost) {
+    setUiState((prev) => ({ ...prev, isAnimating: true }));
+    try {
+      const attachmentUrls = [
+        ...attachments.selectedMedia.map((file) => file.url),
+        ...(attachments.selectedGif ? [attachments.selectedGif] : []),
+      ];
+      const payload = {
+        title: formData.title,
+        body: formData.body,
+        classGroupId: formData.classGroupId ?? 0,
+        clubId: formData.clubId ?? 0,
+        privacyLevel: Number(formData.privacyLevel),
+        status: formData.status ?? 0,
+        callToAction: formData.callToAction || "",
+        hashtags: formData.hashtags,
+        mentionUsernames: formData.mentionUsernames || [],
+        attachmentUrls,
+      };
+      console.log("📤 Creating post:", payload);
+      await createPost(payload);
+      clearDraft();
+      setFormData({
+        title: "",
+        body: "",
+        classGroupId: null,
+        clubId: null,
+        privacyLevel: 0,
+        status: 0,
+        callToAction: "",
+        hashtags: [],
+        mentionUsernames: [],
+        attachmentUrls: [],
+      });
+      setAttachments({
+        selectedMedia: [],
+        selectedGif: null,
+        hasAttachment: false,
+      });
+      setAlbumState({
+        selectedAlbum: null,
+        newAlbumName: "",
+      });
+    } catch (error) {
+      console.error("❌ Lỗi khi đăng bài:", error);
+    } finally {
+      setUiState((prev) => ({ ...prev, isAnimating: false }));
+      onClose();
     }
-  };
-
+  }
+};
   const handleClose = (e) => {
     if (e) {
       e.preventDefault();
@@ -425,7 +446,7 @@ const CreatePostModal = ({
       // Kiểm tra lại hasDraftContent để đảm bảo chính xác
       const hasContent = Boolean(
         formData.title.trim() ||
-        formData.content.trim() ||
+        formData.body.trim() ||
         formData.hashtags.length > 0 ||
         attachments.selectedMedia.length > 0 ||
         attachments.selectedGif ||
@@ -454,10 +475,10 @@ const CreatePostModal = ({
     clearDraft();
     setFormData({
       title: "",
-      content: "",
+      body: "",
       hashtags: [],
       hashtagInput: "",
-      privacy: "public",
+      privacyLevel: "public",
     });
     setUiState((prev) => ({ ...prev, showExitConfirm: false }));
     onClose();
@@ -505,10 +526,10 @@ const CreatePostModal = ({
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const newContent =
-        formData.content.slice(0, start) +
+        formData.body.slice(0, start) +
         emoji +
-        formData.content.slice(end);
-      setFormData((prev) => ({ ...prev, content: newContent }));
+        formData.body.slice(end);
+      setFormData((prev) => ({ ...prev, body: newContent }));
 
       setTimeout(() => {
         textarea.focus();
@@ -518,7 +539,7 @@ const CreatePostModal = ({
         );
       }, 0);
     } else {
-      setFormData((prev) => ({ ...prev, content: prev.content + emoji }));
+      setFormData((prev) => ({ ...prev, body: prev.body + emoji }));
     }
     slideToView("compose");
   };
@@ -712,10 +733,10 @@ const CreatePostModal = ({
       if (autoSaveTimeoutRef.current)
         clearTimeout(autoSaveTimeoutRef.current);
     };
-  }, [formData.title, formData.content, formData.hashtags, formData.privacy]);
+  }, [formData.title, formData.body, formData.hashtags, formData.privacyLevel]);
 
   useEffect(() => {
-    if (isOpen && !formData.title && !formData.content) loadDraft();
+    if (isOpen && !formData.title && !formData.body) loadDraft();
   }, [isOpen]);
 
   useEffect(() => {
@@ -723,10 +744,12 @@ const CreatePostModal = ({
       textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
-  }, [formData.content]);
-
+  }, [formData.body]);
+useEffect(() => {
+  console.log("Dữ liệu form sau khi cập nhật:", formData);
+}, [formData]);
   useEffect(() => {
-    if (formData.content.length > 0 || formData.title.length > 0) {
+    if (formData.body.length > 0 || formData.title.length > 0) {
       setUiState((prev) => ({ ...prev, showSparkles: true }));
       const timer = setTimeout(
         () => setUiState((prev) => ({ ...prev, showSparkles: false })),
@@ -734,7 +757,7 @@ const CreatePostModal = ({
       );
       return () => clearTimeout(timer);
     }
-  }, [formData.content, formData.title]);
+  }, [formData.body, formData.title]);
 
   useEffect(() => {
     if (!isOpen)
@@ -770,16 +793,16 @@ const CreatePostModal = ({
   }, [isOpen]);
 
   const filteredSuggestions = POPULAR_HASHTAGS.filter(
-    (tag) =>
-      tag.toLowerCase().includes(formData.hashtagInput.toLowerCase()) &&
-      !formData.hashtags.includes(tag)
-  );
+  (tag) =>
+    tag.toLowerCase().includes((formData.hashtagInput || "").toLowerCase()) &&
+    !formData.hashtags.includes(tag)
+);
 
   if (!isOpen) return null;
   return (
     <>
       <div
-        className="!mt-0 fixed inset-0 z-[9999] md:flex md:items-center md:justify-center"
+        className="!mt-0 fixed inset-0 z-[9999] flex items-center justify-center"
         onClick={handleBackdropClick}
       >
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -906,11 +929,13 @@ const CreatePostModal = ({
                           <button
                             key={option.value}
                             onClick={() => {
+                              console.log("Giá trị được chọn:", option.value);
                                 setFormData(
                                   (prev) => ({
                                     ...prev,
-                                    privacy:
+                                    privacyLevel:
                                       option.value,
+                                      
                                   })
                                 );
                                 setUiState(
@@ -961,11 +986,11 @@ const CreatePostModal = ({
                   <Textarea
                     ref={textareaRef}
                     placeholder={POST_MESSAGES.PLACEHOLDERS.WHAT_ARE_YOU_THINKING}
-                    value={formData.content}
+                    value={formData.body}
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        content: e.target.value,
+                        body: e.target.value,
                       }))
                     }
                     className="border-gray-200 focus:border-orange-300 focus:ring-orange-200 resize-none !min-h-[150px] overflow-hidden transition-all duration-200"

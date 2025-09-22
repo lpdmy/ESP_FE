@@ -7,7 +7,6 @@ import { useSelector } from 'react-redux';
 const CreatePostInput = ({ onOpenModal }) => {
   // Get user data from Redux store
   const user = useSelector((state) => state.user.user);
-  
   // Computed user values
   const userName = user?.firstName && user?.lastName 
     ? `${user.firstName} ${user.lastName}` 
