@@ -394,8 +394,8 @@ const CreatePostModal = ({
       const payload = {
         title: formData.title,
         body: formData.body,
-        classGroupId: formData.classGroupId ?? 0,
-        clubId: formData.clubId ?? 0,
+        classGroupId: formData.classGroupId ?? null,
+        clubId: formData.clubId ?? null,
         privacyLevel: Number(formData.privacyLevel),
         status: formData.status ?? 0,
         callToAction: formData.callToAction || "",
