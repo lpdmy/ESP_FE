@@ -17,11 +17,19 @@ export function usePostApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
-
+  const userPost = async (sortBy) => {
+  const token = localStorage.getItem("token");
+  return executeApiCall(
+    postService.getUserPost.bind(postService),
+    [token, sortBy],
+    { setLoading: setSaveLoading, setError }
+  );
+};
   return {
     postLoading,
     saveLoading,
     error,
     createPost: createPost.current,
+    userPost,
   };
 }

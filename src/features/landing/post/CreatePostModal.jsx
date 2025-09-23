@@ -28,6 +28,8 @@ import { POST_MESSAGES } from "@/common/constants/messages/post";
 import { useSelector } from "react-redux";
 import { ROLE } from "@/common/constants/roles";
 import { usePostApi } from "./hooks/usePostApi";
+import { uploadImage } from "@/common/utils/upload"
+import { useToast } from "@/common/hooks/useToast";
 const POPULAR_HASHTAGS = [
   "học_tập",
   "giáo_dục",
@@ -136,7 +138,7 @@ const CreatePostModal = ({
   onClose,
 }) => {
   const user = useSelector((state) => state.user.user);
-  
+  const { showError } = useToast();
   const userName = user?.firstName && user?.lastName 
     ? `${user.firstName} ${user.lastName}` 
     : user?.username || "Người dùng";
@@ -384,57 +386,99 @@ const CreatePostModal = ({
   };
 
   const handlePost = async () => {
-  if (canPost) {
-    setUiState((prev) => ({ ...prev, isAnimating: true }));
-    try {
-      const attachmentUrls = [
-        ...attachments.selectedMedia.map((file) => file.url),
-        ...(attachments.selectedGif ? [attachments.selectedGif] : []),
-      ];
-      const payload = {
-        title: formData.title,
-        body: formData.body,
-        classGroupId: formData.classGroupId ?? null,
-        clubId: formData.clubId ?? null,
-        privacyLevel: Number(formData.privacyLevel),
-        status: formData.status ?? 0,
-        callToAction: formData.callToAction || "",
-        hashtags: formData.hashtags,
-        mentionUsernames: formData.mentionUsernames || [],
-        attachmentUrls,
-      };
-      console.log("📤 Creating post:", payload);
-      await createPost(payload);
-      clearDraft();
-      setFormData({
-        title: "",
-        body: "",
-        classGroupId: null,
-        clubId: null,
-        privacyLevel: 0,
-        status: 0,
-        callToAction: "",
-        hashtags: [],
-        mentionUsernames: [],
-        attachmentUrls: [],
-      });
-      setAttachments({
-        selectedMedia: [],
-        selectedGif: null,
-        hasAttachment: false,
-      });
-      setAlbumState({
-        selectedAlbum: null,
-        newAlbumName: "",
-      });
-    } catch (error) {
-      console.error("❌ Lỗi khi đăng bài:", error);
-    } finally {
-      setUiState((prev) => ({ ...prev, isAnimating: false }));
-      onClose();
+  if (!canPost) return;
+  setUiState((prev) => ({ ...prev, isAnimating: true }));
+
+  try {
+    const uploadedAttachments = [];
+    for (const fileObj of attachments.selectedMedia) {
+      try {
+        const uploadedUrl = await uploadImage(fileObj.file, (progress) => {
+          setAttachments((prev) => ({
+            ...prev,
+            selectedMedia: prev.selectedMedia.map((f) =>
+              f.id === fileObj.id ? { ...f, uploadProgress: progress } : f
+            ),
+          }));
+        });
+
+        uploadedAttachments.push({
+          url: uploadedUrl,
+          fileType: fileObj.type,
+        });
+
+        setAttachments((prev) => ({
+          ...prev,
+          selectedMedia: prev.selectedMedia.map((f) =>
+            f.id === fileObj.id
+              ? { ...f, url: uploadedUrl, uploadProgress: 100 }
+              : f
+          ),
+        }));
+      } catch (err) {
+        console.error("Upload thất bại:", err);
+      }
     }
+
+    if (attachments.selectedGif) {
+      uploadedAttachments.push({
+        url: attachments.selectedGif,
+        fileType: "image",
+      });
+    }
+
+    const payload = {
+      title: formData.title,
+      body: formData.body,
+      classGroupId: formData.classGroupId ?? null,
+      clubId: formData.clubId ?? null,
+      privacyLevel: Number(formData.privacyLevel),
+      status: formData.status ?? 0,
+      callToAction: formData.callToAction || "",
+      hashtags: formData.hashtags,
+      mentionUsernames: formData.mentionUsernames || [],
+      attachmentUrls: uploadedAttachments,
+      hashtagInput: "",
+    };
+
+    console.log("📤 Creating post:", payload);
+    await createPost(payload);
+
+    clearDraft();
+    setFormData({
+      title: "",
+      body: "",
+      classGroupId: null,
+      clubId: null,
+      privacyLevel: 0,
+      status: 0,
+      callToAction: "",
+      hashtags: [],
+      mentionUsernames: [],
+      attachmentUrls: [],
+    });
+    setAttachments({
+      selectedMedia: [],
+      selectedGif: null,
+      hasAttachment: false,
+    });
+    setAlbumState({
+      selectedAlbum: null,
+      newAlbumName: "",
+    });
+
+  } catch (error) {
+  const message =
+    error?.response?.data?.message ||
+    error?.message || 
+    "Có lỗi xảy ra khi đăng bài.";
+  showError(message);
+  } finally {
+    setUiState((prev) => ({ ...prev, isAnimating: false }));
+    onClose();
   }
 };
+
   const handleClose = (e) => {
     if (e) {
       e.preventDefault();
@@ -573,74 +617,65 @@ const CreatePostModal = ({
     }
   };
 
-  const handleFileSelect = (files) => {
-    const newFiles = [];
-    const existingFileNames = attachments.selectedMedia.map(
-      (f) => f.file.name
-    );
+  const handleFileSelect = async (files) => {
+  const newFiles = [];
+  const existingFileNames = attachments.selectedMedia.map((f) => f.file.name);
 
-    if (attachments.selectedGif) {
-      if (
-        !confirm(
-          "Bạn đã có GIF. Chọn ảnh/video sẽ xóa GIF hiện tại. Bạn có muốn tiếp tục?"
-        )
-      ) {
-        return;
-      }
-      setAttachments((prev) => ({
-        ...prev,
-        selectedGif: null,
-      }));
+  Array.from(files).forEach(async (file) => {
+    if (file.size > 50 * 1024 * 1024) {
+      alert(`File ${file.name} quá lớn. Kích thước tối đa là 50MB.`);
+      return;
     }
-
-    Array.from(files).forEach((file) => {
-      if (file.size > 50 * 1024 * 1024) {
-        alert(`File ${file.name} quá lớn. Kích thước tối đa là 50MB.`);
-        return;
-      }
-
-      let fileName = file.name;
-      let counter = 1;
-
-      while (existingFileNames.includes(fileName)) {
-        const nameWithoutExt = file.name.substring(
-          0,
-          file.name.lastIndexOf(".")
-        );
-        const extension = file.name.substring(
-          file.name.lastIndexOf(".")
-        );
-        fileName = `${nameWithoutExt}_${counter}${extension}`;
-        counter++;
-      }
-
-      const renamedFile = new File([file], fileName, { type: file.type });
-
-      const mediaFile = {
-        id: Math.random().toString(36).substr(2, 9),
-        file: renamedFile,
-        url: URL.createObjectURL(renamedFile),
-        type: file.type.startsWith("image/")
-          ? "image"
-          : file.type.startsWith("video/")
-            ? "video"
-            : "other",
-        uploadProgress: 0,
-      };
-
-      newFiles.push(mediaFile);
-      simulateIndividualUpload(mediaFile);
+console.log("📂 File đã chọn:", {
+      name: file.name,
+      type: file.type,
+      size: file.size / 1024 + " KB",
     });
+    let fileName = file.name;
+    let counter = 1;
+    while (existingFileNames.includes(fileName)) {
+      const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf("."));
+      const extension = file.name.substring(file.name.lastIndexOf("."));
+      fileName = `${nameWithoutExt}_${counter}${extension}`;
+      counter++;
+    }
+    setFormData((prev) => ({
+  ...prev,
+  attachmentUrls: [
+    ...prev.attachmentUrls,
+    {
+      url: mediaFile.url,
+      fileType: mediaFile.type 
+    }
+  ]
+}));
 
-    if (newFiles.length > 0) {
-      setAttachments((prev) => ({
+    const renamedFile = new File([file], fileName, { type: file.type });
+
+    const mediaFile = {
+      id: Math.random().toString(36).substr(2, 9),
+      file: renamedFile,
+      url: URL.createObjectURL(renamedFile),
+      type: file.type.startsWith("image/")
+        ? "image"
+        : file.type.startsWith("video/")
+        ? "video"
+        : "other",
+      uploadProgress: 0,
+    };
+    simulateIndividualUpload(mediaFile);
+ 
+
+    setAttachments((prev) => ({
       ...prev,
-      selectedMedia: [...prev.selectedMedia, ...newFiles],
+      selectedMedia: [...prev.selectedMedia, mediaFile],
       hasAttachment: true,
     }));
-    slideToView("compose");
-    }
-  };
+  });
+
+  slideToView("compose");
+};
+
 
   const simulateIndividualUpload = async (file) => {
     for (
@@ -784,7 +819,27 @@ useEffect(() => {
       }, 50);
     }
   }, [uiState.currentView, uiState.isSliding]);
+useEffect(() => {
+  if (isOpen) {
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden"; // 👈 thêm dòng này
+  } else {
+    document.body.style.overflow = "";
+    document.documentElement.style.overflow = "";
+  }
 
+  return () => {
+    document.body.style.overflow = "";
+    document.documentElement.style.overflow = "";
+  };
+}, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && modalRef.current) {
+      const height = modalRef.current.offsetHeight;
+      setModalHeight(`${height}px`);
+    }
+  }, [isOpen]);
   useEffect(() => {
     if (isOpen && modalRef.current) {
       const height = modalRef.current.offsetHeight;
@@ -1254,14 +1309,12 @@ useEffect(() => {
                             handleHashtagInputKeyDown
                           }
                           onFocus={() =>
-                            setUiState((prev) => ({
+                          setUiState((prev) => ({
                               ...prev,
                               showHashtagSuggestions:
-                                formData
-                                  .hashtagInput
-                                  .length > 0,
-                            }))
-                          }
+                            (formData.hashtagInput?.length ?? 0) > 0,
+                           }))
+                        }
                           className="border-gray-200 focus:border-orange-300 focus:ring-orange-200 text-sm transition-all duration-200"
                         />
                       </div>
