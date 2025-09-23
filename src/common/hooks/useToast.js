@@ -67,6 +67,7 @@ export const useToast = () => {
   const fileTooLarge = () => showError(PROFILE_MESSAGES.ERROR.FILE_TOO_LARGE)
   const networkError = () => showError(COMMON_MESSAGES.ERROR.NETWORK_ERROR)
   const unknownError = () => showError(COMMON_MESSAGES.ERROR.GENERIC)
+  const postLoadFaild = () => showError(COMMON_MESSAGES.ERROR.postLoadFaild)
 
   return {
     // Basic toast methods
@@ -86,6 +87,7 @@ export const useToast = () => {
     fileTooLarge,
     networkError,
     unknownError,
+    postLoadFaild,
     
     // Direct access to messages
     PROFILE_MESSAGES,
