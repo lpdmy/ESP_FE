@@ -33,11 +33,12 @@ export const API_CONFIG = {
 
   // User endpoints
   USER: {
-    GET_ALL: '/user/get-all',
-    GET_BY_ID: '/user/get-by-id',
-    CREATE: '/user',
-    UPDATE: '/user/update',
-    DELETE: '/user/delete',
+    GET_ALL: '/users',
+    GET_BY_ID: '/users/{id}',
+    CREATE: '/users',
+    UPDATE: '/users',
+    STATISTICS: '/user/statistics',
+    DELETE: '/users',
     STUDENT_PROFILE: '/user/student-profile',
   },
 
@@ -76,14 +77,20 @@ export const getAuthHeaders = (token) => ({
 
 // API Response Handler
 export async function handleApiResponse(response) {
+  console.log('API Response status:', response.status);
+  console.log('API Response headers:', response.headers);
+  
   const contentType = response.headers.get("content-type");
   if (!response.ok) {
+    console.log('API Error - Status:', response.status);
     // Nếu là JSON thì parse, không thì trả về text
     if (contentType && contentType.includes("application/json")) {
       const errorData = await response.json();
+      console.log('API Error Data:', errorData);
       throw errorData;
     } else {
       const errorText = await response.text();
+      console.log('API Error Text:', errorText);
       throw new Error(errorText);
     }
   }
