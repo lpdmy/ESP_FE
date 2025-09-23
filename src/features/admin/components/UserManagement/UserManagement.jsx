@@ -1,11 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/common/components/ui/card"
 import { Button } from "@/common/components/ui/button"
 import { Input } from "@/common/components/ui/input"
 import { Badge } from "@/common/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/common/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, useDropdownMenu } from "@/common/components/ui/dropdown-menu"
-import { SimpleSelect, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/common/components/ui/select"
+import { SimpleSelect} from "@/common/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/common/components/ui/dialog"
 import { Label } from "@/common/components/ui/label"
 import {
@@ -19,73 +19,19 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
+  UserCheck,
+  UserX,
 } from "lucide-react"
-import { useAuthApi } from "@/features/auth/hooks/useAuthApi"
+import { useSelector, useDispatch } from "react-redux";
 import { toast } from "react-toastify";
-
-// Mock user data
-const mockUsers = [
-  {
-    id: 1,
-    name: "Nguyễn Văn An",
-    email: "an.nguyen@fpt.edu.vn",
-    role: "Student",
-    status: "Active",
-    class: "10A1",
-  },
-  {
-    id: 2,
-    name: "Trần Thị Bình",
-    email: "binh.tran@fpt.edu.vn",
-    role: "Student",
-    status: "Active",
-    class: "10A2",
-  },
-  {
-    id: 3,
-    name: "Lê Minh Cường",
-    email: "cuong.le@fpt.edu.vn",
-    role: "Admin",
-    status: "Active",
-    class: "Admin",
-  },
-  {
-    id: 4,
-    name: "Phạm Thu Dung",
-    email: "dung.pham@fpt.edu.vn",
-    role: "Student",
-    status: "Inactive",
-    class: "11B1",
-  },
-  {
-    id: 5,
-    name: "Hoàng Văn Em",
-    email: "em.hoang@fpt.edu.vn",
-    role: "Teacher",
-    status: "Active",
-    class: "Giáo viên",
-  },
-]
+import { useUserApi } from "@/features/admin/hooks/useUserApi"
+import { useAuthApi } from "@/features/auth/hooks/useAuthApi"
+import { formatDateForAPI, formatDateForInput, isValidUrlOrEmpty, formatUrlForAPI } from "@/utils/dateUtils"
 
 const academicYears = [
   { value: "2024-2025", label: "2024-2025" },
   { value: "2023-2024", label: "2023-2024" },
   { value: "2022-2023", label: "2022-2023" },
-]
-
-// Mock data for dropdowns
-const subjects = [
-  { value: "Toán", label: "Toán" },
-  { value: "Ngữ văn", label: "Ngữ văn" },
-  { value: "Tiếng Anh", label: "Tiếng Anh" },
-  { value: "Vật lý", label: "Vật lý" },
-  { value: "Hóa học", label: "Hóa học" },
-  { value: "Sinh học", label: "Sinh học" },
-  { value: "Lịch sử", label: "Lịch sử" },
-  { value: "Địa lý", label: "Địa lý" },
-  { value: "GDCD", label: "GDCD" },
-  { value: "Tin học", label: "Tin học" },
-  { value: "Thể dục", label: "Thể dục" },
 ]
 
 const grades = [
@@ -94,42 +40,47 @@ const grades = [
   { value: 12, label: "Khối 12" },
 ]
 
-const getClassesByGrade = (grade) => {
-  const classMap = {
-    10: [
-      { value: 1, label: "Lớp 10A1" },
-      { value: 2, label: "Lớp 10A2" },
-      { value: 3, label: "Lớp 10A3" },
-      { value: 4, label: "Lớp 10B1" },
-      { value: 5, label: "Lớp 10B2" },
-    ],
-    11: [
-      { value: 6, label: "Lớp 11A1" },
-      { value: 7, label: "Lớp 11A2" },
-      { value: 8, label: "Lớp 11A3" },
-      { value: 9, label: "Lớp 11B1" },
-      { value: 10, label: "Lớp 11B2" },
-    ],
-    12: [
-      { value: 11, label: "Lớp 12A1" },
-      { value: 12, label: "Lớp 12A2" },
-      { value: 13, label: "Lớp 12A3" },
-      { value: 14, label: "Lớp 12B1" },
-      { value: 15, label: "Lớp 12B2" },
-    ],
-  }
-  return classMap[grade] || []
-}
+const subjects = [
+  { value: "Toán", label: "Toán" },
+  { value: "Lý", label: "Vật lý" },
+  { value: "Hóa", label: "Hóa học" },
+  { value: "Sinh", label: "Sinh học" },
+  { value: "Văn", label: "Ngữ văn" },
+  { value: "Sử", label: "Lịch sử" },
+  { value: "Địa", label: "Địa lý" },
+  { value: "Anh", label: "Tiếng Anh" },
+  { value: "Tin", label: "Tin học" },
+  { value: "GDCD", label: "Giáo dục công dân" },
+]
 
 const enrollmentYears = [
   { value: 2024, label: "2024" },
   { value: 2023, label: "2023" },
   { value: 2022, label: "2022" },
-  { value: 2021, label: "2021" },
 ]
 
-// Component riêng cho Dropdown Actions
-const UserActionsDropdown = ({ userId, onDelete }) => {
+const getClassesByGrade = (grade) => {
+  const classMap = {
+    10: [
+      { value: 1, label: "10A1" },
+      { value: 2, label: "10A2" },
+      { value: 3, label: "10A3" },
+    ],
+    11: [
+      { value: 4, label: "11A1" },
+      { value: 5, label: "11A2" },
+      { value: 6, label: "11A3" },
+    ],
+    12: [
+      { value: 7, label: "12A1" },
+      { value: 8, label: "12A2" },
+      { value: 9, label: "12A3" },
+    ],
+  }
+  return classMap[grade] || []
+}
+
+const UserActionsDropdown = ({ user, onView, onEdit, onDelete }) => {
   const { isOpen, openMenu, closeMenu, toggleMenu } = useDropdownMenu();
 
   return (
@@ -144,23 +95,33 @@ const UserActionsDropdown = ({ userId, onDelete }) => {
         isOpen={isOpen} 
         onClose={closeMenu}
       >
-        <DropdownMenuItem onClick={closeMenu}>
+        <DropdownMenuItem onClick={() => {
+          onView(user);
+          closeMenu();
+        }}>
           <Eye className="mr-2 h-4 w-4" />
           Xem chi tiết
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={closeMenu}>
+        <DropdownMenuItem onClick={() => {
+          onEdit(user);
+          closeMenu();
+        }}>
           <Edit className="mr-2 h-4 w-4" />
           Chỉnh sửa
         </DropdownMenuItem>
         <DropdownMenuItem 
-          variant="destructive" 
+          variant={user.status === 1 ? "destructive" : "default"}
           onClick={() => {
-            onDelete();
+            onDelete(user);
             closeMenu();
           }}
         >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Xóa người dùng
+          {user.status === 1 ? (
+            <UserX className="mr-2 h-4 w-4" />
+          ) : (
+            <UserCheck className="mr-2 h-4 w-4" />
+          )}
+          {user.status === 1 ? 'Vô hiệu hóa' : 'Kích hoạt'}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -168,22 +129,33 @@ const UserActionsDropdown = ({ userId, onDelete }) => {
 };
 
 export default function UserManagement() {
-  const [users, setUsers] = useState(mockUsers)
+  const [users, setUsers] = useState([])
+  const [filteredUsers, setFilteredUsers] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
+  const [actualSearchTerm, setActualSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [roleFilter, setRoleFilter] = useState("all")
   const [selectedYear, setSelectedYear] = useState("2024-2025")
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [userToToggle, setUserToToggle] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
   const [sortField, setSortField] = useState("id")
   const [sortDirection, setSortDirection] = useState("asc")
+  const { getAllUsers, deleteUser, updateUser, getUserStatistics, loading } = useUserApi();
+  const currentUser = useSelector((state) => state.user.user);
   const [newUser, setNewUser] = useState({
     email: "",
     firstName: "",
     lastName: "",
     phoneNumber: "",
     role: 0, // Default to Admin
+    avatarUrl: "",
+    status: 1, // Default to Active
     // Student fields
     studentNumber: "", // Sẽ đổi thành mã học sinh
     enrollmentYear: 2024,
@@ -192,11 +164,173 @@ export default function UserManagement() {
     classGroupId: "",
     // Teacher fields
     teacherCode: "",
-    subject: "", // Môn học thay vì khoa
+    position: "", // Vị trí thay vì môn học
   })
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   
+  // Stats for total counts
+  const [totalStats, setTotalStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    students: 0,
+    teachers: 0,
+    admins: 0
+  });
+  
+  
+  // Fetch total stats (without pagination)
+  const fetchTotalStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await getUserStatistics(token);
+      if (response?.data) {
+        setTotalStats({
+          totalUsers: response.data.totalUsers,
+          activeUsers: response.data.activeUsers,
+          students: response.data.students,
+          teachers: response.data.teachers,
+          admins: response.data.admins
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching total stats:", error);
+    }
+  };
+  
+  const fetchUsers = async () => {
+    try {
+      console.log("Fetching users with params:", { pageNumber, pageSize, searchTerm: actualSearchTerm, statusFilter, roleFilter });
+      
+      // Check current user info from Redux
+      console.log("Current user from Redux:", currentUser);
+      console.log("Current user role:", currentUser?.role);
+      
+      // Check if user has Admin role
+      if (currentUser?.role !== 0) {
+        console.error("User does not have Admin role. Current role:", currentUser?.role);
+        toast.error("Bạn không có quyền truy cập chức năng này");
+        return;
+      }
+      
+      // Prepare filter parameters
+      const statusParam = statusFilter === "all" ? null : parseInt(statusFilter);
+      
+      // TODO: Backend cần hỗ trợ role filtering và sorting
+      // Hiện tại chỉ gửi status filter
+      const response = await getAllUsers(pageNumber, pageSize, actualSearchTerm, statusParam);
+      console.log("API Response:", response);
+      
+      if (response?.data) {
+        // Backend returns PaginationResponseDto<UserDto>
+        const userData = response.data.data || [];
+        const totalCount = response.data.totalCount || 0;
+        
+        console.log("User data:", userData);
+        console.log("Total count:", totalCount);
+        
+        const userArray = Array.isArray(userData) ? userData : [];
+        
+        // Apply frontend filtering for role (temporary until backend supports it)
+        let filteredArray = userArray;
+        if (roleFilter !== "all") {
+          const roleMap = { 
+            "admin": 0, 
+            "student": 4, 
+            "teacher": 2 
+          };
+          const roleNumber = roleMap[roleFilter];
+          if (roleNumber !== undefined) {
+            filteredArray = userArray.filter(user => user.role === roleNumber);
+          }
+        }
+        
+        // Apply frontend sorting (temporary until backend supports it)
+        if (sortField && sortDirection) {
+          filteredArray = [...filteredArray].sort((a, b) => {
+            let aValue, bValue;
+            
+            // Handle different field types
+            if (sortField === "id") {
+              aValue = a.role === 4 ? a.studentNumber : a.role === 2 ? a.teacherCode : "";
+              bValue = b.role === 4 ? b.studentNumber : b.role === 2 ? b.teacherCode : "";
+            } else if (sortField === "name") {
+              aValue = a.name || `${a.firstName || ''} ${a.lastName || ''}`.trim();
+              bValue = b.name || `${b.firstName || ''} ${b.lastName || ''}`.trim();
+            } else if (sortField === "class") {
+              aValue = a.class || a.position || a.classGroupId || "";
+              bValue = b.class || b.position || b.classGroupId || "";
+            } else {
+              aValue = a[sortField] || "";
+              bValue = b[sortField] || "";
+            }
+            
+            // Handle string comparison
+            if (typeof aValue === "string" && typeof bValue === "string") {
+              const comparison = aValue.localeCompare(bValue, 'vi-VN');
+              return sortDirection === "asc" ? comparison : -comparison;
+            }
+            
+            // Handle number comparison
+            if (typeof aValue === "number" && typeof bValue === "number") {
+              return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+            }
+            
+            return 0;
+          });
+        }
+        
+        setUsers(filteredArray);
+        setFilteredUsers(filteredArray);
+        setTotalCount(totalCount);
+        setTotalPages(Math.ceil(totalCount / pageSize));
+        
+        // Fetch total stats when no search term (for accurate statistics)
+        if (!actualSearchTerm) {
+          await fetchTotalStats();
+        }
+      } else {
+        console.warn("No data in response:", response);
+        setUsers([]);
+        setFilteredUsers([]);
+        setTotalCount(0);
+        setTotalPages(0);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast.error("Không thể tải danh sách người dùng");
+      setUsers([]);
+      setFilteredUsers([]);
+      setTotalCount(0);
+      setTotalPages(0);
+    }
+  };
+
+  // Handle search
+  const handleSearch = () => {
+    setActualSearchTerm(searchTerm);
+    setPageNumber(1); // Reset to first page when searching
+  };
+
+  // Handle Enter key press
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  // Clear search
+  const handleClearSearch = () => {
+    setSearchTerm("");
+    setActualSearchTerm("");
+    setPageNumber(1);
+  };
+
+
   const [formErrors, setFormErrors] = useState({})
-  const { createUser } = useAuthApi();
+  const { createUser: createUserAuth } = useAuthApi();
 
   // Reset form when role changes
   const handleRoleChange = (newRole) => {
@@ -206,6 +340,8 @@ export default function UserManagement() {
       lastName: newUser.lastName,
       phoneNumber: newUser.phoneNumber,
       role: parseInt(newRole), // Convert string back to number
+      avatarUrl: newUser.avatarUrl,
+      status: newUser.status, // Keep status
       // Clear role-specific fields
       studentNumber: "",
       enrollmentYear: 2024,
@@ -213,7 +349,7 @@ export default function UserManagement() {
       grade: "",
       classGroupId: "",
       teacherCode: "",
-      subject: "",
+      position: "",
     }
     setNewUser(baseUser)
     setFormErrors({})
@@ -226,15 +362,20 @@ export default function UserManagement() {
     // Common fields validation
     if (!newUser.email.trim()) errors.email = "Email là bắt buộc"
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newUser.email)) errors.email = "Email không hợp lệ"
-    if (!newUser.firstName.trim()) errors.firstName = "Tên là bắt buộc"
-    if (!newUser.lastName.trim()) errors.lastName = "Họ là bắt buộc"
+    if (!newUser.firstName.trim()) errors.firstName = "Họ là bắt buộc"
+    if (!newUser.lastName.trim()) errors.lastName = "Tên là bắt buộc"
+    
+    // Avatar URL validation
+    if (newUser.avatarUrl && !isValidUrlOrEmpty(newUser.avatarUrl)) {
+      errors.avatarUrl = "URL avatar phải là một URL hợp lệ"
+    }
     
     // Role-specific validation
     if (newUser.role === 0) { // Admin
       // Không cần password cho admin
     }
     
-    if (newUser.role === 1) { // Student
+    if (newUser.role === 4) { // Student
       if (!newUser.phoneNumber.trim()) errors.phoneNumber = "Số điện thoại là bắt buộc"
       if (!/^(\+84|0)[3|5|7|8|9][0-9]{8}$/.test(newUser.phoneNumber)) errors.phoneNumber = "Số điện thoại không hợp lệ"
       if (!newUser.studentNumber.trim()) errors.studentNumber = "Mã học sinh là bắt buộc"
@@ -246,7 +387,7 @@ export default function UserManagement() {
     if (newUser.role === 2) { // Teacher
       // Không cần password cho teacher
       if (!newUser.teacherCode.trim()) errors.teacherCode = "Mã giáo viên là bắt buộc"
-      if (!newUser.subject.trim()) errors.subject = "Môn học là bắt buộc"
+      if (!newUser.position.trim()) errors.position = "Vị trí là bắt buộc"
     }
     
     setFormErrors(errors)
@@ -254,64 +395,166 @@ export default function UserManagement() {
   }
 
   const handleSort = (field) => {
+    let newDirection = "asc";
     if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-    } else {
-      setSortField(field)
-      setSortDirection("asc")
+      newDirection = sortDirection === "asc" ? "desc" : "asc";
     }
+    
+    setSortField(field);
+    setSortDirection(newDirection);
+    
+    // Re-fetch users with new sorting
+    fetchUsers();
   }
 
-  // Filter and sort users
-  const filteredAndSortedUsers = users
-    .filter((user) => {
-    const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || user.status.toLowerCase() === statusFilter
-    const matchesRole = roleFilter === "all" || user.role.toLowerCase() === roleFilter
+  const handleViewUser = (user) => {
+    setSelectedUser(user);
+    setIsViewModalOpen(true);
+  };
 
-    return matchesSearch && matchesStatus && matchesRole
-  })
-    .sort((a, b) => {
-      const aValue = a[sortField]
-      const bValue = b[sortField]
+  const handleEditUser = (user) => {
+    setSelectedUser(user);
+    setNewUser({
+      email: user.email || "",
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      phoneNumber: user.phoneNumber || "",
+      role: user.role || 0,
+      avatarUrl: user.avatarUrl || "",
+      status: user.status !== undefined ? user.status : 1,
+      studentNumber: user.studentNumber || "",
+      enrollmentYear: user.enrollmentYear || 2024,
+      birthDate: formatDateForInput(user.birthDate),
+      grade: user.grade || "",
+      classGroupId: user.classGroupId || "",
+      teacherCode: user.teacherCode || "",
+      position: user.position || "",
+    });
+    setIsEditModalOpen(true);
+  };
 
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        const comparison = aValue.localeCompare(bValue)
-        return sortDirection === "asc" ? comparison : -comparison
+  const handleUpdateUser = async () => {
+    if (!validateForm()) {
+      toast.error("Vui lòng điền đầy đủ các trường bắt buộc và sửa lỗi")
+      return
+    }
+
+    try {
+      const userData = {
+        id: selectedUser.id,
+        username: newUser.role === 4 ? newUser.studentNumber : newUser.role === 2 ? newUser.teacherCode : newUser.email,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        role: newUser.role,
+        phoneNumber: newUser.phoneNumber,
+        birthDate: formatDateForAPI(newUser.birthDate),
+        avatarUrl: formatUrlForAPI(newUser.avatarUrl),
+        status: newUser.status
       }
 
-      if (typeof aValue === "number" && typeof bValue === "number") {
-        return sortDirection === "asc" ? aValue - bValue : bValue - aValue
+      // Add role-specific fields
+      if (newUser.role === 4) { // Student
+        userData.studentNumber = newUser.studentNumber
+        userData.enrollmentYear = newUser.enrollmentYear
+        userData.classGroupId = newUser.classGroupId
+      } else if (newUser.role === 2) { // Teacher
+        userData.teacherCode = newUser.teacherCode
+        userData.position = newUser.position
       }
 
-      return 0
-    })
+      console.log("Updating user:", userData)
+      
+      const token = localStorage.getItem('token');
+      await updateUser(userData, token);
+      
+      // Refresh users list
+      await fetchUsers();
+      
+      // Refresh total stats
+      await fetchTotalStats();
+      
+      // Reset form and close modal
+      setNewUser({
+        email: "",
+        firstName: "",
+        lastName: "",
+        phoneNumber: "",
+        role: 0,
+        avatarUrl: "",
+        studentNumber: "",
+        enrollmentYear: 2024,
+        birthDate: "",
+        grade: "",
+        classGroupId: "",
+        teacherCode: "",
+        position: "",
+      })
+      setFormErrors({})
+      setIsEditModalOpen(false)
+      toast.success("Cập nhật người dùng thành công!")
+    } catch (error) {
+      console.error("Error updating user:", error);
+      toast.error("Không thể cập nhật người dùng");
+    }
+  };
 
-  const totalPages = Math.ceil(filteredAndSortedUsers.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedUsers = filteredAndSortedUsers.slice(startIndex, endIndex)
+  const handleDeleteUser = (user) => {
+    setUserToToggle(user);
+    setIsConfirmModalOpen(true);
+  };
 
-  const handleSearchChange = (value) => {
-    setSearchTerm(value)
-    setCurrentPage(1)
-  }
+  const handleConfirmStatusChange = async () => {
+    if (!userToToggle) return;
+    
+    const action = userToToggle.status === 1 ? 'vô hiệu hóa' : 'kích hoạt';
+    const newStatus = userToToggle.status === 1 ? 0 : 1;
+    
+    try {
+      const userData = {
+        id: userToToggle.id,
+        username: userToToggle.role === 4 ? userToToggle.studentNumber : userToToggle.role === 2 ? userToToggle.teacherCode : userToToggle.email,
+        email: userToToggle.email,
+        firstName: userToToggle.firstName,
+        lastName: userToToggle.lastName,
+        role: userToToggle.role,
+        phoneNumber: userToToggle.phoneNumber,
+        birthDate: userToToggle.birthDate,
+        avatarUrl: userToToggle.avatarUrl,
+        status: newStatus
+      }
 
-  const handleStatusFilterChange = (value) => {
-    setStatusFilter(value)
-    setCurrentPage(1)
-  }
+      // Add role-specific fields
+      if (userToToggle.role === 4) { // Student
+        userData.studentNumber = userToToggle.studentNumber
+        userData.enrollmentYear = userToToggle.enrollmentYear
+        userData.classGroupId = userToToggle.classGroupId
+      } else if (userToToggle.role === 2) { // Teacher
+        userData.teacherCode = userToToggle.teacherCode
+        userData.position = userToToggle.position
+      }
 
-  const handleRoleFilterChange = (value) => {
-    setRoleFilter(value)
-    setCurrentPage(1)
-  }
-
-  const handleDeleteUser = (userId) => {
-    setUsers(users.filter((user) => user.id !== userId))
-  }
+      console.log("Updating user status:", userData)
+      
+      const token = localStorage.getItem('token');
+      await updateUser(userData, token);
+      
+      // Refresh users list
+      await fetchUsers();
+      
+      // Refresh total stats
+      await fetchTotalStats();
+      
+      toast.success(`Đã ${action} người dùng thành công!`);
+      
+      // Close modal and reset state
+      setIsConfirmModalOpen(false);
+      setUserToToggle(null);
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      toast.error(`${action.charAt(0).toUpperCase() + action.slice(1)} người dùng thất bại`);
+    }
+  };
 
   const handleExcelImport = (event) => {
     const file = event.target.files?.[0]
@@ -321,72 +564,77 @@ export default function UserManagement() {
     }
   }
 
-  const handleCreateUser = () => {
+  const handleCreateUser = async () => {
     if (!validateForm()) {
       toast.error("Vui lòng điền đầy đủ các trường bắt buộc và sửa lỗi")
       return
     }
 
-    // Create user based on role
-    const userData = {
-      email: newUser.email,
-      firstName: newUser.firstName,
-      lastName: newUser.lastName,
-      role: newUser.role,
-    }
+    try {
+      // Create user based on role
+      const userData = {
+        username: newUser.role === 4 ? newUser.studentNumber : newUser.role === 2 ? newUser.teacherCode : newUser.email,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        role: newUser.role,
+        phoneNumber: newUser.phoneNumber,
+        birthDate: formatDateForAPI(newUser.birthDate),
+        avatarUrl: formatUrlForAPI(newUser.avatarUrl),
+        status: newUser.status
+      }
 
-    // Add role-specific fields
-    if (newUser.role === 0) { // Admin
-      // Không cần thêm gì cho admin
-    } else if (newUser.role === 1) { // Student
-      userData.phoneNumber = newUser.phoneNumber
-      userData.studentNumber = newUser.studentNumber
-      userData.enrollmentYear = newUser.enrollmentYear
-      userData.birthDate = newUser.birthDate
-      userData.grade = newUser.grade
-      userData.classGroupId = newUser.classGroupId
-    } else if (newUser.role === 2) { // Teacher
-      userData.teacherCode = newUser.teacherCode
-      userData.subject = newUser.subject
-    }
+      // Add role-specific fields
+      if (newUser.role === 4) { // Student
+        userData.studentNumber = newUser.studentNumber
+        userData.enrollmentYear = newUser.enrollmentYear
+        userData.classGroupId = newUser.classGroupId
+      } else if (newUser.role === 2) { // Teacher
+        userData.teacherCode = newUser.teacherCode
+        userData.position = newUser.position
+      }
 
-    console.log("Creating user:", userData)
-    
-    // Mock user for display (adapt to your current table structure)
-    const displayUser = {
-      id: users.length + 1,
-      name: `${newUser.firstName} ${newUser.lastName}`,
-      email: newUser.email,
-      role: newUser.role === 0 ? "Admin" : newUser.role === 1 ? "Student" : "Teacher",
-      status: "Active",
-      class: newUser.role === 1 ? getClassesByGrade(newUser.grade).find(c => c.value === newUser.classGroupId)?.label || "Chưa phân lớp" : 
-             newUser.role === 2 ? newUser.subject : "Admin",
+      console.log("Creating user:", userData)
+      
+      const token = localStorage.getItem('token');
+      const res = await createUserAuth(userData, token);
+      
+      // Refresh users list
+      await fetchUsers();
+      
+      // Refresh total stats
+      await fetchTotalStats();
+      
+      // Reset form
+      setNewUser({
+        email: "",
+        firstName: "",
+        lastName: "",
+        phoneNumber: "",
+        role: 0, // Default to Admin
+        avatarUrl: "",
+        studentNumber: "",
+        enrollmentYear: 2024,
+        birthDate: "",
+        grade: "",
+        classGroupId: "",
+        teacherCode: "",
+        position: "",
+      })
+      setFormErrors({})
+      setIsModalOpen(false)
+      toast.success("Tạo người dùng thành công!")
+    } catch (error) {
+      console.error("Error creating user:", error);
+      toast.error("Không thể tạo người dùng");
     }
-
-    setUsers([...users, displayUser])
-    
-    // Reset form
-    setNewUser({
-      email: "",
-      firstName: "",
-      lastName: "",
-      phoneNumber: "",
-      role: 0, // Default to Admin
-      studentNumber: "",
-      enrollmentYear: 2024,
-      birthDate: "",
-      grade: "",
-      classGroupId: "",
-      teacherCode: "",
-      subject: "",
-    })
-    setFormErrors({})
-    setIsModalOpen(false)
-    toast.success("Tạo người dùng thành công!")
   }
 
   const getStatusBadge = (status) => {
-    return status === "Active" ? (
+    // Handle both number and string status
+    const statusValue = typeof status === 'number' ? status : (status === 'Active' ? 1 : 0);
+    
+    return statusValue === 1 ? (
       <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Hoạt động</Badge>
     ) : (
       <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Không hoạt động</Badge>
@@ -394,6 +642,13 @@ export default function UserManagement() {
   }
 
   const getRoleBadge = (role) => {
+    // Convert number role to string
+    let roleKey = role;
+    if (typeof role === 'number') {
+      const roleMap = { 0: 'Admin', 4: 'Student', 2: 'Teacher' };
+      roleKey = roleMap[role] || 'Admin';
+    }
+    
     const roleColors = {
       Admin: "inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent [a&]:hover:bg-primary/90 bg-purple-100 text-purple-800 hover:bg-purple-100",
       Teacher: "inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent [a&]:hover:bg-primary/90 bg-blue-100 text-blue-800 hover:bg-blue-100",
@@ -401,12 +656,12 @@ export default function UserManagement() {
     }
     const roleNames = {
       Admin: "Quản trị viên",
-      Teacher: "Giáo viên",
+      Teacher: "Giáo viên", 
       Student: "Học sinh",
     }
     return (
-      <span className={roleColors[role] || roleColors.Student}>
-        {roleNames[role] || role}
+      <span className={roleColors[roleKey] || roleColors.Student}>
+        {roleNames[roleKey] || roleKey}
       </span>
     )
   }
@@ -419,6 +674,17 @@ export default function UserManagement() {
       </div>
     </TableHead>
   )
+
+  useEffect(() => {
+    fetchUsers();
+  }, [pageNumber, pageSize, actualSearchTerm, statusFilter, roleFilter, sortField, sortDirection]);
+
+  // Fetch total stats on component mount
+  useEffect(() => {
+    fetchTotalStats();
+  }, []);
+
+  // Note: Filtering is now handled in fetchUsers to avoid conflicts with pagination
 
   return (
     <div className="space-y-6">
@@ -443,7 +709,29 @@ export default function UserManagement() {
             </Button>
           </div>
           <Button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              // Reset form khi mở modal create
+              setNewUser({
+                email: "",
+                firstName: "",
+                lastName: "",
+                phoneNumber: "",
+                role: 0, // Default to Admin
+                avatarUrl: "",
+                status: 1, // Default to Active
+                // Student fields
+                studentNumber: "",
+                enrollmentYear: 2024,
+                birthDate: "",
+                grade: "", // Reset khối
+                classGroupId: "", // Reset lớp
+                // Teacher fields
+                teacherCode: "",
+                position: "",
+              });
+              setFormErrors({});
+              setIsModalOpen(true);
+            }}
             className="!bg-blue-600 hover:!bg-blue-700 !text-white"
           >
             <UserPlus className="h-4 w-4 mr-2" />
@@ -479,7 +767,7 @@ export default function UserManagement() {
                   placeholder="Chọn vai trò"
                   options={[
                     { value: "0", label: "Quản trị viên" },
-                    { value: "1", label: "Học sinh" },
+                    { value: "4", label: "Học sinh" },
                     { value: "2", label: "Giáo viên" }
                   ]}
                   className="!w-full"
@@ -491,7 +779,7 @@ export default function UserManagement() {
             {/* Common Fields */}
             <div className="!grid !grid-cols-4 !items-center !gap-4">
               <Label htmlFor="firstName" className="!text-right !text-sm !font-medium !text-gray-700">
-                Tên *
+                Họ *
               </Label>
               <div className="!col-span-3">
                 <Input
@@ -499,7 +787,7 @@ export default function UserManagement() {
                   value={newUser.firstName}
                   onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
                   className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
-                  placeholder="Nhập tên"
+                  placeholder="Nhập họ"
                 />
                 {formErrors.firstName && <span className="!text-red-500 !text-xs !mt-1">{formErrors.firstName}</span>}
               </div>
@@ -507,7 +795,7 @@ export default function UserManagement() {
 
             <div className="!grid !grid-cols-4 !items-center !gap-4">
               <Label htmlFor="lastName" className="!text-right !text-sm !font-medium !text-gray-700">
-                Họ *
+                Tên *
               </Label>
               <div className="!col-span-3">
                 <Input
@@ -515,7 +803,7 @@ export default function UserManagement() {
                   value={newUser.lastName}
                   onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
                   className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
-                  placeholder="Nhập họ"
+                  placeholder="Nhập tên"
                 />
                 {formErrors.lastName && <span className="!text-red-500 !text-xs !mt-1">{formErrors.lastName}</span>}
               </div>
@@ -538,7 +826,8 @@ export default function UserManagement() {
               </div>
             </div>
 
-            {/* Admin Fields */}
+
+            {/* Admin Fields */} 
             {newUser.role === 0 && (
               <div className="!text-sm !text-gray-500 !text-center !py-4">
                 Quản trị viên chỉ cần thông tin cơ bản
@@ -546,7 +835,7 @@ export default function UserManagement() {
             )}
              
             {/* Student Fields */}
-            {newUser.role === 1 && (
+            {newUser.role === 4 && (
               <>
                 <div className="!grid !grid-cols-4 !items-center !gap-4">
                   <Label htmlFor="phoneNumber" className="!text-right !text-sm !font-medium !text-gray-700">
@@ -667,18 +956,18 @@ export default function UserManagement() {
                 </div>
 
                 <div className="!grid !grid-cols-4 !items-center !gap-4">
-                  <Label htmlFor="subject" className="!text-right !text-sm !font-medium !text-gray-700">
-                    Môn học *
+                  <Label htmlFor="position" className="!text-right !text-sm !font-medium !text-gray-700">
+                    Vị trí *
                   </Label>
                   <div className="!col-span-3">
-                    <SimpleSelect 
-                      value={newUser.subject} 
-                      onValueChange={(value) => setNewUser({ ...newUser, subject: value })}
-                      placeholder="Chọn môn học"
-                      options={subjects}
-                      className="!w-full"
+                    <Input
+                      id="position"
+                      value={newUser.position}
+                      onChange={(e) => setNewUser({ ...newUser, position: e.target.value })}
+                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      placeholder="Nhập vị trí công việc"
                     />
-                    {formErrors.subject && <span className="!text-red-500 !text-xs !mt-1">{formErrors.subject}</span>}
+                    {formErrors.position && <span className="!text-red-500 !text-xs !mt-1">{formErrors.position}</span>}
                   </div>
                 </div>
               </>
@@ -695,32 +984,350 @@ export default function UserManagement() {
         </DialogContent>
       </Dialog>
 
+      {/* View User Modal */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="!sm:max-w-[600px] !bg-white !p-6 !rounded-lg !shadow-lg !border-0 !outline-none !ring-0">
+          <DialogHeader className="!flex !flex-col !gap-2 !text-center sm:!text-left !mb-4">
+            <DialogTitle className="!text-lg !font-semibold !text-gray-900">Chi tiết người dùng</DialogTitle>
+            <DialogDescription className="!text-sm !text-gray-500">Thông tin chi tiết về người dùng được chọn</DialogDescription>
+          </DialogHeader>
+          
+          {selectedUser && (
+            <div className="!grid !gap-4 !py-4">
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="!text-sm !font-medium !text-gray-700">Họ tên</Label>
+                    <p className="!text-sm !text-gray-900 !mt-1">
+                      {selectedUser.name || `${selectedUser.firstName || ''} ${selectedUser.lastName || ''}`.trim() || 'N/A'}
+                    </p>
+                  </div>
+                <div>
+                  <Label className="!text-sm !font-medium !text-gray-700">Email</Label>
+                  <p className="!text-sm !text-gray-900 !mt-1">{selectedUser.email || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="!text-sm !font-medium !text-gray-700">Vai trò</Label>
+                  <div className="!mt-1">{getRoleBadge(selectedUser.role)}</div>
+                </div>
+                <div>
+                  <Label className="!text-sm !font-medium !text-gray-700">Trạng thái</Label>
+                  <div className="!mt-1">{getStatusBadge(selectedUser.status || 'Active')}</div>
+                </div>
+                {selectedUser.role === 4 && (
+                  <>
+                    <div>
+                      <Label className="!text-sm !font-medium !text-gray-700">Mã học sinh</Label>
+                      <p className="!text-sm !text-gray-900 !mt-1">{selectedUser.studentNumber || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="!text-sm !font-medium !text-gray-700">Năm nhập học</Label>
+                      <p className="!text-sm !text-gray-900 !mt-1">{selectedUser.enrollmentYear || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="!text-sm !font-medium !text-gray-700">Ngày sinh</Label>
+                      <p className="!text-sm !text-gray-900 !mt-1">{selectedUser.birthDate || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="!text-sm !font-medium !text-gray-700">Khối</Label>
+                      <p className="!text-sm !text-gray-900 !mt-1">{selectedUser.grade || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="!text-sm !font-medium !text-gray-700">Lớp</Label>
+                      <p className="!text-sm !text-gray-900 !mt-1">{selectedUser.className || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="!text-sm !font-medium !text-gray-700">Số điện thoại</Label>
+                      <p className="!text-sm !text-gray-900 !mt-1">{selectedUser.phoneNumber || 'N/A'}</p>
+                    </div>
+                  </>
+                )}
+                {selectedUser.role === 2 && (
+                  <>
+                    <div>
+                      <Label className="!text-sm !font-medium !text-gray-700">Mã giáo viên</Label>
+                      <p className="!text-sm !text-gray-600 !mt-1">{selectedUser.teacherCode || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="!text-sm !font-medium !text-gray-700">Vị trí</Label>
+                      <p className="!text-sm !text-gray-600 !mt-1">{selectedUser.position || 'N/A'}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="!flex !flex-col-reverse !gap-2 sm:!flex-row sm:!justify-end !mt-6">
+            <Button variant="outline" onClick={() => setIsViewModalOpen(false)} className="!border !border-gray-300 !bg-white !text-gray-700 hover:!bg-gray-50 !px-4 !py-2 !rounded-md">
+              Đóng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="!sm:max-w-[425px] !bg-white !p-6 !rounded-lg !shadow-lg !border-0 !outline-none !ring-0">
+          <DialogHeader className="!flex !flex-col !gap-2 !text-center sm:!text-left !mb-4">
+            <DialogTitle className="!text-lg !font-semibold !text-gray-900">Chỉnh sửa người dùng</DialogTitle>
+            <DialogDescription className="!text-sm !text-gray-500">Cập nhật thông tin người dùng. Điền thông tin bắt buộc bên dưới.</DialogDescription>
+          </DialogHeader>
+          <div className="!grid !gap-4 !py-4">
+            {/* Role Selection - Hidden in Update Form */}
+            {/* <div className="!grid !grid-cols-4 !items-center !gap-4">
+              <Label htmlFor="edit-role" className="!text-right !text-sm !font-medium !text-gray-700">
+                Vai trò *
+              </Label>
+              <div className="!col-span-3">
+                <SimpleSelect 
+                  value={newUser.role.toString()} 
+                  onValueChange={handleRoleChange}
+                  placeholder="Chọn vai trò"
+                  options={[
+                    { value: "0", label: "Quản trị viên" },
+                    { value: "4", label: "Học sinh" },
+                    { value: "2", label: "Giáo viên" }
+                  ]}
+                  className="!w-full"
+                />
+                {formErrors.role && <span className="!text-red-500 !text-xs !mt-1">{formErrors.role}</span>}
+              </div>
+            </div> */}
+
+            {/* Common Fields */}
+            <div className="!grid !grid-cols-4 !items-center !gap-4">
+              <Label htmlFor="edit-firstName" className="!text-right !text-sm !font-medium !text-gray-700">
+                Họ *
+              </Label>
+              <div className="!col-span-3">
+                <Input
+                  id="edit-firstName"
+                  value={newUser.firstName}
+                  onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
+                  className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                  placeholder="Nhập họ"
+                />
+                {formErrors.firstName && <span className="!text-red-500 !text-xs !mt-1">{formErrors.firstName}</span>}
+              </div>
+            </div>
+
+            <div className="!grid !grid-cols-4 !items-center !gap-4">
+              <Label htmlFor="edit-lastName" className="!text-right !text-sm !font-medium !text-gray-700">
+                Tên *
+              </Label>
+              <div className="!col-span-3">
+                <Input
+                  id="edit-lastName"
+                  value={newUser.lastName}
+                  onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
+                  className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                  placeholder="Nhập tên"
+                />
+                {formErrors.lastName && <span className="!text-red-500 !text-xs !mt-1">{formErrors.lastName}</span>}
+              </div>
+            </div>
+
+            <div className="!grid !grid-cols-4 !items-center !gap-4">
+              <Label htmlFor="edit-email" className="!text-right !text-sm !font-medium !text-gray-700">
+                Email *
+              </Label>
+              <div className="!col-span-3">
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                  placeholder="Nhập địa chỉ email"
+                />
+                {formErrors.email && <span className="!text-red-500 !text-xs !mt-1">{formErrors.email}</span>}
+              </div>
+            </div>
+
+
+            {/* Admin Fields */} 
+            {newUser.role === 0 && (
+              <div className="!text-sm !text-gray-500 !text-center !py-4">
+                Quản trị viên chỉ cần thông tin cơ bản
+              </div>
+            )}
+             
+            {/* Student Fields */}
+            {newUser.role === 4 && (
+              <>
+                <div className="!grid !grid-cols-4 !items-center !gap-4">
+                  <Label htmlFor="edit-phoneNumber" className="!text-right !text-sm !font-medium !text-gray-700">
+                    Số điện thoại *
+                  </Label>
+                  <div className="!col-span-3">
+                    <Input
+                      id="edit-phoneNumber"
+                      value={newUser.phoneNumber}
+                      onChange={(e) => setNewUser({ ...newUser, phoneNumber: e.target.value })}
+                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      placeholder="+84901234567"
+                    />
+                    {formErrors.phoneNumber && <span className="!text-red-500 !text-xs !mt-1">{formErrors.phoneNumber}</span>}
+                  </div>
+                </div>
+
+                <div className="!grid !grid-cols-4 !items-center !gap-4">
+                  <Label htmlFor="edit-studentNumber" className="!text-right !text-sm !font-medium !text-gray-700">
+                    Mã học sinh *
+                  </Label>
+                  <div className="!col-span-3">
+                    <Input
+                      id="edit-studentNumber"
+                      value={newUser.studentNumber}
+                      onChange={(e) => setNewUser({ ...newUser, studentNumber: e.target.value })}
+                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      placeholder="HS2024001"
+                    />
+                    {formErrors.studentNumber && <span className="!text-red-500 !text-xs !mt-1">{formErrors.studentNumber}</span>}
+                  </div>
+                </div>
+
+                <div className="!grid !grid-cols-4 !items-center !gap-4">
+                  <Label htmlFor="edit-enrollmentYear" className="!text-right !text-sm !font-medium !text-gray-700">
+                    Năm nhập học *
+                  </Label>
+                  <div className="!col-span-3">
+                    <SimpleSelect 
+                      value={newUser.enrollmentYear.toString()} 
+                      onValueChange={(value) => setNewUser({ ...newUser, enrollmentYear: parseInt(value) })}
+                      placeholder="Chọn năm nhập học"
+                      options={enrollmentYears.map(y => ({ value: y.value.toString(), label: y.label }))}
+                      className="!w-full"
+                    />
+                    {formErrors.enrollmentYear && <span className="!text-red-500 !text-xs !mt-1">{formErrors.enrollmentYear}</span>}
+                  </div>
+                </div>
+
+                <div className="!grid !grid-cols-4 !items-center !gap-4">
+                  <Label htmlFor="edit-birthDate" className="!text-right !text-sm !font-medium !text-gray-700">
+                    Ngày sinh *
+                  </Label>
+                  <div className="!col-span-3">
+                    <Input
+                      id="edit-birthDate"
+                      type="date"
+                      value={newUser.birthDate}
+                      onChange={(e) => setNewUser({ ...newUser, birthDate: e.target.value })}
+                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                    />
+                    {formErrors.birthDate && <span className="!text-red-500 !text-xs !mt-1">{formErrors.birthDate}</span>}
+                  </div>
+                </div>
+
+                <div className="!grid !grid-cols-4 !items-center !gap-4">
+                  <Label htmlFor="edit-grade" className="!text-right !text-sm !font-medium !text-gray-700">
+                    Khối *
+                  </Label>
+                  <div className="!col-span-3">
+                    <SimpleSelect 
+                      value={newUser.grade.toString()} 
+                      onValueChange={(value) => setNewUser({ ...newUser, grade: parseInt(value), classGroupId: "" })}
+                      placeholder="Chọn khối"
+                      options={grades.map(g => ({ value: g.value.toString(), label: g.label }))}
+                      className="!w-full"
+                    />
+                    {formErrors.grade && <span className="!text-red-500 !text-xs !mt-1">{formErrors.grade}</span>}
+                  </div>
+                </div>
+
+                <div className="!grid !grid-cols-4 !items-center !gap-4">
+                  <Label htmlFor="edit-classGroupId" className="!text-right !text-sm !font-medium !text-gray-700">
+                    Lớp học *
+                  </Label>
+                  <div className="!col-span-3">
+                    <SimpleSelect 
+                      value={newUser.classGroupId.toString()} 
+                      onValueChange={(value) => setNewUser({ ...newUser, classGroupId: parseInt(value) })}
+                      placeholder={newUser.grade ? "Chọn lớp học" : "Vui lòng chọn khối trước"}
+                      options={newUser.grade ? getClassesByGrade(newUser.grade).map(c => ({ value: c.value.toString(), label: c.label })) : []}
+                      className="!w-full"
+                      disabled={!newUser.grade}
+                    />
+                    {formErrors.classGroupId && <span className="!text-red-500 !text-xs !mt-1">{formErrors.classGroupId}</span>}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Teacher Fields */}
+            {newUser.role === 2 && (
+              <>
+                <div className="!grid !grid-cols-4 !items-center !gap-4">
+                  <Label htmlFor="edit-teacherCode" className="!text-right !text-sm !font-medium !text-gray-700">
+                    Mã giáo viên *
+                  </Label>
+                  <div className="!col-span-3">
+                    <Input
+                      id="edit-teacherCode"
+                      value={newUser.teacherCode}
+                      onChange={(e) => setNewUser({ ...newUser, teacherCode: e.target.value })}
+                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      placeholder="GV001"
+                    />
+                    {formErrors.teacherCode && <span className="!text-red-500 !text-xs !mt-1">{formErrors.teacherCode}</span>}
+                  </div>
+                </div>
+
+                <div className="!grid !grid-cols-4 !items-center !gap-4">
+                  <Label htmlFor="edit-position" className="!text-right !text-sm !font-medium !text-gray-700">
+                    Vị trí *
+                  </Label>
+                  <div className="!col-span-3">
+                    <Input
+                      id="edit-position"
+                      value={newUser.position}
+                      onChange={(e) => setNewUser({ ...newUser, position: e.target.value })}
+                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      placeholder="Nhập vị trí công việc"
+                    />
+                    {formErrors.position && <span className="!text-red-500 !text-xs !mt-1">{formErrors.position}</span>}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter className="!flex !flex-col-reverse !gap-2 sm:!flex-row sm:!justify-end !mt-6">
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)} className="!border !border-gray-300 !bg-white !text-gray-700 hover:!bg-gray-50 !px-4 !py-2 !rounded-md">
+              Hủy
+            </Button>
+            <Button onClick={handleUpdateUser} className="!bg-blue-600 hover:!bg-blue-700 !text-white !px-4 !py-2 !rounded-md">
+              Cập nhật người dùng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-gray-900">{users.length}</div>
+            <div className="text-2xl font-bold text-gray-900">{totalStats.totalUsers}</div>
             <p className="text-sm text-gray-600">Tổng người dùng</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">{users.filter((u) => u.status === "Active").length}</div>
+            <div className="text-2xl font-bold text-green-600">{totalStats.activeUsers}</div>
             <p className="text-sm text-gray-600">Người dùng hoạt động</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">{users.filter((u) => u.role === "Student").length}</div>
+            <div className="text-2xl font-bold text-blue-600">{totalStats.students}</div>
             <p className="text-sm text-gray-600">Học sinh</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-purple-600">
-              {users.filter((u) => u.role === "Admin" || u.role === "Teacher").length}
+              {totalStats.teachers + totalStats.admins}
             </div>
-            <p className="text-sm text-gray-600">Giáo viên</p>
+            <p className="text-sm text-gray-600">Giáo viên & Admin</p>
           </CardContent>
         </Card>
       </div>
@@ -743,29 +1350,48 @@ export default function UserManagement() {
                 className="w-40"
               />
             </div>
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <div className="relative flex-1 flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Tìm kiếm theo tên hoặc email..."
+                  placeholder="Tìm kiếm theo tên, email, mã học sinh, mã giáo viên..."
                   value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyPress={handleKeyPress}
                   className="pl-10"
                 />
               </div>
+              <Button 
+                onClick={handleSearch}
+                className="!bg-blue-600 hover:!bg-blue-700 !text-white !px-4"
+              >
+                <Search className="h-4 w-4 mr-2" />
+                Tìm kiếm
+              </Button>
+              {actualSearchTerm && (
+                <Button 
+                  onClick={handleClearSearch}
+                  variant="outline"
+                  className="!border-gray-300 !text-gray-700 hover:!bg-gray-50 !px-4"
+                >
+                  Xóa
+                </Button>
+              )}
+            </div>
             <SimpleSelect 
               value={statusFilter} 
-              onValueChange={handleStatusFilterChange}
+              onValueChange={setStatusFilter}
               placeholder="Lọc theo trạng thái"
               options={[
                 { value: "all", label: "Tất cả trạng thái" },
-                { value: "active", label: "Hoạt động" },
-                { value: "inactive", label: "Không hoạt động" }
+                { value: "1", label: "Hoạt động" },
+                { value: "0", label: "Không hoạt động" }
               ]}
               className="w-full sm:w-[180px]"
             />
             <SimpleSelect 
               value={roleFilter} 
-              onValueChange={handleRoleFilterChange}
+              onValueChange={setRoleFilter}
               placeholder="Lọc theo vai trò"
               options={[
                 { value: "all", label: "Tất cả vai trò" },
@@ -781,10 +1407,10 @@ export default function UserManagement() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Hiển thị</span>
               <SimpleSelect
-                value={itemsPerPage.toString()}
+                value={pageSize.toString()}
                 onValueChange={(value) => {
-                  setItemsPerPage(Number(value))
-                  setCurrentPage(1)
+                  setPageSize(Number(value))
+                  setPageNumber(1)
                 }}
                 options={[
                   { value: "5", label: "5" },
@@ -796,17 +1422,18 @@ export default function UserManagement() {
               />
               <span className="text-sm text-gray-600">mục</span>
             </div>
-            <div className="text-sm text-gray-600">
-              Hiển thị {startIndex + 1} đến {Math.min(endIndex, filteredAndSortedUsers.length)} trong tổng số{" "}
-              {filteredAndSortedUsers.length} mục
-            </div>
           </div>
 
           <div className="rounded-md border" style={{ borderColor: '#e5e7eb' }}>
+            {loading && (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-sm text-gray-500">Đang tải dữ liệu...</div>
+              </div>
+            )}
             <Table>
               <TableHeader>
                 <TableRow style={{ borderBottomColor: '#e5e7eb' }}>
-                  <SortHeader field="id">ID</SortHeader>
+                  <SortHeader field="id">Mã số</SortHeader>
                   <SortHeader field="name">Họ tên</SortHeader>
                   <SortHeader field="email">Email</SortHeader>
                   <SortHeader field="role">Vai trò</SortHeader>
@@ -816,19 +1443,42 @@ export default function UserManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedUsers.map((user) => (
-                  <TableRow key={user.id} style={{ borderBottomColor: '#e5e7eb' }}>
-                    <TableCell className="font-medium">{user.id}</TableCell>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell className="text-gray-600">{user.email}</TableCell>
-                    <TableCell>{getRoleBadge(user.role)}</TableCell>
-                    <TableCell className="text-gray-600">{user.class}</TableCell>
-                    <TableCell>{getStatusBadge(user.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <UserActionsDropdown userId={user.id} onDelete={() => handleDeleteUser(user.id)} />
+                {filteredUsers.length > 0 ? (
+                  filteredUsers.map((user) => (
+                    <TableRow key={user.id} style={{ borderBottomColor: '#e5e7eb' }}>
+                      <TableCell className="font-medium">
+                        {(() => {
+                          if (user.role === 4) return user.studentNumber || 'N/A'; // Student
+                          if (user.role === 2) return user.teacherCode || 'N/A'; // Teacher
+                          return 'AD'; // Admin
+                        })()}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'N/A'}
+                      </TableCell>
+                      <TableCell className="text-gray-600">{user.email || 'N/A'}</TableCell>
+                      <TableCell>{getRoleBadge(user.role)}</TableCell>
+                      <TableCell className="text-gray-600">
+                        {user.className|| ''}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(user.status !== undefined ? user.status : 1)}</TableCell>
+                      <TableCell className="text-right">
+                        <UserActionsDropdown 
+                          user={user} 
+                          onView={handleViewUser}
+                          onEdit={handleEditUser}
+                          onDelete={handleDeleteUser} 
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      {loading ? 'Đang tải...' : 'Không có dữ liệu người dùng'}
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
@@ -836,14 +1486,14 @@ export default function UserManagement() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-gray-600">
-                Trang {currentPage} / {totalPages}
+                Trang {pageNumber} / {totalPages}
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
+                  onClick={() => setPageNumber(pageNumber - 1)}
+                  disabled={pageNumber === 1}
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Trước
@@ -865,9 +1515,9 @@ export default function UserManagement() {
                     return (
                       <Button
                         key={pageNum}
-                        variant={currentPage === pageNum ? "default" : "outline"}
+                        variant={pageNumber === pageNum ? "default" : "outline"}
                         size="sm"
-                        onClick={() => setCurrentPage(pageNum)}
+                        onClick={() => setPageNumber(pageNum)}
                         className="w-8 h-8 p-0"
                       >
                         {pageNum}
@@ -879,8 +1529,8 @@ export default function UserManagement() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
+                  onClick={() => setPageNumber(pageNumber + 1)}
+                  disabled={pageNumber === totalPages}
                 >
                   Tiếp theo
                   <ChevronRight className="h-4 w-4" />
@@ -889,13 +1539,80 @@ export default function UserManagement() {
             </div>
           )}
 
-          {filteredAndSortedUsers.length === 0 && (
+          {users.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               Không tìm thấy người dùng nào phù hợp với tiêu chí của bạn.
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Confirmation Modal for Status Change */}
+      <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
+        <DialogContent className="!sm:max-w-[425px] !bg-white !p-6 !rounded-lg !shadow-lg !border-0 !outline-none !ring-0">
+          <DialogHeader className="!flex !flex-col !gap-2 !text-center sm:!text-left !mb-4">
+            <DialogTitle className="!text-lg !font-semibold !text-gray-900">
+              {userToToggle?.status === 1 ? 'Vô hiệu hóa người dùng' : 'Kích hoạt người dùng'}
+            </DialogTitle>
+            <DialogDescription className="!text-sm !text-gray-500">
+              {userToToggle?.status === 1 
+                ? 'Bạn có chắc chắn muốn vô hiệu hóa người dùng này? Người dùng sẽ không thể đăng nhập vào hệ thống.'
+                : 'Bạn có chắc chắn muốn kích hoạt người dùng này? Người dùng sẽ có thể đăng nhập vào hệ thống.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          {userToToggle && (
+            <div className="!py-4">
+              <div className="!bg-gray-50 !p-4 !rounded-lg !mb-4">
+                <div className="!grid !grid-cols-2 !gap-4 !text-sm">
+                  <div>
+                    <span className="!font-medium !text-gray-700">Họ tên:</span>
+                    <p className="!text-gray-900 !mt-1">
+                      {userToToggle.name || `${userToToggle.firstName || ''} ${userToToggle.lastName || ''}`.trim() || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="!font-medium !text-gray-700">Email:</span>
+                    <p className="!text-gray-900 !mt-1">{userToToggle.email || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="!font-medium !text-gray-700">Vai trò:</span>
+                    <div className="!mt-1">{getRoleBadge(userToToggle.role)}</div>
+                  </div>
+                  <div>
+                    <span className="!font-medium !text-gray-700">Trạng thái hiện tại:</span>
+                    <div className="!mt-1">{getStatusBadge(userToToggle.status)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="!flex !flex-col-reverse !gap-2 sm:!flex-row sm:!justify-end !mt-6">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsConfirmModalOpen(false);
+                setUserToToggle(null);
+              }} 
+              className="!border !border-gray-300 !bg-white !text-gray-700 hover:!bg-gray-50 !px-4 !py-2 !rounded-md"
+            >
+              Hủy
+            </Button>
+            <Button 
+              onClick={handleConfirmStatusChange}
+              className={`!px-4 !py-2 !rounded-md !text-white ${
+                userToToggle?.status === 1 
+                  ? '!bg-red-600 hover:!bg-red-700' 
+                  : '!bg-green-600 hover:!bg-green-700'
+              }`}
+            >
+              {userToToggle?.status === 1 ? 'Vô hiệu hóa' : 'Kích hoạt'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
