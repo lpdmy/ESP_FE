@@ -26,6 +26,8 @@ import { useToast } from "@/common/hooks/useToast";
 import { useProfileApi } from "@/features/user-profile/hooks/useProfileApi";
 import CreatePostInput from "@/features/landing/post/CreatePostInput";
 import CreatePostModal from "@/features/landing/post/CreatePostModal";
+import UpdatePostModal from "@/features/landing/post/UpdatePostModal";
+import DeletePostModal from "@/features/landing/post/DeletePostModal";
 import {
   Edit,
   Star,
@@ -57,6 +59,8 @@ import {
 import PostCard from "@/features/landing/components/PostCard";
 import { Textarea } from "@/common/components/ui/textarea";
 import { usePostApi } from "@/features/landing/post/hooks/usePostApi";
+import { useSelector } from "react-redux";
+
 export default function StudentProfile() {
   const [profile, setProfile] = useState(null);
   const [extraData, setExtraData] = useState({});
@@ -64,6 +68,9 @@ export default function StudentProfile() {
   const [post, setPost] = useState([]);
   const [postContent, setPostContent] = useState("");
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState(null);
   const {
     isOpen: isSortDropdownOpen,
     openMenu: openSortDropdown,
@@ -72,6 +79,8 @@ export default function StudentProfile() {
   } = useDropdownMenu(false);
 
   const toast = useToast();
+  const user = useSelector((state) => state.user.user);
+  const currentUserId = user?.userId || user?.id || 1;
 
   // Profile API hook
   const { profileLoading, getMyProfile } = useProfileApi();
@@ -123,6 +132,40 @@ export default function StudentProfile() {
 
   const handleCloseCreatePostModal = () => {
     setIsCreatePostModalOpen(false);
+  };
+
+  const handleEditPost = (post) => {
+    setSelectedPost(post);
+    setIsUpdateModalOpen(true);
+  };
+
+  const handleDeletePost = (post) => {
+    setSelectedPost(post);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleUpdatePost = (updatedPost) => {
+    // TODO: Implement update post logic
+    console.log('Update post:', updatedPost);
+    setIsUpdateModalOpen(false);
+    setSelectedPost(null);
+  };
+
+  const handleConfirmDelete = (postId) => {
+    // TODO: Implement delete post logic
+    console.log('Delete post:', postId);
+    setIsDeleteModalOpen(false);
+    setSelectedPost(null);
+  };
+
+  const handleCloseUpdateModal = () => {
+    setIsUpdateModalOpen(false);
+    setSelectedPost(null);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setSelectedPost(null);
   };
 
   return (
@@ -643,21 +686,86 @@ export default function StudentProfile() {
                       author={p.userFullName || "Ẩn danh"}
                       class={p.classGroupId || "Học sinh"}
                       time="Vừa xong" // nếu API chưa có createdAt thì tạm hardcode
-                      content={p.body}
-                      image={
-                        p.attachmentUrls && p.attachmentUrls.length > 0
-                          ? p.attachmentUrls[0]
-                          : null
-                      }
+                       content={p.body}
+                       image={
+                         p.attachmentUrls && p.attachmentUrls.length > 0
+                           ? p.attachmentUrls[0]
+                           : null
+                       }
+                       images={p.attachmentUrls || []}
                       likes={p.likeCount}
                       comments={p.comments.length}
                       shares={0} // nếu backend chưa trả về shareCount
                       isVerified={true}
-                      isMyPost={p.userId === profile?.id} // so sánh id để biết có phải bài của mình
-                    />
+                       createdBy={p.userId || currentUserId} // ID của người tạo bài đăng
+                       currentUserId={currentUserId} // ID của người dùng hiện tại
+                       onEdit={() => handleEditPost(p)}
+                       onDelete={() => handleDeletePost(p)}
+                     />
                   ))
                 ) : (
-                  <p className="text-gray-500 italic">Chưa có bài đăng nào</p>
+                  <>
+                    {/* Demo posts khi chưa có data từ API */}
+                    <PostCard
+                      author={profile?.firstName && profile?.lastName 
+                        ? `${profile.firstName} ${profile.lastName}` 
+                        : profile?.username || "Tôi"}
+                      class={profile?.classGroupName || "Học sinh"}
+                      time="2 giờ trước"
+                      content="Hôm nay học lập trình React rất vui! Tạo được component đầu tiên rồi 🚀 #React #LậpTrình #HọcTập"
+                      images={["/Picturemockdata/DSC03778.jpg", "/Picturemockdata/DSC04766.jpg", "/Picturemockdata/IMG_1492.jpg"]}
+                      hashtags={["React", "LậpTrình", "HọcTập", "FPT"]}
+                      album="Dự án React"
+                      privacy="public"
+                      likes={15}
+                      comments={8}
+                      shares={3}
+                      isVerified={true}
+                      createdBy={currentUserId}
+                      currentUserId={currentUserId}
+                      onEdit={() => handleEditPost({
+                        id: 1,
+                        content: "Hôm nay học lập trình React rất vui! Tạo được component đầu tiên rồi 🚀 #React #LậpTrình #HọcTập",
+                        images: ["/Picturemockdata/DSC03778.jpg", "/Picturemockdata/DSC04766.jpg", "/Picturemockdata/IMG_1492.jpg"]
+                      })}
+                      onDelete={() => handleDeletePost({
+                        id: 1,
+                        content: "Hôm nay học lập trình React rất vui! Tạo được component đầu tiên rồi 🚀 #React #LậpTrình #HọcTập"
+                      })}
+                    />
+
+                    <PostCard
+                      author={profile?.firstName && profile?.lastName 
+                        ? `${profile.firstName} ${profile.lastName}` 
+                        : profile?.username || "Tôi"}
+                      class={profile?.classGroupName || "Học sinh"}
+                      time="1 ngày trước"
+                      content="Tham gia cuộc thi hackathon với team! Cảm ơn mọi người đã hỗ trợ 💻✨"
+                      images={["/Picturemockdata/IMG_1492.jpg", "/Picturemockdata/DSC03778.jpg"]}
+                      gif="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif"
+                      hashtags={["Hackathon", "Teamwork", "LậpTrình", "FPT"]}
+                      album="Cuộc thi hackathon"
+                      privacy="public"
+                      likes={28}
+                      comments={12}
+                      shares={5}
+                      isVerified={true}
+                      createdBy={currentUserId}
+                      currentUserId={currentUserId}
+                      onEdit={() => handleEditPost({
+                        id: 2,
+                        content: "Tham gia cuộc thi hackathon với team! Cảm ơn mọi người đã hỗ trợ 💻✨",
+                        images: ["/Picturemockdata/IMG_1492.jpg", "/Picturemockdata/DSC03778.jpg"],
+                        gif: "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif"
+                      })}
+                      onDelete={() => handleDeletePost({
+                        id: 2,
+                        content: "Tham gia cuộc thi hackathon với team! Cảm ơn mọi người đã hỗ trợ 💻✨"
+                      })}
+                    />
+
+                    <p className="text-gray-500 italic mt-4">Demo posts - Sẽ hiển thị bài đăng thực từ API khi có data</p>
+                  </>
                 )}
               </div>
             </TabsContent>
@@ -669,6 +777,22 @@ export default function StudentProfile() {
       <CreatePostModal
         isOpen={isCreatePostModalOpen}
         onClose={handleCloseCreatePostModal}
+      />
+
+      {/* Update Post Modal */}
+      <UpdatePostModal
+        isOpen={isUpdateModalOpen}
+        onClose={handleCloseUpdateModal}
+        post={selectedPost}
+        onUpdate={handleUpdatePost}
+      />
+
+      {/* Delete Post Modal */}
+      <DeletePostModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        post={selectedPost}
+        onDelete={handleConfirmDelete}
       />
     </>
   );
