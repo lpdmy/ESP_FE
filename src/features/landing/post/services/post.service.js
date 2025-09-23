@@ -8,4 +8,8 @@ export class PostService extends ApiService{
  async getUserPost(token, sortBy = "newest") {
   return this.get(`${API_CONFIG.POST.USER_POST}?sort=${sortBy}`, token);
 }
+async deletePost(id, token) {
+  const urlWithId = `${API_CONFIG.POST.DELETE_POST}?id=${id}`;
+  return this.delete(urlWithId, token);
+}
 }

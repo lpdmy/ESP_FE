@@ -68,7 +68,9 @@ export const API_CONFIG = {
   },
   POST :{
     CREATE_POST : '/post',
-    USER_POST:'/post/user'
+    USER_POST:'/post/user',
+    DELETE_POST:'/post',
+    UPDATE_POST:'/post'
   }
 };
 

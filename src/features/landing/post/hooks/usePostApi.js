@@ -24,6 +24,16 @@ export function usePostApi() {
     [token, sortBy],
     { setLoading: setSaveLoading, setError }
   );
+  
+};
+const DeletePost = async () => {
+  const token = localStorage.getItem("token");
+  return executeApiCall(
+    postService.deletePost.bind(postService),
+    [token,postId ],
+    { setLoading: setSaveLoading, setError }
+  );
+  
 };
   return {
     postLoading,
@@ -31,5 +41,6 @@ export function usePostApi() {
     error,
     createPost: createPost.current,
     userPost,
+    DeletePost,
   };
 }
