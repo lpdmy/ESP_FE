@@ -695,6 +695,7 @@ export default function StudentProfile() {
                        images={p.attachmentUrls || []}
                       likes={p.likeCount}
                       comments={p.comments.length}
+                      hashtags={p.hashtags || []}
                       shares={0} // nếu backend chưa trả về shareCount
                       isVerified={true}
                        createdBy={p.userId || currentUserId} // ID của người tạo bài đăng

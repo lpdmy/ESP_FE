@@ -868,27 +868,7 @@ const CreatePostModal = ({ isOpen, onClose }) => {
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
         <Card
-          ref={modalRef}
-          className={`!py-0 relative w-full ${isMobile ? "h-[90vh]" : "h-full"} md:h-auto md:max-w-3xl md:mx-4 bg-white shadow-2xl md:rounded-lg overflow-hidden modal-container modal-optimized ${
-            uiState.isAnimating
-              ? "scale-95 opacity-90"
-              : "scale-100 opacity-100"
-          }`}
-          style={{
-            height: isMobile
-              ? "90vh"
-              : uiState.isSliding && fixedHeight
-              ? `${fixedHeight}px`
-              : modalHeight,
-            maxHeight: "95vh",
-            minHeight: isMobile ? undefined : "500px",
-            transition: isMobile
-              ? undefined
-              : uiState.isSliding
-              ? "height 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-              : "height 0.3s ease-out",
-          }}
-          onClick={(e) => e.stopPropagation()}
+          className="relative w-full md:max-w-3xl md:mx-4 bg-white shadow-2xl md:rounded-lg overflow-hidden !p-0"
         >
           <div
             ref={slideContainerRef}

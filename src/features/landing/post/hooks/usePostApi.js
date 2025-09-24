@@ -17,29 +17,40 @@ export function usePostApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
+
+  const updatePost = useRef(async (payload) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      postService.UpdatePost.bind(postService),
+      [payload, token],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+
   const userPost = async (sortBy) => {
-  const token = localStorage.getItem("token");
-  return executeApiCall(
-    postService.getUserPost.bind(postService),
-    [token, sortBy],
-    { setLoading: setSaveLoading, setError }
-  );
-  
-};
-const deletePost = async (id) => {
-  const token = localStorage.getItem("token");
-  return executeApiCall(
-    postService.DeletePost.bind(postService),
-    [id,token ],
-    { setLoading: setSaveLoading, setError }
-  );
-  
-};
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      postService.getUserPost.bind(postService),
+      [token, sortBy],
+      { setLoading: setSaveLoading, setError }
+    );
+  };
+
+  const deletePost = async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      postService.DeletePost.bind(postService),
+      [id, token],
+      { setLoading: setSaveLoading, setError }
+    );
+  };
+
   return {
     postLoading,
     saveLoading,
     error,
     createPost: createPost.current,
+    updatePost: updatePost.current,
     userPost,
     deletePost,
   };
