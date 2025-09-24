@@ -26,11 +26,11 @@ export function usePostApi() {
   );
   
 };
-const DeletePost = async () => {
+const deletePost = async (id) => {
   const token = localStorage.getItem("token");
   return executeApiCall(
-    postService.deletePost.bind(postService),
-    [token,postId ],
+    postService.DeletePost.bind(postService),
+    [id,token ],
     { setLoading: setSaveLoading, setError }
   );
   
@@ -41,6 +41,6 @@ const DeletePost = async () => {
     error,
     createPost: createPost.current,
     userPost,
-    DeletePost,
+    deletePost,
   };
 }

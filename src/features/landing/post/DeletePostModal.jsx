@@ -2,16 +2,22 @@ import React from "react";
 import { X, AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
 import { Card } from "@/common/components/ui/card";
-
+import { usePostApi } from "./hooks/usePostApi";
+import { useToast } from "@/common/hooks/useToast";
 const DeletePostModal = ({ isOpen, onClose, post, onDelete }) => {
-  const handleDelete = () => {
-    if (post) {
-      onDelete(post.id);
-      onClose();
-    }
-  };
+  const {deletePost} = usePostApi();
+  const toast = useToast();
+  const handleDelete = async () => {
+  try {
+    await deletePost(post.id);
+    toast.deletePostSucess();
+    onDelete(post.id);  
+    onClose();         
+  } catch (error) {
+  }
+};
 
-  const handleClose = (e) => {
+  const handleClose =  (e) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();

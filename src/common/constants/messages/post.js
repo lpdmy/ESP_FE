@@ -17,7 +17,8 @@ export const POST_MESSAGES = {
   // Notifications
   NOTIFICATIONS: {
     DRAFT_RESTORED: "Đã khôi phục bản nháp",
-    POST_CREATED: "Bài đăng đã được tạo thành công"
+    POST_CREATED: "Bài đăng đã được tạo thành công",
+    POST_DELETED: "Bài đăng được xóa thành công"
   },
 
   // Labels

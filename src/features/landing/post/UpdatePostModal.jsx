@@ -314,7 +314,7 @@ const UpdatePostModal = ({ isOpen, onClose, post, onUpdate }) => {
   if (!isOpen || !post) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] md:flex md:items-center md:justify-center" onClick={handleClose}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center" onClick={handleClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       
       <Card

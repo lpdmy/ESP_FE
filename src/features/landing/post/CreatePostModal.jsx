@@ -21,14 +21,18 @@ import { Button } from "@/common/components/ui/button";
 import { Card } from "@/common/components/ui/card";
 import { Textarea } from "@/common/components/ui/textarea";
 import { Input } from "@/common/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/common/components/ui/avatar";
 import EmojiPicker from "@/common/components/emoji-picker";
 import GifSearchModal from "@/common/components/gif-search-modal";
 import { POST_MESSAGES } from "@/common/constants/messages/post";
 import { useSelector } from "react-redux";
 import { ROLE } from "@/common/constants/roles";
 import { usePostApi } from "./hooks/usePostApi";
-import { uploadImage } from "@/common/utils/upload"
+import { uploadImage } from "@/common/utils/upload";
 import { useToast } from "@/common/hooks/useToast";
 const POPULAR_HASHTAGS = [
   "học_tập",
@@ -92,7 +96,7 @@ const MOCK_ALBUMS = [
     postCount: 12,
   },
   {
-    id: "2", 
+    id: "2",
     name: "Hoạt động sinh viên",
     thumbnail: "/Picturemockdata/DSC04766.jpg",
     postCount: 8,
@@ -132,32 +136,33 @@ const PRIVACY_OPTIONS = [
   },
 ];
 
-
-const CreatePostModal = ({
-  isOpen,
-  onClose,
-}) => {
+const CreatePostModal = ({ isOpen, onClose }) => {
   const user = useSelector((state) => state.user.user);
   const { showError } = useToast();
-  const userName = user?.firstName && user?.lastName 
-    ? `${user.firstName} ${user.lastName}` 
-    : user?.username || "Người dùng";
-  
-  const userAvatar = user?.firstName && user?.lastName
-    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
-    : user?.username ? user.username[0].toUpperCase() : 'U';
-  
+  const toast = useToast();
+  const userName =
+    user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user?.username || "Người dùng";
+
+  const userAvatar =
+    user?.firstName && user?.lastName
+      ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+      : user?.username
+      ? user.username[0].toUpperCase()
+      : "U";
+
   const [formData, setFormData] = useState({
     title: "",
-  body: "",
-  classGroupId: null,
-  clubId: null,
-  privacyLevel: 0,
-  status: 0,
-  callToAction: "",
-  hashtags: [],
-  mentionUsernames: [],
-  attachmentUrls: [],
+    body: "",
+    classGroupId: null,
+    clubId: null,
+    privacyLevel: 0,
+    status: 0,
+    callToAction: "",
+    hashtags: [],
+    mentionUsernames: [],
+    attachmentUrls: [],
   });
   const { createPost, saveLoading, error } = usePostApi();
   const [uiState, setUiState] = useState({
@@ -176,7 +181,7 @@ const CreatePostModal = ({
     showImageTooltip: false,
     showGifTooltip: false,
   });
-  
+
   const [attachments, setAttachments] = useState({
     selectedMedia: [],
     selectedGif: null,
@@ -190,6 +195,8 @@ const CreatePostModal = ({
 
   const [modalHeight, setModalHeight] = useState("auto");
   const [fixedHeight, setFixedHeight] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const contentMaxHeight = isMobile ? "calc(90vh - 180px)" : "calc(95vh - 220px)";
 
   const slideContainerRef = useRef(null);
   const modalRef = useRef(null);
@@ -201,6 +208,7 @@ const CreatePostModal = ({
   const startXRef = useRef(0);
   const currentXRef = useRef(0);
   const isDraggingSlideRef = useRef(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const canPost =
     formData.title.trim() ||
@@ -208,12 +216,12 @@ const CreatePostModal = ({
     formData.hashtags.length > 0 ||
     attachments.hasAttachment;
   const hasDraftContent = Boolean(
-    formData.title.trim() || 
-    formData.body.trim() || 
-    formData.hashtags.length > 0 || 
-    attachments.selectedMedia.length > 0 || 
-    attachments.selectedGif ||
-    albumState.selectedAlbum
+    formData.title.trim() ||
+      formData.body.trim() ||
+      formData.hashtags.length > 0 ||
+      attachments.selectedMedia.length > 0 ||
+      attachments.selectedGif ||
+      albumState.selectedAlbum
   );
 
   const currentPrivacy =
@@ -223,7 +231,7 @@ const CreatePostModal = ({
   const slideToView = (view) => {
     if (view === uiState.currentView) return;
 
-    if (modalRef.current) {
+    if (!isMobile && modalRef.current) {
       const currentHeight = modalRef.current.offsetHeight;
       setFixedHeight(currentHeight);
       setModalHeight(`${currentHeight}px`);
@@ -240,12 +248,14 @@ const CreatePostModal = ({
         currentView: view,
       }));
 
-    setTimeout(() => {
-        if (modalRef.current) {
-          const newHeight = modalRef.current.offsetHeight;
-          setModalHeight(`${newHeight}px`);
-        }
-      }, 50);
+      if (!isMobile) {
+        setTimeout(() => {
+          if (modalRef.current) {
+            const newHeight = modalRef.current.offsetHeight;
+            setModalHeight(`${newHeight}px`);
+          }
+        }, 50);
+      }
     }, 150);
 
     setTimeout(() => {
@@ -254,7 +264,7 @@ const CreatePostModal = ({
         isSliding: false,
       }));
       setFixedHeight(null);
-      setModalHeight("auto");
+      if (!isMobile) setModalHeight("auto");
     }, 300);
   };
 
@@ -386,98 +396,102 @@ const CreatePostModal = ({
   };
 
   const handlePost = async () => {
-  if (!canPost) return;
-  setUiState((prev) => ({ ...prev, isAnimating: true }));
+    if (!canPost) return;
+    setUiState((prev) => ({ ...prev, isAnimating: true }));
+    setErrorMessage(""); // reset lỗi cũ trước khi gửi
 
-  try {
-    const uploadedAttachments = [];
-    for (const fileObj of attachments.selectedMedia) {
-      try {
-        const uploadedUrl = await uploadImage(fileObj.file, (progress) => {
+    try {
+      const uploadedAttachments = [];
+      for (const fileObj of attachments.selectedMedia) {
+        try {
+          const uploadedUrl = await uploadImage(fileObj.file, (progress) => {
+            setAttachments((prev) => ({
+              ...prev,
+              selectedMedia: prev.selectedMedia.map((f) =>
+                f.id === fileObj.id ? { ...f, uploadProgress: progress } : f
+              ),
+            }));
+          });
+
+          uploadedAttachments.push({
+            url: uploadedUrl,
+            fileType: fileObj.type,
+          });
+
           setAttachments((prev) => ({
             ...prev,
             selectedMedia: prev.selectedMedia.map((f) =>
-              f.id === fileObj.id ? { ...f, uploadProgress: progress } : f
+              f.id === fileObj.id
+                ? { ...f, url: uploadedUrl, uploadProgress: 100 }
+                : f
             ),
           }));
-        });
-
-        uploadedAttachments.push({
-          url: uploadedUrl,
-          fileType: fileObj.type,
-        });
-
-        setAttachments((prev) => ({
-          ...prev,
-          selectedMedia: prev.selectedMedia.map((f) =>
-            f.id === fileObj.id
-              ? { ...f, url: uploadedUrl, uploadProgress: 100 }
-              : f
-          ),
-        }));
-      } catch (err) {
-        console.error("Upload thất bại:", err);
+        } catch (err) {
+          console.error("Upload thất bại:", err);
+        }
       }
-    }
 
-    if (attachments.selectedGif) {
-      uploadedAttachments.push({
-        url: attachments.selectedGif,
-        fileType: "image",
+      if (attachments.selectedGif) {
+        uploadedAttachments.push({
+          url: attachments.selectedGif,
+          fileType: "image",
+        });
+      }
+
+      const payload = {
+        title: formData.title,
+        body: formData.body,
+        classGroupId: formData.classGroupId ?? null,
+        clubId: formData.clubId ?? null,
+        privacyLevel: Number(formData.privacyLevel),
+        status: formData.status ?? 0,
+        callToAction: formData.callToAction || "",
+        hashtags: formData.hashtags,
+        mentionUsernames: formData.mentionUsernames || [],
+        attachmentUrls: uploadedAttachments,
+        hashtagInput: "",
+      };
+
+      console.log("📤 Creating post:", payload);
+      await createPost(payload);
+
+      // ✅ Thành công
+      toast.createPostSuccess();
+      clearDraft();
+      setFormData({
+        title: "",
+        body: "",
+        classGroupId: null,
+        clubId: null,
+        privacyLevel: 0,
+        status: 0,
+        callToAction: "",
+        hashtags: [],
+        mentionUsernames: [],
+        attachmentUrls: [],
       });
+      setAttachments({
+        selectedMedia: [],
+        selectedGif: null,
+        hasAttachment: false,
+      });
+      setAlbumState({
+        selectedAlbum: null,
+        newAlbumName: "",
+      });
+
+      onClose(); // ✅ chỉ đóng modal khi thành công
+    } catch (error) {
+      // ❌ Thất bại → show lỗi trong modal
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Có lỗi xảy ra khi đăng bài.";
+      setErrorMessage(message);
+    } finally {
+      setUiState((prev) => ({ ...prev, isAnimating: false }));
     }
-
-    const payload = {
-      title: formData.title,
-      body: formData.body,
-      classGroupId: formData.classGroupId ?? null,
-      clubId: formData.clubId ?? null,
-      privacyLevel: Number(formData.privacyLevel),
-      status: formData.status ?? 0,
-      callToAction: formData.callToAction || "",
-      hashtags: formData.hashtags,
-      mentionUsernames: formData.mentionUsernames || [],
-      attachmentUrls: uploadedAttachments,
-      hashtagInput: "",
-    };
-
-    console.log("📤 Creating post:", payload);
-    await createPost(payload);
-
-    clearDraft();
-    setFormData({
-      title: "",
-      body: "",
-      classGroupId: null,
-      clubId: null,
-      privacyLevel: 0,
-      status: 0,
-      callToAction: "",
-      hashtags: [],
-      mentionUsernames: [],
-      attachmentUrls: [],
-    });
-    setAttachments({
-      selectedMedia: [],
-      selectedGif: null,
-      hasAttachment: false,
-    });
-    setAlbumState({
-      selectedAlbum: null,
-      newAlbumName: "",
-    });
-
-  } catch (error) {
-  const message =
-    error?.response?.data?.message ||
-    error?.message || 
-    "Có lỗi xảy ra khi đăng bài.";
-  showError(message);
-  } finally {
-    setUiState((prev) => ({ ...prev, isAnimating: false }));
-    onClose();
-  }
-};
+  };
 
   const handleClose = (e) => {
     if (e) {
@@ -490,18 +504,18 @@ const CreatePostModal = ({
       // Kiểm tra lại hasDraftContent để đảm bảo chính xác
       const hasContent = Boolean(
         formData.title.trim() ||
-        formData.body.trim() ||
-        formData.hashtags.length > 0 ||
-        attachments.selectedMedia.length > 0 ||
-        attachments.selectedGif ||
-        albumState.selectedAlbum
+          formData.body.trim() ||
+          formData.hashtags.length > 0 ||
+          attachments.selectedMedia.length > 0 ||
+          attachments.selectedGif ||
+          albumState.selectedAlbum
       );
 
       if (hasContent) {
         setUiState((prev) => ({ ...prev, showExitConfirm: true }));
-    } else {
-      onClose();
-    }
+      } else {
+        onClose();
+      }
     }, 100);
   };
 
@@ -551,10 +565,10 @@ const CreatePostModal = ({
         thumbnail: "/Picturemockdata/DSC03778.jpg",
         postCount: 0,
       };
-      setAlbumState((prev) => ({ 
-        ...prev, 
+      setAlbumState((prev) => ({
+        ...prev,
         selectedAlbum: newAlbum,
-        newAlbumName: "" 
+        newAlbumName: "",
       }));
       slideToView("compose");
     }
@@ -570,17 +584,12 @@ const CreatePostModal = ({
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const newContent =
-        formData.body.slice(0, start) +
-        emoji +
-        formData.body.slice(end);
+        formData.body.slice(0, start) + emoji + formData.body.slice(end);
       setFormData((prev) => ({ ...prev, body: newContent }));
 
       setTimeout(() => {
         textarea.focus();
-        textarea.setSelectionRange(
-          start + emoji.length,
-          start + emoji.length
-        );
+        textarea.setSelectionRange(start + emoji.length, start + emoji.length);
       }, 0);
     } else {
       setFormData((prev) => ({ ...prev, body: prev.body + emoji }));
@@ -600,12 +609,12 @@ const CreatePostModal = ({
         });
 
         setAttachments((prev) => ({
-      ...prev,
+          ...prev,
           selectedMedia: [],
-      selectedGif: gifUrl,
-      hasAttachment: true,
-    }));
-    slideToView("compose");
+          selectedGif: gifUrl,
+          hasAttachment: true,
+        }));
+        slideToView("compose");
       }
     } else {
       setAttachments((prev) => ({
@@ -618,64 +627,60 @@ const CreatePostModal = ({
   };
 
   const handleFileSelect = async (files) => {
-  const newFiles = [];
-  const existingFileNames = attachments.selectedMedia.map((f) => f.file.name);
+    const newFiles = [];
+    const existingFileNames = attachments.selectedMedia.map((f) => f.file.name);
 
-  Array.from(files).forEach(async (file) => {
-    if (file.size > 50 * 1024 * 1024) {
-      alert(`File ${file.name} quá lớn. Kích thước tối đa là 50MB.`);
-      return;
-    }
-console.log("📂 File đã chọn:", {
-      name: file.name,
-      type: file.type,
-      size: file.size / 1024 + " KB",
+    Array.from(files).forEach(async (file) => {
+      if (file.size > 50 * 1024 * 1024) {
+        alert(`File ${file.name} quá lớn. Kích thước tối đa là 50MB.`);
+        return;
+      }
+      console.log("📂 File đã chọn:", {
+        name: file.name,
+        type: file.type,
+        size: file.size / 1024 + " KB",
+      });
+      let fileName = file.name;
+      let counter = 1;
+      while (existingFileNames.includes(fileName)) {
+        const nameWithoutExt = file.name.substring(
+          0,
+          file.name.lastIndexOf(".")
+        );
+        const extension = file.name.substring(file.name.lastIndexOf("."));
+        fileName = `${nameWithoutExt}_${counter}${extension}`;
+        counter++;
+      }
+      const renamedFile = new File([file], fileName, { type: file.type });
+      const mediaFile = {
+        id: Math.random().toString(36).substr(2, 9),
+        file: renamedFile,
+        url: URL.createObjectURL(renamedFile),
+        type: file.type.startsWith("image/")
+          ? "image"
+          : file.type.startsWith("video/")
+          ? "video"
+          : "other",
+        uploadProgress: 0,
+      };
+      setFormData((prev) => ({
+        ...prev,
+        attachmentUrls: [
+          ...(prev.attachmentUrls || []),
+          { url: mediaFile.url, fileType: mediaFile.type },
+        ],
+      }));
+      simulateIndividualUpload(mediaFile);
+
+      setAttachments((prev) => ({
+        ...prev,
+        selectedMedia: [...prev.selectedMedia, mediaFile],
+        hasAttachment: true,
+      }));
     });
-    let fileName = file.name;
-    let counter = 1;
-    while (existingFileNames.includes(fileName)) {
-      const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf("."));
-      const extension = file.name.substring(file.name.lastIndexOf("."));
-      fileName = `${nameWithoutExt}_${counter}${extension}`;
-      counter++;
-    }
-    setFormData((prev) => ({
-  ...prev,
-  attachmentUrls: [
-    ...prev.attachmentUrls,
-    {
-      url: mediaFile.url,
-      fileType: mediaFile.type 
-    }
-  ]
-}));
 
-    const renamedFile = new File([file], fileName, { type: file.type });
-
-    const mediaFile = {
-      id: Math.random().toString(36).substr(2, 9),
-      file: renamedFile,
-      url: URL.createObjectURL(renamedFile),
-      type: file.type.startsWith("image/")
-        ? "image"
-        : file.type.startsWith("video/")
-        ? "video"
-        : "other",
-      uploadProgress: 0,
-    };
-    simulateIndividualUpload(mediaFile);
- 
-
-    setAttachments((prev) => ({
-      ...prev,
-      selectedMedia: [...prev.selectedMedia, mediaFile],
-      hasAttachment: true,
-    }));
-  });
-
-  slideToView("compose");
-};
-
+    slideToView("compose");
+  };
 
   const simulateIndividualUpload = async (file) => {
     for (
@@ -688,7 +693,7 @@ console.log("📂 File đã chọn:", {
       );
       setAttachments((prev) => ({
         ...prev,
-        selectedMedia: prev.selectedMedia.map((f) => 
+        selectedMedia: prev.selectedMedia.map((f) =>
           f.id === file.id
             ? { ...f, uploadProgress: Math.min(progress, 100) }
             : f
@@ -697,7 +702,7 @@ console.log("📂 File đã chọn:", {
     }
     setAttachments((prev) => ({
       ...prev,
-      selectedMedia: prev.selectedMedia.map((f) => 
+      selectedMedia: prev.selectedMedia.map((f) =>
         f.id === file.id ? { ...f, uploadProgress: 100 } : f
       ),
     }));
@@ -759,14 +764,12 @@ console.log("📂 File đã chọn:", {
   };
 
   useEffect(() => {
-    if (autoSaveTimeoutRef.current)
-      clearTimeout(autoSaveTimeoutRef.current);
+    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     autoSaveTimeoutRef.current = setTimeout(() => {
       if (hasDraftContent) saveDraft();
     }, 1000);
     return () => {
-      if (autoSaveTimeoutRef.current)
-        clearTimeout(autoSaveTimeoutRef.current);
+      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     };
   }, [formData.title, formData.body, formData.hashtags, formData.privacyLevel]);
 
@@ -780,9 +783,9 @@ console.log("📂 File đã chọn:", {
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [formData.body]);
-useEffect(() => {
-  console.log("Dữ liệu form sau khi cập nhật:", formData);
-}, [formData]);
+  useEffect(() => {
+    console.log("Dữ liệu form sau khi cập nhật:", formData);
+  }, [formData]);
   useEffect(() => {
     if (formData.body.length > 0 || formData.title.length > 0) {
       setUiState((prev) => ({ ...prev, showSparkles: true }));
@@ -795,8 +798,7 @@ useEffect(() => {
   }, [formData.body, formData.title]);
 
   useEffect(() => {
-    if (!isOpen)
-      setUiState((prev) => ({ ...prev, currentView: "compose" }));
+    if (!isOpen) setUiState((prev) => ({ ...prev, currentView: "compose" }));
   }, [isOpen]);
 
   useEffect(() => {
@@ -813,45 +815,48 @@ useEffect(() => {
   }, [uiState.showImageViewer]);
 
   useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
     if (!uiState.isSliding) {
       setTimeout(() => {
-      setModalHeight("auto");
+        if (!isMobile) setModalHeight("auto");
       }, 50);
     }
-  }, [uiState.currentView, uiState.isSliding]);
-useEffect(() => {
-  if (isOpen) {
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden"; // 👈 thêm dòng này
-  } else {
-    document.body.style.overflow = "";
-    document.documentElement.style.overflow = "";
-  }
+  }, [uiState.currentView, uiState.isSliding, isMobile]);
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden"; // 👈 thêm dòng này
+    } else {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }
 
-  return () => {
-    document.body.style.overflow = "";
-    document.documentElement.style.overflow = "";
-  };
-}, [isOpen]);
+    return () => {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && modalRef.current) {
+    if (!isMobile && isOpen && modalRef.current) {
       const height = modalRef.current.offsetHeight;
       setModalHeight(`${height}px`);
     }
-  }, [isOpen]);
-  useEffect(() => {
-    if (isOpen && modalRef.current) {
-      const height = modalRef.current.offsetHeight;
-      setModalHeight(`${height}px`);
-    }
-  }, [isOpen]);
+  }, [isOpen, isMobile]);
 
   const filteredSuggestions = POPULAR_HASHTAGS.filter(
-  (tag) =>
-    tag.toLowerCase().includes((formData.hashtagInput || "").toLowerCase()) &&
-    !formData.hashtags.includes(tag)
-);
+    (tag) =>
+      tag.toLowerCase().includes((formData.hashtagInput || "").toLowerCase()) &&
+      !formData.hashtags.includes(tag)
+  );
 
   if (!isOpen) return null;
   return (
@@ -864,18 +869,22 @@ useEffect(() => {
 
         <Card
           ref={modalRef}
-          className={`!py-0 relative w-full h-full md:h-auto md:max-w-3xl md:mx-4 bg-white shadow-2xl md:rounded-lg overflow-hidden modal-container modal-optimized ${uiState.isAnimating
+          className={`!py-0 relative w-full ${isMobile ? "h-[90vh]" : "h-full"} md:h-auto md:max-w-3xl md:mx-4 bg-white shadow-2xl md:rounded-lg overflow-hidden modal-container modal-optimized ${
+            uiState.isAnimating
               ? "scale-95 opacity-90"
               : "scale-100 opacity-100"
           }`}
           style={{
-            height:
-              uiState.isSliding && fixedHeight
-                ? `${fixedHeight}px`
-                : modalHeight,
+            height: isMobile
+              ? "90vh"
+              : uiState.isSliding && fixedHeight
+              ? `${fixedHeight}px`
+              : modalHeight,
             maxHeight: "95vh",
-            minHeight: "500px", // Tăng chiều cao tối thiểu
-            transition: uiState.isSliding
+            minHeight: isMobile ? undefined : "500px",
+            transition: isMobile
+              ? undefined
+              : uiState.isSliding
               ? "height 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
               : "height 0.3s ease-out",
           }}
@@ -883,11 +892,11 @@ useEffect(() => {
         >
           <div
             ref={slideContainerRef}
-            className={`h-full ${uiState.isSliding ? "opacity-70" : "opacity-100"
+            className={`h-full ${
+              uiState.isSliding ? "opacity-70" : "opacity-100"
             }`}
             style={{
-              transition:
-                "opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              transition: "opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
             }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -906,42 +915,40 @@ useEffect(() => {
                   </Button>
                 )}
                 <h2 className="text-lg font-semibold text-gray-900">
-                   {uiState.currentView === "compose" &&
-                     POST_MESSAGES.LABELS.CREATE_POST}
-                   {uiState.currentView === "emoji" &&
-                     POST_MESSAGES.LABELS.SELECT_EMOJI}
-                   {uiState.currentView === "gif" && POST_MESSAGES.LABELS.FIND_GIF}
-                   {uiState.currentView === "media" &&
-                     POST_MESSAGES.LABELS.SELECT_MEDIA}
-                   {uiState.currentView === "album-select" && "Chọn Album"}
-                   {uiState.currentView === "album-create" && "Tạo Album Mới"}
+                  {uiState.currentView === "compose" &&
+                    POST_MESSAGES.LABELS.CREATE_POST}
+                  {uiState.currentView === "emoji" &&
+                    POST_MESSAGES.LABELS.SELECT_EMOJI}
+                  {uiState.currentView === "gif" &&
+                    POST_MESSAGES.LABELS.FIND_GIF}
+                  {uiState.currentView === "media" &&
+                    POST_MESSAGES.LABELS.SELECT_MEDIA}
+                  {uiState.currentView === "album-select" && "Chọn Album"}
+                  {uiState.currentView === "album-create" && "Tạo Album Mới"}
                 </h2>
-                {uiState.showSparkles &&
-                  uiState.currentView === "compose" && (
+                {uiState.showSparkles && uiState.currentView === "compose" && (
                   <Sparkles className="h-4 w-4 text-orange-500" />
                 )}
               </div>
-               <Button
-                 variant="ghost"
-                 size="sm"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   handleClose(e);
                 }}
-                 className="h-8 w-8 p-0 hover:bg-orange-100 rounded-full"
-               >
-                 <X className="h-4 w-4" />
-               </Button>
+                className="h-8 w-8 p-0 hover:bg-orange-100 rounded-full"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
 
-
-            {uiState.showDraftRestored &&
-              uiState.currentView === "compose" && (
+            {uiState.showDraftRestored && uiState.currentView === "compose" && (
               <div className="bg-green-50 border-l-4 border-green-400 p-3 mx-6 mt-3 rounded">
-                   <p className="text-sm text-green-700">
-                     {POST_MESSAGES.NOTIFICATIONS.DRAFT_RESTORED}
-                   </p>
+                <p className="text-sm text-green-700">
+                  {POST_MESSAGES.NOTIFICATIONS.DRAFT_RESTORED}
+                </p>
               </div>
             )}
 
@@ -967,8 +974,7 @@ useEffect(() => {
                       onClick={() =>
                         setUiState((prev) => ({
                           ...prev,
-                          showPrivacyDropdown:
-                            !prev.showPrivacyDropdown,
+                          showPrivacyDropdown: !prev.showPrivacyDropdown,
                         }))
                       }
                       className="flex items-center space-x-2 text-sm border-orange-200 hover:bg-orange-50 hover:border-orange-300"
@@ -980,68 +986,63 @@ useEffect(() => {
 
                     {uiState.showPrivacyDropdown && (
                       <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20 animate-fade-in">
-                        {PRIVACY_OPTIONS.map(
-                          (option) => (
+                        {PRIVACY_OPTIONS.map((option) => (
                           <button
                             key={option.value}
                             onClick={() => {
                               console.log("Giá trị được chọn:", option.value);
-                                setFormData(
-                                  (prev) => ({
-                                    ...prev,
-                                    privacyLevel:
-                                      option.value,
-                                      
-                                  })
-                                );
-                                setUiState(
-                                  (prev) => ({
-                                    ...prev,
-                                    showPrivacyDropdown: false,
-                                  })
-                                );
+                              setFormData((prev) => ({
+                                ...prev,
+                                privacyLevel: option.value,
+                              }));
+                              setUiState((prev) => ({
+                                ...prev,
+                                showPrivacyDropdown: false,
+                              }));
                             }}
                             className="w-full flex items-start space-x-3 p-3 hover:bg-orange-50 text-left transition-colors"
                           >
-                              <div className="mt-0.5">
-                                {option.icon}
-                              </div>
+                            <div className="mt-0.5">{option.icon}</div>
                             <div>
-                                <div className="font-medium text-gray-900">
-                                  {
-                                    option.label
-                                  }
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {
-                                    option.description
-                                  }
-                                </div>
+                              <div className="font-medium text-gray-900">
+                                {option.label}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {option.description}
+                              </div>
                             </div>
                           </button>
-                          )
-                        )}
+                        ))}
                       </div>
                     )}
                   </div>
                 </div>
-
-                <div className="px-6 py-4 pt-2 space-y-5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                {errorMessage && (
+                    <div className="mx-6 mb-3 p-3 bg-red-50 border-l-4 border-red-400 rounded">
+                      <p className="text-sm text-red-700">{errorMessage}</p>
+                    </div>
+                  )}
+                <div
+                  className="px-6 py-4 pt-2 space-y-5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                  style={{ maxHeight: contentMaxHeight }}
+                >
                   <Input
-                       placeholder={POST_MESSAGES.PLACEHOLDERS.ADD_TITLE}
+                    placeholder={POST_MESSAGES.PLACEHOLDERS.ADD_TITLE}
                     value={formData.title}
-                       onChange={(e) =>
-                         setFormData((prev) => ({
-                           ...prev,
-                           title: e.target.value,
-                         }))
-                       }
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
                     className="border-gray-200 focus:border-orange-300 focus:ring-orange-200 transition-all duration-200"
                   />
 
                   <Textarea
                     ref={textareaRef}
-                    placeholder={POST_MESSAGES.PLACEHOLDERS.WHAT_ARE_YOU_THINKING}
+                    placeholder={
+                      POST_MESSAGES.PLACEHOLDERS.WHAT_ARE_YOU_THINKING
+                    }
                     value={formData.body}
                     onChange={(e) =>
                       setFormData((prev) => ({
@@ -1053,7 +1054,7 @@ useEffect(() => {
                     rows={1}
                   />
 
-                    <div className="space-y-3">
+                  <div className="space-y-3">
                     <Button
                       variant="outline"
                       size="sm"
@@ -1062,10 +1063,9 @@ useEffect(() => {
                     >
                       <FolderPlus className="h-4 w-4 text-orange-500" />
                       <span>
-                        {albumState.selectedAlbum 
-                          ? `Album: ${albumState.selectedAlbum.name}` 
-                          : "Thêm vào album"
-                        }
+                        {albumState.selectedAlbum
+                          ? `Album: ${albumState.selectedAlbum.name}`
+                          : "Thêm vào album"}
                       </span>
                       {albumState.selectedAlbum && (
                         <Button
@@ -1086,129 +1086,84 @@ useEffect(() => {
                   {(attachments.selectedMedia.length > 0 ||
                     attachments.selectedGif) && (
                     <div className="space-y-3">
-                        {attachments.selectedMedia.length >
-                          0 && (
+                      {attachments.selectedMedia.length > 0 && (
                         <div>
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center space-x-2">
-                                  <h4 className="text-sm font-medium text-gray-700">
-                                    Ảnh/Video đã
-                                    chọn
-                                  </h4>
-                                  {attachments
-                                    .selectedMedia
-                                    .length > 8 && (
-                                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                        {
-                                          attachments
-                                            .selectedMedia
-                                            .length
-                                        }{" "}
-                                        ảnh
-                                      </span>
-                                    )}
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    attachments.selectedMedia.forEach(
-                                      (file) => {
-                                        if (
-                                          file.url
-                                        )
-                                          URL.revokeObjectURL(
-                                            file.url
-                                          );
-                                      }
-                                    );
-                                    setAttachments(
-                                      (prev) => ({
-                                        ...prev,
-                                        selectedMedia:
-                                          [],
-                                        hasAttachment:
-                                          prev.selectedGif
-                                            ? true
-                                            : false,
-                                      })
-                                    );
-                                  }}
-                                  className="text-red-500 hover:text-red-700 hover:bg-red-50 text-xs"
-                                >
-                                  <X className="h-3 w-3 mr-1" />
-                                  Xóa tất cả
-                                </Button>
-                              </div>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <h4 className="text-sm font-medium text-gray-700">
+                                Ảnh/Video đã chọn
+                              </h4>
+                              {attachments.selectedMedia.length > 8 && (
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                  {attachments.selectedMedia.length} ảnh
+                                </span>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                attachments.selectedMedia.forEach((file) => {
+                                  if (file.url) URL.revokeObjectURL(file.url);
+                                });
+                                setAttachments((prev) => ({
+                                  ...prev,
+                                  selectedMedia: [],
+                                  hasAttachment: prev.selectedGif
+                                    ? true
+                                    : false,
+                                }));
+                              }}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 text-xs"
+                            >
+                              <X className="h-3 w-3 mr-1" />
+                              Xóa tất cả
+                            </Button>
+                          </div>
+                          <div
+                            className="flex gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 pb-2 border-l-2 border-r-2 border-gray-100 rounded-lg px-2 bg-gray-50/30"
+                            style={{
+                              scrollbarWidth: "thin",
+                              scrollbarColor: "#9ca3af #f3f4f6",
+                              maxHeight: 180,
+                              flexWrap: "nowrap",
+                            }}
+                          >
+                            {attachments.selectedMedia.map((file) => (
                               <div
-                                className="flex gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 pb-2 border-l-2 border-r-2 border-gray-100 rounded-lg px-2 bg-gray-50/30"
-                                style={{
-                                  scrollbarWidth: "thin",
-                                  scrollbarColor: "#9ca3af #f3f4f6",
-                                  maxHeight: '200px', // Giới hạn chiều cao cho container ảnh
-                                  flexWrap: 'nowrap', // Không wrap, giữ scroll ngang
-                                }}
+                                key={file.id}
+                                className="relative group flex-shrink-0 w-32 h-28"
                               >
-                                {attachments.selectedMedia.map(
-                                  (file) => (
-                                    <div
-                                      key={
-                                        file.id
-                                      }
-                                      className="relative group flex-shrink-0 w-32 h-28"
-                                    >
-                                      {file.type ===
-                                        "image" ? (
-                                        <img
-                                          src={
-                                            file.url ||
-                                            "/placeholder.svg"
-                                          }
-                                          alt={
-                                            file
-                                              .file
-                                              .name
-                                          }
-                                          className="w-full h-full object-contain rounded-lg border border-gray-200 bg-gray-50 cursor-pointer hover:opacity-80 transition-opacity"
-                                          onClick={() =>
-                                            openImageViewer(
-                                              file.url
-                                            )
-                                          }
+                                {file.type === "image" ? (
+                                  <img
+                                    src={file.url || "/placeholder.svg"}
+                                    alt={file.file.name}
+                                    className="w-full h-full object-contain rounded-lg border border-gray-200 bg-gray-50 cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={() => openImageViewer(file.url)}
                                   />
                                 ) : (
                                   <video
-                                          src={
-                                            file.url
-                                          }
-                                          className="w-full h-full object-contain rounded-lg border border-gray-200 bg-gray-50 cursor-pointer hover:opacity-80 transition-opacity"
+                                    src={file.url}
+                                    className="w-full h-full object-contain rounded-lg border border-gray-200 bg-gray-50 cursor-pointer hover:opacity-80 transition-opacity"
                                     muted
-                                          onClick={() =>
-                                            openImageViewer(
-                                              file.url
-                                            )
-                                          }
+                                    onClick={() => openImageViewer(file.url)}
                                   />
                                 )}
 
-                                      {file.uploadProgress <
-                                        100 && (
+                                {file.uploadProgress < 100 && (
                                   <div className="absolute inset-0 bg-black/50 rounded-lg flex flex-col items-center justify-center">
                                     <div className="w-3/4 bg-gray-200 rounded-full h-2 mb-2">
                                       <div
                                         className="bg-gradient-to-r from-orange-400 to-yellow-400 h-2 rounded-full transition-all duration-300 relative overflow-hidden"
-                                                style={{
-                                                  width: `${file.uploadProgress}%`,
-                                                }}
+                                        style={{
+                                          width: `${file.uploadProgress}%`,
+                                        }}
                                       >
                                         <div className="absolute inset-0 bg-white/20 animate-pulse" />
                                       </div>
                                     </div>
                                     <span className="text-white text-xs font-medium bg-black/30 px-2 py-1 rounded">
-                                              {Math.round(
-                                                file.uploadProgress
-                                              )}
-                                              %
+                                      {Math.round(file.uploadProgress)}%
                                     </span>
                                   </div>
                                 )}
@@ -1216,63 +1171,55 @@ useEffect(() => {
                                 <Button
                                   variant="destructive"
                                   size="sm"
-                                        className="absolute top-1 right-1 h-6 w-6 p-0 opacity-80 hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600"
-                                        onClick={(
-                                          e
-                                        ) => {
-                                          e.stopPropagation();
-                                          removeMediaFile(
-                                            file.id
-                                          );
-                                        }}
+                                  className="absolute top-1 right-1 h-6 w-6 p-0 opacity-80 hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeMediaFile(file.id);
+                                  }}
                                 >
                                   <X className="h-3 w-3" />
                                 </Button>
                               </div>
-                                  )
-                                )}
+                            ))}
                           </div>
                         </div>
                       )}
 
                       {attachments.selectedGif && (
                         <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="text-sm font-medium text-gray-700">
-                                GIF đã chọn
-                              </h4>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={removeGif}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50 text-xs"
-                              >
-                                <X className="h-3 w-3 mr-1" />
-                                Xóa GIF
-                              </Button>
-                            </div>
-                            <div className="relative group inline-block max-h-32 overflow-hidden">
-                              <img
-                                src={
-                                  attachments.selectedGif ||
-                                  "/placeholder.svg"
-                                }
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-sm font-medium text-gray-700">
+                              GIF đã chọn
+                            </h4>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={removeGif}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 text-xs"
+                            >
+                              <X className="h-3 w-3 mr-1" />
+                              Xóa GIF
+                            </Button>
+                          </div>
+                          <div className="relative group inline-block max-h-32 overflow-hidden">
+                            <img
+                              src={
+                                attachments.selectedGif || "/placeholder.svg"
+                              }
                               alt="Selected GIF"
-                                className="max-w-full h-32 object-contain rounded-lg border border-gray-200 bg-gray-50 cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() =>
-                                  openImageViewer(
-                                    attachments.selectedGif
-                                  )
-                                }
+                              className="max-w-full h-32 object-contain rounded-lg border border-gray-200 bg-gray-50 cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() =>
+                                openImageViewer(attachments.selectedGif)
+                              }
                             />
                             <Button
                               variant="destructive"
                               size="sm"
-                                className="absolute top-1 right-1 h-6 w-6 p-0 opacity-80 hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeGif();
-                                }}
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-80 hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeGif();
+                              }}
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -1289,84 +1236,62 @@ useEffect(() => {
                         <Input
                           ref={hashtagInputRef}
                           placeholder="Thêm #hashtag"
-                          value={
-                            formData.hashtagInput
-                          }
+                          value={formData.hashtagInput}
                           onChange={(e) => {
                             setFormData((prev) => ({
                               ...prev,
-                              hashtagInput:
-                                e.target.value,
+                              hashtagInput: e.target.value,
                             }));
                             setUiState((prev) => ({
                               ...prev,
-                              showHashtagSuggestions:
-                                e.target.value
-                                  .length > 0,
+                              showHashtagSuggestions: e.target.value.length > 0,
                             }));
                           }}
-                          onKeyDown={
-                            handleHashtagInputKeyDown
-                          }
+                          onKeyDown={handleHashtagInputKeyDown}
                           onFocus={() =>
-                          setUiState((prev) => ({
+                            setUiState((prev) => ({
                               ...prev,
                               showHashtagSuggestions:
-                            (formData.hashtagInput?.length ?? 0) > 0,
-                           }))
-                        }
+                                (formData.hashtagInput?.length ?? 0) > 0,
+                            }))
+                          }
                           className="border-gray-200 focus:border-orange-300 focus:ring-orange-200 text-sm transition-all duration-200"
                         />
                       </div>
 
                       {uiState.showHashtagSuggestions &&
-                        filteredSuggestions.length >
-                        0 && (
-                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-40 overflow-y-auto animate-fade-in">
-                            {filteredSuggestions
-                              .slice(0, 8)
-                              .map((tag) => (
-                            <button
-                              key={tag}
-                                  onClick={() =>
-                                    addHashtag(
-                                      tag
-                                    )
-                                  }
-                              className="w-full text-left px-3 py-2 hover:bg-orange-50 text-sm flex items-center space-x-2 transition-colors"
-                            >
-                              <Hash className="h-3 w-3 text-orange-400" />
-                                  <span>
-                                    {tag}
-                                  </span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                        filteredSuggestions.length > 0 && (
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-40 overflow-y-auto animate-fade-in">
+                            {filteredSuggestions.slice(0, 8).map((tag) => (
+                              <button
+                                key={tag}
+                                onClick={() => addHashtag(tag)}
+                                className="w-full text-left px-3 py-2 hover:bg-orange-50 text-sm flex items-center space-x-2 transition-colors"
+                              >
+                                <Hash className="h-3 w-3 text-orange-400" />
+                                <span>{tag}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                     </div>
 
                     {formData.hashtags.length > 0 && (
                       <div className="flex flex-wrap gap-2">
-                        {formData.hashtags.map(
-                          (tag) => (
+                        {formData.hashtags.map((tag) => (
                           <span
                             key={tag}
                             className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gradient-to-r from-orange-100 to-yellow-100 text-orange-700 border border-orange-200 animate-fade-in"
                           >
                             #{tag}
                             <button
-                                onClick={() =>
-                                  removeHashtag(
-                                    tag
-                                  )
-                                }
+                              onClick={() => removeHashtag(tag)}
                               className="ml-2 hover:text-orange-900 transition-colors"
                             >
                               <X className="h-3 w-3" />
                             </button>
                           </span>
-                          )
-                        )}
+                        ))}
                       </div>
                     )}
                   </div>
@@ -1384,15 +1309,11 @@ useEffect(() => {
                         <div
                           className="relative group"
                           onMouseEnter={() => {
-                            if (
-                              attachments.selectedGif
-                            ) {
-                              setUiState(
-                                (prev) => ({
-                                  ...prev,
-                                  showImageTooltip: true,
-                                })
-                              );
+                            if (attachments.selectedGif) {
+                              setUiState((prev) => ({
+                                ...prev,
+                                showImageTooltip: true,
+                              }));
                             }
                           }}
                           onMouseLeave={() => {
@@ -1401,24 +1322,21 @@ useEffect(() => {
                               showImageTooltip: false,
                             }));
                           }}
-                      >
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                            disabled={
+                        >
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={attachments.selectedGif ? true : false}
+                            className={`whitespace-nowrap flex-shrink-0 transition-all duration-200 min-w-fit ${
                               attachments.selectedGif
-                                ? true
-                                : false
-                            }
-                            className={`whitespace-nowrap flex-shrink-0 transition-all duration-200 min-w-fit ${attachments.selectedGif
                                 ? "text-gray-400 cursor-not-allowed opacity-50"
                                 : "text-gray-600 hover:text-orange-600 hover:bg-orange-50 hover:scale-105"
-                              }`}
-                          onClick={slideToMedia}
-                        >
-                          <ImageIcon className="h-4 w-4 mr-2" />
+                            }`}
+                            onClick={slideToMedia}
+                          >
+                            <ImageIcon className="h-4 w-4 mr-2" />
                             Tải lên Ảnh/Video
-                        </Button>
+                          </Button>
                         </div>
                         <Button
                           variant="ghost"
@@ -1432,17 +1350,11 @@ useEffect(() => {
                         <div
                           className="relative group"
                           onMouseEnter={() => {
-                            if (
-                              attachments
-                                .selectedMedia
-                                .length > 0
-                            ) {
-                              setUiState(
-                                (prev) => ({
-                                  ...prev,
-                                  showGifTooltip: true,
-                                })
-                              );
+                            if (attachments.selectedMedia.length > 0) {
+                              setUiState((prev) => ({
+                                ...prev,
+                                showGifTooltip: true,
+                              }));
                             }
                           }}
                           onMouseLeave={() => {
@@ -1452,45 +1364,37 @@ useEffect(() => {
                             }));
                           }}
                         >
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             disabled={
-                              attachments
-                                .selectedMedia
-                                .length > 0
+                              attachments.selectedMedia.length > 0
                                 ? true
                                 : false
                             }
-                            className={`whitespace-nowrap flex-shrink-0 transition-all duration-200 min-w-fit ${attachments
-                                .selectedMedia
-                                .length > 0
+                            className={`whitespace-nowrap flex-shrink-0 transition-all duration-200 min-w-fit ${
+                              attachments.selectedMedia.length > 0
                                 ? "text-gray-400 cursor-not-allowed opacity-50"
                                 : "text-gray-600 hover:text-orange-600 hover:bg-orange-50 hover:scale-105"
-                              }`}
-                          onClick={slideToGif}
-                        >
-                          <Gift className="h-4 w-4 mr-2" />
-                          GIF
-                        </Button>
+                            }`}
+                            onClick={slideToGif}
+                          >
+                            <Gift className="h-4 w-4 mr-2" />
+                            GIF
+                          </Button>
                         </div>
                       </div>
                     </div>
                   </div>
-
                   <div className="flex justify-end pt-5 border-t border-gray-100 sticky bottom-0 bg-white z-10">
                     <Button
                       onClick={handlePost}
-                      disabled={
-                        !canPost || uiState.isAnimating
-                      }
-                      className={`transition-all duration-300 ${canPost
+                      disabled={!canPost || uiState.isAnimating}
+                      className={`transition-all duration-300 ${
+                        canPost
                           ? "bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white shadow-md hover:shadow-lg transform hover:scale-105"
                           : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                        } ${uiState.isAnimating
-                          ? "animate-pulse"
-                          : ""
-                        }`}
+                      } ${uiState.isAnimating ? "animate-pulse" : ""}`}
                     >
                       {uiState.isAnimating ? (
                         <div className="flex items-center space-x-2">
@@ -1508,13 +1412,14 @@ useEffect(() => {
 
             {uiState.currentView === "emoji" && (
               <div className="h-full">
-                <div className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ maxHeight: 'calc(100vh - 150px)' }}>
+                <div
+                  className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                  style={{ maxHeight: "calc(100vh - 150px)" }}
+                >
                   <div className="h-full">
                     <EmojiPicker
                       isOpen={true}
-                      onClose={() =>
-                        slideToView("compose")
-                      }
+                      onClose={() => slideToView("compose")}
                       onEmojiSelect={handleEmojiSelect}
                       inline={true}
                     />
@@ -1525,13 +1430,14 @@ useEffect(() => {
 
             {uiState.currentView === "gif" && (
               <div className="h-full">
-                <div className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ maxHeight: 'calc(100vh - 150px)' }}>
+                <div
+                  className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                  style={{ maxHeight: "calc(100vh - 150px)" }}
+                >
                   <div className="h-full">
                     <GifSearchModal
                       isOpen={true}
-                      onClose={() =>
-                        slideToView("compose")
-                      }
+                      onClose={() => slideToView("compose")}
                       onGifSelect={handleGifSelect}
                       inline={true}
                     />
@@ -1542,10 +1448,14 @@ useEffect(() => {
 
             {uiState.currentView === "media" && (
               <div className="h-full">
-                <div className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ maxHeight: 'calc(100vh - 150px)' }}>
+                <div
+                  className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                  style={{ maxHeight: "calc(100vh - 150px)" }}
+                >
                   <div className="h-full">
                     <div
-                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 h-full flex flex-col justify-center ${uiState.isDragging
+                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 h-full flex flex-col justify-center ${
+                        uiState.isDragging
                           ? "border-orange-400 bg-orange-100"
                           : "border-orange-300 hover:border-orange-400 hover:bg-orange-100/50"
                       }`}
@@ -1560,17 +1470,14 @@ useEffect(() => {
                       <p className="text-gray-600 mb-4">
                         Kéo thả file vào đây hoặc{" "}
                         <button
-                          onClick={() =>
-                            fileInputRef.current?.click()
-                          }
+                          onClick={() => fileInputRef.current?.click()}
                           className="text-orange-600 hover:text-orange-700 font-medium underline"
                         >
                           chọn từ thiết bị
                         </button>
                       </p>
                       <p className="text-sm text-gray-500">
-                        JPG, PNG, GIF, MP4, MOV (tối đa
-                        50MB)
+                        JPG, PNG, GIF, MP4, MOV (tối đa 50MB)
                       </p>
                     </div>
                   </div>
@@ -1580,7 +1487,10 @@ useEffect(() => {
 
             {uiState.currentView === "album-select" && (
               <div className="h-full">
-                <div className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ maxHeight: 'calc(100vh - 150px)' }}>
+                <div
+                  className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                  style={{ maxHeight: "calc(100vh - 150px)" }}
+                >
                   <div className="h-full flex flex-col">
                     <div className="flex-1 overflow-y-auto space-y-4">
                       <Button
@@ -1592,7 +1502,9 @@ useEffect(() => {
                       </Button>
 
                       <div className="space-y-3">
-                        <h3 className="text-sm font-medium text-gray-700">Album hiện có</h3>
+                        <h3 className="text-sm font-medium text-gray-700">
+                          Album hiện có
+                        </h3>
                         {MOCK_ALBUMS.map((album) => (
                           <button
                             key={album.id}
@@ -1605,9 +1517,13 @@ useEffect(() => {
                               className="w-12 h-12 object-cover rounded-lg border border-gray-200"
                             />
                             <div className="flex-1">
-                              <h4 className="font-medium text-gray-900">{album.name}</h4>
-                              <p className="text-sm text-gray-500">{album.postCount} bài đăng</p>
-                    </div>
+                              <h4 className="font-medium text-gray-900">
+                                {album.name}
+                              </h4>
+                              <p className="text-sm text-gray-500">
+                                {album.postCount} bài đăng
+                              </p>
+                            </div>
                             <Folder className="h-5 w-5 text-orange-500" />
                           </button>
                         ))}
@@ -1617,7 +1533,10 @@ useEffect(() => {
                     <Button
                       variant="outline"
                       onClick={() => {
-                        setAlbumState((prev) => ({ ...prev, selectedAlbum: null }));
+                        setAlbumState((prev) => ({
+                          ...prev,
+                          selectedAlbum: null,
+                        }));
                         slideToView("compose");
                       }}
                       className="w-full mt-4 border-gray-300 text-gray-600 hover:bg-gray-50"
@@ -1631,13 +1550,20 @@ useEffect(() => {
 
             {uiState.currentView === "album-create" && (
               <div className="h-full">
-                <div className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ maxHeight: 'calc(100vh - 150px)' }}>
+                <div
+                  className="p-6 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                  style={{ maxHeight: "calc(100vh - 150px)" }}
+                >
                   <div className="h-full flex flex-col justify-center">
                     <div className="space-y-6">
                       <div className="text-center">
                         <FolderPlus className="h-16 w-16 text-orange-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Tạo album mới</h3>
-                        <p className="text-gray-600">Đặt tên cho album của bạn</p>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          Tạo album mới
+                        </h3>
+                        <p className="text-gray-600">
+                          Đặt tên cho album của bạn
+                        </p>
                       </div>
 
                       <div className="space-y-4">
@@ -1690,9 +1616,7 @@ useEffect(() => {
         type="file"
         multiple
         accept="image/*,video/*"
-        onChange={(e) =>
-          e.target.files && handleFileSelect(e.target.files)
-        }
+        onChange={(e) => e.target.files && handleFileSelect(e.target.files)}
         className="hidden"
       />
 
@@ -1805,9 +1729,7 @@ useEffect(() => {
                   clipRule="evenodd"
                 />
               </svg>
-               <span>
-                 {POST_MESSAGES.TOOLTIPS.MUTUAL_EXCLUSIVE_ATTACHMENT}
-               </span>
+              <span>{POST_MESSAGES.TOOLTIPS.MUTUAL_EXCLUSIVE_ATTACHMENT}</span>
             </div>
           </div>
         </div>

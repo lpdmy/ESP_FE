@@ -1,5 +1,6 @@
 import { toast } from 'react-toastify'
 import { PROFILE_MESSAGES, AUTH_MESSAGES, COMMON_MESSAGES } from '@/common/constants/messages'
+import { POST_MESSAGES } from '../constants/messages/post'
 
 export const useToast = () => {
   const showSuccess = (message, options = {}) => {
@@ -68,6 +69,8 @@ export const useToast = () => {
   const networkError = () => showError(COMMON_MESSAGES.ERROR.NETWORK_ERROR)
   const unknownError = () => showError(COMMON_MESSAGES.ERROR.GENERIC)
   const postLoadFaild = () => showError(COMMON_MESSAGES.ERROR.postLoadFaild)
+  const createPostSuccess = () =>showSuccess(POST_MESSAGES.NOTIFICATIONS.POST_CREATED)
+  const deletePostSucess = () => showSuccess(POST_MESSAGES.NOTIFICATIONS.POST_DELETED)
 
   return {
     // Basic toast methods
@@ -88,7 +91,8 @@ export const useToast = () => {
     networkError,
     unknownError,
     postLoadFaild,
-    
+    createPostSuccess,
+    deletePostSucess,
     // Direct access to messages
     PROFILE_MESSAGES,
     AUTH_MESSAGES,

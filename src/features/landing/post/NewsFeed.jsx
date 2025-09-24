@@ -237,10 +237,11 @@ export default function NewsFeed() {
   };
 
   const handleDeletePost = (post) => {
-    setSelectedPost(post);
-    setIsDeleteModalOpen(true);
-  };
-
+  console.log(">>> [NewsFeed] Chọn post để xóa:", post);
+  console.log("Mở modal xoá post ID:", post.id);
+  setSelectedPost(post);
+  setIsDeleteModalOpen(true);
+};
   const handleUpdatePost = (updatedPost) => {
     setPosts(prevPosts => 
       prevPosts.map(post => 
