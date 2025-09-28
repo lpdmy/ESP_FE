@@ -20,4 +20,8 @@ export const ROUTES = {
   ONBOARDING: {
     ONBOARDING: "/onboarding",
   },
+  COLLECTION:{
+    LIST_COLLECTION : "/list-collection",
+    COLLECTION_DETAIL: "/collection-detail/{id}"
+  }
 };

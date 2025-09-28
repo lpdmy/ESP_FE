@@ -72,6 +72,12 @@ export const API_CONFIG = {
     USER_POST:'/post/user',
     DELETE_POST:'/post',
     UPDATE_POST:'/post'
+  },
+  COLLECTION :{
+    CREATE_COLLECTION :'/collection',
+    CREATE_COLLECTION :'/collection',
+    CREATE_COLLECTION :'/collection',
+    USER_COLLECTION :'/collection/user',
   }
 };
 
