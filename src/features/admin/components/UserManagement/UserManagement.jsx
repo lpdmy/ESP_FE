@@ -446,7 +446,33 @@ export default function UserManagement() {
       toast.success("Cập nhật người dùng thành công!")
     } catch (error) {
       console.error("Error updating user:", error);
-      toast.error("Không thể cập nhật người dùng");
+      
+      // Handle specific validation errors
+      let hasFieldError = false;
+      if (error.message) {
+        const errorMessage = error.message.toLowerCase();
+        
+        // Check for email duplication
+        if (errorMessage.includes('email') && errorMessage.includes('đã tồn tại')) {
+          setFormErrors(prev => ({ ...prev, email: "Email đã tồn tại" }));
+          hasFieldError = true;
+        }
+        
+        // Check for username duplication
+        if (errorMessage.includes('id') && errorMessage.includes('đã tồn tại')) {
+          if (newUser.role === 4) {
+            setFormErrors(prev => ({ ...prev, studentNumber: "Mã học sinh đã tồn tại" }));
+          } else if (newUser.role === 2) {
+            setFormErrors(prev => ({ ...prev, teacherCode: "Mã giáo viên đã tồn tại" }));
+          }
+          hasFieldError = true;
+        }
+      }
+      
+      // Show general error only if no specific field error was set
+      if (!hasFieldError) {
+        toast.error("Không thể cập nhật người dùng");
+      }
     }
   };
 
@@ -571,7 +597,33 @@ export default function UserManagement() {
       toast.success("Tạo người dùng thành công!")
     } catch (error) {
       console.error("Error creating user:", error);
-      toast.error("Không thể tạo người dùng");
+      
+      // Handle specific validation errors
+      let hasFieldError = false;
+      if (error.message) {
+        const errorMessage = error.message.toLowerCase();
+        
+        // Check for email duplication
+        if (errorMessage.includes('email') && errorMessage.includes('đã tồn tại')) {
+          setFormErrors(prev => ({ ...prev, email: "Email đã tồn tại" }));
+          hasFieldError = true;
+        }
+        
+        // Check for username duplication
+        if (errorMessage.includes('id') && errorMessage.includes('đã tồn tại')) {
+          if (newUser.role === 4) {
+            setFormErrors(prev => ({ ...prev, studentNumber: "Mã học sinh đã tồn tại" }));
+          } else if (newUser.role === 2) {
+            setFormErrors(prev => ({ ...prev, teacherCode: "Mã giáo viên đã tồn tại" }));
+          }
+          hasFieldError = true;
+        }
+      }
+      
+      // Show general error only if no specific field error was set
+      if (!hasFieldError) {
+        toast.error("Không thể tạo người dùng");
+      }
     }
   }
 
@@ -788,8 +840,16 @@ export default function UserManagement() {
                   id="email"
                   type="email"
                   value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                  onChange={(e) => {
+                    setNewUser({ ...newUser, email: e.target.value });
+                    // Clear email error when user starts typing
+                    if (formErrors.email) {
+                      setFormErrors(prev => ({ ...prev, email: undefined }));
+                    }
+                  }}
+                  className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                    formErrors.email ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                  }`}
                   placeholder="Nhập địa chỉ email"
                 />
                 {formErrors.email && <span className="!text-red-500 !text-xs !mt-1">{formErrors.email}</span>}
@@ -815,8 +875,16 @@ export default function UserManagement() {
                     <Input
                       id="phoneNumber"
                       value={newUser.phoneNumber}
-                      onChange={(e) => setNewUser({ ...newUser, phoneNumber: e.target.value })}
-                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      onChange={(e) => {
+                        setNewUser({ ...newUser, phoneNumber: e.target.value });
+                        // Clear phone error when user starts typing
+                        if (formErrors.phoneNumber) {
+                          setFormErrors(prev => ({ ...prev, phoneNumber: undefined }));
+                        }
+                      }}
+                      className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                        formErrors.phoneNumber ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                      }`}
                       placeholder="+84901234567"
                     />
                     {formErrors.phoneNumber && <span className="!text-red-500 !text-xs !mt-1">{formErrors.phoneNumber}</span>}
@@ -831,8 +899,16 @@ export default function UserManagement() {
                     <Input
                       id="studentNumber"
                       value={newUser.studentNumber}
-                      onChange={(e) => setNewUser({ ...newUser, studentNumber: e.target.value })}
-                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      onChange={(e) => {
+                        setNewUser({ ...newUser, studentNumber: e.target.value });
+                        // Clear student number error when user starts typing
+                        if (formErrors.studentNumber) {
+                          setFormErrors(prev => ({ ...prev, studentNumber: undefined }));
+                        }
+                      }}
+                      className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                        formErrors.studentNumber ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                      }`}
                       placeholder="HS2024001"
                     />
                     {formErrors.studentNumber && <span className="!text-red-500 !text-xs !mt-1">{formErrors.studentNumber}</span>}
@@ -917,8 +993,16 @@ export default function UserManagement() {
                     <Input
                       id="teacherCode"
                       value={newUser.teacherCode}
-                      onChange={(e) => setNewUser({ ...newUser, teacherCode: e.target.value })}
-                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      onChange={(e) => {
+                        setNewUser({ ...newUser, teacherCode: e.target.value });
+                        // Clear teacher code error when user starts typing
+                        if (formErrors.teacherCode) {
+                          setFormErrors(prev => ({ ...prev, teacherCode: undefined }));
+                        }
+                      }}
+                      className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                        formErrors.teacherCode ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                      }`}
                       placeholder="GV001"
                     />
                     {formErrors.teacherCode && <span className="!text-red-500 !text-xs !mt-1">{formErrors.teacherCode}</span>}
@@ -1134,8 +1218,16 @@ export default function UserManagement() {
                   id="edit-email"
                   type="email"
                   value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                  onChange={(e) => {
+                    setNewUser({ ...newUser, email: e.target.value });
+                    // Clear email error when user starts typing
+                    if (formErrors.email) {
+                      setFormErrors(prev => ({ ...prev, email: undefined }));
+                    }
+                  }}
+                  className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                    formErrors.email ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                  }`}
                   placeholder="Nhập địa chỉ email"
                 />
                 {formErrors.email && <span className="!text-red-500 !text-xs !mt-1">{formErrors.email}</span>}
@@ -1161,8 +1253,16 @@ export default function UserManagement() {
                     <Input
                       id="edit-phoneNumber"
                       value={newUser.phoneNumber}
-                      onChange={(e) => setNewUser({ ...newUser, phoneNumber: e.target.value })}
-                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      onChange={(e) => {
+                        setNewUser({ ...newUser, phoneNumber: e.target.value });
+                        // Clear phone error when user starts typing
+                        if (formErrors.phoneNumber) {
+                          setFormErrors(prev => ({ ...prev, phoneNumber: undefined }));
+                        }
+                      }}
+                      className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                        formErrors.phoneNumber ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                      }`}
                       placeholder="+84901234567"
                     />
                     {formErrors.phoneNumber && <span className="!text-red-500 !text-xs !mt-1">{formErrors.phoneNumber}</span>}
@@ -1177,8 +1277,16 @@ export default function UserManagement() {
                     <Input
                       id="edit-studentNumber"
                       value={newUser.studentNumber}
-                      onChange={(e) => setNewUser({ ...newUser, studentNumber: e.target.value })}
-                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      onChange={(e) => {
+                        setNewUser({ ...newUser, studentNumber: e.target.value });
+                        // Clear student number error when user starts typing
+                        if (formErrors.studentNumber) {
+                          setFormErrors(prev => ({ ...prev, studentNumber: undefined }));
+                        }
+                      }}
+                      className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                        formErrors.studentNumber ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                      }`}
                       placeholder="HS2024001"
                     />
                     {formErrors.studentNumber && <span className="!text-red-500 !text-xs !mt-1">{formErrors.studentNumber}</span>}
@@ -1263,8 +1371,16 @@ export default function UserManagement() {
                     <Input
                       id="edit-teacherCode"
                       value={newUser.teacherCode}
-                      onChange={(e) => setNewUser({ ...newUser, teacherCode: e.target.value })}
-                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      onChange={(e) => {
+                        setNewUser({ ...newUser, teacherCode: e.target.value });
+                        // Clear teacher code error when user starts typing
+                        if (formErrors.teacherCode) {
+                          setFormErrors(prev => ({ ...prev, teacherCode: undefined }));
+                        }
+                      }}
+                      className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                        formErrors.teacherCode ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                      }`}
                       placeholder="GV001"
                     />
                     {formErrors.teacherCode && <span className="!text-red-500 !text-xs !mt-1">{formErrors.teacherCode}</span>}
