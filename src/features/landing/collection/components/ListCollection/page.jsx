@@ -15,11 +15,9 @@ import { Link } from "react-router-dom";
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/common/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+import { 
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, 
+  DropdownMenuItem, useDropdownMenu 
 } from "@/common/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -35,7 +33,7 @@ import {
   LoadingOverlay,
   LoadingCollection,
 } from "@/common/components/ui/loading";
-
+import albumCover from "@/img/albumCover.png"; 
 export default function CollectionsList() {
   const { getCollectionsByUser, createCollection, collectionLoading } =
     useCollectionApi();
@@ -73,21 +71,21 @@ export default function CollectionsList() {
   }, [pageNumber, pageSize]);
 
   const create = async () => {
-  try {
-    if (!newName.trim()) return;
-    const payload = { name: newName };
-    const response = await createCollection(payload);
-    console.log("✅ Tạo thành công:", response);
-    
-    setNewName("");
-    closeDialog();
-    const updated = await getCollectionsByUser(pageNumber, pageSize);
-    setCollections(updated.data.data || []);
-    setTotalPages(updated.data.totalPages);
-  } catch (err) {
-    console.error("❌ Lỗi khi tạo bộ sưu tập:", err);
-  }
-};
+    try {
+      if (!newName.trim()) return;
+      const payload = { name: newName };
+      const response = await createCollection(payload);
+      console.log("✅ Tạo thành công:", response);
+
+      setNewName("");
+      closeDialog();
+      const updated = await getCollectionsByUser(pageNumber, pageSize);
+      setCollections(updated.data.data || []);
+      setTotalPages(updated.data.totalPages);
+    } catch (err) {
+      console.error("❌ Lỗi khi tạo bộ sưu tập:", err);
+    }
+  };
 
   if (initialLoading) {
     return <LoadingOverlay isLoading />;
@@ -164,6 +162,7 @@ export default function CollectionsList() {
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCollections.map((collection) => (
+              
               <Card
                 key={collection.id}
                 className="hover-lift card-shine group overflow-hidden"
@@ -171,8 +170,8 @@ export default function CollectionsList() {
                 <CardHeader className="p-0">
                   <div className="relative">
                     <img
-                      src={collection.coverImage || "/placeholder.svg"}
-                      alt={collection.name}
+                      src={collection.coverImage || albumCover}
+                      alt={collection.name || "Default Album Cover"}
                       className="w-full h-48 object-cover"
                     />
                     <div className="absolute top-2 right-2">
@@ -272,7 +271,7 @@ export default function CollectionsList() {
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span className="flex items-center">
                           <Calendar className="w-3 h-3 mr-1" />
-                          Cập nhật:{" "}
+                          Ngày tạo:{" "}
                           {new Date(collection.createdAt).toLocaleDateString(
                             "vi-VN"
                           )}
