@@ -76,6 +76,9 @@ export const useToast = () => {
   const createCollection = () => showSuccess(COLLECTION_MESSAGES.SUCCESS.CREATE)
   const updateCollection = () => showSuccess(COLLECTION_MESSAGES.SUCCESS.UPDATE)
   const nameIsNull = () => showError(COLLECTION_MESSAGES.ERROR.REQUIRE_NAME)
+  const loadAlbumFail = () =>showError(COLLECTION_MESSAGES.ERROR.LOAD_FAILD)
+  const addCollectionIteamFail = () => showError(COLLECTION_MESSAGES.ERROR.SAVE_ALBUM_FAILD)
+  const addCollectionIteamSuccess = () => showError(COLLECTION_MESSAGES.SUCCESS.ADD)
 
   return {
     // Basic toast methods
@@ -102,6 +105,9 @@ export const useToast = () => {
     createCollection,
     updateCollection,
     nameIsNull,
+    loadAlbumFail,
+    addCollectionIteamFail,
+    addCollectionIteamSuccess,
     // Direct access to messages
     PROFILE_MESSAGES,
     AUTH_MESSAGES,

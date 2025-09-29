@@ -27,11 +27,11 @@ export function usePostApi() {
     );
   });
 
-  const userPost = async (sortBy) => {
+  const userPost = async (sortOrder ) => {
     const token = localStorage.getItem("token");
     return executeApiCall(
       postService.getUserPost.bind(postService),
-      [token, sortBy],
+      [token, sortOrder ],
       { setLoading: setSaveLoading, setError }
     );
   };
@@ -44,6 +44,14 @@ export function usePostApi() {
       { setLoading: setSaveLoading, setError }
     );
   };
+  const likePost = useRef(async (payload) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      postService.LikePost.bind(postService),
+      [payload, token],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
 
   return {
     postLoading,
@@ -51,6 +59,7 @@ export function usePostApi() {
     error,
     createPost: createPost.current,
     updatePost: updatePost.current,
+    likePost: likePost.current,
     userPost,
     deletePost,
   };

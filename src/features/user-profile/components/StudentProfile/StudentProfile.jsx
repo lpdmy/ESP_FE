@@ -114,9 +114,7 @@ export default function StudentProfile() {
   useEffect(() => {
   const loadPost = async () => {
     try {
-        console.log("🔎 sortBy hiện tại:", sortBy);
       const response = await userPost(sortBy);
-      console.log("📄 Response.data:", response?.data);
       setPost(response?.data || []);
     } catch (error) {
       console.error("❌ Lỗi khi load post:", error);
@@ -129,6 +127,15 @@ export default function StudentProfile() {
   const handleOpenCreatePostModal = () => {
     setIsCreatePostModalOpen(true);
   };
+  const handleCreatePost = async (newPost) => {
+  try {
+    const response = await userPost(sortBy); // gọi lại API
+    setPost(response?.data || []);
+  } catch (error) {
+    console.error("❌ Lỗi khi reload bài đăng:", error);
+  }
+};
+
 
   const handleCloseCreatePostModal = () => {
     setIsCreatePostModalOpen(false);
@@ -152,11 +159,10 @@ export default function StudentProfile() {
   };
 
   const handleConfirmDelete = (postId) => {
-    // TODO: Implement delete post logic
-    console.log('Delete post:', postId);
-    setIsDeleteModalOpen(false);
-    setSelectedPost(null);
-  };
+  setPost(prev => prev.filter(p => p.id !== postId));
+  setIsDeleteModalOpen(false);
+  setSelectedPost(null);
+};
 
   const handleCloseUpdateModal = () => {
     setIsUpdateModalOpen(false);
@@ -605,8 +611,8 @@ export default function StudentProfile() {
                           >
                             {sortBy === "newest" && "Mới nhất"}
                             {sortBy === "oldest" && "Cũ nhất"}
-                            {sortBy === "most_liked" && "Nhiều lượt thích"}
-                            {sortBy === "most_commented" && "Nhiều bình luận"}
+                            {sortBy === "mostliked" && "Nhiều lượt thích"}
+                            {sortBy === "mostcommented" && "Nhiều bình luận"}
                             <ChevronDown className="w-3 h-3 ml-1" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -647,11 +653,11 @@ export default function StudentProfile() {
 
                           <DropdownMenuItem
                             onClick={() => {
-                              setSortBy("most_liked");
+                              setSortBy("mostliked");
                               closeSortDropdown();
                             }}
                             className={`cursor-pointer ${
-                              sortBy === "most_liked"
+                              sortBy === "mostliked"
                                 ? "bg-orange-50 text-orange-600"
                                 : "hover:bg-gray-50"
                             }`}
@@ -661,11 +667,11 @@ export default function StudentProfile() {
 
                           <DropdownMenuItem
                             onClick={() => {
-                              setSortBy("most_commented");
+                              setSortBy("mostcommented");
                               closeSortDropdown();
                             }}
                             className={`cursor-pointer ${
-                              sortBy === "most_commented"
+                              sortBy === "mostcommented"
                                 ? "bg-orange-50 text-orange-600"
                                 : "hover:bg-gray-50"
                             }`}
@@ -684,8 +690,10 @@ export default function StudentProfile() {
                     <PostCard
                       key={p.id}
                       author={p.userFullName || "Ẩn danh"}
+                      postId={p.id}
+                      isLiked={p.isLikedByCurrentUser}
                       class={p.classGroupId || "Học sinh"}
-                      time="Vừa xong" // nếu API chưa có createdAt thì tạm hardcode
+                      time={p.createdAt}
                        content={p.body}
                        image={
                          p.attachmentUrls && p.attachmentUrls.length > 0
@@ -694,7 +702,7 @@ export default function StudentProfile() {
                        }
                        images={p.attachmentUrls || []}
                       likes={p.likeCount}
-                      comments={p.comments.length}
+                      comments={p.comments?.length || 0}
                       hashtags={p.hashtags || []}
                       shares={0} // nếu backend chưa trả về shareCount
                       isVerified={true}
@@ -702,6 +710,7 @@ export default function StudentProfile() {
                        currentUserId={currentUserId} // ID của người dùng hiện tại
                        onEdit={() => handleEditPost(p)}
                        onDelete={() => handleDeletePost(p)}
+                       title={p.title}
                      />
                   ))
                 ) : (
@@ -778,6 +787,7 @@ export default function StudentProfile() {
       <CreatePostModal
         isOpen={isCreatePostModalOpen}
         onClose={handleCloseCreatePostModal}
+        onCreate={handleCreatePost}
       />
 
       {/* Update Post Modal */}

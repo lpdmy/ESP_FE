@@ -16,5 +16,8 @@ export class CollectionService extends ApiService {
   async updateCollection(token,payload){
     return this.put(API_CONFIG.COLLECTION.UPDATE_COLLECTION, payload, token);
   }
+  async addCollectionIteam(token,payload){
+    return this.post(API_CONFIG.COLLECTION.ADD_COLLECTION_ITEAM, payload, token);
+  }
 
 }
