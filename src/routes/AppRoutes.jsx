@@ -4,6 +4,7 @@ import { authRoutes } from "./AuthRoutes";
 import { adminRoutes } from "./AdminRoutes";
 import { profileRoutes } from "./UserProfileRoutes";
 import { onboardingRoutes } from "./OnboardingRoutes";
+import { collectionsRoutes} from "./CollectionRoutes";
 
 export default function AppRoutes() {
   return (
@@ -13,6 +14,7 @@ export default function AppRoutes() {
       {...adminRoutes}
       {...profileRoutes}
       {...onboardingRoutes}
+      {...collectionsRoutes}
     </Routes>
   );
 }
