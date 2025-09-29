@@ -59,46 +59,6 @@ const DeletePostModal = ({ isOpen, onClose, post, onDelete }) => {
             <p className="text-gray-600">
               Bạn có chắc chắn muốn xóa bài đăng này không? Hành động này không thể hoàn tác.
             </p>
-            
-            {/* Post Preview */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full flex items-center justify-center">
-                  <span className="text-white font-semibold text-sm">
-                    {post.user?.name?.charAt(0) || "?"}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <span className="font-medium text-gray-900 text-sm">
-                      {post.user?.name || "Ẩn danh"}
-                    </span>
-                    <span className="text-xs text-gray-500">• 2 giờ trước</span>
-                  </div>
-                  <p className="text-sm text-gray-700 line-clamp-2">
-                    {post.content}
-                  </p>
-                  {post.hashtags && post.hashtags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {post.hashtags.slice(0, 3).map((tag, index) => (
-                        <span
-                          key={index}
-                          className="text-blue-600 text-xs font-medium"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                      {post.hashtags.length > 3 && (
-                        <span className="text-gray-500 text-xs">
-                          +{post.hashtags.length - 3} khác
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
               <div className="flex items-start space-x-2">
                 <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />

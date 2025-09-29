@@ -40,6 +40,15 @@ export function useCollectionApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
+  const addCollectionIteam = useRef(async (payload) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      collectionService.addCollectionIteam.bind(collectionService),
+      [ token,payload],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  
   
 
   return {
@@ -47,6 +56,7 @@ export function useCollectionApi() {
     saveLoading,
     error,
     getCollectionsByUser,
+    addCollectionIteam: addCollectionIteam.current,
     updateCollection : updateCollection.current,
     deleteCollection: deleteCollection.current,
     createCollection: createCollection.current

@@ -71,13 +71,15 @@ export const API_CONFIG = {
     CREATE_POST : '/post',
     USER_POST:'/post/user',
     DELETE_POST:'/post',
-    UPDATE_POST:'/post'
+    UPDATE_POST:'/post',
+    LIKE_POST:'/post/like'
   },
   COLLECTION :{
     CREATE_COLLECTION :'/collection',
     DELETE_COLLECTION :'/collection',
     UPDATE_COLLECTION :'/collection',
     USER_COLLECTION :'/collection/user',
+    ADD_COLLECTION_ITEAM: '/collection/add-collection-iteam'
   }
 };
 

@@ -223,41 +223,96 @@ export default function CollectionsList() {
               return (
                 <Card
                   key={collection.id}
-                  className="hover-lift card-shine group overflow-hidden"
+                  className="hover-lift card-shine group overflow-hidden !p-0"
                 >
                   <CardHeader className="p-0">
                     <div className="relative">
-                      {collection.collectionItems &&
-                      collection.collectionItems.length > 0 ? (
-                        collection.collectionItems.length === 1 ? (
-                          <img
-                            src={
-                              collection.collectionItems[0].image || albumCover
-                            }
-                            alt="Ảnh 1"
-                            className="w-full h-48 object-cover"
-                          />
+                      <div className="w-full h-48 rounded overflow-hidden mb-3">
+                        {collection.collectionItems &&
+                        collection.collectionItems.length > 0 ? (
+                          <>
+                            {/* 1 ảnh */}
+                            {collection.collectionItems.length === 1 && (
+                              <img
+                                src={
+                                  collection.collectionItems[0].image ||
+                                  albumCover
+                                }
+                                alt="Ảnh 1"
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+
+                            {/* 2 ảnh → chia dọc (trên / dưới) */}
+                            {collection.collectionItems.length === 2 && (
+                              <div className="grid grid-rows-2 w-full h-full">
+                                {collection.collectionItems
+                                  .slice(0, 2)
+                                  .map((item, idx) => (
+                                    <img
+                                      key={idx}
+                                      src={item.image || albumCover}
+                                      alt={`Ảnh ${idx + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ))}
+                              </div>
+                            )}
+
+                            {/* 3 ảnh → bên trái 1 ảnh, bên phải 2 ảnh */}
+                            {collection.collectionItems.length === 3 && (
+                              <div className="grid grid-cols-2 gap-0 w-full h-48">
+                                {/* Bên trái chiếm 1/2 */}
+                                <div className="h-48">
+                                  <img
+                                    src={
+                                      collection.collectionItems[0].image ||
+                                      albumCover
+                                    }
+                                    alt="Ảnh 1"
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+
+                                {/* Bên phải chia đều 2 ảnh theo chiều dọc */}
+                                <div className="grid grid-rows-2 gap-0 h-48">
+                                  {collection.collectionItems
+                                    .slice(1, 3)
+                                    .map((item, idx) => (
+                                      <img
+                                        key={idx}
+                                        src={item.image || albumCover}
+                                        alt={`Ảnh ${idx + 2}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+                            {/* 4 ảnh → lưới 2x2 */}
+                            {collection.collectionItems.length >= 4 && (
+                              <div className="grid grid-cols-2 grid-rows-2 w-full h-full">
+                                {collection.collectionItems
+                                  .slice(0, 4)
+                                  .map((item, idx) => (
+                                    <img
+                                      key={idx}
+                                      src={item.image || albumCover}
+                                      alt={`Ảnh ${idx + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ))}
+                              </div>
+                            )}
+                          </>
                         ) : (
-                          <div className="grid grid-cols-2 grid-rows-2 gap-0 w-full h-48">
-                            {collection.collectionItems
-                              .slice(0, 4)
-                              .map((item, index) => (
-                                <img
-                                  key={index}
-                                  src={item.image || albumCover}
-                                  alt={`Ảnh ${index + 1}`}
-                                  className="object-cover w-full h-full"
-                                />
-                              ))}
-                          </div>
-                        )
-                      ) : (
-                        <img
-                          src={albumCover}
-                          alt={collection.name || "Default Album Cover"}
-                          className="w-full h-48 object-cover"
-                        />
-                      )}
+                          <img
+                            src={albumCover}
+                            alt="Default Album Cover"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
 
                       <div className="absolute top-2 right-2">
                         <DropdownMenu>
@@ -340,11 +395,88 @@ export default function CollectionsList() {
                 <Card key={collection.id} className="hover-lift !p-4">
                   <CardContent className="!px-0">
                     <div className="flex gap-4">
-                      <img
-                        src={firstImage}
-                        alt={collection.name}
-                        className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
-                      />
+                      <div className="w-40 h-40 rounded overflow-hidden">
+                        {collection.collectionItems &&
+                        collection.collectionItems.length > 0 ? (
+                          <>
+                            {/* 1 ảnh */}
+                            {collection.collectionItems.length === 1 && (
+                              <img
+                                src={
+                                  collection.collectionItems[0].image ||
+                                  albumCover
+                                }
+                                alt="Ảnh 1"
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+
+                            {/* 2 ảnh → chia ngang */}
+                            {collection.collectionItems.length === 2 && (
+                              <div className="grid grid-cols-2 gap-0 w-full h-full">
+                                {collection.collectionItems
+                                  .slice(0, 2)
+                                  .map((item, idx) => (
+                                    <img
+                                      key={idx}
+                                      src={item.image || albumCover}
+                                      alt={`Ảnh ${idx + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ))}
+                              </div>
+                            )}
+
+                            {/* 3 ảnh → bên trái 1 ảnh lớn, bên phải 2 ảnh nhỏ */}
+                            {collection.collectionItems.length === 3 && (
+                              <div className="grid grid-cols-2 gap-0 w-full h-full">
+                                <img
+                                  src={
+                                    collection.collectionItems[0].image ||
+                                    albumCover
+                                  }
+                                  alt="Ảnh 1"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="grid grid-rows-2 gap-0 h-full">
+                                  {collection.collectionItems
+                                    .slice(1, 3)
+                                    .map((item, idx) => (
+                                      <img
+                                        key={idx}
+                                        src={item.image || albumCover}
+                                        alt={`Ảnh ${idx + 2}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 4 ảnh → lưới 2x2 */}
+                            {collection.collectionItems.length >= 4 && (
+                              <div className="grid grid-cols-2 grid-rows-2 gap-0 w-full h-full">
+                                {collection.collectionItems
+                                  .slice(0, 4)
+                                  .map((item, idx) => (
+                                    <img
+                                      key={idx}
+                                      src={item.image || albumCover}
+                                      alt={`Ảnh ${idx + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ))}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <img
+                            src={albumCover}
+                            alt="Default Album Cover"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between mb-2">
                           <Link to={`/collection/${collection.id}`}>

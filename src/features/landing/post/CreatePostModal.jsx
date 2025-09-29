@@ -136,7 +136,7 @@ const PRIVACY_OPTIONS = [
   },
 ];
 
-const CreatePostModal = ({ isOpen, onClose }) => {
+const CreatePostModal = ({ isOpen, onClose, onCreate }) => {
   const user = useSelector((state) => state.user.user);
   const { showError } = useToast();
   const toast = useToast();
@@ -196,7 +196,9 @@ const CreatePostModal = ({ isOpen, onClose }) => {
   const [modalHeight, setModalHeight] = useState("auto");
   const [fixedHeight, setFixedHeight] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
-  const contentMaxHeight = isMobile ? "calc(90vh - 180px)" : "calc(95vh - 220px)";
+  const contentMaxHeight = isMobile
+    ? "calc(90vh - 180px)"
+    : "calc(95vh - 220px)";
 
   const slideContainerRef = useRef(null);
   const modalRef = useRef(null);
@@ -398,7 +400,7 @@ const CreatePostModal = ({ isOpen, onClose }) => {
   const handlePost = async () => {
     if (!canPost) return;
     setUiState((prev) => ({ ...prev, isAnimating: true }));
-    setErrorMessage(""); // reset lỗi cũ trước khi gửi
+    setErrorMessage(""); // reset lỗi cũ trước khi gửi  
 
     try {
       const uploadedAttachments = [];
@@ -451,11 +453,11 @@ const CreatePostModal = ({ isOpen, onClose }) => {
         attachmentUrls: uploadedAttachments,
         hashtagInput: "",
       };
-
-      console.log("📤 Creating post:", payload);
-      await createPost(payload);
-
-      // ✅ Thành công
+      const newPost = await createPost(payload);
+      if (onCreate) {
+        onCreate(newPost.data || newPost);
+      }
+      onClose();
       toast.createPostSuccess();
       clearDraft();
       setFormData({
@@ -479,10 +481,7 @@ const CreatePostModal = ({ isOpen, onClose }) => {
         selectedAlbum: null,
         newAlbumName: "",
       });
-
-      onClose(); // ✅ chỉ đóng modal khi thành công
     } catch (error) {
-      // ❌ Thất bại → show lỗi trong modal
       const message =
         error?.response?.data?.message ||
         error?.message ||
@@ -867,9 +866,7 @@ const CreatePostModal = ({ isOpen, onClose }) => {
       >
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-        <Card
-          className="relative w-full md:max-w-3xl md:mx-4 bg-white shadow-2xl md:rounded-lg overflow-hidden !p-0"
-        >
+        <Card className="relative w-full md:max-w-3xl md:mx-4 bg-white shadow-2xl md:rounded-lg overflow-hidden !p-0">
           <div
             ref={slideContainerRef}
             className={`h-full ${
@@ -998,10 +995,10 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                   </div>
                 </div>
                 {errorMessage && (
-                    <div className="mx-6 mb-3 p-3 bg-red-50 border-l-4 border-red-400 rounded">
-                      <p className="text-sm text-red-700">{errorMessage}</p>
-                    </div>
-                  )}
+                  <div className="mx-6 mb-3 p-3 bg-red-50 border-l-4 border-red-400 rounded">
+                    <p className="text-sm text-red-700">{errorMessage}</p>
+                  </div>
+                )}
                 <div
                   className="px-6 py-4 pt-2 space-y-5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
                   style={{ maxHeight: contentMaxHeight }}
