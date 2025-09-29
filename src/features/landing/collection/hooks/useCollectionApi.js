@@ -24,12 +24,31 @@ export function useCollectionApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
+  const deleteCollection = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      collectionService.deleteCollection.bind(collectionService),
+      [ token,id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const updateCollection = useRef(async (payload) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      collectionService.updateCollection.bind(collectionService),
+      [ token,payload],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  
 
   return {
     collectionLoading,
     saveLoading,
     error,
     getCollectionsByUser,
+    updateCollection : updateCollection.current,
+    deleteCollection: deleteCollection.current,
     createCollection: createCollection.current
   };
 }

@@ -75,8 +75,8 @@ export const API_CONFIG = {
   },
   COLLECTION :{
     CREATE_COLLECTION :'/collection',
-    CREATE_COLLECTION :'/collection',
-    CREATE_COLLECTION :'/collection',
+    DELETE_COLLECTION :'/collection',
+    UPDATE_COLLECTION :'/collection',
     USER_COLLECTION :'/collection/user',
   }
 };

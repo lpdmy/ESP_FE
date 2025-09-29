@@ -22,6 +22,6 @@ export const ROUTES = {
   },
   COLLECTION:{
     LIST_COLLECTION : "/list-collection",
-    COLLECTION_DETAIL: "/collection-detail/{id}"
+    COLLECTION_DETAIL: "/collection-detail/:id"
   }
 };
