@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/common/components/ui/card"
 import { Button } from "@/common/components/ui/button"
 import { Input } from "@/common/components/ui/input"
@@ -129,6 +130,7 @@ const UserActionsDropdown = ({ user, onView, onEdit, onDelete }) => {
 };
 
 export default function UserManagement() {
+  const navigate = useNavigate()
   const [users, setUsers] = useState([])
   const [filteredUsers, setFilteredUsers] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -695,19 +697,14 @@ export default function UserManagement() {
           <p className="text-gray-600 mt-1">Quản lý và giám sát tất cả người dùng trên nền tảng</p>
         </div>
         <div className="flex gap-3">
-          <div className="relative">
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleExcelImport}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              id="excel-import"
-            />
-            <Button variant="outline" className="!border-green-600 !text-green-600 hover:!bg-green-50 !bg-transparent">
-              <Upload className="h-4 w-4 mr-2" />
-              Nhập từ Excel
-            </Button>
-          </div>
+          <Button 
+            variant="outline" 
+            className="!border-green-600 !text-green-600 hover:!bg-green-50 !bg-transparent"
+            onClick={() => navigate('/admin/import-students')}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Nhập từ Excel
+          </Button>
           <Button 
             onClick={() => {
               // Reset form khi mở modal create

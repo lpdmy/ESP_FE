@@ -1,0 +1,6 @@
+studentId,firstName,lastName,email,phone,dateOfBirth,enrollmentYear,grade,class
+HS001,Nguyễn Văn,An,invalid-email,0123456789,2010-05-15,2024,10,10A1
+HS002,,Bình,tran.thi.binh@example.com,0987654321,2010-08-20,2024,10,10A1
+HS003,Lê Văn,,le.van.cuong@example.com,invalid-phone,2010-03-10,2024,10,10A2
+,Phạm Thị,Dung,pham.thi.dung@example.com,0123456792,2010-12-05,2024,10,10A2
+HS005,Hoàng Văn,Em,hoang.van.em@example.com,0123456793,invalid-date,2024,10,10B1

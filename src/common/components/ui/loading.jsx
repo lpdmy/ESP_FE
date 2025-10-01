@@ -87,11 +87,14 @@ export function LoadingButton({
   variant = "default",
   ...props 
 }) {
+  // Remove isLoading from props to prevent it from being passed to DOM
+  const { isLoading: _, ...buttonProps } = { isLoading, ...props };
+  
   return (
     <Button 
       className={`relative overflow-hidden transition-all duration-200 ${isLoading ? 'cursor-not-allowed' : ''} ${className}`}
       disabled={isLoading}
-      {...props}
+      {...buttonProps}
     >
       {isLoading && (
         <>
