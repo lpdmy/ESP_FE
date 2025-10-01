@@ -6,11 +6,26 @@ export class UserService extends ApiService {
   //   return this.get(API_CONFIG.USER.GET_ALL, token);
   // }
 
-  async getAllUsers(pageNumber, pageSize, search, status, token) {
+  async getAllUsers(pageNumber, pageSize, search, status, role, sortField, sortDirection, token) {
     let url = `${API_CONFIG.USER.GET_ALL}?pageNumber=${pageNumber}&pageSize=${pageSize}&search=${search || ''}`;
+    
     if (status !== null && status !== undefined) {
       url += `&status=${status}`;
     }
+    
+    if (role !== null && role !== undefined && role !== 'all') {
+      // Convert role string to number
+      const roleMap = { 'admin': 0, 'student': 4, 'teacher': 2 };
+      const roleNumber = roleMap[role];
+      if (roleNumber !== undefined) {
+        url += `&role=${roleNumber}`;
+      }
+    }
+    
+    if (sortField && sortDirection) {
+      url += `&sortField=${sortField}&sortDirection=${sortDirection}`;
+    }
+    
     return this.get(url, token);
   }
 
