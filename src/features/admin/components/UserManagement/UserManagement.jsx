@@ -53,10 +53,12 @@ const subjects = [
   { value: "GDCD", label: "Giáo dục công dân" },
 ]
 
+// Generate enrollment years dynamically (current year and 2 previous years)
+const currentYear = new Date().getFullYear();
 const enrollmentYears = [
-  { value: 2024, label: "2024" },
-  { value: 2023, label: "2023" },
-  { value: 2022, label: "2022" },
+  { value: currentYear, label: currentYear.toString() },
+  { value: currentYear - 1, label: (currentYear - 1).toString() },
+  { value: currentYear - 2, label: (currentYear - 2).toString() },
 ]
 
 const getClassesByGrade = (grade) => {
@@ -158,7 +160,7 @@ export default function UserManagement() {
     status: 1, // Default to Active
     // Student fields
     studentNumber: "", // Sẽ đổi thành mã học sinh
-    enrollmentYear: 2024,
+    enrollmentYear: currentYear,
     birthDate: "",
     grade: "", // Khối
     classGroupId: "",
@@ -217,10 +219,10 @@ export default function UserManagement() {
       
       // Prepare filter parameters
       const statusParam = statusFilter === "all" ? null : parseInt(statusFilter);
+      const roleParam = roleFilter === "all" ? null : roleFilter;
       
-      // TODO: Backend cần hỗ trợ role filtering và sorting
-      // Hiện tại chỉ gửi status filter
-      const response = await getAllUsers(pageNumber, pageSize, actualSearchTerm, statusParam);
+      // Send all parameters to backend for filtering and sorting
+      const response = await getAllUsers(pageNumber, pageSize, actualSearchTerm, statusParam, roleParam, sortField, sortDirection);
       console.log("API Response:", response);
       
       if (response?.data) {
@@ -233,57 +235,9 @@ export default function UserManagement() {
         
         const userArray = Array.isArray(userData) ? userData : [];
         
-        // Apply frontend filtering for role (temporary until backend supports it)
-        let filteredArray = userArray;
-        if (roleFilter !== "all") {
-          const roleMap = { 
-            "admin": 0, 
-            "student": 4, 
-            "teacher": 2 
-          };
-          const roleNumber = roleMap[roleFilter];
-          if (roleNumber !== undefined) {
-            filteredArray = userArray.filter(user => user.role === roleNumber);
-          }
-        }
-        
-        // Apply frontend sorting (temporary until backend supports it)
-        if (sortField && sortDirection) {
-          filteredArray = [...filteredArray].sort((a, b) => {
-            let aValue, bValue;
-            
-            // Handle different field types
-            if (sortField === "id") {
-              aValue = a.role === 4 ? a.studentNumber : a.role === 2 ? a.teacherCode : "";
-              bValue = b.role === 4 ? b.studentNumber : b.role === 2 ? b.teacherCode : "";
-            } else if (sortField === "name") {
-              aValue = a.name || `${a.firstName || ''} ${a.lastName || ''}`.trim();
-              bValue = b.name || `${b.firstName || ''} ${b.lastName || ''}`.trim();
-            } else if (sortField === "class") {
-              aValue = a.class || a.position || a.classGroupId || "";
-              bValue = b.class || b.position || b.classGroupId || "";
-            } else {
-              aValue = a[sortField] || "";
-              bValue = b[sortField] || "";
-            }
-            
-            // Handle string comparison
-            if (typeof aValue === "string" && typeof bValue === "string") {
-              const comparison = aValue.localeCompare(bValue, 'vi-VN');
-              return sortDirection === "asc" ? comparison : -comparison;
-            }
-            
-            // Handle number comparison
-            if (typeof aValue === "number" && typeof bValue === "number") {
-              return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
-            }
-            
-            return 0;
-          });
-        }
-        
-        setUsers(filteredArray);
-        setFilteredUsers(filteredArray);
+        // Backend now handles all filtering and sorting
+        setUsers(userArray);
+        setFilteredUsers(userArray);
         setTotalCount(totalCount);
         setTotalPages(Math.ceil(totalCount / pageSize));
         
@@ -344,7 +298,7 @@ export default function UserManagement() {
       status: newUser.status, // Keep status
       // Clear role-specific fields
       studentNumber: "",
-      enrollmentYear: 2024,
+      enrollmentYear: currentYear,
       birthDate: "",
       grade: "",
       classGroupId: "",
@@ -424,7 +378,7 @@ export default function UserManagement() {
       status: user.status !== undefined ? user.status : 1,
       studentNumber: user.studentNumber || "",
       enrollmentYear: user.enrollmentYear || 2024,
-      birthDate: formatDateForInput(user.birthDate),
+      birthDate: formatDateForInput(user.birthdate),
       grade: user.grade || "",
       classGroupId: user.classGroupId || "",
       teacherCode: user.teacherCode || "",
@@ -471,9 +425,6 @@ export default function UserManagement() {
       // Refresh users list
       await fetchUsers();
       
-      // Refresh total stats
-      await fetchTotalStats();
-      
       // Reset form and close modal
       setNewUser({
         email: "",
@@ -483,7 +434,7 @@ export default function UserManagement() {
         role: 0,
         avatarUrl: "",
         studentNumber: "",
-        enrollmentYear: 2024,
+        enrollmentYear: currentYear,
         birthDate: "",
         grade: "",
         classGroupId: "",
@@ -495,7 +446,33 @@ export default function UserManagement() {
       toast.success("Cập nhật người dùng thành công!")
     } catch (error) {
       console.error("Error updating user:", error);
-      toast.error("Không thể cập nhật người dùng");
+      
+      // Handle specific validation errors
+      let hasFieldError = false;
+      if (error.message) {
+        const errorMessage = error.message.toLowerCase();
+        
+        // Check for email duplication
+        if (errorMessage.includes('email') && errorMessage.includes('đã tồn tại')) {
+          setFormErrors(prev => ({ ...prev, email: "Email đã tồn tại" }));
+          hasFieldError = true;
+        }
+        
+        // Check for username duplication
+        if (errorMessage.includes('id') && errorMessage.includes('đã tồn tại')) {
+          if (newUser.role === 4) {
+            setFormErrors(prev => ({ ...prev, studentNumber: "Mã học sinh đã tồn tại" }));
+          } else if (newUser.role === 2) {
+            setFormErrors(prev => ({ ...prev, teacherCode: "Mã giáo viên đã tồn tại" }));
+          }
+          hasFieldError = true;
+        }
+      }
+      
+      // Show general error only if no specific field error was set
+      if (!hasFieldError) {
+        toast.error("Không thể cập nhật người dùng");
+      }
     }
   };
 
@@ -541,9 +518,6 @@ export default function UserManagement() {
       
       // Refresh users list
       await fetchUsers();
-      
-      // Refresh total stats
-      await fetchTotalStats();
       
       toast.success(`Đã ${action} người dùng thành công!`);
       
@@ -602,9 +576,6 @@ export default function UserManagement() {
       // Refresh users list
       await fetchUsers();
       
-      // Refresh total stats
-      await fetchTotalStats();
-      
       // Reset form
       setNewUser({
         email: "",
@@ -614,7 +585,7 @@ export default function UserManagement() {
         role: 0, // Default to Admin
         avatarUrl: "",
         studentNumber: "",
-        enrollmentYear: 2024,
+        enrollmentYear: currentYear,
         birthDate: "",
         grade: "",
         classGroupId: "",
@@ -626,7 +597,33 @@ export default function UserManagement() {
       toast.success("Tạo người dùng thành công!")
     } catch (error) {
       console.error("Error creating user:", error);
-      toast.error("Không thể tạo người dùng");
+      
+      // Handle specific validation errors
+      let hasFieldError = false;
+      if (error.message) {
+        const errorMessage = error.message.toLowerCase();
+        
+        // Check for email duplication
+        if (errorMessage.includes('email') && errorMessage.includes('đã tồn tại')) {
+          setFormErrors(prev => ({ ...prev, email: "Email đã tồn tại" }));
+          hasFieldError = true;
+        }
+        
+        // Check for username duplication
+        if (errorMessage.includes('id') && errorMessage.includes('đã tồn tại')) {
+          if (newUser.role === 4) {
+            setFormErrors(prev => ({ ...prev, studentNumber: "Mã học sinh đã tồn tại" }));
+          } else if (newUser.role === 2) {
+            setFormErrors(prev => ({ ...prev, teacherCode: "Mã giáo viên đã tồn tại" }));
+          }
+          hasFieldError = true;
+        }
+      }
+      
+      // Show general error only if no specific field error was set
+      if (!hasFieldError) {
+        toast.error("Không thể tạo người dùng");
+      }
     }
   }
 
@@ -675,16 +672,19 @@ export default function UserManagement() {
     </TableHead>
   )
 
+  // Fetch users when dependencies change
   useEffect(() => {
     fetchUsers();
   }, [pageNumber, pageSize, actualSearchTerm, statusFilter, roleFilter, sortField, sortDirection]);
 
-  // Fetch total stats on component mount
+  // Fetch total stats only on component mount and when search is cleared
   useEffect(() => {
-    fetchTotalStats();
-  }, []);
+    if (!actualSearchTerm) {
+      fetchTotalStats();
+    }
+  }, [actualSearchTerm]);
 
-  // Note: Filtering is now handled in fetchUsers to avoid conflicts with pagination
+  // Note: All filtering and sorting is now handled by backend for better performance
 
   return (
     <div className="space-y-6">
@@ -721,7 +721,7 @@ export default function UserManagement() {
                 status: 1, // Default to Active
                 // Student fields
                 studentNumber: "",
-                enrollmentYear: 2024,
+                enrollmentYear: currentYear,
                 birthDate: "",
                 grade: "", // Reset khối
                 classGroupId: "", // Reset lớp
@@ -741,7 +741,29 @@ export default function UserManagement() {
       </div>
 
       {/* Dialog Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={(open) => {
+        setIsModalOpen(open);
+        if (!open) {
+          // Reset form and errors when closing modal
+          setNewUser({
+            email: "",
+            firstName: "",
+            lastName: "",
+            phoneNumber: "",
+            role: 0,
+            avatarUrl: "",
+            status: 1,
+            studentNumber: "",
+            enrollmentYear: new Date().getFullYear(),
+            birthDate: "",
+            grade: "",
+            classGroupId: "",
+            teacherCode: "",
+            position: "",
+          });
+          setFormErrors({});
+        }
+      }}>
         <DialogTrigger asChild>
           <div style={{ display: 'none' }}></div>
         </DialogTrigger>
@@ -818,8 +840,16 @@ export default function UserManagement() {
                   id="email"
                   type="email"
                   value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                  onChange={(e) => {
+                    setNewUser({ ...newUser, email: e.target.value });
+                    // Clear email error when user starts typing
+                    if (formErrors.email) {
+                      setFormErrors(prev => ({ ...prev, email: undefined }));
+                    }
+                  }}
+                  className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                    formErrors.email ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                  }`}
                   placeholder="Nhập địa chỉ email"
                 />
                 {formErrors.email && <span className="!text-red-500 !text-xs !mt-1">{formErrors.email}</span>}
@@ -845,8 +875,16 @@ export default function UserManagement() {
                     <Input
                       id="phoneNumber"
                       value={newUser.phoneNumber}
-                      onChange={(e) => setNewUser({ ...newUser, phoneNumber: e.target.value })}
-                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      onChange={(e) => {
+                        setNewUser({ ...newUser, phoneNumber: e.target.value });
+                        // Clear phone error when user starts typing
+                        if (formErrors.phoneNumber) {
+                          setFormErrors(prev => ({ ...prev, phoneNumber: undefined }));
+                        }
+                      }}
+                      className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                        formErrors.phoneNumber ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                      }`}
                       placeholder="+84901234567"
                     />
                     {formErrors.phoneNumber && <span className="!text-red-500 !text-xs !mt-1">{formErrors.phoneNumber}</span>}
@@ -861,8 +899,16 @@ export default function UserManagement() {
                     <Input
                       id="studentNumber"
                       value={newUser.studentNumber}
-                      onChange={(e) => setNewUser({ ...newUser, studentNumber: e.target.value })}
-                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      onChange={(e) => {
+                        setNewUser({ ...newUser, studentNumber: e.target.value });
+                        // Clear student number error when user starts typing
+                        if (formErrors.studentNumber) {
+                          setFormErrors(prev => ({ ...prev, studentNumber: undefined }));
+                        }
+                      }}
+                      className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                        formErrors.studentNumber ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                      }`}
                       placeholder="HS2024001"
                     />
                     {formErrors.studentNumber && <span className="!text-red-500 !text-xs !mt-1">{formErrors.studentNumber}</span>}
@@ -895,6 +941,7 @@ export default function UserManagement() {
                       type="date"
                       value={newUser.birthDate}
                       onChange={(e) => setNewUser({ ...newUser, birthDate: e.target.value })}
+                      max={new Date(new Date().getFullYear() - 14, 11, 31).toISOString().split('T')[0]}
                       className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
                     />
                     {formErrors.birthDate && <span className="!text-red-500 !text-xs !mt-1">{formErrors.birthDate}</span>}
@@ -947,8 +994,16 @@ export default function UserManagement() {
                     <Input
                       id="teacherCode"
                       value={newUser.teacherCode}
-                      onChange={(e) => setNewUser({ ...newUser, teacherCode: e.target.value })}
-                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      onChange={(e) => {
+                        setNewUser({ ...newUser, teacherCode: e.target.value });
+                        // Clear teacher code error when user starts typing
+                        if (formErrors.teacherCode) {
+                          setFormErrors(prev => ({ ...prev, teacherCode: undefined }));
+                        }
+                      }}
+                      className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                        formErrors.teacherCode ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                      }`}
                       placeholder="GV001"
                     />
                     {formErrors.teacherCode && <span className="!text-red-500 !text-xs !mt-1">{formErrors.teacherCode}</span>}
@@ -974,7 +1029,27 @@ export default function UserManagement() {
             )}
           </div>
           <DialogFooter className="!flex !flex-col-reverse !gap-2 sm:!flex-row sm:!justify-end !mt-6">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)} className="!border !border-gray-300 !bg-white !text-gray-700 hover:!bg-gray-50 !px-4 !py-2 !rounded-md">
+            <Button variant="outline" onClick={() => {
+              setIsModalOpen(false);
+              // Reset form and errors when canceling
+              setNewUser({
+                email: "",
+                firstName: "",
+                lastName: "",
+                phoneNumber: "",
+                role: 0,
+                avatarUrl: "",
+                status: 1,
+                studentNumber: "",
+                enrollmentYear: new Date().getFullYear(),
+                birthDate: "",
+                grade: "",
+                classGroupId: "",
+                teacherCode: "",
+                position: "",
+              });
+              setFormErrors({});
+            }} className="!border !border-gray-300 !bg-white !text-gray-700 hover:!bg-gray-50 !px-4 !py-2 !rounded-md">
               Hủy
             </Button>
             <Button onClick={handleCreateUser} className="!bg-blue-600 hover:!bg-blue-700 !text-white !px-4 !py-2 !rounded-md">
@@ -1023,9 +1098,11 @@ export default function UserManagement() {
                       <Label className="!text-sm !font-medium !text-gray-700">Năm nhập học</Label>
                       <p className="!text-sm !text-gray-900 !mt-1">{selectedUser.enrollmentYear || 'N/A'}</p>
                     </div>
-                    <div>
-                      <Label className="!text-sm !font-medium !text-gray-700">Ngày sinh</Label>
-                      <p className="!text-sm !text-gray-900 !mt-1">{selectedUser.birthDate || 'N/A'}</p>
+                      <div>
+                        <Label className="!text-sm !font-medium !text-gray-700">Ngày sinh</Label>
+                        <p className="!text-sm !text-gray-900 !mt-1">
+                          {selectedUser.birthdate ? new Date(selectedUser.birthdate).toLocaleDateString('vi-VN') : 'N/A'}
+                        </p>
                     </div>
                     <div>
                       <Label className="!text-sm !font-medium !text-gray-700">Khối</Label>
@@ -1066,7 +1143,13 @@ export default function UserManagement() {
       </Dialog>
 
       {/* Edit User Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+      <Dialog open={isEditModalOpen} onOpenChange={(open) => {
+        setIsEditModalOpen(open);
+        if (!open) {
+          // Reset form and errors when closing edit modal
+          setFormErrors({});
+        }
+      }}>
         <DialogContent className="!sm:max-w-[425px] !bg-white !p-6 !rounded-lg !shadow-lg !border-0 !outline-none !ring-0">
           <DialogHeader className="!flex !flex-col !gap-2 !text-center sm:!text-left !mb-4">
             <DialogTitle className="!text-lg !font-semibold !text-gray-900">Chỉnh sửa người dùng</DialogTitle>
@@ -1136,8 +1219,16 @@ export default function UserManagement() {
                   id="edit-email"
                   type="email"
                   value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                  onChange={(e) => {
+                    setNewUser({ ...newUser, email: e.target.value });
+                    // Clear email error when user starts typing
+                    if (formErrors.email) {
+                      setFormErrors(prev => ({ ...prev, email: undefined }));
+                    }
+                  }}
+                  className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                    formErrors.email ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                  }`}
                   placeholder="Nhập địa chỉ email"
                 />
                 {formErrors.email && <span className="!text-red-500 !text-xs !mt-1">{formErrors.email}</span>}
@@ -1163,8 +1254,16 @@ export default function UserManagement() {
                     <Input
                       id="edit-phoneNumber"
                       value={newUser.phoneNumber}
-                      onChange={(e) => setNewUser({ ...newUser, phoneNumber: e.target.value })}
-                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      onChange={(e) => {
+                        setNewUser({ ...newUser, phoneNumber: e.target.value });
+                        // Clear phone error when user starts typing
+                        if (formErrors.phoneNumber) {
+                          setFormErrors(prev => ({ ...prev, phoneNumber: undefined }));
+                        }
+                      }}
+                      className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                        formErrors.phoneNumber ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                      }`}
                       placeholder="+84901234567"
                     />
                     {formErrors.phoneNumber && <span className="!text-red-500 !text-xs !mt-1">{formErrors.phoneNumber}</span>}
@@ -1179,8 +1278,16 @@ export default function UserManagement() {
                     <Input
                       id="edit-studentNumber"
                       value={newUser.studentNumber}
-                      onChange={(e) => setNewUser({ ...newUser, studentNumber: e.target.value })}
-                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      onChange={(e) => {
+                        setNewUser({ ...newUser, studentNumber: e.target.value });
+                        // Clear student number error when user starts typing
+                        if (formErrors.studentNumber) {
+                          setFormErrors(prev => ({ ...prev, studentNumber: undefined }));
+                        }
+                      }}
+                      className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                        formErrors.studentNumber ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                      }`}
                       placeholder="HS2024001"
                     />
                     {formErrors.studentNumber && <span className="!text-red-500 !text-xs !mt-1">{formErrors.studentNumber}</span>}
@@ -1213,6 +1320,7 @@ export default function UserManagement() {
                       type="date"
                       value={newUser.birthDate}
                       onChange={(e) => setNewUser({ ...newUser, birthDate: e.target.value })}
+                      max={new Date(new Date().getFullYear() - 14, 11, 31).toISOString().split('T')[0]}
                       className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
                     />
                     {formErrors.birthDate && <span className="!text-red-500 !text-xs !mt-1">{formErrors.birthDate}</span>}
@@ -1265,8 +1373,16 @@ export default function UserManagement() {
                     <Input
                       id="edit-teacherCode"
                       value={newUser.teacherCode}
-                      onChange={(e) => setNewUser({ ...newUser, teacherCode: e.target.value })}
-                      className="!h-10 !w-full !rounded-md !border !border-gray-300 !bg-white !px-3 !py-2 !text-sm"
+                      onChange={(e) => {
+                        setNewUser({ ...newUser, teacherCode: e.target.value });
+                        // Clear teacher code error when user starts typing
+                        if (formErrors.teacherCode) {
+                          setFormErrors(prev => ({ ...prev, teacherCode: undefined }));
+                        }
+                      }}
+                      className={`!h-10 !w-full !rounded-md !border !px-3 !py-2 !text-sm ${
+                        formErrors.teacherCode ? '!border-red-500 !bg-red-50' : '!border-gray-300 !bg-white'
+                      }`}
                       placeholder="GV001"
                     />
                     {formErrors.teacherCode && <span className="!text-red-500 !text-xs !mt-1">{formErrors.teacherCode}</span>}
@@ -1292,7 +1408,10 @@ export default function UserManagement() {
             )}
           </div>
           <DialogFooter className="!flex !flex-col-reverse !gap-2 sm:!flex-row sm:!justify-end !mt-6">
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)} className="!border !border-gray-300 !bg-white !text-gray-700 hover:!bg-gray-50 !px-4 !py-2 !rounded-md">
+            <Button variant="outline" onClick={() => {
+              setIsEditModalOpen(false);
+              setFormErrors({});
+            }} className="!border !border-gray-300 !bg-white !text-gray-700 hover:!bg-gray-50 !px-4 !py-2 !rounded-md">
               Hủy
             </Button>
             <Button onClick={handleUpdateUser} className="!bg-blue-600 hover:!bg-blue-700 !text-white !px-4 !py-2 !rounded-md">
@@ -1425,12 +1544,12 @@ export default function UserManagement() {
           </div>
 
           <div className="rounded-md border" style={{ borderColor: '#e5e7eb' }}>
-            {loading && (
+            {loading && filteredUsers.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <div className="text-sm text-gray-500">Đang tải dữ liệu...</div>
               </div>
-            )}
-            <Table>
+            ) : (
+              <Table>
               <TableHeader>
                 <TableRow style={{ borderBottomColor: '#e5e7eb' }}>
                   <SortHeader field="id">Mã số</SortHeader>
@@ -1475,12 +1594,13 @@ export default function UserManagement() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                      {loading ? 'Đang tải...' : 'Không có dữ liệu người dùng'}
+                      Không có dữ liệu người dùng
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+            )}
           </div>
 
           {totalPages > 1 && (
@@ -1539,11 +1659,6 @@ export default function UserManagement() {
             </div>
           )}
 
-          {users.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              Không tìm thấy người dùng nào phù hợp với tiêu chí của bạn.
-            </div>
-          )}
         </CardContent>
       </Card>
 
