@@ -80,6 +80,9 @@ export const API_CONFIG = {
     UPDATE_COLLECTION :'/collection',
     USER_COLLECTION :'/collection/user',
     ADD_COLLECTION_ITEAM: '/collection/add-collection-iteam'
+  },
+  CLUB:{
+    CREATE_CLUB:'/club/club-creation-request'
   }
 };
 

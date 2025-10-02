@@ -23,5 +23,8 @@ export const ROUTES = {
   COLLECTION:{
     LIST_COLLECTION : "/list-collection",
     COLLECTION_DETAIL: "/collection-detail/:id"
+  },
+  CLUB:{
+    CREATE_CLUB:"/club/create-club"
   }
 };

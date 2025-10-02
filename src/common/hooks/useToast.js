@@ -2,6 +2,7 @@ import { toast } from 'react-toastify'
 import { PROFILE_MESSAGES, AUTH_MESSAGES, COMMON_MESSAGES } from '@/common/constants/messages'
 import { POST_MESSAGES } from '../constants/messages/post'
 import { COLLECTION_MESSAGES } from '../constants/messages/collection'
+import { CLUB_MESSAGES } from '../constants/messages/club'
 
 export const useToast = () => {
   const showSuccess = (message, options = {}) => {
@@ -79,6 +80,7 @@ export const useToast = () => {
   const loadAlbumFail = () =>showError(COLLECTION_MESSAGES.ERROR.LOAD_FAILD)
   const addCollectionIteamFail = () => showError(COLLECTION_MESSAGES.ERROR.SAVE_ALBUM_FAILD)
   const addCollectionIteamSuccess = () => showError(COLLECTION_MESSAGES.SUCCESS.ADD)
+  const createClubSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.CREATE)
 
   return {
     // Basic toast methods
@@ -108,6 +110,7 @@ export const useToast = () => {
     loadAlbumFail,
     addCollectionIteamFail,
     addCollectionIteamSuccess,
+    createClubSuccess,
     // Direct access to messages
     PROFILE_MESSAGES,
     AUTH_MESSAGES,
