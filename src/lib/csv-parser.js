@@ -80,13 +80,28 @@ const parseCSVLine = (line) => {
 export const validateRow = (row, mapping, requiredFieldIds) => {
   const errors = [];
   
+  // Map fieldId to Vietnamese names
+  const fieldNames = {
+    'studentId': 'Mã học sinh',
+    'firstName': 'Tên',
+    'lastName': 'Họ', 
+    'email': 'Email',
+    'phone': 'Số điện thoại',
+    'dateOfBirth': 'Ngày sinh',
+    'enrollmentYear': 'Năm nhập học',
+    'grade': 'Khối',
+    'class': 'Lớp'
+  };
+
   // Check if all required fields are mapped and have values
   requiredFieldIds.forEach(fieldId => {
     const csvHeader = Object.keys(mapping).find(key => mapping[key] === fieldId);
+    const fieldName = fieldNames[fieldId] || fieldId;
+    
     if (!csvHeader) {
-      errors.push(`Trường bắt buộc "${fieldId}" chưa được mapping`);
+      errors.push(`Trường bắt buộc "${fieldName}" chưa được mapping`);
     } else if (!row[csvHeader] || row[csvHeader].trim() === '') {
-      errors.push(`Trường "${fieldId}" không được để trống`);
+      errors.push(`${fieldName} không được để trống`);
     }
   });
 
@@ -98,17 +113,27 @@ export const validateRow = (row, mapping, requiredFieldIds) => {
     if (value && value.trim() !== '') {
       // Email validation
       if (fieldId === 'email' && !isValidEmail(value)) {
-        errors.push(`Email không hợp lệ: ${value}`);
+        errors.push(`Email không hợp lệ`);
       }
       
       // Phone validation
       if (fieldId === 'phone' && !isValidPhone(value)) {
-        errors.push(`Số điện thoại không hợp lệ: ${value}`);
+        errors.push(`Số điện thoại không hợp lệ`);
       }
       
       // Student ID validation
       if (fieldId === 'studentId' && !isValidStudentId(value)) {
-        errors.push(`Mã học sinh không hợp lệ: ${value}`);
+        errors.push(`Mã học sinh không hợp lệ`);
+      }
+      
+      // Date of birth validation
+      if (fieldId === 'dateOfBirth' && !isValidDate(value)) {
+        errors.push(`Ngày sinh không hợp lệ`);
+      }
+      
+      // Enrollment year validation
+      if (fieldId === 'enrollmentYear' && !isValidEnrollmentYear(value)) {
+        errors.push(`Năm nhập học không hợp lệ`);
       }
     }
   });
@@ -181,4 +206,33 @@ const isValidStudentId = (studentId) => {
   // Student ID should be alphanumeric and at least 3 characters
   const studentIdRegex = /^[A-Za-z0-9]{3,}$/;
   return studentIdRegex.test(studentId);
+};
+
+/**
+ * Validate date format (YYYY-MM-DD)
+ * @param {string} date - Date to validate
+ * @returns {boolean}
+ */
+const isValidDate = (date) => {
+  if (!date || typeof date !== 'string') return false;
+  
+  // Check if it's a valid date format
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(date)) return false;
+  
+  // Check if it's a valid date
+  const parsedDate = new Date(date);
+  return parsedDate instanceof Date && !isNaN(parsedDate);
+};
+
+/**
+ * Validate enrollment year (2000-2030)
+ * @param {string} year - Year to validate
+ * @returns {boolean}
+ */
+const isValidEnrollmentYear = (year) => {
+  if (!year || typeof year !== 'string') return false;
+  
+  const yearNum = parseInt(year, 10);
+  return !isNaN(yearNum) && yearNum >= 2000 && yearNum <= 2030;
 };

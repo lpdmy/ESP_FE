@@ -17,7 +17,7 @@ export const STUDENT_IMPORT_MESSAGES = {
     INVALID_FILE_FORMAT: "Định dạng file không hợp lệ",
     FILE_TOO_LARGE: "File quá lớn (tối đa 10MB)",
     EMPTY_FILE: "File trống hoặc không hợp lệ",
-    REQUIRED_FIELDS_NOT_MAPPED: "Các trường bắt buộc chưa được mapping",
+    REQUIRED_FIELDS_NOT_MAPPED: "Các trường bắt buộc chưa được ánh xạ",
     REQUIRED_FIELDS_EMPTY: "Các trường bắt buộc không được để trống",
     INVALID_EMAIL_FORMAT: "Email không hợp lệ",
     INVALID_PHONE_FORMAT: "Số điện thoại không hợp lệ",

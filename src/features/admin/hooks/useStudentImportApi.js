@@ -23,10 +23,8 @@ export const useStudentImportApi = () => {
         setProgress(progressValue);
       }],
       { 
-        setLoading: setIsImporting,
-        setError: (error) => {
-          toast.showError(error?.message || STUDENT_IMPORT_MESSAGES.ERROR.IMPORT_FAILED);
-        }
+        setLoading: setIsImporting
+        // Không set setError để tránh double toast
       }
     );
   };

@@ -700,7 +700,7 @@ export default function UserManagement() {
           <Button 
             variant="outline" 
             className="!border-green-600 !text-green-600 hover:!bg-green-50 !bg-transparent"
-            onClick={() => navigate('/admin/import-students')}
+            onClick={() => navigate('/admin/users/import')}
           >
             <Upload className="h-4 w-4 mr-2" />
             Nhập từ Excel

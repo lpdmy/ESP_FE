@@ -9,6 +9,6 @@ export const adminRoutes = [
     <Route element={<ProtectedRoute allowedRoles={[ROLE.ADMIN]} />}>
         <Route key="admin-dashboard" path="/admin" element={<DashboardPage />} />,
         <Route key="user-management" path="/admin/users" element={<UserManagementPage />} />,
-        <Route key="import-students" path="/admin/import-students" element={<ImportStudentsPage />} />
+        <Route key="import-students" path="/admin/users/import" element={<ImportStudentsPage />} />
     </Route>
 ];

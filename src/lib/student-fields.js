@@ -78,62 +78,48 @@ export const SYSTEM_FIELDS = [
  */
 export const autoMatchFields = (csvHeaders) => {
   const mapping = {};
+  const usedFields = new Set();
   
-  // Define matching patterns for each field
-  const fieldPatterns = {
-    studentId: [
-      'ma_hoc_sinh', 'student_id', 'mahs', 'id', 'ma_hs', 'studentid',
-      'mã học sinh', 'mã hs', 'mahs', 'id học sinh'
-    ],
-    firstName: [
-      'ten', 'first_name', 'ho_ten', 'ten_goi', 'firstname',
-      'tên', 'tên gọi', 'tên riêng'
-    ],
-    lastName: [
-      'ho', 'last_name', 'ho_ten', 'ho_dem', 'lastname',
-      'họ', 'họ đệm', 'họ tên'
-    ],
-    email: [
-      'email', 'e_mail', 'mail', 'thu_dien_tu',
-      'email học sinh', 'thư điện tử'
-    ],
-    phone: [
-      'phone', 'sdt', 'so_dien_thoai', 'dien_thoai', 'mobile',
-      'số điện thoại', 'điện thoại', 'sdt học sinh'
-    ],
-    dateOfBirth: [
-      'ngay_sinh', 'birthday', 'date_of_birth', 'ngay_thang_nam_sinh',
-      'ngày sinh', 'sinh nhật', 'ngày tháng năm sinh'
-    ],
-    enrollmentYear: [
-      'nam_nhap_hoc', 'enrollment_year', 'nam_hoc', 'year',
-      'năm nhập học', 'năm học', 'niên khóa'
-    ],
-    grade: [
-      'khoi', 'grade', 'khoi_lop', 'cap_hoc',
-      'khối', 'khối lớp', 'cấp học'
-    ],
-    class: [
-      'lop', 'class', 'lop_hoc', 'ten_lop',
-      'lớp', 'lớp học', 'tên lớp'
-    ]
+  // Tên tiếng Việt ưu tiên cho auto match
+  const vietnameseFieldNames = {
+    studentId: ['mã học sinh', 'mã hs', 'mahs', 'ma_hs', 'studentid', 'student_id', 'id'],
+    firstName: ['tên', 'ten', 'firstname', 'first_name', 'ho_ten', 'hoten'],
+    lastName: ['họ', 'ho', 'lastname', 'last_name', 'ho_ten', 'hoten'],
+    email: ['email', 'e_mail', 'mail'],
+    phone: ['số điện thoại', 'số dt', 'sdt', 'phone', 'phone_number', 'dienthoai'],
+    dateOfBirth: ['ngày sinh', 'ngay sinh', 'dateofbirth', 'date_of_birth', 'birthday', 'birth_date'],
+    enrollmentYear: ['năm nhập học', 'nam nhap hoc', 'enrollmentyear', 'enrollment_year', 'namnhap', 'năm nhập'],
+    grade: ['khối', 'khoi', 'grade', 'lop', 'lớp'],
+    class: ['lớp', 'lop', 'class', 'phong', 'phòng']
   };
 
   // Match each CSV header with system fields
   csvHeaders.forEach(csvHeader => {
     const normalizedHeader = csvHeader.toLowerCase().trim();
+    let bestMatch = null;
+    let bestScore = 0;
     
-    // Find matching field
-    for (const [fieldId, patterns] of Object.entries(fieldPatterns)) {
-      const isMatch = patterns.some(pattern => 
-        normalizedHeader.includes(pattern.toLowerCase()) ||
-        pattern.toLowerCase().includes(normalizedHeader)
-      );
+    // Tìm kiếm theo tên tiếng Việt trước
+    Object.entries(vietnameseFieldNames).forEach(([fieldId, names]) => {
+      if (usedFields.has(fieldId)) return;
       
-      if (isMatch) {
-        mapping[csvHeader] = fieldId;
-        break;
-      }
+      names.forEach(name => {
+        // Tìm kiếm chính xác hoặc chứa từ khóa
+        if (normalizedHeader === name.toLowerCase() || 
+            normalizedHeader.includes(name.toLowerCase()) || 
+            name.toLowerCase().includes(normalizedHeader)) {
+          const score = Math.min(normalizedHeader.length, name.length) / Math.max(normalizedHeader.length, name.length);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = fieldId;
+          }
+        }
+      });
+    });
+    
+    if (bestMatch && bestScore > 0.3) {
+      mapping[csvHeader] = bestMatch;
+      usedFields.add(bestMatch);
     }
   });
 

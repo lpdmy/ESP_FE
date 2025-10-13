@@ -53,15 +53,7 @@ export class StudentImportService extends ApiService {
    */
   async importStudentsWithProgress(importData, token, onProgress) {
     try {
-      // First validate the data
-      onProgress && onProgress(10, 'Đang validate dữ liệu...');
-      const validationResult = await this.validateStudents(importData, token);
-      
-      if (!validationResult.data?.valid) {
-        throw new Error('Dữ liệu không hợp lệ: ' + validationResult.data?.errors?.map(e => e.errors?.join(', ')).join('; '));
-      }
-
-      // Then import the data
+      // Import the data directly (backend sẽ xử lý validation từng hàng)
       onProgress && onProgress(30, 'Đang import dữ liệu...');
       const importResult = await this.importStudents(importData, token);
       
