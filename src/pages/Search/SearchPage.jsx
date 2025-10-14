@@ -160,7 +160,7 @@ export default function SearchPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Tìm kiếm bạn bè, bài viết, sự kiện, cuộc thi..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
               />
             </form>
           </div>
@@ -339,7 +339,7 @@ export default function SearchPage() {
                   <select
                     value={filters.datePosted}
                     onChange={(e) => handleFilterUpdate('datePosted', e.target.value)}
-                    className="w-full px-3 py-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm bg-white/50"
+                    className="w-full px-3 py-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none text-sm bg-white/50"
                   >
                     {datePostedOptions.map(option => (
                       <option key={option.value} value={option.value}>
@@ -357,7 +357,7 @@ export default function SearchPage() {
                   <select
                     value={filters.postsFrom}
                     onChange={(e) => handleFilterUpdate('postsFrom', e.target.value)}
-                    className="w-full px-3 py-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm bg-white/50"
+                    className="w-full px-3 py-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none text-sm bg-white/50"
                   >
                     {postsFromOptions.map(option => (
                       <option key={option.value} value={option.value}>
@@ -378,7 +378,7 @@ export default function SearchPage() {
                     value={filters.taggedLocation}
                     onChange={(e) => handleFilterUpdate('taggedLocation', e.target.value)}
                     placeholder="Nhập địa điểm..."
-                    className="w-full px-3 py-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm bg-white/50"
+                    className="w-full px-3 py-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none text-sm bg-white/50"
                   />
                 </div>
               </div>

@@ -113,7 +113,7 @@ export const GlobalSearch = ({
             placeholder={placeholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className={`w-full pl-12 rounded-xl focus:ring-2 focus:ring-orange-500 
+            className={`w-full pl-12 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none
               ${variant === 'compact' ? 'py-2 text-sm pr-4' : 'py-3 text-base pr-12'}
               ${variant === 'expanded' ? 'py-4 text-lg pr-12' : ''}
               shadow-sm hover:shadow-md transition-all duration-200
