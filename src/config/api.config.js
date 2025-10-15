@@ -80,6 +80,13 @@ export const API_CONFIG = {
     UPDATE_COLLECTION :'/collection',
     USER_COLLECTION :'/collection/user',
     ADD_COLLECTION_ITEAM: '/collection/add-collection-iteam'
+  },
+
+  // Student Import endpoints
+  STUDENT_IMPORT: {
+    IMPORT_STUDENTS: '/admin/students/import',
+    VALIDATE_STUDENTS: '/admin/students/validate',
+    DOWNLOAD_TEMPLATE: '/admin/students/template'
   }
 };
 
