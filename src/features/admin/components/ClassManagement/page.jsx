@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import { ClassGroupService } from "@/services/classgroup.service";
 
 const academicYears = [
   { value: "2024-2025", label: "2024-2025" },
@@ -45,7 +46,7 @@ const mockClasses = [
 ]
 
 export default function ClassManagementPage() {
-  const [classes, setClasses] = useState(mockClasses)
+  const [classes, setClasses] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedYear, setSelectedYear] = useState("2024-2025")
   const [expandedGrades, setExpandedGrades] = useState([10]) // Grade 10 expanded by default
@@ -61,8 +62,7 @@ export default function ClassManagementPage() {
     name: "",
     grade: "",
     academicYear: "2024-2025",
-    teacherId: "",
-    status: 1,
+    description: "",
   })
   
   const [formErrors, setFormErrors] = useState({})
@@ -77,13 +77,35 @@ export default function ClassManagementPage() {
   }
 
   // Filter classes based on search and year
-  const filteredClasses = classes.filter(cls => {
-    const matchesSearch = !searchTerm || 
-      cls.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cls.teacher.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesYear = cls.academicYear === selectedYear
-    return matchesSearch && matchesYear
-  })
+  // Fetch-based filtering: call backend when searchTerm or selectedYear changes
+  useEffect(() => {
+    const doSearch = async () => {
+      try {
+        const token = currentUser?.token;
+        const res = await ClassGroupService.search({ nameOrCombined: searchTerm, academicYear: selectedYear }, token);
+        const data = (res?.data || res) || [];
+        const mapped = data.map(c => ({
+          id: c.id,
+          name: c.name,
+          grade: c.grade,
+          academicYear: toAcademicYear(c.startYear),
+          students: c.currentStudentCount ?? 0,
+          teacher: "",
+          teacherId: null,
+          status: c.isDeleted ? 0 : 1,
+        }));
+        setClasses(mapped);
+      } catch (e) {
+        console.error('Search failed', e);
+      }
+    };
+    // Debounce simple: delay 300ms
+    const h = setTimeout(doSearch, 300);
+    return () => clearTimeout(h);
+  }, [searchTerm, selectedYear, currentUser]);
+
+  // Local view of classes for grouping by grade
+  const filteredClasses = classes;
 
   // Group classes by grade
   const classesByGrade = filteredClasses.reduce((acc, cls) => {
@@ -98,7 +120,7 @@ export default function ClassManagementPage() {
   const stats = {
     totalClasses: filteredClasses.length,
     totalStudents: filteredClasses.reduce((sum, cls) => sum + cls.students, 0),
-    totalTeachers: new Set(filteredClasses.map(cls => cls.teacherId)).size
+    totalTeachers: new Set(filteredClasses.map(cls => cls.teacher).filter(Boolean)).size
   }
 
   const handleViewClass = (classItem) => {
@@ -112,8 +134,7 @@ export default function ClassManagementPage() {
       name: classItem.name || "",
       grade: classItem.grade || "",
       academicYear: classItem.academicYear || "2024-2025",
-      teacherId: classItem.teacherId || "",
-      status: classItem.status !== undefined ? classItem.status : 1,
+      description: classItem.description || "",
     });
     setIsEditModalOpen(true);
   };
@@ -125,10 +146,10 @@ export default function ClassManagementPage() {
 
   const handleConfirmDelete = async () => {
     if (!classToDelete) return;
-    
     try {
-      const updatedClasses = classes.filter(c => c.id !== classToDelete.id);
-      setClasses(updatedClasses);
+      const token = currentUser?.token;
+      await ClassGroupService.remove(classToDelete.id, token);
+      setClasses(prev => prev.filter(c => c.id !== classToDelete.id));
       toast.success("Xóa lớp học thành công!");
       setIsConfirmModalOpen(false);
       setClassToDelete(null);
@@ -139,35 +160,71 @@ export default function ClassManagementPage() {
   };
 
   const handleCreateClass = async () => {
-    if (!newClass.name.trim() || !newClass.grade || !newClass.teacherId) {
-      toast.error("Vui lòng điền đầy đủ các trường bắt buộc")
+    if (!newClass.name.trim() || !newClass.grade) {
+      toast.error("Vui lòng điền tên lớp và khối")
       return
     }
-
     try {
-      const newClassData = {
-        id: Math.max(...classes.map(c => c.id)) + 1,
-        ...newClass,
-        students: 0,
-        teacher: "Giáo viên mới",
+      const token = currentUser?.token;
+      const startYear = parseInt(String(newClass.academicYear).slice(0, 4), 10);
+      const payload = {
+        name: newClass.name,
+        description: newClass.description || undefined,
+        grade: Number(newClass.grade),
+        startYear: Number.isFinite(startYear) ? startYear : undefined,
       };
-      
-      setClasses([...classes, newClassData]);
-      setNewClass({
-        name: "",
-        grade: "",
-        academicYear: "2024-2025",
-        teacherId: "",
-        status: 1,
-      })
+      const res = await ClassGroupService.create(payload, token);
+      const created = res?.data || res;
+      const uiItem = {
+        id: created.id,
+        name: created.name,
+        grade: created.grade,
+        academicYear: toAcademicYear(created.startYear),
+        students: created.currentStudentCount ?? 0,
+        teacher: "",
+        teacherId: null,
+        status: created.isDeleted ? 0 : 1,
+      };
+      setClasses(prev => [...prev, uiItem]);
+      setNewClass({ name: "", grade: "", academicYear: "2024-2025", description: "" })
       setFormErrors({})
       setIsModalOpen(false)
       toast.success("Tạo lớp học thành công!")
     } catch (error) {
       console.error("Error creating class:", error);
-      toast.error("Không thể tạo lớp học");
+      toast.error(error?.message || "Không thể tạo lớp học");
     }
   }
+
+  const handleUpdateClass = async () => {
+    if (!selectedClass) return;
+    try {
+      const token = currentUser?.token;
+      const startYear = parseInt(String(newClass.academicYear).slice(0, 4), 10);
+      const payload = {
+        id: selectedClass.id,
+        name: newClass.name || undefined,
+        description: newClass.description || undefined,
+        grade: Number(newClass.grade),
+        startYear: Number.isFinite(startYear) ? startYear : undefined,
+      };
+      const res = await ClassGroupService.update(selectedClass.id, payload, token);
+      const updated = res?.data || res;
+      setClasses(prev => prev.map(c => c.id === selectedClass.id ? {
+        ...c,
+        name: updated.name,
+        grade: updated.grade,
+        academicYear: toAcademicYear(updated.startYear),
+        students: updated.currentStudentCount ?? c.students,
+        status: updated.isDeleted ? 0 : 1,
+      } : c));
+      setIsEditModalOpen(false);
+      toast.success("Cập nhật lớp học thành công!");
+    } catch (error) {
+      console.error("Error updating class:", error);
+      toast.error(error?.message || "Không thể cập nhật lớp học");
+    }
+  };
 
   const getGradeName = (grade) => {
     const gradeNames = {
@@ -177,6 +234,40 @@ export default function ClassManagementPage() {
     }
     return gradeNames[grade] || `Khối ${grade}`
   }
+
+  // Helper to map start year to academic year label
+  const toAcademicYear = (startYear) => {
+    if (!startYear) return "";
+    const endYear = Number(startYear) + 1;
+    return `${startYear}-${endYear}`;
+  }
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const token = currentUser?.token;
+        const res = await ClassGroupService.dashboard(token);
+        const payload = res?.data || res;
+        const flattened = (payload?.classesByGrade || []).flatMap(g => {
+          return (g.classes || []).map(c => ({
+            id: c.id,
+            name: c.name,
+            grade: c.grade,
+            academicYear: toAcademicYear(c.startYear),
+            students: c.currentStudentCount ?? 0,
+            teacher: "",
+            teacherId: null,
+            status: c.isDeleted ? 0 : 1,
+          }));
+        });
+        setClasses(flattened);
+      } catch (e) {
+        console.error("Failed to load classes", e);
+        toast.error("Không thể tải danh sách lớp học");
+      }
+    };
+    load();
+  }, [currentUser])
 
   return (
     <div className="space-y-6">
@@ -379,12 +470,23 @@ export default function ClassManagementPage() {
 
       {/* Create Class Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] bg-white">
           <DialogHeader>
             <DialogTitle>Thêm lớp học mới</DialogTitle>
             <DialogDescription>Tạo lớp học mới. Điền thông tin bắt buộc bên dưới.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="grade" className="text-right">Khối *</Label>
+              <div className="col-span-3">
+                <SimpleSelect 
+                  value={(newClass.grade ?? '').toString()} 
+                  onValueChange={(value) => setNewClass({ ...newClass, grade: parseInt(value) })}
+                  placeholder="Chọn khối"
+                  options={grades.map(g => ({ value: g.value.toString(), label: g.label }))}
+                />
+              </div>
+            </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">Tên lớp *</Label>
               <div className="col-span-3">
@@ -392,18 +494,7 @@ export default function ClassManagementPage() {
                   id="name"
                   value={newClass.name}
                   onChange={(e) => setNewClass({ ...newClass, name: e.target.value })}
-                  placeholder="Nhập tên lớp (VD: 10A1)"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="grade" className="text-right">Khối *</Label>
-              <div className="col-span-3">
-                <SimpleSelect 
-                  value={newClass.grade.toString()} 
-                  onValueChange={(value) => setNewClass({ ...newClass, grade: parseInt(value) })}
-                  placeholder="Chọn khối"
-                  options={grades.map(g => ({ value: g.value.toString(), label: g.label }))}
+                  placeholder="Nhập tên lớp (VD: A1)"
                 />
               </div>
             </div>
@@ -418,29 +509,13 @@ export default function ClassManagementPage() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="teacherId" className="text-right">GVCN *</Label>
-              <div className="col-span-3">
-                <SimpleSelect 
-                  value={newClass.teacherId.toString()} 
-                  onValueChange={(value) => setNewClass({ ...newClass, teacherId: parseInt(value) })}
-                  placeholder="Chọn giáo viên chủ nhiệm"
-                  options={[
-                    { value: "1", label: "Nguyễn Thị Lan" },
-                    { value: "2", label: "Trần Văn Nam" },
-                    { value: "3", label: "Lê Thị Hoa" },
-                    { value: "4", label: "Phạm Thị D" },
-                    { value: "5", label: "Hoàng Văn E" },
-                  ]}
-                />
-              </div>
-            </div>
+            {/* GVCN field removed: backend DTO không hỗ trợ teacherId trong Create/Update */}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
               Hủy
             </Button>
-            <Button onClick={handleCreateClass}>
+            <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleCreateClass}>
               Tạo lớp học
             </Button>
           </DialogFooter>
@@ -449,7 +524,7 @@ export default function ClassManagementPage() {
 
       {/* View Class Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] bg-white">
           <DialogHeader>
             <DialogTitle>Chi tiết lớp học</DialogTitle>
             <DialogDescription>Thông tin chi tiết về lớp học được chọn</DialogDescription>
@@ -490,9 +565,73 @@ export default function ClassManagementPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Class Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[425px] bg-white">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa lớp học</DialogTitle>
+            <DialogDescription>Cập nhật thông tin lớp học. Điền thông tin bắt buộc bên dưới.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-grade" className="text-right">Khối *</Label>
+              <div className="col-span-3">
+                <SimpleSelect 
+                  value={(newClass.grade ?? '').toString()} 
+                  onValueChange={(value) => setNewClass({ ...newClass, grade: parseInt(value) })}
+                  placeholder="Chọn khối"
+                  options={grades.map(g => ({ value: g.value.toString(), label: g.label }))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-name" className="text-right">Tên lớp *</Label>
+              <div className="col-span-3">
+                <Input
+                  id="edit-name"
+                  value={newClass.name}
+                  onChange={(e) => setNewClass({ ...newClass, name: e.target.value })}
+                  placeholder="Nhập tên lớp (VD: A1)"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-academicYear" className="text-right">Năm học *</Label>
+              <div className="col-span-3">
+                <SimpleSelect 
+                  value={newClass.academicYear} 
+                  onValueChange={(value) => setNewClass({ ...newClass, academicYear: value })}
+                  placeholder="Chọn năm học"
+                  options={academicYears}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-description" className="text-right">Mô tả</Label>
+              <div className="col-span-3">
+                <Input
+                  id="edit-description"
+                  value={newClass.description}
+                  onChange={(e) => setNewClass({ ...newClass, description: e.target.value })}
+                  placeholder="Nhập mô tả lớp học"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+              Hủy
+            </Button>
+            <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleUpdateClass}>
+              Cập nhật lớp học
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Confirmation Modal for Delete */}
       <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] bg-white">
           <DialogHeader>
             <DialogTitle>Xóa lớp học</DialogTitle>
             <DialogDescription>

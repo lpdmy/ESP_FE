@@ -80,6 +80,23 @@ export const API_CONFIG = {
     UPDATE_COLLECTION :'/collection',
     USER_COLLECTION :'/collection/user',
     ADD_COLLECTION_ITEAM: '/collection/add-collection-iteam'
+  },
+  // Class Group endpoints
+  CLASS_GROUP: {
+    LIST: '/classgroup',
+    GET_BY_ID: '/classgroup/{id}',
+    GET_BY_NAME: '/classgroup/by-name',
+    DASHBOARD: '/classgroup/dashboard',
+    BY_GRADE: '/classgroup/by-grade/{grade}',
+    WITHOUT_GRADE: '/classgroup/without-grade',
+    BY_START_YEAR: '/classgroup/by-start-year/{startYear}',
+    WITHOUT_START_YEAR: '/classgroup/without-start-year',
+    DELETED: '/classgroup/deleted',
+    FILTER: '/classgroup/filter',
+    CHECK_NAME_EXISTS: '/classgroup/check-name-exists',
+    CREATE: '/classgroup',
+    UPDATE: '/classgroup/{id}',
+    DELETE: '/classgroup/{id}'
   }
 };
 
