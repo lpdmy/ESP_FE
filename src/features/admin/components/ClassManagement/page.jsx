@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import { ClassGroupService } from "@/services/classgroup.service";
 
 const academicYears = [
@@ -46,12 +47,12 @@ const mockClasses = [
 ]
 
 export default function ClassManagementPage() {
+  const navigate = useNavigate();
   const [classes, setClasses] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedYear, setSelectedYear] = useState("2024-2025")
   const [expandedGrades, setExpandedGrades] = useState([10]) // Grade 10 expanded by default
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
   const [selectedClass, setSelectedClass] = useState(null)
@@ -124,8 +125,7 @@ export default function ClassManagementPage() {
   }
 
   const handleViewClass = (classItem) => {
-    setSelectedClass(classItem);
-    setIsViewModalOpen(true);
+    navigate(`/admin/classes/${classItem.id}`);
   };
 
   const handleEditClass = (classItem) => {
@@ -275,7 +275,7 @@ export default function ClassManagementPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Lớp học</h1>
         <p className="text-sm text-gray-600">Quản lý danh sách lớp học theo năm học và khối</p>
-      </div>
+        </div>
 
       {/* Search and Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -305,7 +305,7 @@ export default function ClassManagementPage() {
           <Plus className="h-4 w-4 mr-2" />
           Thêm lớp mới
         </Button>
-      </div>
+              </div>
 
       {/* Stats Container - Hộp bọc như hình */}
       <Card className="bg-blue-50 border-blue-200 shadow-sm rounded-2xl mb-6">
@@ -319,8 +319,8 @@ export default function ClassManagementPage() {
               <h3 className="text-lg font-semibold text-blue-900">Thống kê năm học {selectedYear}</h3>
               <p className="text-sm text-blue-700">Tổng quan về các lớp học trong năm học được chọn</p>
             </div>
-          </div>
-          
+              </div>
+
           {/* Stats Cards - 3 thẻ nhỏ nằm ngang */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="bg-white border-gray-200 shadow-sm rounded-xl">
@@ -328,15 +328,15 @@ export default function ClassManagementPage() {
                 <div className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-xl">
                     <GraduationCap className="h-5 w-5 text-blue-600" />
-                  </div>
+                </div>
                   <div>
                     <div className="text-lg font-bold text-gray-900">{stats.totalClasses}</div>
                     <div className="text-xs text-gray-600">Tổng số lớp</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
             <Card className="bg-white border-gray-200 shadow-sm rounded-xl">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -382,7 +382,7 @@ export default function ClassManagementPage() {
                 className="flex items-center justify-between p-4 bg-blue-50 rounded-2xl cursor-pointer hover:bg-blue-100 transition-colors mb-4"
                 onClick={() => toggleGrade(gradeNum)}
               >
-                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3">
                   {isExpanded ? (
                     <ChevronDown className="h-5 w-5 text-blue-600" />
                   ) : (
@@ -391,21 +391,21 @@ export default function ClassManagementPage() {
                   <h2 className="text-lg font-semibold text-blue-900">{getGradeName(gradeNum)}</h2>
                   <Badge className="bg-blue-100 text-blue-800 text-xs">
                     {gradeClasses.length} lớp
-                  </Badge>
-                </div>
+                    </Badge>
+                  </div>
                 <div className="text-sm text-blue-700 font-medium">
                   {totalStudents} học sinh
+                  </div>
                 </div>
-              </div>
 
               {/* Class Cards Grid */}
               {isExpanded && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {gradeClasses.map((cls) => (
                     <Card key={cls.id} className="bg-white border-gray-200 shadow-sm rounded-2xl hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
+                        <CardContent className="p-4">
                         {/* Header with class name and actions */}
-                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex justify-between items-start mb-3">
                           <h3 className="font-bold text-lg text-gray-900">{cls.name}</h3>
                           <div className="flex gap-1">
                             <Button
@@ -447,26 +447,26 @@ export default function ClassManagementPage() {
                           <Eye className="h-4 w-4 mr-2" />
                           Xem chi tiết
                         </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
               )}
             </div>
           );
         })}
-      </div>
+        </div>
 
-      {/* Empty State */}
+        {/* Empty State */}
       {Object.keys(classesByGrade).length === 0 && (
         <Card className="text-center py-12 bg-white border-gray-200 shadow-sm rounded-2xl">
-          <CardContent>
+            <CardContent>
             <GraduationCap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy lớp học</h3>
-            <p className="text-gray-500">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
-          </CardContent>
-        </Card>
-      )}
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy lớp học</h3>
+              <p className="text-gray-500">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+            </CardContent>
+          </Card>
+        )}
 
       {/* Create Class Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -517,49 +517,6 @@ export default function ClassManagementPage() {
             </Button>
             <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleCreateClass}>
               Tạo lớp học
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Class Modal */}
-      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-white">
-          <DialogHeader>
-            <DialogTitle>Chi tiết lớp học</DialogTitle>
-            <DialogDescription>Thông tin chi tiết về lớp học được chọn</DialogDescription>
-          </DialogHeader>
-          
-          {selectedClass && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Tên lớp</Label>
-                  <p className="text-sm text-gray-900 mt-1">{selectedClass.name}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Khối</Label>
-                  <p className="text-sm text-gray-900 mt-1">{getGradeName(selectedClass.grade)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Năm học</Label>
-                  <p className="text-sm text-gray-900 mt-1">{selectedClass.academicYear}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Giáo viên chủ nhiệm</Label>
-                  <p className="text-sm text-gray-900 mt-1">{selectedClass.teacher}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Sĩ số</Label>
-                  <p className="text-sm text-gray-900 mt-1">{selectedClass.students} học sinh</p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
-              Đóng
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -660,7 +617,7 @@ export default function ClassManagementPage() {
                     <p className="text-gray-900 mt-1">{classToDelete.teacher}</p>
                   </div>
                 </div>
-              </div>
+      </div>
             </div>
           )}
           
