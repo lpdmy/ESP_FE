@@ -6,6 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/common/components/ui
 import { Loading, LoadingOverlay, LoadingCard } from "@/common/components/ui/loading"
 import { useToast } from "@/common/hooks/useToast"
 import { useProfileApi } from "@/features/user-profile/hooks/useProfileApi"
+import CreatePostInput from "@/features/landing/post/CreatePostInput"
+import CreatePostModal from "@/features/landing/post/CreatePostModal"
+import UpdatePostModal from "@/features/landing/post/UpdatePostModal"
+import DeletePostModal from "@/features/landing/post/DeletePostModal"
 import {
     Edit,
     Star,
@@ -33,14 +37,21 @@ import { useState, useEffect } from "react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, useDropdownMenu } from "@/common/components/ui/dropdown-menu"
 import PostCard from "@/features/landing/components/PostCard"
 import { Textarea } from "@/common/components/ui/textarea"
+import { useSelector } from "react-redux"
 
 export default function TeacherProfile() {
     const [profile, setProfile] = useState(null);
     const [extraData, setExtraData] = useState({});
     const [sortBy, setSortBy] = useState("newest");
     const [postContent, setPostContent] = useState("");
+    const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
+    const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [selectedPost, setSelectedPost] = useState(null);
     const { isOpen: isSortDropdownOpen, openMenu: openSortDropdown, closeMenu: closeSortDropdown, toggleMenu: toggleSortDropdown } = useDropdownMenu(false);
     const toast = useToast();
+    const user = useSelector((state) => state.user.user);
+    const currentUserId = user?.userId || user?.id || 1;
 
     // Profile API hook
     const { profileLoading, getMyTeacherProfile } = useProfileApi();
@@ -82,6 +93,49 @@ export default function TeacherProfile() {
 
         loadProfile();
     }, []);
+
+    // CreatePostModal handlers
+    const handleOpenCreatePostModal = () => {
+        setIsCreatePostModalOpen(true);
+    };
+
+    const handleCloseCreatePostModal = () => {
+        setIsCreatePostModalOpen(false);
+    };
+
+    const handleEditPost = (post) => {
+        setSelectedPost(post);
+        setIsUpdateModalOpen(true);
+    };
+
+    const handleDeletePost = (post) => {
+        setSelectedPost(post);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleUpdatePost = (updatedPost) => {
+        // TODO: Implement update post logic
+        console.log('Update post:', updatedPost);
+        setIsUpdateModalOpen(false);
+        setSelectedPost(null);
+    };
+
+    const handleConfirmDelete = (postId) => {
+        // TODO: Implement delete post logic
+        console.log('Delete post:', postId);
+        setIsDeleteModalOpen(false);
+        setSelectedPost(null);
+    };
+
+    const handleCloseUpdateModal = () => {
+        setIsUpdateModalOpen(false);
+        setSelectedPost(null);
+    };
+
+    const handleCloseDeleteModal = () => {
+        setIsDeleteModalOpen(false);
+        setSelectedPost(null);
+    };
 
     return (
         <>
@@ -440,50 +494,8 @@ export default function TeacherProfile() {
                         {/* Bài đăng của tôi */}
                         <TabsContent value="posts">
                             <div className="space-y-6">
-                                {/* Create Post - Editable */}
-                                <Card className="p-4 bg-white/80 backdrop-blur-sm border border-orange-100">
-                                    <div className="flex items-start space-x-3">
-                                        <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full flex items-center justify-center">
-                                            <span className="text-white font-bold text-sm">
-                                                {profile?.firstName && profile?.lastName 
-                                                    ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
-                                                    : profile?.username ? profile.username[0].toUpperCase() : 'T'}
-                                            </span>
-                                        </div>
-                                        <div className="flex-1">
-                                            <Textarea
-                                                placeholder="Chia sẻ hoạt động giảng dạy, sự kiện và thành tích của bạn..."
-                                                value={postContent}
-                                                onChange={(e) => setPostContent(e.target.value)}
-                                                className="w-full p-3 mt-3 border border-gray-200 rounded-md text-base resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                                rows={3}
-                                            />
-                                            <div className="flex items-center justify-between mt-3">
-                                                <div className="flex items-center space-x-4">
-                                                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
-                                                        <Image className="h-4 w-4 mr-2" />
-                                                        Ảnh
-                                                    </Button>
-                                                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
-                                                        <Video className="h-4 w-4 mr-2" />
-                                                        Video
-                                                    </Button>
-                                                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50">
-                                                        <Smile className="h-4 w-4 mr-2" />
-                                                        Cảm xúc
-                                                    </Button>
-                                                </div>
-                                                <Button 
-                                                    className="bg-gradient-to-r from-orange-500 to-yellow-500 border-0 text-white"
-                                                    disabled={!postContent.trim()}
-                                                >
-                                                    <Plus className="h-4 w-4 mr-2" />
-                                                    Đăng bài
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Card>
+                                {/* Create Post Input */}
+                                <CreatePostInput onOpenModal={handleOpenCreatePostModal} />
 
                                 {/* Sort Controls */}
                                 <Card className="p-4 bg-white border-blue-200 relative z-40">
@@ -570,7 +582,19 @@ export default function TeacherProfile() {
                                     comments={3}
                                     shares={1}
                                     isVerified={true}
-                                    isMyPost={true}
+                                    createdBy={currentUserId}
+                                    currentUserId={currentUserId}
+                                    onEdit={() => handleEditPost({
+                                        id: 1,
+                                        content: "Chia sẻ kinh nghiệm dạy Tin học cho học sinh THPT. Các phương pháp giảng dạy hiệu quả và cách khuyến khích học sinh tìm hiểu công nghệ 🎓 #GiáoDục #TinHọc",
+                                        author: profile?.firstName && profile?.lastName 
+                                            ? `${profile.firstName} ${profile.lastName}` 
+                                            : profile?.username || "Tôi"
+                                    })}
+                                    onDelete={() => handleDeletePost({
+                                        id: 1,
+                                        content: "Chia sẻ kinh nghiệm dạy Tin học cho học sinh THPT. Các phương pháp giảng dạy hiệu quả và cách khuyến khích học sinh tìm hiểu công nghệ 🎓 #GiáoDục #TinHọc"
+                                    })}
                                 />
 
                                 <PostCard
@@ -580,12 +604,22 @@ export default function TeacherProfile() {
                                     class={profile?.teacherCode || "Giáo viên"}
                                     time="2 giờ trước"
                                     content="Tổ chức thành công workshop 'Lập trình Scratch cho học sinh' với 45 em tham gia. Cảm ơn các em đã nhiệt tình tham gia! 🚀 #Scratch #LậpTrình"
-                                    image="/Picturemockdata/DSC04766.jpg"
+                                    images={["/Picturemockdata/DSC04766.jpg", "/Picturemockdata/DSC03778.jpg"]}
                                     likes={15}
                                     comments={7}
                                     shares={2}
                                     isVerified={true}
-                                    isMyPost={true}
+                                    createdBy={currentUserId}
+                                    currentUserId={currentUserId}
+                                    onEdit={() => handleEditPost({
+                                        id: 2,
+                                        content: "Tổ chức thành công workshop 'Lập trình Scratch cho học sinh' với 45 em tham gia. Cảm ơn các em đã nhiệt tình tham gia! 🚀 #Scratch #LậpTrình",
+                                        images: ["/Picturemockdata/DSC04766.jpg", "/Picturemockdata/DSC03778.jpg"]
+                                    })}
+                                    onDelete={() => handleDeletePost({
+                                        id: 2,
+                                        content: "Tổ chức thành công workshop 'Lập trình Scratch cho học sinh' với 45 em tham gia. Cảm ơn các em đã nhiệt tình tham gia! 🚀 #Scratch #LậpTrình"
+                                    })}
                                 />
 
                                 <PostCard
@@ -599,7 +633,16 @@ export default function TeacherProfile() {
                                     comments={12}
                                     shares={5}
                                     isVerified={true}
-                                    isMyPost={true}
+                                    createdBy={currentUserId}
+                                    currentUserId={currentUserId}
+                                    onEdit={() => handleEditPost({
+                                        id: 3,
+                                        content: "Thông báo về cuộc thi 'Sáng tạo ứng dụng di động' dành cho học sinh khối 11-12. Hạn nộp bài: 15/12/2024. Giải thưởng hấp dẫn đang chờ đón! 🏆"
+                                    })}
+                                    onDelete={() => handleDeletePost({
+                                        id: 3,
+                                        content: "Thông báo về cuộc thi 'Sáng tạo ứng dụng di động' dành cho học sinh khối 11-12. Hạn nộp bài: 15/12/2024. Giải thưởng hấp dẫn đang chờ đón! 🏆"
+                                    })}
                                 />
 
                                 <PostCard
@@ -609,11 +652,22 @@ export default function TeacherProfile() {
                                     class={profile?.teacherCode || "Giáo viên"}
                                     time="3 ngày trước"
                                     content="Chia sẻ tài liệu học tập về 'An toàn thông tin trên Internet' cho học sinh. Các em hãy tải về và học tập nhé! 📚 #AnToànThôngTin #HọcTập"
+                                    images={["/Picturemockdata/IMG_1492.jpg", "/Picturemockdata/DSC03778.jpg", "/Picturemockdata/DSC04766.jpg"]}
                                     likes={19}
                                     comments={6}
                                     shares={3}
                                     isVerified={true}
-                                    isMyPost={true}
+                                    createdBy={currentUserId}
+                                    currentUserId={currentUserId}
+                                    onEdit={() => handleEditPost({
+                                        id: 4,
+                                        content: "Chia sẻ tài liệu học tập về 'An toàn thông tin trên Internet' cho học sinh. Các em hãy tải về và học tập nhé! 📚 #AnToànThôngTin #HọcTập",
+                                        images: ["/Picturemockdata/IMG_1492.jpg", "/Picturemockdata/DSC03778.jpg", "/Picturemockdata/DSC04766.jpg"]
+                                    })}
+                                    onDelete={() => handleDeletePost({
+                                        id: 4,
+                                        content: "Chia sẻ tài liệu học tập về 'An toàn thông tin trên Internet' cho học sinh. Các em hãy tải về và học tập nhé! 📚 #AnToànThôngTin #HọcTập"
+                                    })}
                                 />
 
                                 <PostCard
@@ -623,11 +677,29 @@ export default function TeacherProfile() {
                                     class={profile?.teacherCode || "Giáo viên"}
                                     time="1 tuần trước"
                                     content="Kết quả bài kiểm tra giữa kỳ môn Tin học 12. Chúc mừng các em đạt điểm cao! Những em chưa đạt yêu cầu hãy cố gắng hơn nữa 💪 #KếtQuảThi #TinHọc12"
+                                    images={["/Picturemockdata/DSC03778.jpg", "/Picturemockdata/IMG_1492.jpg"]}
+                                    gif="https://media.giphy.com/media/3o7btPCcdNniyf0ArS/giphy.gif"
+                                    video="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                                    hashtags={["KếtQuảThi", "TinHọc12", "GiáoDục", "FPT"]}
+                                    album="Kết quả thi"
+                                    privacy="public"
                                     likes={31}
                                     comments={18}
                                     shares={4}
                                     isVerified={true}
-                                    isMyPost={true}
+                                    createdBy={currentUserId}
+                                    currentUserId={currentUserId}
+                                    onEdit={() => handleEditPost({
+                                        id: 5,
+                                        content: "Kết quả bài kiểm tra giữa kỳ môn Tin học 12. Chúc mừng các em đạt điểm cao! Những em chưa đạt yêu cầu hãy cố gắng hơn nữa 💪 #KếtQuảThi #TinHọc12",
+                                        images: ["/Picturemockdata/DSC03778.jpg", "/Picturemockdata/IMG_1492.jpg"],
+                                        gif: "https://media.giphy.com/media/3o7btPCcdNniyf0ArS/giphy.gif",
+                                        video: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                                    })}
+                                    onDelete={() => handleDeletePost({
+                                        id: 5,
+                                        content: "Kết quả bài kiểm tra giữa kỳ môn Tin học 12. Chúc mừng các em đạt điểm cao! Những em chưa đạt yêu cầu hãy cố gắng hơn nữa 💪 #KếtQuảThi #TinHọc12"
+                                    })}
                                 />
 
                             </div>
@@ -635,6 +707,28 @@ export default function TeacherProfile() {
                     </Tabs>
                 </div>
             )}
+
+            {/* Create Post Modal */}
+            <CreatePostModal 
+                isOpen={isCreatePostModalOpen}
+                onClose={handleCloseCreatePostModal}
+            />
+
+            {/* Update Post Modal */}
+            <UpdatePostModal
+                isOpen={isUpdateModalOpen}
+                onClose={handleCloseUpdateModal}
+                post={selectedPost}
+                onUpdate={handleUpdatePost}
+            />
+
+            {/* Delete Post Modal */}
+            <DeletePostModal
+                isOpen={isDeleteModalOpen}
+                onClose={handleCloseDeleteModal}
+                post={selectedPost}
+                onDelete={handleConfirmDelete}
+            />
         </>
     )
 }

@@ -1,5 +1,7 @@
 import { toast } from 'react-toastify'
 import { PROFILE_MESSAGES, AUTH_MESSAGES, COMMON_MESSAGES } from '@/common/constants/messages'
+import { POST_MESSAGES } from '../constants/messages/post'
+import { COLLECTION_MESSAGES } from '../constants/messages/collection'
 
 export const useToast = () => {
   const showSuccess = (message, options = {}) => {
@@ -67,6 +69,16 @@ export const useToast = () => {
   const fileTooLarge = () => showError(PROFILE_MESSAGES.ERROR.FILE_TOO_LARGE)
   const networkError = () => showError(COMMON_MESSAGES.ERROR.NETWORK_ERROR)
   const unknownError = () => showError(COMMON_MESSAGES.ERROR.GENERIC)
+  const postLoadFaild = () => showError(COMMON_MESSAGES.ERROR.postLoadFaild)
+  const createPostSuccess = () =>showSuccess(POST_MESSAGES.NOTIFICATIONS.POST_CREATED)
+  const deletePostSucess = () => showSuccess(POST_MESSAGES.NOTIFICATIONS.POST_DELETED)
+  const deleteCollection = () => showSuccess(COLLECTION_MESSAGES.SUCCESS.DELETE)
+  const createCollection = () => showSuccess(COLLECTION_MESSAGES.SUCCESS.CREATE)
+  const updateCollection = () => showSuccess(COLLECTION_MESSAGES.SUCCESS.UPDATE)
+  const nameIsNull = () => showError(COLLECTION_MESSAGES.ERROR.REQUIRE_NAME)
+  const loadAlbumFail = () =>showError(COLLECTION_MESSAGES.ERROR.LOAD_FAILD)
+  const addCollectionIteamFail = () => showError(COLLECTION_MESSAGES.ERROR.SAVE_ALBUM_FAILD)
+  const addCollectionIteamSuccess = () => showError(COLLECTION_MESSAGES.SUCCESS.ADD)
 
   return {
     // Basic toast methods
@@ -86,10 +98,20 @@ export const useToast = () => {
     fileTooLarge,
     networkError,
     unknownError,
-    
+    postLoadFaild,
+    createPostSuccess,
+    deletePostSucess,
+    deleteCollection,
+    createCollection,
+    updateCollection,
+    nameIsNull,
+    loadAlbumFail,
+    addCollectionIteamFail,
+    addCollectionIteamSuccess,
     // Direct access to messages
     PROFILE_MESSAGES,
     AUTH_MESSAGES,
-    COMMON_MESSAGES
+    COMMON_MESSAGES,
+    COLLECTION_MESSAGES
   }
 }

@@ -10,6 +10,7 @@ export const PROFILE_MESSAGES = {
     AVATAR_UPLOAD_FAILED: "Không thể tải lên ảnh đại diện. Vui lòng thử lại.",
     INVALID_FILE_TYPE: "Chỉ chấp nhận file JPG, PNG, GIF",
     FILE_TOO_LARGE: "File quá lớn. Kích thước tối đa 5MB",
+    POST_LOAD_FAILD: "Không thể tải bài đăng. Vui lòng thử lại."
   },
   WARNING: {
     UNSAVED_CHANGES: "Bạn có thay đổi chưa được lưu. Bạn có chắc muốn rời khỏi trang?",

@@ -192,7 +192,7 @@ export default function AuthForm() {
                       <Input
                         id="register-name"
                         type="text"
-                        placeholder="Nguyễn Văn A"
+                        placeholder="Họ và tên"
                         className="pl-10 focus:ring-2 focus:ring-orange-500 border-gray-200"
                         required
                       />

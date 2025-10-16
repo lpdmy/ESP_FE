@@ -1,5 +1,5 @@
 import Sidebar from "@/features/landing/components/Sidebar"
-import NewsFeed from "@/features/landing/components/NewsFeed"
+import NewsFeed from "@/features/landing/post/NewsFeed"
 import RightPanel from "@/features/landing/components/RightPanel"
 
 export default function LandingContent() {

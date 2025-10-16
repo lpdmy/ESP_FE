@@ -87,11 +87,14 @@ export function LoadingButton({
   variant = "default",
   ...props 
 }) {
+  // Remove isLoading from props to prevent it from being passed to DOM
+  const { isLoading: _, ...buttonProps } = { isLoading, ...props };
+  
   return (
     <Button 
       className={`relative overflow-hidden transition-all duration-200 ${isLoading ? 'cursor-not-allowed' : ''} ${className}`}
       disabled={isLoading}
-      {...props}
+      {...buttonProps}
     >
       {isLoading && (
         <>
@@ -109,6 +112,21 @@ export function LoadingButton({
       </span>
     </Button>
   )
+}
+export function LoadingCollection({ 
+  isLoading, 
+  className = "",
+  variant = "default"
+}) {
+  if (!isLoading) return null;
+
+  return (
+    <div className={`absolute inset-0 bg-gradient-to-br from-orange-50 via-yellow-50 to-white flex items-center justify-center z-10 ${className}`}>
+     <div className="backdrop-blur-md  animate-in fade-in-0 zoom-in-95 duration-300">
+        <Loading size="lg" variant={variant} />
+      </div>
+    </div>
+  );
 }
 
 export function LoadingCard({ 

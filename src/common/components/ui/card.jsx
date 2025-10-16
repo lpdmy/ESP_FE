@@ -1,12 +1,13 @@
 import React from 'react';
 import { cn } from "@/lib/utils";
 
-export const Card = ({ className, children, ...props }) => {
+export const Card = React.forwardRef(({ className, children, ...props }, ref) => {
   return (
     <div
+      ref={ref}
       data-slot="card"
       className={cn(
-        "bg-white text-gray-900 flex flex-col gap-6 rounded-xl border border-gray-200 py-6 shadow-sm",
+        "bg-white text-gray-900 flex flex-col gap-3 rounded-xl border border-gray-200 py-6 shadow-sm",
         className
       )}
       {...props}
@@ -14,7 +15,9 @@ export const Card = ({ className, children, ...props }) => {
       {children}
     </div>
   );
-};
+});
+
+Card.displayName = "Card";
 
 export const CardHeader = ({ className, children, ...props }) => {
   return (
