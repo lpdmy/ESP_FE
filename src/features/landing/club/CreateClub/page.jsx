@@ -123,6 +123,7 @@ function CreateClub() {
         contactPhone,
       };
       const response = await createClub(payload);
+      handleAvatarUpload()
       toast.createClubSuccess();
     } catch (error) {
       console.error("Lỗi khi tạo CLB:", error);
@@ -213,7 +214,7 @@ function CreateClub() {
                     <Label htmlFor="shortDescription">Mô tả ngắn *</Label>
                     <Input
                       id="shortDescription"
-                      placeholder="Mô tả ngắn gọn về CLB/Lớp học (tối đa 100 ký tự)"
+                      placeholder="Mô tả ngắn gọn về CLB (tối đa 100 ký tự)"
                       maxLength={100}
                       value={shortDescription}
                       onChange={(e) => setShortDescription(e.target.value)}
@@ -319,7 +320,7 @@ function CreateClub() {
 
                       <div
                         className="border-2 border-dashed rounded-lg p-6 text-center transition-colors"
-                        style={{
+                        style={{              
                           borderColor: coverFile ? "#f97316" : "#d1d5db",
                         }}
                       >
@@ -453,7 +454,7 @@ function CreateClub() {
                         Đang tạo...
                       </>
                     ) : (
-                      "Tạo CLB/Lớp học"
+                      "Tạo CLB"
                     )}
                   </Button>
                 </div>
@@ -484,7 +485,7 @@ function CreateClub() {
                   </div>
                   <div>
                     <h3 className="font-bold break-words">
-                      {clubName || "Tên CLB/Lớp học"}
+                      {clubName || "Tên CLB học"}
                     </h3>
                     <p className="text-sm text-gray-600 break-words">
                       {shortDescription || "Mô tả ngắn sẽ hiển thị ở đây"}

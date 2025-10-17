@@ -25,6 +25,9 @@ export const ROUTES = {
     COLLECTION_DETAIL: "/collection-detail/:id"
   },
   CLUB:{
-    CREATE_CLUB:"/club/create-club"
+    CREATE_CLUB:"/club/create-club-creation",
+    LIST_CLUB:"/club/list-club",
+    CLUB_DETAIL:"/club/:id",
+    MANAGE_CLUB:"/club/manage/:id"
   }
 };

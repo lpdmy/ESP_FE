@@ -72,7 +72,10 @@ export const API_CONFIG = {
     USER_POST:'/post/user',
     DELETE_POST:'/post',
     UPDATE_POST:'/post',
-    LIKE_POST:'/post/like'
+    LIKE_POST:'/post/like',
+    CLUB_PENDING_POST:'/post/club/pending',
+    APPROVE_POST:'/post/approve/{id}',
+    CLUB_POST:'/post/club'
   },
   COLLECTION :{
     CREATE_COLLECTION :'/collection',
@@ -82,7 +85,18 @@ export const API_CONFIG = {
     ADD_COLLECTION_ITEAM: '/collection/add-collection-iteam'
   },
   CLUB:{
-    CREATE_CLUB:'/club/club-creation-request'
+    CREATE_CLUB:'/club-creation-request',
+    LIST_CLUB:'/club',
+    CLUB_CATEGORY:'/club/categories',
+    CLUB_DETAIL:'/club/{id}',
+    CLUB_JOIN_REQUEST:'/join-request/club',
+    CLUB_CREATE_JOIN_REQUES:'/join-request',
+    CLUB_CANCEL_JOIN_REQUES:'/join-request/{id}',
+    CLUB_APPROVE_JOIN_REQUEST:'/join-request/approve/{id}',
+    CLUB_REJECT_JOIN_REQUEST:'/join-request/reject/{id}',
+    USER_CLUB :'/club-member/user',
+    UPDATE_CLUB:'/club',
+    LEAVE_CLUB:'/club-member/{id}'
   }
 };
 

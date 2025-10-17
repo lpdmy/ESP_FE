@@ -125,8 +125,6 @@ const UpdatePostModal = ({ isOpen, onClose, post, onUpdate }) => {
   // Load dữ liệu từ post khi mở modal
   useEffect(() => {
   if (post) {
-    console.log("📥 Loaded post:", post);
-
     setFormData({
       title: post.title || "",
       body: post.body || "",

@@ -14,10 +14,136 @@ export function useClubApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
+  const updateClub = useRef(async (payload) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.updateClub.bind(clubService),
+      [ token,payload],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const getListClub = useRef(async (pageNumber, pageSize,search="") => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.getListClub.bind(clubService),
+      [token, pageNumber, pageSize,search],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const getClubDetail = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.getClubDetail.bind(clubService),
+      [token, id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const getClubCategory = useRef(async () => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.getClubCategory.bind(clubService),
+      [token],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const getClubJoinRequest = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.getClubJoinRequest.bind(clubService),
+      [token,id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const createClubJoinRequest = useRef(async (payload) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.createClubJoinRequest.bind(clubService),
+      [ token,payload],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const approveJoinRequest = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.approveJoinRequest.bind(clubService),
+      [token,id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const cancelJoinRequest = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.cancelJoinRequest.bind(clubService),
+      [token,id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const approvePost = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.approvePost.bind(clubService),
+      [token,id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const rejectJoinRequest = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.rejectJoinRequest.bind(clubService),
+      [token,id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const getClubByUser = useRef(async () => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.getClubByUser.bind(clubService),
+      [token],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const getPostPending = useRef(async (id,pageNumber, pageSize,search="") => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.getPostPending.bind(clubService),
+      [token,id, pageNumber, pageSize,search],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const getClubPost = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.getClubPost.bind(clubService),
+      [token,id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const leaveClub = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.leaveClub.bind(clubService),
+      [token,id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
   return{
     clubLoading,
     saveLoading,
     error,
-    createClub : createClub.current
+    createClub : createClub.current,
+    getListClub : getListClub.current,
+    getClubCategory : getClubCategory.current,
+    getClubDetail : getClubDetail.current,
+    getClubJoinRequest : getClubJoinRequest.current,
+    createClubJoinRequest : createClubJoinRequest.current,
+    approveJoinRequest: approveJoinRequest.current,
+    rejectJoinRequest : rejectJoinRequest.current,
+    getClubByUser : getClubByUser.current,
+    updateClub: updateClub.current,
+    getPostPending: getPostPending.current,
+    approvePost: approvePost.current,
+    getClubPost : getClubPost.current,
+    cancelJoinRequest : cancelJoinRequest.current,
+    leaveClub : leaveClub.current
   };
 }

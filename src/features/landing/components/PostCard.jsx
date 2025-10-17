@@ -39,6 +39,7 @@ import { useCollectionApi } from "../collection/hooks/useCollectionApi";
 import { useToast } from "@/common/hooks/useToast";
 export default function PostCard({
   author,
+  avatarUrl,
   class: className,
   time,
   postId,
@@ -50,7 +51,7 @@ export default function PostCard({
   videos, // Array of videos
   hashtags = [], // Array of hashtags
   album, // Album name
-  privacy = "public", // 'public', 'friends', 'private'
+  privacy , // 'public', 'friends', 'private'
   likes,
   comments,
   shares,
@@ -116,9 +117,9 @@ export default function PostCard({
     try {
       const payload = { postId: postId, collectionId: id };
       const response = await addCollectionIteam(payload);
-      toast.addCollectionIteamSuccess()
+      toast.addCollectionIteamSuccess();
     } catch (err) {
-      toast.addCollectionIteamSuccess()
+      toast.addCollectionIteamSuccess();
     }
   };
 
@@ -187,11 +188,11 @@ export default function PostCard({
   // Hàm render privacy icon
   const getPrivacyIcon = () => {
     switch (privacy) {
-      case "private":
+      case 1:
         return <Lock className="h-3 w-3" />;
       case "friends":
         return <Users className="h-3 w-3" />;
-      case "public":
+      case 0:
       default:
         return <Globe className="h-3 w-3" />;
     }
@@ -200,8 +201,8 @@ export default function PostCard({
   // Hàm render privacy text
   const getPrivacyText = () => {
     switch (privacy) {
-      case "private":
-        return "Chỉ mình tôi";
+      case 1:
+        return "Nội bộ";
       case "friends":
         return "Bạn bè";
       case "public":
@@ -214,6 +215,7 @@ export default function PostCard({
       hanldeUserAlbum();
     }
   }, [isAlbumPopupOpen]);
+
   const isOwner = createdBy && currentUserId && createdBy === currentUserId;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -223,10 +225,18 @@ export default function PostCard({
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full flex items-center justify-center">
-              <span className="text-white font-semibold text-sm">
-                {author ? author.charAt(0) : "?"}
-              </span>
+            <div className="w-12 h-12 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full flex items-center justify-center">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={author}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                  {author.charAt(0)}
+                </div>
+              )}
             </div>
             <div>
               <div className="flex items-center space-x-2">

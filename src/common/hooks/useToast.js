@@ -81,6 +81,15 @@ export const useToast = () => {
   const addCollectionIteamFail = () => showError(COLLECTION_MESSAGES.ERROR.SAVE_ALBUM_FAILD)
   const addCollectionIteamSuccess = () => showError(COLLECTION_MESSAGES.SUCCESS.ADD)
   const createClubSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.CREATE)
+  const createClubJoinRequestSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.CREATE_CLUB_JOIN)
+  const createClubJoinRequestFail = () => showError(CLUB_MESSAGES.ERROR.CREATE_CLUB_JOIN)
+  const rejectJoinRequestFail = () => showError(CLUB_MESSAGES.ERROR.REJECT_JOIN)
+  const rejectJoinRequestSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.REJECT_JOIN)
+  const approveJoinRequestSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.APPROVE_JOIN)
+  const approveJoinRequestFail = () => showError(CLUB_MESSAGES.ERROR.APPROVE_JOIN)
+  const approvePostFail = () => showError(CLUB_MESSAGES.ERROR.APPROVE_POST)
+  const approvePostSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.APPROVE_POST)
+  const leaveClubSuccess = () => showSuccess(CLUB_MESSAGES.ERROR.LEAVE_CLUB)
 
   return {
     // Basic toast methods
@@ -111,6 +120,15 @@ export const useToast = () => {
     addCollectionIteamFail,
     addCollectionIteamSuccess,
     createClubSuccess,
+    createClubJoinRequestSuccess,
+    createClubJoinRequestFail,
+    rejectJoinRequestFail,
+    approveJoinRequestSuccess,
+    rejectJoinRequestSuccess,
+    approveJoinRequestFail,
+    approvePostFail,
+    approvePostSuccess,
+    leaveClubSuccess,
     // Direct access to messages
     PROFILE_MESSAGES,
     AUTH_MESSAGES,
