@@ -65,19 +65,32 @@ const ImportStudents = () => {
     setIsDragging(false);
 
     const file = e.dataTransfer.files[0];
-    if (file && file.type === 'text/csv') {
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+    const isCSV = fileName.endsWith('.csv');
+
+    if (isCSV) {
       processFile(file);
     } else {
-      toast.showError('Vui lòng chọn file CSV hợp lệ');
+      toast.showError('Vui lòng chọn tệp CSV hợp lệ (.csv)');
     }
   }, [toast]);
 
   const handleFileSelect = useCallback((e) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+    const isCSV = fileName.endsWith('.csv');
+
+    if (isCSV) {
       processFile(file);
+    } else {
+      toast.showError('Vui lòng chọn tệp CSV hợp lệ (.csv)');
     }
-  }, []);
+  }, [toast]);
+
 
   const processFile = (file) => {
     setSelectedFile(file);
@@ -238,8 +251,8 @@ const ImportStudents = () => {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-bold text-gray-900">Import Học Sinh</h1>
-          <p className="text-gray-600 mt-1">Upload file CSV và ánh xạ dữ liệu để import danh sách học sinh vào hệ thống</p>
+          <h1 className="text-3xl font-bold text-gray-900">Nhập danh sách học sinh từ Excel/CSV</h1>
+          <p className="text-gray-600 mt-1">Tải file dữ liệu và ánh xạ các cột để thêm học sinh vào hệ thống</p>
         </div>
         <div className="flex gap-3 flex-shrink-0">
           <Button 
@@ -248,14 +261,14 @@ const ImportStudents = () => {
             onClick={() => navigate('/admin/users')}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Quay lại
+            Quay về
           </Button>
           <Button 
             onClick={() => downloadTemplate()}
             className="!bg-green-600 hover:!bg-green-700 !text-white"
           >
             <Download className="h-4 w-4 mr-2" />
-            Tải mẫu Excel
+            Tải file mẫu Excel
           </Button>
         </div>
       </div>
@@ -263,8 +276,8 @@ const ImportStudents = () => {
       {/* Upload Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Upload File CSV</CardTitle>
-          <CardDescription>Chọn file CSV chứa dữ liệu học sinh cần import</CardDescription>
+          <CardTitle className="text-xl font-semibold">Chọn tệp danh sách học sinh (.CSV)</CardTitle>
+          <CardDescription>Chỉ chọn tệp dữ liệu định dạng CSV</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -288,11 +301,11 @@ const ImportStudents = () => {
                 }`}
               >
                 <Upload className="h-10 w-10 mx-auto mb-4 text-gray-400" />
-                <p className="text-base font-medium mb-2">Kéo thả file CSV vào đây hoặc click để chọn</p>
-                <p className="text-sm text-gray-500 mb-4">Hỗ trợ file .csv với dung lượng tối đa 10MB</p>
+                <p className="text-base font-medium mb-2">Kéo thả tệp vào đây hoặc nhấn để chọn từ máy</p>
+                <p className="text-sm text-gray-500 mb-4">Chỉ hỗ trợ tệp .CSV, dung lượng tối đa 10MB</p>
                 <label htmlFor="csv-upload">
                   <Button variant="outline" className="cursor-pointer bg-transparent" asChild>
-                    <span>Chọn file CSV</span>
+                    <span>Chọn tệp CSV</span>
                   </Button>
                 </label>
                 <input 
@@ -322,8 +335,8 @@ const ImportStudents = () => {
           <CardHeader>
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
               <div className="min-w-0">
-                <CardTitle className="text-xl font-semibold">Mapping Trường Dữ Liệu</CardTitle>
-                <CardDescription>Ánh xạ các cột trong file CSV với các trường trong hệ thống</CardDescription>
+                <CardTitle className="text-xl font-semibold">Ánh xạ cột dữ liệu</CardTitle>
+                <CardDescription>Chọn trường tương ứng trong hệ thống cho từng cột trong file CSV</CardDescription>
               </div>
               <div className="flex items-center gap-2 text-sm flex-shrink-0">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -361,7 +374,7 @@ const ImportStudents = () => {
               {mappedRequiredFields.length < requiredFields.length && (
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm font-medium text-yellow-800">
-                    Cảnh báo: Các trường bắt buộc chưa được ánh xạ
+                    Cảnh báo: Còn thiếu các trường bắt buộc
                   </p>
                   <ul className="mt-2 text-sm text-yellow-700 list-disc list-inside">
                     {requiredFields
@@ -383,8 +396,8 @@ const ImportStudents = () => {
           <CardHeader>
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
               <div className="min-w-0">
-                <CardTitle className="text-xl font-semibold">Preview Dữ Liệu</CardTitle>
-                <CardDescription>Xem trước dữ liệu trước khi import</CardDescription>
+                <CardTitle className="text-xl font-semibold">Xem trước dữ liệu</CardTitle>
+                <CardDescription>Kiểm tra dữ liệu trước khi thực hiện import</CardDescription>
               </div>
               <div className="text-sm text-gray-600 flex-shrink-0">
                 Hiển thị {startIndex + 1}-{Math.min(endIndex, csvData.rows.length)} / {csvData.rows.length} dòng
@@ -400,7 +413,7 @@ const ImportStudents = () => {
                   <div>
                     <p className="text-sm font-medium text-red-800">Phát hiện {totalErrors} dòng có lỗi</p>
                     <p className="text-sm text-red-700 mt-1">
-                      Các dòng thiếu trường bắt buộc sẽ được highlight màu đỏ
+                      Các dòng thiếu thông tin bắt buộc sẽ được tô đỏ
                     </p>
                   </div>
                 </div>
@@ -543,15 +556,13 @@ const ImportStudents = () => {
               <RadioGroupItem value="insert">
                 <div className="font-medium">Chỉ thêm mới</div>
                 <div className="text-sm text-gray-600 mt-1">
-                  Chỉ thêm các học sinh mới. Bỏ qua nếu mã học sinh đã tồn tại.
-                </div>
+                  Hệ thống chỉ thêm các học sinh chưa có mã. Những học sinh trùng mã sẽ được bỏ qua.                </div>
               </RadioGroupItem>
 
               <RadioGroupItem value="upsert">
                 <div className="font-medium">Thêm mới và cập nhật</div>
                 <div className="text-sm text-gray-600 mt-1">
-                  Thêm học sinh mới và cập nhật thông tin nếu mã học sinh đã tồn tại.
-                </div>
+                  Hệ thống thêm học sinh mới và tự động cập nhật thông tin nếu mã học sinh đã tồn tại.                </div>
               </RadioGroupItem>
             </RadioGroup>
           </CardContent>
@@ -562,8 +573,8 @@ const ImportStudents = () => {
       {(isImporting || importResult) && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">Tiến Trình Import</CardTitle>
-            <CardDescription>Kết quả quá trình import dữ liệu</CardDescription>
+            <CardTitle className="text-xl font-semibold">Tiến trình nhập dữ liệu</CardTitle>
+            <CardDescription>Trạng thái và kết quả quá trình import</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -574,7 +585,7 @@ const ImportStudents = () => {
                     <span className="font-medium">{progress}%</span>
                   </div>
                   <Progress value={progress} className="h-2" />
-                  <p className="text-sm text-gray-600 text-center">Vui lòng đợi, đang import dữ liệu học sinh</p>
+                  <p className="text-sm text-gray-600 text-center">Vui lòng chờ trong giây lát, hệ thống đang nhập dữ liệu</p>
                 </div>
               )}
 
@@ -614,7 +625,7 @@ const ImportStudents = () => {
                         onClick={handleDownloadErrors}
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        Tải xuống file lỗi
+                        Tải xuống danh sách lỗi
                       </Button>
                     </div>
                   )}
@@ -622,7 +633,7 @@ const ImportStudents = () => {
                   {importResult.success === importResult.total && (
                     <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                       <p className="text-sm font-medium text-green-800">
-                        ✓ Import thành công tất cả {importResult.total} học sinh!
+                        ✓ Tất cả {importResult.total} học sinh đã được nhập thành công!
                       </p>
                     </div>
                   )}
@@ -643,7 +654,6 @@ const ImportStudents = () => {
             loadingText="Đang import..."
             className="!bg-blue-600 hover:!bg-blue-700 !text-white flex items-center"
           >
-            <UploadIcon className="h-5 w-5 mr-2 flex-shrink-0" />
             Bắt đầu Import
           </LoadingButton>
         </div>

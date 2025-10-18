@@ -7,24 +7,33 @@ export const STUDENT_IMPORT_MESSAGES = {
     STUDENT_UPDATED: "Cập nhật học sinh thành công"
   },
   ERROR: {
-    IMPORT_FAILED: "Import học sinh thất bại",
-    VALIDATION_FAILED: "Validation dữ liệu thất bại",
-    TEMPLATE_DOWNLOAD_FAILED: "Tải template thất bại",
-    STUDENT_CREATE_FAILED: "Tạo học sinh thất bại",
-    STUDENT_UPDATE_FAILED: "Cập nhật học sinh thất bại",
-    STUDENT_ALREADY_EXISTS: "Học sinh đã tồn tại trong hệ thống",
-    STUDENT_NOT_FOUND: "Học sinh không tồn tại",
-    INVALID_FILE_FORMAT: "Định dạng file không hợp lệ",
-    FILE_TOO_LARGE: "File quá lớn (tối đa 10MB)",
-    EMPTY_FILE: "File trống hoặc không hợp lệ",
-    REQUIRED_FIELDS_NOT_MAPPED: "Các trường bắt buộc chưa được ánh xạ",
-    REQUIRED_FIELDS_EMPTY: "Các trường bắt buộc không được để trống",
-    INVALID_EMAIL_FORMAT: "Email không hợp lệ",
-    INVALID_PHONE_FORMAT: "Số điện thoại không hợp lệ",
-    INVALID_STUDENT_ID_FORMAT: "Mã học sinh không hợp lệ",
-    INVALID_DATE_FORMAT: "Ngày sinh không hợp lệ",
-    NETWORK_ERROR: "Lỗi kết nối mạng",
-    UNKNOWN_ERROR: "Có lỗi xảy ra, vui lòng thử lại"
+      // --- Nhóm: Lỗi hệ thống / chung ---
+    UNKNOWN_ERROR: "Có lỗi xảy ra, vui lòng thử lại.",
+    NETWORK_ERROR: "Lỗi kết nối mạng, vui lòng kiểm tra đường truyền.",
+
+    // --- Nhóm: Lỗi file import ---
+    INVALID_FILE_FORMAT: "Định dạng tệp không hợp lệ (chỉ hỗ trợ .xlsx hoặc .csv).",
+    FILE_TOO_LARGE: "Dung lượng tệp quá lớn (tối đa 10MB).",
+    EMPTY_FILE: "Tệp trống hoặc không chứa dữ liệu hợp lệ.",
+
+    // --- Nhóm: Lỗi mapping / dữ liệu ---
+    REQUIRED_FIELDS_NOT_MAPPED: "Các trường bắt buộc chưa được ánh xạ.",
+    REQUIRED_FIELDS_EMPTY: "Các trường bắt buộc không được để trống.",
+    INVALID_EMAIL_FORMAT: "Định dạng email không hợp lệ.",
+    INVALID_PHONE_FORMAT: "Định dạng số điện thoại không hợp lệ.",
+    INVALID_STUDENT_ID_FORMAT: "Định dạng mã học sinh không hợp lệ.",
+    INVALID_DATE_FORMAT: "Định dạng ngày sinh không hợp lệ.",
+
+    // --- Nhóm: Lỗi xử lý dữ liệu học sinh ---
+    STUDENT_ALREADY_EXISTS: "Học sinh đã tồn tại trong hệ thống.",
+    STUDENT_NOT_FOUND: "Không tìm thấy học sinh trong hệ thống.",
+    STUDENT_CREATE_FAILED: "Không thể tạo mới học sinh.",
+    STUDENT_UPDATE_FAILED: "Không thể cập nhật học sinh.",
+
+    // --- Nhóm: Lỗi quy trình import ---
+    IMPORT_FAILED: "Quá trình import học sinh thất bại.",
+    VALIDATION_FAILED: "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại tệp import.",
+    TEMPLATE_DOWNLOAD_FAILED: "Không thể tải xuống file template import."
   },
   VALIDATION: {
     STUDENTS_REQUIRED: "Danh sách học sinh không được để trống",
