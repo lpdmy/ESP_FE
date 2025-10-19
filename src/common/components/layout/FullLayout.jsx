@@ -14,7 +14,7 @@ export default function FullLayout({ children }) {
       <main className="flex-1">
         <div className="w-full py-6">
           <div className="w-full px-4">
-            <div className="flex gap-8 justify-center">
+            <div className="flex gap-6 justify-center">
               {/* Sidebar */}
               <aside className="hidden lg:block w-64 xl:w-72 sticky top-[88px] self-start flex-shrink-0">
                 <Sidebar />
@@ -25,7 +25,7 @@ export default function FullLayout({ children }) {
                 {/* Main content (tự giãn khi mất RightPanel) */}
                 <section
                   className={`min-w-0 ${
-                    isStudent ? "lg:max-w-4xl xl:max-w-4xl" : "lg:max-w-5xl xl:max-w-5xl"
+                    isStudent ? "lg:max-w-5xl xl:max-w-5xl" : "lg:max-w-5xl xl:max-w-5xl"
                   } flex-1`}
                 >
                   {children}
