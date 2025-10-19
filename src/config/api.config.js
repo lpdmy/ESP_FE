@@ -67,12 +67,25 @@ export const API_CONFIG = {
   UPLOAD: {
     UPLOAD_IMAGE: '/upload'
   },
-  POST: {
-    CREATE_POST: '/post',
-    USER_POST: '/post/user',
-    DELETE_POST: '/post',
-    UPDATE_POST: '/post',
-    LIKE_POST: '/post/like'
+  // Search endpoints  
+  SEARCH: {
+    GLOBAL: '/search',
+    USERS: '/search/users',
+    POSTS: '/search/posts',
+    ACTIVITIES: '/search/activities',
+    CLUBS: '/search/clubs',
+    HASHTAGS: '/search/hashtags',
+    ADVANCED: '/search/advanced',
+    SUGGESTIONS: '/search/suggestions',
+    TRENDING: '/search/trending',
+    HISTORY: '/search/history'
+  },
+  POST :{
+    CREATE_POST : '/post',
+    USER_POST:'/post/user',
+    DELETE_POST:'/post',
+    UPDATE_POST:'/post',
+    LIKE_POST:'/post/like'
   },
   COLLECTION: {
     CREATE_COLLECTION: '/collection',
