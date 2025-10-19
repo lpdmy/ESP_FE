@@ -1,26 +1,33 @@
-import { Button } from "@/common/components/ui/button"
-import { Card } from "@/common/components/ui/card"
-import { Badge } from "@/common/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar"
-import { useSelector } from "react-redux"
-import { SIDEBAR_NAVIGATION, SIDEBAR_DEFAULT_TAB } from "@/common/constants/sidebar"
+import { Button } from "@/common/components/ui/button";
+import { Card } from "@/common/components/ui/card";
+import { Badge } from "@/common/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar";
+import { useSelector } from "react-redux";
+import { useLocation, useNavigate } from "react-router-dom";
+import { SIDEBAR_NAVIGATION } from "@/common/constants/sidebar";
 
-export default function Sidebar({ activeTab = SIDEBAR_DEFAULT_TAB }) {
+export default function Sidebar() {
   const user = useSelector((state) => state.user.user);
-  
-  const userName = user?.firstName && user?.lastName 
-    ? `${user.firstName} ${user.lastName}` 
-    : user?.username || "Người dùng";
-  
-  const userAvatar = user?.firstName && user?.lastName
-    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
-    : user?.username ? user.username[0].toUpperCase() : 'U';
-  
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const userName =
+    user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user?.username || "Người dùng";
+
+  const userAvatar =
+    user?.firstName && user?.lastName
+      ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+      : user?.username
+        ? user.username[0].toUpperCase()
+        : "U";
+
   const menuItems = SIDEBAR_NAVIGATION;
 
   return (
     <div className="space-y-4">
-      {/* Profile Card */}
+      {/* Hồ sơ người dùng */}
       <Card className="p-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-white">
         <div className="flex items-center space-x-3">
           <Avatar className="w-12 h-12 ring-2 ring-white/30">
@@ -54,17 +61,30 @@ export default function Sidebar({ activeTab = SIDEBAR_DEFAULT_TAB }) {
       <Card className="p-2">
         <nav className="space-y-1">
           {menuItems.map((item, index) => {
-            const isActive = item.label === activeTab;
+            const paths = Array.isArray(item.paths) ? item.paths : [item.path];
+
+            const isActive = paths.some((p) =>
+              p === "/"
+                ? location.pathname === "/" // chỉ đúng trang chủ
+                : location.pathname.startsWith(p)
+            );
+
             return (
               <Button
                 key={index}
                 variant={isActive ? "default" : "ghost"}
-                className={`w-full justify-start ${isActive ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"}`}
+                className={`w-full justify-start ${isActive
+                    ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                    : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"
+                  }`}
+                onClick={() => navigate(paths[0])}
               >
                 <item.icon className="h-5 w-5 mr-3" />
                 <span className="flex-1 text-left">{item.label}</span>
                 {item.count && (
-                  <Badge className="bg-orange-500 text-white text-xs ml-auto">{item.count}</Badge>
+                  <Badge className="bg-orange-500 text-white text-xs ml-auto">
+                    {item.count}
+                  </Badge>
                 )}
               </Button>
             );
@@ -72,5 +92,5 @@ export default function Sidebar({ activeTab = SIDEBAR_DEFAULT_TAB }) {
         </nav>
       </Card>
     </div>
-  )
+  );
 }

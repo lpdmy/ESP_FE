@@ -82,16 +82,16 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
             >
               <DropdownMenuItem>
                 <User className="mr-2 h-4 w-4" />
-                Profile
+                Hồ sơ
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Settings className="mr-2 h-4 w-4" />
-                Settings
+                Cài đặt
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
-                Logout
+                Đăng xuất
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
