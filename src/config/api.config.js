@@ -3,17 +3,17 @@ export const API_CONFIG = {
   // Base URLs
   BASE_URL: (() => {
     const hostname = window.location.hostname;
-    
+
     // Development environment
     if (hostname.includes("edusphere-dev")) {
       return "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net/api";
     }
-    
+
     // Local development
     if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
       return "https://localhost:7084/api";
     }
-    
+
     // Production environment
     return "https://esp-prod-api.yourdomain.com/api";
   })(),
@@ -67,6 +67,19 @@ export const API_CONFIG = {
   UPLOAD: {
     UPLOAD_IMAGE: '/upload'
   },
+  // Search endpoints  
+  SEARCH: {
+    GLOBAL: '/search',
+    USERS: '/search/users',
+    POSTS: '/search/posts',
+    ACTIVITIES: '/search/activities',
+    CLUBS: '/search/clubs',
+    HASHTAGS: '/search/hashtags',
+    ADVANCED: '/search/advanced',
+    SUGGESTIONS: '/search/suggestions',
+    TRENDING: '/search/trending',
+    HISTORY: '/search/history'
+  },
   POST :{
     CREATE_POST : '/post',
     USER_POST:'/post/user',
@@ -100,7 +113,7 @@ export const getAuthHeaders = (token) => ({
 export async function handleApiResponse(response) {
   console.log('API Response status:', response.status);
   console.log('API Response headers:', response.headers);
-  
+
   const contentType = response.headers.get("content-type");
   if (!response.ok) {
     console.log('API Error - Status:', response.status);
