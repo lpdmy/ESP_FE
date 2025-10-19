@@ -3,17 +3,17 @@ export const API_CONFIG = {
   // Base URLs
   BASE_URL: (() => {
     const hostname = window.location.hostname;
-    
+
     // Development environment
     if (hostname.includes("edusphere-dev")) {
       return "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net/api";
     }
-    
+
     // Local development
     if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
       return "https://localhost:7084/api";
     }
-    
+
     // Production environment
     return "https://esp-prod-api.yourdomain.com/api";
   })(),
@@ -67,18 +67,18 @@ export const API_CONFIG = {
   UPLOAD: {
     UPLOAD_IMAGE: '/upload'
   },
-  POST :{
-    CREATE_POST : '/post',
-    USER_POST:'/post/user',
-    DELETE_POST:'/post',
-    UPDATE_POST:'/post',
-    LIKE_POST:'/post/like'
+  POST: {
+    CREATE_POST: '/post',
+    USER_POST: '/post/user',
+    DELETE_POST: '/post',
+    UPDATE_POST: '/post',
+    LIKE_POST: '/post/like'
   },
-  COLLECTION :{
-    CREATE_COLLECTION :'/collection',
-    DELETE_COLLECTION :'/collection',
-    UPDATE_COLLECTION :'/collection',
-    USER_COLLECTION :'/collection/user',
+  COLLECTION: {
+    CREATE_COLLECTION: '/collection',
+    DELETE_COLLECTION: '/collection',
+    UPDATE_COLLECTION: '/collection',
+    USER_COLLECTION: '/collection/user',
     ADD_COLLECTION_ITEAM: '/collection/add-collection-iteam'
   },
 
@@ -87,6 +87,26 @@ export const API_CONFIG = {
     IMPORT_STUDENTS: '/admin/students/import',
     VALIDATE_STUDENTS: '/admin/students/validate',
     DOWNLOAD_TEMPLATE: '/admin/students/template'
+  },
+
+  STAR_POINT: {
+    // Rules
+    UPDATE_REWARD_RULE: "/admin/rules/{actionType}/points",
+    GET_RULES: "/admin/rules",
+
+    // Rewards
+    GET_ALL_REWARDS: "/admin/rewards",
+    GET_REWARD_BY_ID: "/admin/rewards/{id}",
+    CREATE_REWARD: "/admin/rewards",
+    UPDATE_REWARD: "/admin/rewards/{id}",
+    DELETE_REWARD: "/admin/rewards/{id}",
+    REDEEM_REWARD: "/rewards/redeem",
+    GET_POINT_HISTORY: '/points/history',
+    GET_USER_POINTS: "/points/current",
+
+    GET_ALL_REDEMPTIONS_ADMIN: "/redeems/admin",
+    GET_MY_REDEMPTIONS: "/redeems/me",
+    PICKUP_REDEMPTION: "/redeems/{id}/pickup"
   }
 };
 
@@ -100,7 +120,7 @@ export const getAuthHeaders = (token) => ({
 export async function handleApiResponse(response) {
   console.log('API Response status:', response.status);
   console.log('API Response headers:', response.headers);
-  
+
   const contentType = response.headers.get("content-type");
   if (!response.ok) {
     console.log('API Error - Status:', response.status);
