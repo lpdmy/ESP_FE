@@ -23,12 +23,7 @@ import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { ClassGroupService } from "@/services/classgroup.service";
-
-const academicYears = [
-  { value: "2024-2025", label: "2024-2025" },
-  { value: "2023-2024", label: "2023-2024" },
-  { value: "2022-2023", label: "2022-2023" },
-]
+import { AcademicYearService } from "@/services/academicyear.service";
 
 const grades = [
   { value: 10, label: "Khối 10" },
@@ -36,34 +31,31 @@ const grades = [
   { value: 12, label: "Khối 12" },
 ]
 
-// Mock data matching the UI sample
-const mockClasses = [
-  { id: 1, name: "10A1", grade: 10, academicYear: "2024-2025", students: 35, teacher: "Nguyễn Thị Lan", teacherId: 1, status: 1 },
-  { id: 2, name: "10A2", grade: 10, academicYear: "2024-2025", students: 33, teacher: "Trần Văn Nam", teacherId: 2, status: 1 },
-  { id: 3, name: "10A3", grade: 10, academicYear: "2024-2025", students: 34, teacher: "Lê Thị Hoa", teacherId: 3, status: 1 },
-  { id: 4, name: "11A1", grade: 11, academicYear: "2024-2025", students: 30, teacher: "Phạm Thị D", teacherId: 4, status: 1 },
-  { id: 5, name: "11A2", grade: 11, academicYear: "2024-2025", students: 33, teacher: "Hoàng Văn E", teacherId: 5, status: 1 },
-  { id: 6, name: "12A1", grade: 12, academicYear: "2024-2025", students: 28, teacher: "Vũ Thị F", teacherId: 6, status: 1 },
-]
-
 export default function ClassManagementPage() {
   const navigate = useNavigate();
   const [classes, setClasses] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedYear, setSelectedYear] = useState("2024-2025")
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(null) // Will be set after fetching academic years
+  const [academicYears, setAcademicYears] = useState([])
   const [expandedGrades, setExpandedGrades] = useState([10]) // Grade 10 expanded by default
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
   const [selectedClass, setSelectedClass] = useState(null)
   const [classToDelete, setClassToDelete] = useState(null)
+  const [dashboardStats, setDashboardStats] = useState({
+    totalClasses: 0,
+    totalStudents: 0,
+    totalTeachers: 0
+  })
+  const [homeroomTeachers, setHomeroomTeachers] = useState({}) // classId -> teacher info
   const currentUser = useSelector((state) => state.user.user);
   
   const [newClass, setNewClass] = useState({
     name: "",
     grade: "",
-    academicYear: "2024-2025",
     description: "",
+    academicYearId: null,
   })
   
   const [formErrors, setFormErrors] = useState({})
@@ -77,19 +69,88 @@ export default function ClassManagementPage() {
     )
   }
 
-  // Filter classes based on search and year
-  // Fetch-based filtering: call backend when searchTerm or selectedYear changes
+  // Year-offset helpers per requirement
+  const getSelectedAcademicYear = () => academicYears.find(ay => ay.id === selectedAcademicYearId);
+  const getSelectedAcademicYearName = () => {
+    const ay = getSelectedAcademicYear();
+    return ay ? ay.name : "";
+  };
+
+  // Load homeroom teacher for a specific class
+  const loadHomeroomTeacher = async (classId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await ClassGroupService.getHomeroomTeacher(classId, token);
+      const teacher = response?.data || response;
+      
+      if (teacher) {
+        setHomeroomTeachers(prev => ({
+          ...prev,
+          [classId]: teacher
+        }));
+      }
+    } catch (error) {
+      console.error(`Failed to load homeroom teacher for class ${classId}:`, error);
+      // Don't show error toast for individual teacher loading failures
+    }
+  };
+
+  // Load homeroom teachers for all classes
+  const loadAllHomeroomTeachers = async (classList) => {
+    const promises = classList.map(cls => loadHomeroomTeacher(cls.id));
+    await Promise.allSettled(promises);
+  };
+
+  // Fetch academic years on component mount
   useEffect(() => {
+    const fetchAcademicYears = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          return;
+        }
+        
+        const response = await ClassGroupService.getAcademicYears(token);
+        
+        // Backend returns { statusCode, message, data: [...] }
+        const data = response?.data || [];
+        setAcademicYears(data);
+        
+        // Set default selected academic year to current one
+        const currentYear = data.find(ay => ay.isCurrent) || data[0];
+        if (currentYear) {
+          setSelectedAcademicYearId(currentYear.id);
+          console.log('Set default academic year to:', currentYear.name, 'ID:', currentYear.id);
+        }
+      } catch (error) {
+        console.error('Failed to fetch academic years:', error);
+        toast.error('Không thể tải danh sách niên khóa');
+      }
+    };
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchAcademicYears();
+    }
+  }, [currentUser]);
+
+  // Filter classes based on search and academic year
+  // Fetch-based filtering: call backend when searchTerm or selectedAcademicYearId changes
+  useEffect(() => {
+    // Don't search if no academic year is selected
+    if (!selectedAcademicYearId) return;
+    
     const doSearch = async () => {
       try {
-        const token = currentUser?.token;
-        const res = await ClassGroupService.search({ nameOrCombined: searchTerm, academicYear: selectedYear }, token);
+        const token = localStorage.getItem('token');
+        const res = await ClassGroupService.search({ nameOrCombined: searchTerm, academicYearId: selectedAcademicYearId }, token);
         const data = (res?.data || res) || [];
         const mapped = data.map(c => ({
           id: c.id,
           name: c.name,
           grade: c.grade,
-          academicYear: toAcademicYear(c.startYear),
+          academicYearId: c.academicYearId,
+          academicYearName: c.academicYearName,
           students: c.currentStudentCount ?? 0,
           teacher: "",
           teacherId: null,
@@ -103,7 +164,7 @@ export default function ClassManagementPage() {
     // Debounce simple: delay 300ms
     const h = setTimeout(doSearch, 300);
     return () => clearTimeout(h);
-  }, [searchTerm, selectedYear, currentUser]);
+  }, [searchTerm, selectedAcademicYearId, currentUser]);
 
   // Local view of classes for grouping by grade
   const filteredClasses = classes;
@@ -117,12 +178,8 @@ export default function ClassManagementPage() {
     return acc
   }, {})
 
-  // Calculate stats
-  const stats = {
-    totalClasses: filteredClasses.length,
-    totalStudents: filteredClasses.reduce((sum, cls) => sum + cls.students, 0),
-    totalTeachers: new Set(filteredClasses.map(cls => cls.teacher).filter(Boolean)).size
-  }
+  // Use dashboard stats from API instead of calculating locally
+  const stats = dashboardStats
 
   const handleViewClass = (classItem) => {
     navigate(`/admin/classes/${classItem.id}`);
@@ -133,8 +190,8 @@ export default function ClassManagementPage() {
     setNewClass({
       name: classItem.name || "",
       grade: classItem.grade || "",
-      academicYear: classItem.academicYear || "2024-2025",
       description: classItem.description || "",
+      academicYearId: classItem.academicYearId || null,
     });
     setIsEditModalOpen(true);
   };
@@ -147,7 +204,7 @@ export default function ClassManagementPage() {
   const handleConfirmDelete = async () => {
     if (!classToDelete) return;
     try {
-      const token = currentUser?.token;
+      const token = localStorage.getItem('token');
       await ClassGroupService.remove(classToDelete.id, token);
       setClasses(prev => prev.filter(c => c.id !== classToDelete.id));
       toast.success("Xóa lớp học thành công!");
@@ -160,18 +217,17 @@ export default function ClassManagementPage() {
   };
 
   const handleCreateClass = async () => {
-    if (!newClass.name.trim() || !newClass.grade) {
-      toast.error("Vui lòng điền tên lớp và khối")
+    if (!newClass.name.trim() || !newClass.grade || !newClass.academicYearId) {
+      toast.error("Vui lòng điền đầy đủ thông tin: tên lớp, khối và năm học")
       return
     }
     try {
-      const token = currentUser?.token;
-      const startYear = parseInt(String(newClass.academicYear).slice(0, 4), 10);
+      const token = localStorage.getItem('token');
       const payload = {
         name: newClass.name,
         description: newClass.description || undefined,
         grade: Number(newClass.grade),
-        startYear: Number.isFinite(startYear) ? startYear : undefined,
+        academicYearId: newClass.academicYearId,
       };
       const res = await ClassGroupService.create(payload, token);
       const created = res?.data || res;
@@ -179,14 +235,15 @@ export default function ClassManagementPage() {
         id: created.id,
         name: created.name,
         grade: created.grade,
-        academicYear: toAcademicYear(created.startYear),
+        academicYearId: created.academicYearId,
+        academicYearName: created.academicYearName,
         students: created.currentStudentCount ?? 0,
         teacher: "",
         teacherId: null,
         status: created.isDeleted ? 0 : 1,
       };
       setClasses(prev => [...prev, uiItem]);
-      setNewClass({ name: "", grade: "", academicYear: "2024-2025", description: "" })
+      setNewClass({ name: "", grade: "", description: "", academicYearId: null })
       setFormErrors({})
       setIsModalOpen(false)
       toast.success("Tạo lớp học thành công!")
@@ -199,14 +256,13 @@ export default function ClassManagementPage() {
   const handleUpdateClass = async () => {
     if (!selectedClass) return;
     try {
-      const token = currentUser?.token;
-      const startYear = parseInt(String(newClass.academicYear).slice(0, 4), 10);
+      const token = localStorage.getItem('token');
       const payload = {
         id: selectedClass.id,
         name: newClass.name || undefined,
         description: newClass.description || undefined,
         grade: Number(newClass.grade),
-        startYear: Number.isFinite(startYear) ? startYear : undefined,
+        academicYearId: newClass.academicYearId,
       };
       const res = await ClassGroupService.update(selectedClass.id, payload, token);
       const updated = res?.data || res;
@@ -214,7 +270,8 @@ export default function ClassManagementPage() {
         ...c,
         name: updated.name,
         grade: updated.grade,
-        academicYear: toAcademicYear(updated.startYear),
+        academicYearId: updated.academicYearId,
+        academicYearName: updated.academicYearName,
         students: updated.currentStudentCount ?? c.students,
         status: updated.isDeleted ? 0 : 1,
       } : c));
@@ -235,39 +292,63 @@ export default function ClassManagementPage() {
     return gradeNames[grade] || `Khối ${grade}`
   }
 
-  // Helper to map start year to academic year label
-  const toAcademicYear = (startYear) => {
-    if (!startYear) return "";
-    const endYear = Number(startYear) + 1;
-    return `${startYear}-${endYear}`;
-  }
+  // Helper to get academic year name
+  const getAcademicYearName = (academicYearId) => {
+    const ay = academicYears.find(y => y.id === academicYearId);
+    return ay ? ay.name : "";
+  };
 
+  // Load dashboard data and stats from API
   useEffect(() => {
-    const load = async () => {
+    const loadDashboardData = async () => {
       try {
-        const token = currentUser?.token;
-        const res = await ClassGroupService.dashboard(token);
+        const token = localStorage.getItem('token');
+        console.log('Loading dashboard with academicYearId:', selectedAcademicYearId);
+        
+        const res = await ClassGroupService.dashboard(token, selectedAcademicYearId);
         const payload = res?.data || res;
+        
+        console.log('Dashboard API response:', res);
+        console.log('Dashboard payload:', payload);
+        console.log('Statistics:', payload?.statistics);
+        
+        // Set dashboard stats from API (backend already filtered by academic year)
+        setDashboardStats({
+          totalClasses: payload?.statistics?.totalClasses || 0,
+          totalStudents: payload?.statistics?.totalStudents || 0,
+          totalTeachers: payload?.statistics?.totalTeachers || 0
+        });
+        
         const flattened = (payload?.classesByGrade || []).flatMap(g => {
           return (g.classes || []).map(c => ({
             id: c.id,
             name: c.name,
             grade: c.grade,
-            academicYear: toAcademicYear(c.startYear),
+            academicYearId: c.academicYearId,
+            academicYearName: c.academicYearName,
             students: c.currentStudentCount ?? 0,
             teacher: "",
             teacherId: null,
             status: c.isDeleted ? 0 : 1,
           }));
         });
+        
         setClasses(flattened);
+        
+        // Load homeroom teachers for all classes
+        await loadAllHomeroomTeachers(flattened);
+        
       } catch (e) {
-        console.error("Failed to load classes", e);
-        toast.error("Không thể tải danh sách lớp học");
+        console.error("Failed to load dashboard data", e);
+        toast.error("Không thể tải dữ liệu dashboard");
       }
     };
-    load();
-  }, [currentUser])
+    
+    // Only load dashboard if we have a user and academic years are loaded
+    if (currentUser && academicYears.length > 0) {
+      loadDashboardData();
+    }
+  }, [currentUser, selectedAcademicYearId, academicYears.length])
 
   return (
     <div className="space-y-6">
@@ -291,15 +372,25 @@ export default function ClassManagementPage() {
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-700">Năm học:</span>
           <SimpleSelect 
-            value={selectedYear} 
-            onValueChange={setSelectedYear}
+            value={selectedAcademicYearId ? selectedAcademicYearId.toString() : ""} 
+            onValueChange={(value) => setSelectedAcademicYearId(parseInt(value))}
             placeholder="Chọn năm học"
-            options={academicYears}
+            options={academicYears.map(ay => ({ value: ay.id.toString(), label: ay.name }))}
             className="w-40 border-gray-200 rounded-2xl"
           />
         </div>
         <Button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            // Set default academic year to current one when opening create modal
+            const currentAcademicYearId = selectedAcademicYearId || academicYears.find(ay => ay.isCurrent)?.id;
+            setNewClass({
+              name: "",
+              grade: "",
+              description: "",
+              academicYearId: currentAcademicYearId || null,
+            });
+            setIsModalOpen(true);
+          }}
           className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm rounded-2xl px-4"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -316,8 +407,15 @@ export default function ClassManagementPage() {
               <GraduationCap className="h-4 w-4 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-blue-900">Thống kê năm học {selectedYear}</h3>
-              <p className="text-sm text-blue-700">Tổng quan về các lớp học trong năm học được chọn</p>
+              <h3 className="text-lg font-semibold text-blue-900">
+                Thống kê {getSelectedAcademicYearName() ? `năm học ${getSelectedAcademicYearName()}` : 'tất cả niên khóa'}
+              </h3>
+              <p className="text-sm text-blue-700">
+                {getSelectedAcademicYearName() 
+                  ? 'Tổng quan về các lớp học trong năm học được chọn'
+                  : 'Tổng quan về tất cả lớp học trong hệ thống'
+                }
+              </p>
             </div>
               </div>
 
@@ -435,7 +533,26 @@ export default function ClassManagementPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             <GraduationCap className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm text-gray-600">{cls.teacher}</span>
+                            <span className="text-sm text-gray-600">
+                              {homeroomTeachers[cls.id] 
+                                ? `${homeroomTeachers[cls.id].firstName} ${homeroomTeachers[cls.id].lastName}`.trim()
+                                : "Chưa có GVCN"
+                              }
+                            </span>
+                            {!homeroomTeachers[cls.id] && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  // Navigate to class detail with teacher assignment focus
+                                  navigate(`/admin/classes/${cls.id}?assignTeacher=true`);
+                                }}
+                                className="h-6 w-6 p-0 text-green-600 hover:text-green-800 hover:bg-green-50"
+                                title="Gán giáo viên chủ nhiệm"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         </div>
 
@@ -502,10 +619,10 @@ export default function ClassManagementPage() {
               <Label htmlFor="academicYear" className="text-right">Năm học *</Label>
               <div className="col-span-3">
                 <SimpleSelect 
-                  value={newClass.academicYear} 
-                  onValueChange={(value) => setNewClass({ ...newClass, academicYear: value })}
+                  value={(newClass.academicYearId ?? selectedAcademicYearId ?? (academicYears.find(ay => ay.isCurrent)?.id) ?? "").toString()} 
+                  onValueChange={(value) => setNewClass({ ...newClass, academicYearId: parseInt(value) })}
                   placeholder="Chọn năm học"
-                  options={academicYears}
+                  options={academicYears.map(ay => ({ value: ay.id.toString(), label: ay.name }))}
                 />
               </div>
             </div>
@@ -556,10 +673,10 @@ export default function ClassManagementPage() {
               <Label htmlFor="edit-academicYear" className="text-right">Năm học *</Label>
               <div className="col-span-3">
                 <SimpleSelect 
-                  value={newClass.academicYear} 
-                  onValueChange={(value) => setNewClass({ ...newClass, academicYear: value })}
+                  value={(newClass.academicYearId ?? '').toString()} 
+                  onValueChange={(value) => setNewClass({ ...newClass, academicYearId: parseInt(value) })}
                   placeholder="Chọn năm học"
-                  options={academicYears}
+                  options={academicYears.map(ay => ({ value: ay.id.toString(), label: ay.name }))}
                 />
               </div>
             </div>
@@ -610,11 +727,16 @@ export default function ClassManagementPage() {
                   </div>
                   <div>
                     <span className="font-medium text-gray-700">Năm học:</span>
-                    <p className="text-gray-900 mt-1">{classToDelete.academicYear}</p>
+                    <p className="text-gray-900 mt-1">{getAcademicYearName(classToDelete.academicYearId)}</p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-700">Giáo viên:</span>
-                    <p className="text-gray-900 mt-1">{classToDelete.teacher}</p>
+                    <p className="text-gray-900 mt-1">
+                      {classToDelete && homeroomTeachers[classToDelete.id] 
+                        ? `${homeroomTeachers[classToDelete.id].firstName} ${homeroomTeachers[classToDelete.id].lastName}`.trim()
+                        : "Chưa có GVCN"
+                      }
+                    </p>
                   </div>
                 </div>
       </div>
