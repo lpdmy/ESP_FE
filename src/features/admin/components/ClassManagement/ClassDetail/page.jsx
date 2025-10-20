@@ -13,44 +13,13 @@
       ArrowLeft,
       Users,
       GraduationCap,
-      MapPin,
-      Calendar,
       Plus,
-      Edit,
       Trash2,
       Eye,
       } from "lucide-react";
       import { useSelector } from "react-redux";
       import { toast } from "react-toastify";
-
-      // Mock data for demonstration
-      const mockClassData = {
-      id: 1,
-      name: "10A1",
-      grade: 10,
-      subject: "Toán",
-      status: "Hoạt động",
-      students: 35,
-      teacher: "Nguyễn Thị Lan",
-      classroom: "Phòng 201",
-      schedule: "Thứ 2, 4, 6 - 7:00-8:30",
-      description: "Lớp học chuyên về môn Toán, tập trung phát triển tư duy logic và kỹ năng giải quyết vấn đề.",
-      academicYear: "2024-2025"
-      };
-
-      const mockStudents = [
-      { id: 1, name: "Nguyễn Văn An", email: "an.nguyen@email.com", birthDate: "2008-05-15", status: "Hoạt động" },
-      { id: 2, name: "Trần Thị Bình", email: "binh.tran@email.com", birthDate: "2008-03-22", status: "Hoạt động" },
-      { id: 3, name: "Lê Minh Cường", email: "cuong.le@email.com", birthDate: "2008-07-10", status: "Tạm dừng" },
-      { id: 4, name: "Phạm Thị Dung", email: "dung.pham@email.com", birthDate: "2008-01-08", status: "Hoạt động" },
-      { id: 5, name: "Hoàng Văn Em", email: "em.hoang@email.com", birthDate: "2008-09-12", status: "Hoạt động" },
-      ];
-
-      const mockTeachers = [
-      { id: 1, name: "Nguyễn Thị Lan", email: "lan.nguyen@email.com", subject: "Toán" },
-      { id: 2, name: "Trần Văn Nam", email: "nam.tran@email.com", subject: "Lý" },
-      { id: 3, name: "Lê Thị Hoa", email: "hoa.le@email.com", subject: "Hóa" },
-      ];
+      import { ClassGroupService } from "@/services/classgroup.service";
 
 export default function ClassDetailPage() {
   const { id } = useParams();
@@ -119,124 +88,262 @@ export default function ClassDetailPage() {
     };
   }, []);
       
-      const [classData, setClassData] = useState(mockClassData);
-      const [students, setStudents] = useState(mockStudents);
-      const [teachers, setTeachers] = useState(mockTeachers);
+      const [classData, setClassData] = useState(null);
+      const [students, setStudents] = useState([]);
       const [loading, setLoading] = useState(false);
-      const [activeTab, setActiveTab] = useState('students');
       const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
-      const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false);
-      const [selectedStudent, setSelectedStudent] = useState(null);
-      const [editingStudent, setEditingStudent] = useState({
-        id: '',
-        name: '',
-        email: '',
-        birthDate: '',
-        status: 'active'
-      });
-      
       const [newStudent, setNewStudent] = useState({
-         name: "",
-         email: "",
-         birthDate: "",
-         status: "Hoạt động"
+         email: ""
       });
+      const [emailError, setEmailError] = useState("");
+      
+      // Homeroom Teacher states
+      const [isAssignTeacherModalOpen, setIsAssignTeacherModalOpen] = useState(false);
+      const [newTeacher, setNewTeacher] = useState({
+         email: ""
+      });
+      const [teacherEmailError, setTeacherEmailError] = useState("");
+      const [homeroomTeacher, setHomeroomTeacher] = useState(null);
+      const [isTeacherDetailModalOpen, setIsTeacherDetailModalOpen] = useState(false);
+      
+      // Confirm modal states
+      const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+      const [confirmAction, setConfirmAction] = useState(null);
+      const [confirmData, setConfirmData] = useState(null);
 
       // Fetch class data
       useEffect(() => {
          const fetchClassData = async () => {
             try {
             setLoading(true);
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            setClassData(mockClassData);
-            setStudents(mockStudents);
-            setTeachers(mockTeachers);
+            const token = localStorage.getItem('token');
+            
+            console.log('Fetching class data for ID:', id);
+            console.log('Token:', token ? 'Present' : 'Missing');
+            
+            // Check if we should open assign teacher modal
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('assignTeacher') === 'true') {
+               setIsAssignTeacherModalOpen(true);
+               // Clean up URL
+               window.history.replaceState({}, '', window.location.pathname);
+            }
+            
+            // Fetch class detail
+            const classResponse = await ClassGroupService.getDetail(id, token);
+            console.log('Class response:', classResponse);
+            
+            if (classResponse && classResponse.data) {
+               setClassData(classResponse.data);
+            } else {
+               console.log('No class data found, trying basic getById...');
+               // Fallback to basic getById if detail endpoint fails
+               const basicResponse = await ClassGroupService.getById(id, token);
+               console.log('Basic response:', basicResponse);
+               if (basicResponse && basicResponse.data) {
+                  setClassData(basicResponse.data);
+               }
+            }
+            
+            // Fetch students
+            const studentsResponse = await ClassGroupService.getStudents(id, token);
+            console.log('Students response:', studentsResponse);
+            
+            if (studentsResponse && studentsResponse.data) {
+               setStudents(studentsResponse.data);
+            }
+            
+            // Fetch homeroom teacher
+            try {
+               const teacherResponse = await ClassGroupService.getHomeroomTeacher(id, token);
+               console.log('Homeroom teacher response:', teacherResponse);
+               
+               if (teacherResponse && teacherResponse.data) {
+                  setHomeroomTeacher(teacherResponse.data);
+               }
+            } catch (teacherError) {
+               console.log('No homeroom teacher found or error:', teacherError);
+               setHomeroomTeacher(null);
+            }
             } catch (error) {
             console.error("Error fetching class data:", error);
-            toast.error("Không thể tải thông tin lớp học");
+            toast.error("Không thể tải thông tin lớp học: " + error.message);
             } finally {
             setLoading(false);
             }
          };
 
-         fetchClassData();
+         if (id) {
+            fetchClassData();
+         }
       }, [id]);
 
       const handleBack = () => {
-         navigate('/admin/classes');
+         // Preserve academic year filter when going back
+         const urlParams = new URLSearchParams(window.location.search);
+         const academicYear = urlParams.get('academicYear');
+         const backUrl = academicYear ? `/admin/classes?academicYear=${academicYear}` : '/admin/classes';
+         navigate(backUrl);
       };
 
       const handleAddStudent = async () => {
-         if (!newStudent.name.trim() || !newStudent.email.trim()) {
-            toast.error("Vui lòng điền đầy đủ thông tin");
+         // Clear previous error
+         setEmailError("");
+         
+         if (!newStudent.email.trim()) {
+            setEmailError("Vui lòng nhập email học sinh");
+            return;
+         }
+
+         // Basic email validation
+         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+         if (!emailRegex.test(newStudent.email)) {
+            setEmailError("Email không đúng định dạng");
             return;
          }
 
          try {
-            const studentData = {
-            id: Math.max(...students.map(s => s.id)) + 1,
-            ...newStudent
-            };
+            const token = localStorage.getItem('token');
+            const response = await ClassGroupService.addStudent(id, newStudent.email, token);
             
-            setStudents([...students, studentData]);
-            setNewStudent({ name: "", email: "", birthDate: "", status: "Hoạt động" });
-            setIsAddStudentModalOpen(false);
-            toast.success("Thêm học sinh thành công!");
+            console.log('Add student response:', response);
+            
+            if (response && response.data && response.data.success) {
+               // Refresh students list
+               const studentsResponse = await ClassGroupService.getStudents(id, token);
+               if (studentsResponse && studentsResponse.data) {
+                  setStudents(studentsResponse.data);
+               }
+               
+               setNewStudent({ email: "" });
+               setEmailError("");
+               setIsAddStudentModalOpen(false);
+               toast.success(response.data.message || "Thêm học sinh thành công!");
+            } else {
+               // Backend handles all validation logic, just display the error message
+               const errorMessage = response?.data?.message || response?.message || "Không thể thêm học sinh";
+               setEmailError(errorMessage);
+            }
          } catch (error) {
             console.error("Error adding student:", error);
-            toast.error("Không thể thêm học sinh");
+            // Backend handles all validation logic, just display the error message
+            const errorMessage = error?.response?.data?.message || error?.message || "Không thể thêm học sinh";
+            setEmailError(errorMessage);
          }
       };
-
-      const handleEditStudent = (student) => {
-         setEditingStudent({
-            id: student.id,
-            name: student.name,
-            email: student.email,
-            birthDate: student.birthDate,
-            status: student.status
-         });
-         setIsEditStudentModalOpen(true);
-      };
-
-      const handleUpdateStudent = async () => {
-         if (!editingStudent.name.trim() || !editingStudent.email.trim()) {
-            toast.error("Vui lòng điền đầy đủ thông tin");
-            return;
-         }
-
-         try {
-            setStudents(students.map(student => 
-               student.id === editingStudent.id 
-                  ? { ...student, ...editingStudent }
-                  : student
-            ));
-            setIsEditStudentModalOpen(false);
-            toast.success("Cập nhật thông tin học sinh thành công!");
-         } catch (error) {
-            console.error("Error updating student:", error);
-            toast.error("Không thể cập nhật thông tin học sinh");
-         }
-      };
-
 
       const handleDeleteStudent = async (studentId) => {
          try {
-            setStudents(students.filter(s => s.id !== studentId));
-            toast.success("Xóa học sinh thành công!");
+            const token = localStorage.getItem('token');
+            const response = await ClassGroupService.removeStudent(id, studentId, token);
+            
+            if (response && response.data !== undefined) {
+               // Refresh students list
+               const studentsResponse = await ClassGroupService.getStudents(id, token);
+               if (studentsResponse && studentsResponse.data) {
+                  setStudents(studentsResponse.data);
+               }
+               
+               toast.success("Xóa học sinh thành công!");
+            } else {
+               toast.error(response?.message || "Không thể xóa học sinh");
+            }
          } catch (error) {
             console.error("Error deleting student:", error);
             toast.error("Không thể xóa học sinh");
          }
       };
 
-      const getStatusBadge = (status) => {
-         return status === "Hoạt động" ? (
-            <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Hoạt động</Badge>
-         ) : (
-            <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Tạm dừng</Badge>
-         );
+      const handleConfirmDeleteStudent = (student) => {
+         setConfirmAction('deleteStudent');
+         setConfirmData(student);
+         setIsConfirmModalOpen(true);
+      };
+
+      const handleConfirmRemoveTeacher = () => {
+         setConfirmAction('removeTeacher');
+         setConfirmData(homeroomTeacher);
+         setIsConfirmModalOpen(true);
+      };
+
+      const handleConfirmAction = async () => {
+         if (confirmAction === 'deleteStudent') {
+            await handleDeleteStudent(confirmData.id);
+         } else if (confirmAction === 'removeTeacher') {
+            await handleRemoveTeacher();
+         }
+         setIsConfirmModalOpen(false);
+         setConfirmAction(null);
+         setConfirmData(null);
+      };
+
+      const handleAssignTeacher = async () => {
+         // Clear previous error
+         setTeacherEmailError("");
+         
+         if (!newTeacher.email.trim()) {
+            setTeacherEmailError("Vui lòng nhập email giáo viên");
+            return;
+         }
+
+         // Basic email validation
+         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+         if (!emailRegex.test(newTeacher.email)) {
+            setTeacherEmailError("Email không đúng định dạng");
+            return;
+         }
+
+         try {
+            const token = localStorage.getItem('token');
+            const response = await ClassGroupService.assignHomeroomTeacher(id, newTeacher.email, token);
+            
+            console.log('Assign teacher response:', response);
+            
+            if (response && response.data && response.data.success) {
+               // Refresh homeroom teacher info
+               try {
+                  const teacherResponse = await ClassGroupService.getHomeroomTeacher(id, token);
+                  if (teacherResponse && teacherResponse.data) {
+                     setHomeroomTeacher(teacherResponse.data);
+                  }
+               } catch (teacherError) {
+                  console.log('Error refreshing teacher info:', teacherError);
+               }
+               
+               setNewTeacher({ email: "" });
+               setTeacherEmailError("");
+               setIsAssignTeacherModalOpen(false);
+               toast.success(response.data.message || "Gán giáo viên chủ nhiệm thành công!");
+            } else {
+               // Backend handles all validation logic, just display the error message
+               const errorMessage = response?.data?.message || response?.message || "Không thể gán giáo viên chủ nhiệm";
+               setTeacherEmailError(errorMessage);
+            }
+         } catch (error) {
+            console.error("Error assigning teacher:", error);
+            // Backend handles all validation logic, just display the error message
+            const errorMessage = error?.response?.data?.message || error?.message || "Không thể gán giáo viên chủ nhiệm";
+            setTeacherEmailError(errorMessage);
+         }
+      };
+
+      const handleRemoveTeacher = async () => {
+         try {
+            const token = localStorage.getItem('token');
+            const response = await ClassGroupService.removeHomeroomTeacher(id, token);
+            
+            if (response && response.data !== undefined) {
+               // Clear homeroom teacher info
+               setHomeroomTeacher(null);
+               
+               toast.success("Bỏ gán giáo viên chủ nhiệm thành công!");
+            } else {
+               toast.error(response?.message || "Không thể bỏ gán giáo viên chủ nhiệm");
+            }
+         } catch (error) {
+            console.error("Error removing teacher:", error);
+            toast.error("Không thể bỏ gán giáo viên chủ nhiệm");
+         }
       };
 
       if (loading) {
@@ -245,6 +352,17 @@ export default function ClassDetailPage() {
             <div className="text-center">
                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                <p className="text-gray-600">Đang tải thông tin lớp học...</p>
+            </div>
+            </div>
+         );
+      }
+
+      if (!classData) {
+         return (
+            <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+               <p className="text-gray-600">Không tìm thấy thông tin lớp học</p>
+               <Button onClick={handleBack} className="mt-4">Quay lại</Button>
             </div>
             </div>
          );
@@ -269,16 +387,21 @@ export default function ClassDetailPage() {
             <div className="flex items-center gap-3 mb-2">
                <h1 className="text-3xl font-bold text-gray-900">Lớp {classData.name}</h1>
                <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
-                  {classData.status}
+                  Khối {classData.grade}
                </Badge>
+               {classData.academicYearName && (
+                 <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+                    {classData.academicYearName}
+                 </Badge>
+               )}
             </div>
             <p className="text-gray-600">
-               Khối {classData.grade} - {classData.subject}
+               {classData.description}
             </p>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <Card className="bg-white border-gray-200 shadow-sm rounded-xl">
                <CardContent className="p-4">
                   <div className="flex items-center gap-3">
@@ -286,7 +409,7 @@ export default function ClassDetailPage() {
                      <Users className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                     <div className="text-lg font-bold text-gray-900">{classData.students}</div>
+                     <div className="text-lg font-bold text-gray-900">{classData.currentStudentCount}</div>
                      <div className="text-xs text-gray-600">Số học sinh</div>
                   </div>
                   </div>
@@ -299,37 +422,44 @@ export default function ClassDetailPage() {
                   <div className="flex items-center justify-center w-10 h-10 bg-green-100 rounded-xl">
                      <GraduationCap className="h-5 w-5 text-green-600" />
                   </div>
-                  <div>
-                     <div className="text-sm font-medium text-gray-900">{classData.teacher}</div>
-                     <div className="text-xs text-gray-600">Giáo viên</div>
+                  <div className="flex-1">
+                     <div className="text-sm font-medium text-gray-900">
+                        {homeroomTeacher ? `${homeroomTeacher.firstName} ${homeroomTeacher.lastName}`.trim() : "Chưa có"}
+                     </div>
+                     <div className="text-xs text-gray-600">Giáo viên chủ nhiệm</div>
                   </div>
-                  </div>
-               </CardContent>
-            </Card>
-
-            <Card className="bg-white border-gray-200 shadow-sm rounded-xl">
-               <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-xl">
-                     <MapPin className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                     <div className="text-sm font-medium text-gray-900">{classData.classroom}</div>
-                     <div className="text-xs text-gray-600">Phòng học</div>
-                  </div>
-                  </div>
-               </CardContent>
-            </Card>
-
-            <Card className="bg-white border-gray-200 shadow-sm rounded-xl">
-               <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-10 h-10 bg-orange-100 rounded-xl">
-                     <Calendar className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div>
-                     <div className="text-sm font-medium text-gray-900">{classData.schedule}</div>
-                     <div className="text-xs text-gray-600">Lịch học</div>
+                  <div className="flex gap-2">
+                     {homeroomTeacher ? (
+                        <>
+                           <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setIsTeacherDetailModalOpen(true)}
+                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                              title="Xem chi tiết giáo viên"
+                           >
+                              <Eye className="h-4 w-4" />
+                           </Button>
+                           <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleConfirmRemoveTeacher}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                              title="Xóa giáo viên khỏi lớp"
+                           >
+                              <Trash2 className="h-4 w-4" />
+                           </Button>
+                        </>
+                     ) : (
+                        <Button
+                           size="sm"
+                           onClick={() => setIsAssignTeacherModalOpen(true)}
+                           className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700 text-white"
+                           title="Gán giáo viên chủ nhiệm"
+                        >
+                           <Plus className="h-4 w-4" />
+                        </Button>
+                     )}
                   </div>
                   </div>
                </CardContent>
@@ -351,41 +481,12 @@ export default function ClassDetailPage() {
             </CardContent>
             </Card>
 
-      {/* Student/Teacher Tabs */}
-      <div className="radio-inputs mb-6">
-        <label className="radio">
-          <input 
-            type="radio" 
-            name="tab" 
-            checked={activeTab === 'students'}
-            onChange={() => setActiveTab('students')}
-          />
-          <span className="name flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Học sinh ({students.length})
-          </span>
-        </label>
-        
-        <label className="radio">
-          <input 
-            type="radio" 
-            name="tab" 
-            checked={activeTab === 'teachers'}
-            onChange={() => setActiveTab('teachers')}
-          />
-          <span className="name flex items-center gap-2">
-            <GraduationCap className="h-4 w-4" />
-            Giáo viên ({teachers.length})
-          </span>
-        </label>
-      </div>
-
-      {/* Student/Teacher List Table */}
+      {/* Students List Table */}
       <Card className="!bg-white !border-gray-200 !shadow-sm !rounded-xl">
         <CardHeader className="!pb-4">
           <div className="flex items-center justify-between">
             <h3 className="!text-lg !font-semibold !text-gray-900">
-              {activeTab === 'students' ? 'Danh sách học sinh' : 'Danh sách giáo viên'}
+              Danh sách học sinh ({students.length})
             </h3>
             <Button 
               onClick={() => setIsAddStudentModalOpen(true)}
@@ -397,96 +498,54 @@ export default function ClassDetailPage() {
           </div>
         </CardHeader>
         <CardContent className="!p-0">
-          {activeTab === 'students' ? (
-            <div className="!overflow-hidden !rounded-xl">
-              <Table>
-                <TableHeader>
-                  <TableRow className="!border-b !border-gray-200 !bg-gray-50">
-                    <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">STT</TableHead>
-                    <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Họ tên</TableHead>
-                    <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Email</TableHead>
-                    <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Ngày sinh</TableHead>
-                    <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Trạng thái</TableHead>
-                    <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Thao tác</TableHead>
+          <div className="!overflow-hidden !rounded-xl">
+            <Table>
+              <TableHeader>
+                <TableRow className="!border-b !border-gray-200 !bg-gray-50">
+                  <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">STT</TableHead>
+                  <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Họ tên</TableHead>
+                  <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Email</TableHead>
+                  <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Ngày sinh</TableHead>
+                  <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Thao tác</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {students.map((student, index) => (
+                  <TableRow key={student.id} className="!border-b !border-gray-200 hover:!bg-gray-50">
+                    <TableCell className="!text-gray-600 !py-3 !px-4">{index + 1}</TableCell>
+                    <TableCell className="!font-medium !text-gray-900 !py-3 !px-4">{student.fullName}</TableCell>
+                    <TableCell className="!text-gray-600 !py-3 !px-4">{student.email}</TableCell>
+                    <TableCell className="!text-gray-600 !py-3 !px-4">
+                      {student.birthdate ? new Date(student.birthdate).toLocaleDateString('vi-VN') : '-'}
+                    </TableCell>
+                    <TableCell className="!py-3 !px-4">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleConfirmDeleteStudent(student)}
+                          className="!text-red-600 hover:!text-red-800 hover:!bg-red-50 !px-2 !py-1 !rounded-md"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Xóa khỏi lớp
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {students.map((student, index) => (
-                    <TableRow key={student.id} className="!border-b !border-gray-200 hover:!bg-gray-50">
-                      <TableCell className="!text-gray-600 !py-3 !px-4">{index + 1}</TableCell>
-                      <TableCell className="!font-medium !text-gray-900 !py-3 !px-4">{student.name}</TableCell>
-                      <TableCell className="!text-gray-600 !py-3 !px-4">{student.email}</TableCell>
-                      <TableCell className="!text-gray-600 !py-3 !px-4">{student.birthDate}</TableCell>
-                      <TableCell className="!py-3 !px-4">{getStatusBadge(student.status)}</TableCell>
-                      <TableCell className="!py-3 !px-4">
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleEditStudent(student)}
-                            className="!text-gray-600 hover:!text-gray-800 hover:!bg-gray-100 !px-2 !py-1 !rounded-md"
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Sửa
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeleteStudent(student.id)}
-                            className="!text-gray-600 hover:!text-gray-800 hover:!bg-gray-100 !px-2 !py-1 !rounded-md"
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Xóa
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="!overflow-hidden !rounded-xl">
-              <Table>
-                <TableHeader>
-                  <TableRow className="!border-b !border-gray-200 !bg-gray-50">
-                    <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">STT</TableHead>
-                    <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Họ tên</TableHead>
-                    <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Email</TableHead>
-                    <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Môn học</TableHead>
-                    <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Thao tác</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {teachers.map((teacher, index) => (
-                    <TableRow key={teacher.id} className="!border-b !border-gray-200 hover:!bg-gray-50">
-                      <TableCell className="!text-gray-600 !py-3 !px-4">{index + 1}</TableCell>
-                      <TableCell className="!font-medium !text-gray-900 !py-3 !px-4">{teacher.name}</TableCell>
-                      <TableCell className="!text-gray-600 !py-3 !px-4">{teacher.email}</TableCell>
-                      <TableCell className="!text-gray-600 !py-3 !px-4">{teacher.subject}</TableCell>
-                      <TableCell className="!py-3 !px-4">
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="!text-gray-600 hover:!text-gray-800 hover:!bg-gray-100 !px-2 !py-1 !rounded-md"
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Xem
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                ))}
+              </TableBody>
+            </Table>
+          </div>
             </CardContent>
             </Card>
 
             {/* Add Student Modal */}
-            <Dialog open={isAddStudentModalOpen} onOpenChange={setIsAddStudentModalOpen}>
+            <Dialog open={isAddStudentModalOpen} onOpenChange={(open) => {
+              setIsAddStudentModalOpen(open);
+              if (!open) {
+                setEmailError(""); // Clear error when closing modal
+              }
+            }}>
               <DialogContent className="sm:max-w-[500px] !bg-white !border-0 !shadow-xl !rounded-xl">
                 <DialogHeader className="space-y-3">
                   <div className="flex items-center gap-3">
@@ -494,61 +553,51 @@ export default function ClassDetailPage() {
                       <Plus className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
-                      <DialogTitle className="text-xl font-semibold text-gray-900">Thêm học sinh mới</DialogTitle>
+                      <DialogTitle className="text-xl font-semibold text-gray-900">Thêm học sinh vào lớp</DialogTitle>
                       <DialogDescription className="text-sm text-gray-600">
-                        Thêm học sinh vào lớp {classData.name}. Điền thông tin bắt buộc bên dưới.
+                        Thêm học sinh vào lớp {classData.name}. Nhập email học sinh để thêm vào lớp.
                       </DialogDescription>
                     </div>
                   </div>
                 </DialogHeader>
                 
                 <div className="space-y-6 py-6">
-                  {/* Full Name Field */}
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      Họ tên <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="name"
-                      value={newStudent.name}
-                      onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
-                      placeholder="Nhập họ tên học sinh"
-                      className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* Email Field */}
+                  {/* Student Email Field */}
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-medium text-gray-700 flex items-center gap-1">
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                       </svg>
-                      Email <span className="text-red-500">*</span>
+                      Email học sinh <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="email"
                       type="email"
                       value={newStudent.email}
-                      onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
-                      placeholder="Nhập email học sinh"
-                      className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                      onChange={(e) => {
+                        setNewStudent({ ...newStudent, email: e.target.value });
+                        setEmailError(""); // Clear error when user types
+                      }}
+                      placeholder="Nhập email học sinh (ví dụ: student@email.com)"
+                      className={`h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500 ${emailError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                     />
-                  </div>
-
-                  {/* Birth Date Field */}
-                  <div className="space-y-2">
-                    <Label htmlFor="birthDate" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      Ngày sinh
-                    </Label>
-                    <Input
-                      id="birthDate"
-                      type="date"
-                      value={newStudent.birthDate}
-                      onChange={(e) => setNewStudent({ ...newStudent, birthDate: e.target.value })}
-                      className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                    />
+                    {emailError && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
+                        <div className="flex items-start gap-2">
+                          <svg className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p className="text-sm text-red-700 font-medium">
+                            {emailError}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500">
+                      Học sinh phải đã được đăng ký trong hệ thống với email này. 
+                      <br />
+                      <span className="text-orange-600 font-medium">Lưu ý:</span> Học sinh không thể có trong nhiều lớp cùng niên khóa.
+                    </p>
                   </div>
                 </div>
                 
@@ -571,106 +620,186 @@ export default function ClassDetailPage() {
               </DialogContent>
             </Dialog>
 
-            {/* Edit Student Modal */}
-            <Dialog open={isEditStudentModalOpen} onOpenChange={setIsEditStudentModalOpen}>
+            {/* Assign Homeroom Teacher Modal */}
+            <Dialog open={isAssignTeacherModalOpen} onOpenChange={(open) => {
+              setIsAssignTeacherModalOpen(open);
+              if (!open) {
+                setTeacherEmailError(""); // Clear error when closing modal
+              }
+            }}>
               <DialogContent className="sm:max-w-[500px] !bg-white !border-0 !shadow-xl !rounded-xl">
                 <DialogHeader className="space-y-3">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-10 h-10 bg-green-100 rounded-xl">
-                      <Edit className="h-5 w-5 text-green-600" />
+                      <GraduationCap className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
-                      <DialogTitle className="text-xl font-semibold text-gray-900">Sửa thông tin học sinh</DialogTitle>
+                      <DialogTitle className="text-xl font-semibold text-gray-900">Gán giáo viên chủ nhiệm</DialogTitle>
                       <DialogDescription className="text-sm text-gray-600">
-                        Cập nhật thông tin học sinh trong lớp {classData.name}.
+                        Gán giáo viên làm chủ nhiệm lớp {classData.name}. Nhập email giáo viên để gán làm chủ nhiệm.
                       </DialogDescription>
                     </div>
                   </div>
                 </DialogHeader>
                 
                 <div className="space-y-6 py-6">
-                  {/* Full Name Field */}
+                  {/* Teacher Email Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="edit-name" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      Họ tên <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="edit-name"
-                      value={editingStudent.name}
-                      onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })}
-                      placeholder="Nhập họ tên học sinh"
-                      className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* Email Field */}
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-email" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                    <Label htmlFor="teacherEmail" className="text-sm font-medium text-gray-700 flex items-center gap-1">
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                       </svg>
-                      Email <span className="text-red-500">*</span>
+                      Email giáo viên <span className="text-red-500">*</span>
                     </Label>
                     <Input
-                      id="edit-email"
+                      id="teacherEmail"
                       type="email"
-                      value={editingStudent.email}
-                      onChange={(e) => setEditingStudent({ ...editingStudent, email: e.target.value })}
-                      placeholder="Nhập email học sinh"
-                      className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                      value={newTeacher.email}
+                      onChange={(e) => {
+                        setNewTeacher({ ...newTeacher, email: e.target.value });
+                        setTeacherEmailError(""); // Clear error when user types
+                      }}
+                      placeholder="Nhập email giáo viên (ví dụ: teacher@email.com)"
+                      className={`h-11 border-gray-200 focus:border-green-500 focus:ring-green-500 ${teacherEmailError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                     />
-                  </div>
-
-                  {/* Birth Date Field */}
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-birthDate" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      Ngày sinh
-                    </Label>
-                    <Input
-                      id="edit-birthDate"
-                      type="date"
-                      value={editingStudent.birthDate}
-                      onChange={(e) => setEditingStudent({ ...editingStudent, birthDate: e.target.value })}
-                      className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* Status Field */}
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-status" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Trạng thái
-                    </Label>
-                    <select
-                      id="edit-status"
-                      value={editingStudent.status}
-                      onChange={(e) => setEditingStudent({ ...editingStudent, status: e.target.value })}
-                      className="h-11 w-full px-3 py-2 border border-gray-200 rounded-md focus:border-blue-500 focus:ring-blue-500 focus:outline-none"
-                    >
-                      <option value="active">Hoạt động</option>
-                      <option value="inactive">Tạm dừng</option>
-                    </select>
+                    {teacherEmailError && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
+                        <div className="flex items-start gap-2">
+                          <svg className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p className="text-sm text-red-700 font-medium">
+                            {teacherEmailError}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500">
+                      Giáo viên phải đã được đăng ký trong hệ thống với email này. 
+                      <br />
+                      <span className="text-orange-600 font-medium">Lưu ý:</span> Giáo viên không thể chủ nhiệm nhiều lớp cùng niên khóa.
+                    </p>
                   </div>
                 </div>
                 
                 <DialogFooter className="gap-3 pt-4">
                   <Button 
                     variant="outline" 
-                    onClick={() => setIsEditStudentModalOpen(false)}
+                    onClick={() => setIsAssignTeacherModalOpen(false)}
                     className="h-11 px-6 border-gray-200 text-gray-700 hover:bg-gray-50"
                   >
                     Hủy
                   </Button>
                   <Button 
-                    onClick={handleUpdateStudent}
+                    onClick={handleAssignTeacher}
                     className="h-11 px-6 bg-green-600 hover:bg-green-700 text-white"
                   >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Cập nhật
+                    <GraduationCap className="h-4 w-4 mr-2" />
+                    Gán giáo viên
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Teacher Detail Modal */}
+            <Dialog open={isTeacherDetailModalOpen} onOpenChange={setIsTeacherDetailModalOpen}>
+              <DialogContent className="sm:max-w-[500px] bg-white">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5 text-blue-600" />
+                    Thông tin giáo viên chủ nhiệm
+                  </DialogTitle>
+                  <DialogDescription>
+                    Chi tiết thông tin giáo viên chủ nhiệm lớp {classData?.name}
+                  </DialogDescription>
+                </DialogHeader>
+                
+                {homeroomTeacher && (
+                  <div className="py-4">
+                    <div className="space-y-4 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-700">Họ và tên:</span>
+                        <p className="text-gray-900 mt-1">
+                          {`${homeroomTeacher.firstName} ${homeroomTeacher.lastName}`.trim()}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Email:</span>
+                        <p className="text-gray-900 mt-1">{homeroomTeacher.email}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Số điện thoại:</span>
+                        <p className="text-gray-900 mt-1">{homeroomTeacher.phoneNumber || "Chưa cập nhật"}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <DialogFooter>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsTeacherDetailModalOpen(false)}
+                    className="h-11 px-6 border-gray-200 text-gray-700 hover:bg-gray-50"
+                  >
+                    Đóng
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Confirm Modal */}
+            <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
+              <DialogContent className="sm:max-w-[400px] bg-white">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <div className="flex items-center justify-center w-8 h-8 bg-red-100 rounded-lg">
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </div>
+                    Xác nhận xóa
+                  </DialogTitle>
+                  <DialogDescription>
+                    {confirmAction === 'deleteStudent' 
+                      ? `Bạn có chắc chắn muốn xóa học sinh "${confirmData?.fullName}" khỏi lớp ${classData?.name}?`
+                      : `Bạn có chắc chắn muốn bỏ gán giáo viên "${confirmData?.firstName} ${confirmData?.lastName}" khỏi lớp ${classData?.name}?`
+                    }
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="py-4">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-start gap-2">
+                      <svg className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      <div>
+                        <p className="text-sm text-yellow-800 font-medium">
+                          Hành động này không thể hoàn tác
+                        </p>
+                        <p className="text-xs text-yellow-700 mt-1">
+                          {confirmAction === 'deleteStudent' 
+                            ? 'Học sinh sẽ bị xóa khỏi lớp và cần được thêm lại nếu muốn quay lại.'
+                            : 'Giáo viên sẽ không còn là chủ nhiệm lớp này nữa.'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <DialogFooter className="gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsConfirmModalOpen(false)}
+                    className="h-11 px-6 border-gray-200 text-gray-700 hover:bg-gray-50"
+                  >
+                    Hủy
+                  </Button>
+                  <Button 
+                    onClick={handleConfirmAction}
+                    className="h-11 px-6 bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {confirmAction === 'deleteStudent' ? 'Xóa học sinh' : 'Bỏ gán giáo viên'}
                   </Button>
                 </DialogFooter>
               </DialogContent>

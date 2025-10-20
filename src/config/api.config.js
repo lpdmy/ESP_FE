@@ -85,18 +85,29 @@ export const API_CONFIG = {
   CLASS_GROUP: {
     LIST: '/classgroup',
     GET_BY_ID: '/classgroup/{id}',
+    GET_DETAIL: '/classgroup/{id}/detail',
     GET_BY_NAME: '/classgroup/by-name',
     DASHBOARD: '/classgroup/dashboard',
     BY_GRADE: '/classgroup/by-grade/{grade}',
     WITHOUT_GRADE: '/classgroup/without-grade',
-    BY_START_YEAR: '/classgroup/by-start-year/{startYear}',
-    WITHOUT_START_YEAR: '/classgroup/without-start-year',
+    BY_ACADEMIC_YEAR: '/classgroup/by-academic-year/{academicYearId}',
+    WITHOUT_ACADEMIC_YEAR: '/classgroup/without-academic-year',
     DELETED: '/classgroup/deleted',
     FILTER: '/classgroup/filter',
     CHECK_NAME_EXISTS: '/classgroup/check-name-exists',
     CREATE: '/classgroup',
     UPDATE: '/classgroup/{id}',
-    DELETE: '/classgroup/{id}'
+    DELETE: '/classgroup/{id}',
+    // Student management endpoints
+    GET_STUDENTS: '/classgroup/{id}/students',
+    ADD_STUDENT: '/classgroup/{id}/students',
+    REMOVE_STUDENT: '/classgroup/{id}/students/{studentId}',
+    // Homeroom Teacher management endpoints
+    ASSIGN_HOMEROOM_TEACHER: '/classgroup/{id}/homeroom-teacher',
+    REMOVE_HOMEROOM_TEACHER: '/classgroup/{id}/homeroom-teacher',
+    GET_HOMEROOM_TEACHER: '/classgroup/{id}/homeroom-teacher',
+    // Academic Year endpoints
+    GET_ACADEMIC_YEARS: '/classgroup/academic-years'
   }
 };
 
