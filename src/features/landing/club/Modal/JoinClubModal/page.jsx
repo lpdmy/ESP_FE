@@ -9,7 +9,7 @@ import {
   DialogFooter,
   DialogDescription,
   useDialog
-} from "@/common/components/ui/Dialog"; // Đường dẫn có thể thay đổi tuỳ vào vị trí bạn import
+} from "@/common/components/ui/dialog"; // Đường dẫn có thể thay đổi tuỳ vào vị trí bạn import
 
 export default function JoinClubModal({ open, onClose, onSubmit }) {
   const [reasonToJoin, setReason] = useState("");
