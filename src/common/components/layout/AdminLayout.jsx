@@ -8,7 +8,7 @@ export default function AdminLayout({ children, header, sidebar }) {
       {/* Header */}
       {header && (
         <div className="fixed top-0 left-0 right-0 z-50">
-          {typeof header === 'function' 
+          {typeof header === 'function'
             ? header({ sidebarOpen, setSidebarOpen })
             : header
           }
@@ -19,7 +19,7 @@ export default function AdminLayout({ children, header, sidebar }) {
         {/* Sidebar */}
         {sidebar && (
           <div className={`${sidebarOpen ? "w-64" : "w-16"} transition-all duration-300`}>
-            {typeof sidebar === 'function' 
+            {typeof sidebar === 'function'
               ? sidebar({ isOpen: sidebarOpen, onClose: () => setSidebarOpen(!sidebarOpen) })
               : sidebar
             }
@@ -28,11 +28,11 @@ export default function AdminLayout({ children, header, sidebar }) {
 
         {/* Main Content */}
         <main
-          className={`flex-1 transition-all duration-300 ${
-            sidebarOpen ? "ml-4" : "ml-4"
-          } p-6`}
+          className={`flex-1 transition-all duration-300 ${sidebarOpen ? "ml-4" : "ml-4"
+            } p-6 overflow-x-auto`}
+          style={{ maxWidth: "calc(100vw - 16rem)" }} 
         >
-          {children}
+          <div className="max-w-[1600px] mx-auto">{children}</div>
         </main>
       </div>
     </div>

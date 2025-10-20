@@ -10,6 +10,9 @@ export const ROUTES = {
   },
   ADMIN: {
     USER_MANAGEMENT: "/admin/users",
+    MAIN: "/admin",
+    REWARDS: "/admin/rewards",
+    IMPORT_USERS: "/admin/users/import",
   },
   USER_PROFILE: {
     PROFILE: "/profile",
@@ -30,4 +33,10 @@ export const ROUTES = {
     CLUB_DETAIL:"/club/:id",
     MANAGE_CLUB:"/club/manage/:id"
   }
+  STAR_POINT: {
+    REWARD_STORE: "/reward-store",              
+    REWARD_DETAIL: "/reward-store/:id",       
+    HISTORY: "/points/history",       
+    MY_REDEMPTIONS: "/points/my-redemptions"        
+  },
 };

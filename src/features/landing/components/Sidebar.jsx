@@ -13,14 +13,17 @@ import {
 } from "@/common/constants/sidebar";
 import { useClubApi } from "../club/hooks/useClubApi";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar";
+import { useLocation, useNavigate } from "react-router-dom";
 
-export default function Sidebar({ activeTab = SIDEBAR_DEFAULT_TAB }) {
+export default function Sidebar() {
   const user = useSelector((state) => state.user.user);
   const navigate = useNavigate();
   const [joinedClubs, setJoinedClubs] = useState([]);
   const { getClubByUser } = useClubApi();
+  const location = useLocation();
+
   const userName =
     user?.firstName && user?.lastName
       ? `${user.firstName} ${user.lastName}`
@@ -32,6 +35,10 @@ export default function Sidebar({ activeTab = SIDEBAR_DEFAULT_TAB }) {
       : user?.username
       ? user.username[0].toUpperCase()
       : "U";
+        ? user.username[0].toUpperCase()
+        : "U";
+
+  const menuItems = SIDEBAR_NAVIGATION;
 
   const menuItems = SIDEBAR_NAVIGATION;
   const handleClubByUser = async () => {
@@ -55,7 +62,7 @@ export default function Sidebar({ activeTab = SIDEBAR_DEFAULT_TAB }) {
   }, []);
   return (
     <div className="space-y-4">
-      {/* Profile Card */}
+      {/* Hồ sơ người dùng */}
       <Card className="p-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-white">
         <div className="flex items-center space-x-3">
           <Avatar className="w-12 h-12 ring-2 ring-white/30">
@@ -89,16 +96,23 @@ export default function Sidebar({ activeTab = SIDEBAR_DEFAULT_TAB }) {
       <Card className="p-2">
         <nav className="space-y-1">
           {menuItems.map((item, index) => {
-            const isActive = item.label === activeTab;
+            const paths = Array.isArray(item.paths) ? item.paths : [item.path];
+
+            const isActive = paths.some((p) =>
+              p === "/"
+                ? location.pathname === "/" // chỉ đúng trang chủ
+                : location.pathname.startsWith(p)
+            );
+
             return (
               <Button
                 key={index}
                 variant={isActive ? "default" : "ghost"}
-                className={`w-full justify-start ${
-                  isActive
+                className={`w-full justify-start ${isActive
                     ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
                     : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"
-                }`}
+                  }`}
+                onClick={() => navigate(paths[0])}
               >
                 <item.icon className="h-5 w-5 mr-3" />
                 <span className="flex-1 text-left">{item.label}</span>
