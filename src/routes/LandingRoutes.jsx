@@ -1,10 +1,13 @@
 import { Route } from "react-router-dom";
 import HomePage from "@/pages/Landing/HomePage";
+import ClassDetailPage from "@/pages/MyClasses/ClassDetailPage";
 import ProtectedRoute from "./ProtectedRoute";
 import { ROLE } from "@/common/constants/roles";
 
+
 export const landingRoutes = [
   <Route element={<ProtectedRoute />}>
-          <Route key="landing" path="/" element={<HomePage />} />
-    </Route>
+    <Route key="landing" path="/" element={<HomePage />} />
+    <Route key="class-detail" path="/my-classes/:id" element={<ClassDetailPage />} />
+  </Route>
 ];

@@ -3,9 +3,12 @@ import { Card } from "@/common/components/ui/card"
 import { Badge } from "@/common/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar"
 import { useSelector } from "react-redux"
+import { useNavigate, useLocation } from "react-router-dom"
 import { SIDEBAR_NAVIGATION, SIDEBAR_DEFAULT_TAB } from "@/common/constants/sidebar"
 
 export default function Sidebar({ activeTab = SIDEBAR_DEFAULT_TAB }) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const user = useSelector((state) => state.user.user);
   
   const userName = user?.firstName && user?.lastName 
@@ -17,6 +20,18 @@ export default function Sidebar({ activeTab = SIDEBAR_DEFAULT_TAB }) {
     : user?.username ? user.username[0].toUpperCase() : 'U';
   
   const menuItems = SIDEBAR_NAVIGATION;
+
+  const handleNavigation = (item) => {
+    // Special handling for "Lớp học của tôi" - redirect to user's specific class
+    if (item.key === "my-class" && user?.classGroupId) {
+      navigate(`/my-classes/${user.classGroupId}`)
+      return
+    }
+    
+    if (item.href) {
+      navigate(item.href)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -54,12 +69,23 @@ export default function Sidebar({ activeTab = SIDEBAR_DEFAULT_TAB }) {
       <Card className="p-2">
         <nav className="space-y-1">
           {menuItems.map((item, index) => {
-            const isActive = item.label === activeTab;
+            // Check if current path matches the item's href
+            // Special handling for "Lớp học của tôi" to match both /my-classes and /my-classes/:id
+            const isMyClassActive = item.key === "my-class" && location.pathname.startsWith("/my-classes");
+            const isActive = isMyClassActive 
+              ? true
+              : item.href && location.pathname.startsWith(item.href) && item.href !== "/" 
+              ? true 
+              : item.href === "/" && location.pathname === "/" 
+              ? true
+              : item.label === activeTab;
+            
             return (
               <Button
                 key={index}
                 variant={isActive ? "default" : "ghost"}
                 className={`w-full justify-start ${isActive ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"}`}
+                onClick={() => handleNavigation(item)}
               >
                 <item.icon className="h-5 w-5 mr-3" />
                 <span className="flex-1 text-left">{item.label}</span>
