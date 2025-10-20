@@ -27,6 +27,7 @@ export default function ClubList() {
   const [totalCount, setTotalCount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("Tất cả");
   const allCategories = [{ id: 0, name: "Tất cả" }, ...clubCategory];
+  const toast = useToast()
   const handleCategoryClick = (name) => {
     setSelectedCategory(name);
   };
@@ -39,7 +40,9 @@ export default function ClubList() {
       setClubs(data);
       setTotalCount(total);
     } catch (error) {
+
       console.error("Lỗi khi lấy danh sách CLB:", error);
+      toast.showError("Lỗi khi tải CLUB. Thử lại sau.")
     } finally {
        setIsLoading(false);
     }

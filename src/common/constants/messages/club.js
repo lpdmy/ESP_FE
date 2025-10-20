@@ -8,6 +8,8 @@ export const CLUB_MESSAGES = {
     REJECT_JOIN:"Từ chối tham gia thành công",
     APPROVE_POST:"Duyệt bài đăng thành công",
     LEAVE_CLUB:"Rời câu lạc bộ thành công",
+    KICK_CLUB:"Xóa người dùng khỏi câu lạc bộ thành công.",
+    REJECT_POST:"Từ chối duyệt bài đăng thành công",
   },
   ERROR:{
     CREATE_CLUB_JOIN:"Tạo yêu cầu tham gia câu lạc bộ không thành công",
@@ -15,5 +17,8 @@ export const CLUB_MESSAGES = {
     REJECT_JOIN:"Từ chối tham gia thành công không thành công",
     APPROVE_POST:"Duyệt bài đăng không thành công",
     LEAVE_CLUB:"Rời câu lạc bộ không thành công",
+    LIST: "Lỗi khi tải CLUB. Thử lại sau.",
+    KICK_CLUB:"Lỗi khi xóa người dùng khỏi câu lạc bộ.Vui lòng thử lại sau.",
+    REJECT_POST:"Từ chối duyệt bài đăng thành công",
   }
 }

@@ -75,7 +75,8 @@ export const API_CONFIG = {
     LIKE_POST:'/post/like',
     CLUB_PENDING_POST:'/post/club/pending',
     APPROVE_POST:'/post/approve/{id}',
-    CLUB_POST:'/post/club'
+    CLUB_POST:'/post/club',
+    REJECT_POST:'/post/reject',
   },
   COLLECTION :{
     CREATE_COLLECTION :'/collection',
@@ -96,7 +97,15 @@ export const API_CONFIG = {
     CLUB_REJECT_JOIN_REQUEST:'/join-request/reject/{id}',
     USER_CLUB :'/club-member/user',
     UPDATE_CLUB:'/club',
-    LEAVE_CLUB:'/club-member/{id}'
+    LEAVE_CLUB:'/club-member/{id}',
+    KICK_CLUB:'/club-member',
+    CLUB_CREATION_REQUEST:'/club-creation-request'
+  },
+  COMMENT:{
+    CREATE_COMMENT:'/comment',
+    GET_BY_POST:'/comment/post',
+    GET_BY_COMMENT:'/comment/comment',
+    DELETE_COMMENT:'/comment/{id}'
   }
 };
 

@@ -51,6 +51,7 @@ import { LeaveClubDialogConfirm } from "../Modal/LeaveClubModal/page";
 const clubActivities = []; // 👈 Giả sử chưa có hoạt động
 import CreatePostInput from "../../post/CreatePostInput";
 import CreatePostModal from "../../post/CreatePostModal";
+import DeletePostModal from "../../post/DeletePostModal";
 import { useSelector } from "react-redux";
 export default function ClubDetail() {
   const { isOpen: isDialogOpen, openDialog, closeDialog } = useDialog();
@@ -80,7 +81,10 @@ export default function ClubDetail() {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [posts, setPosts] = useState([]);
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const payload = { clubId: clubid, classId: null };
+  const [post, setPost] = useState([]);
   const getTruncatedText = (text, maxLength = 120) => {
     if (!text) return "";
     if (text.length <= maxLength) return text;
@@ -92,20 +96,33 @@ export default function ClubDetail() {
     try {
       const response = await getClubDetail(clubid);
       setClubDetail(response.data);
-      console.log(response);
       SetIsJoined(response.data.isMember);
       setIsRequestToJoin(response.data.isRequestToJoin);
       SetIsPresident(response.data.isPresident);
     } catch (error) {
+      toast.loadClubFail()
       console.log(error);
     }
   };
+  const handleDeletePost = (post) => {
+    setSelectedPost(post);
+    setIsDeleteModalOpen(true);
+  };
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setSelectedPost(null);
+  };
+  const handleConfirmDelete = (postId) => {
+  setPost(prev => prev.filter(p => p.id !== postId));
+  setIsDeleteModalOpen(false);
+  setSelectedPost(null);
+};
   const handleClubPost = async () => {
     try {
       const response = await getClubPost(clubid);
       const data = response.data;
       setPosts(data);
-      console.log(data);
+      console.log("bài đăng",data);
     } catch (error) {
       console.log(error);
     }
@@ -567,6 +584,13 @@ export default function ClubDetail() {
         onClose={handleCloseCreatePostModal}
         onCreate={handleCreatePost}
         payload={payload}
+        isPresident={isPresident}
+      />
+      <DeletePostModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        post={selectedPost}
+        onDelete={handleConfirmDelete}
       />
     </div>
   );

@@ -14,6 +14,7 @@ const DeletePostModal = ({ isOpen, onClose, post, onDelete }) => {
     onDelete(post.id);  
     onClose();         
   } catch (error) {
+    console.log(error)
   }
 };
 

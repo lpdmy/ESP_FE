@@ -37,6 +37,7 @@ import { useState, useEffect } from "react";
 import { usePostApi } from "../post/hooks/usePostApi";
 import { useCollectionApi } from "../collection/hooks/useCollectionApi";
 import { useToast } from "@/common/hooks/useToast";
+import { CommentSection } from "./Comment/components/page";
 export default function PostCard({
   author,
   avatarUrl,
@@ -51,7 +52,7 @@ export default function PostCard({
   videos, // Array of videos
   hashtags = [], // Array of hashtags
   album, // Album name
-  privacy , // 'public', 'friends', 'private'
+  privacy, // 'public', 'friends', 'private'
   likes,
   comments,
   shares,
@@ -77,7 +78,7 @@ export default function PostCard({
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [isAlbumPopupOpen, setIsAlbumPopupOpen] = useState(false);
   const [userAlbum, setUserAlbum] = useState([]);
-
+  const [showComments, setShowComments] = useState(false);
   const { likePost } = usePostApi();
   const { getCollectionsByUser, addCollectionIteam } = useCollectionApi();
   // Hàm chuyển media (ảnh/gif)
@@ -447,49 +448,43 @@ export default function PostCard({
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          <div className="flex items-center space-x-6">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleLike(postId)}
-              className={`transition-colors ${
-                liked
-                  ? "text-red-500 hover:text-red-600 hover:bg-red-100"
-                  : "text-gray-600 hover:text-red-500 hover:bg-red-50"
-              }`}
-            >
-              <Heart
-                className={`h-4 w-4 mr-2 ${liked ? "fill-red-500" : ""}`}
-              />
-              <span className="text-sm font-medium">{likeCount}</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-600 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-            >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">{comments}</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-600 hover:text-green-500 hover:bg-green-50 transition-colors"
-            >
-              <Share2 className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">{shares}</span>
-            </Button>
-          </div>
-          {contestEntry && (
-            <Button
-              size="sm"
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-            >
-              Bình chọn
-            </Button>
-          )}
-        </div>
+       {/* Actions */}
+<div className="pt-3 border-t border-gray-100">
+  {/* Hàng nút Like / Comment */}
+  <div className="flex items-center space-x-6">
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => handleLike(postId)}
+      className={`transition-colors ${
+        liked
+          ? "text-red-500 hover:text-red-600 hover:bg-red-100"
+          : "text-gray-600 hover:text-red-500 hover:bg-red-50"
+      }`}
+    >
+      <Heart className={`h-4 w-4 mr-2 ${liked ? "fill-red-500" : ""}`} />
+      <span className="text-sm font-medium">{likeCount}</span>
+    </Button>
+
+    <Button
+      variant="ghost"
+      size="sm"
+      className="text-gray-600 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+      onClick={() => setShowComments((prev) => !prev)}
+    >
+      <MessageCircle className="h-4 w-4 mr-2" />
+      <span className="text-sm font-medium">{comments}</span>
+    </Button>
+  </div>
+
+  {/* Bình luận hiển thị ở đây */}
+  {showComments && (
+    <div className="mt-4">
+      <CommentSection postId={postId} />
+    </div>
+  )}
+</div>
+
       </Card>
       <Dialog open={isAlbumPopupOpen} onOpenChange={setIsAlbumPopupOpen}>
         <DialogContent className="max-w-md !bg-white">

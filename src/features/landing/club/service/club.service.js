@@ -29,6 +29,13 @@ export class ClubService extends ApiService {
     }
     return this.get(url, token);
   }
+  async getClubJoinCreation(token, pageNumber = 1, pageSize = 10, search = "") {
+    let url = `${API_CONFIG.CLUB.CLUB_CREATION_REQUEST}?PageNumber=${pageNumber}&PageSize=${pageSize}`;
+    if (search && search.trim() !== "") {
+      url += `&search=${encodeURIComponent(search.trim())}`;
+    }
+    return this.get(url, token);
+  }
   async createClubJoinRequest(token, payload) {
     return this.post(API_CONFIG.CLUB.CLUB_CREATE_JOIN_REQUES, payload, token);
   }
@@ -58,6 +65,10 @@ export class ClubService extends ApiService {
   async approvePost(token, id) {
     const url = API_CONFIG.POST.APPROVE_POST.replace("{id}", id);
     return this.put(url, token);
+  }
+  async rejectPost(token, id) {
+    const url = `${API_CONFIG.POST.REJECT_POST}/${id}`;
+    return this.put(url, token);
   }  
   async getClubPost(token, id) {
     const url = `${API_CONFIG.POST.CLUB_POST}/${id}`;
@@ -67,4 +78,9 @@ export class ClubService extends ApiService {
    const url = API_CONFIG.CLUB.LEAVE_CLUB.replace("{id}", id);
     return this.delete(url, token);
   } 
+  async kickClub(token, payload) {
+  const url = `${API_CONFIG.CLUB.KICK_CLUB}?userid=${payload.userId}&clubid=${payload.clubId}`;
+  return this.delete(url, null, token);
+}
+
 }

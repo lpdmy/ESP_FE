@@ -130,11 +130,19 @@ const PRIVACY_OPTIONS = [
   },
 ];
 
-const CreatePostModal = ({ isOpen, onClose, onCreate,payload = {} }) => {
+const CreatePostModal = ({
+  isOpen,
+  onClose,
+  onCreate,
+  payload = {},
+  isPresident,
+}) => {
   const user = useSelector((state) => state.user.user);
   const clubId = payload.clubId;
-  const classId = payload.classId
+  const classId = payload.classId;
+
   const { showError } = useToast();
+  const [status, setStatus] = useState(0);
   const toast = useToast();
   const userName =
     user?.firstName && user?.lastName
@@ -154,7 +162,7 @@ const CreatePostModal = ({ isOpen, onClose, onCreate,payload = {} }) => {
     classGroupId: classId,
     clubId: clubId,
     privacyLevel: 0,
-    status: 0,
+    status: status,
     callToAction: "",
     hashtags: [],
     mentionUsernames: [],
@@ -396,7 +404,7 @@ const CreatePostModal = ({ isOpen, onClose, onCreate,payload = {} }) => {
   const handlePost = async () => {
     if (!canPost) return;
     setUiState((prev) => ({ ...prev, isAnimating: true }));
-    setErrorMessage(""); // reset lỗi cũ trước khi gửi  
+    setErrorMessage(""); // reset lỗi cũ trước khi gửi
 
     try {
       const uploadedAttachments = [];
@@ -482,6 +490,7 @@ const CreatePostModal = ({ isOpen, onClose, onCreate,payload = {} }) => {
         error?.response?.data?.message ||
         error?.message ||
         "Có lỗi xảy ra khi đăng bài.";
+        console.log(error)
       setErrorMessage(message);
     } finally {
       setUiState((prev) => ({ ...prev, isAnimating: false }));
@@ -757,7 +766,12 @@ const CreatePostModal = ({ isOpen, onClose, onCreate,payload = {} }) => {
       selectedImageUrl: null,
     }));
   };
-
+  useEffect(() => {
+  if (isPresident) {
+    setStatus(1);
+    setFormData((prev) => ({ ...prev, status: 1 }));
+  }
+}, [isPresident]);
   useEffect(() => {
     if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     autoSaveTimeoutRef.current = setTimeout(() => {

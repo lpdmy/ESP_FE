@@ -54,6 +54,14 @@ export function useClubApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
+  const getClubJoinCreation = useRef(async (pageNumber, pageSize,search="") => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.getClubJoinCreation.bind(clubService),
+      [token,pageNumber, pageSize,search=""],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
   const createClubJoinRequest = useRef(async (payload) => {
     const token = localStorage.getItem("token");
     return executeApiCall(
@@ -126,6 +134,22 @@ export function useClubApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
+  const rejectPost = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.rejectPost.bind(clubService),
+      [token,id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const kickClub = useRef(async (payload) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.kickClub.bind(clubService),
+      [ token,payload],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
   return{
     clubLoading,
     saveLoading,
@@ -144,6 +168,9 @@ export function useClubApi() {
     approvePost: approvePost.current,
     getClubPost : getClubPost.current,
     cancelJoinRequest : cancelJoinRequest.current,
-    leaveClub : leaveClub.current
+    leaveClub : leaveClub.current,
+    rejectPost: rejectPost.current,
+    getClubJoinCreation : getClubJoinCreation.current,
+    kickClub : kickClub.current
   };
 }

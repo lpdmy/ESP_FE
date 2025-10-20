@@ -485,7 +485,7 @@ function CreateClub() {
                   </div>
                   <div>
                     <h3 className="font-bold break-words">
-                      {clubName || "Tên CLB học"}
+                      {clubName || "Tên CLB"}
                     </h3>
                     <p className="text-sm text-gray-600 break-words">
                       {shortDescription || "Mô tả ngắn sẽ hiển thị ở đây"}

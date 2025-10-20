@@ -6,6 +6,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/common/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  useDropdownMenu,
+} from "@/common/components/ui/dropdown-menu";
 import { Button } from "@/common/components/ui/button";
 import { Badge } from "@/common/components/ui/badge";
 import { Input } from "@/common/components/ui/input";
@@ -22,6 +29,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/common/components/ui/tabs";
+import PostCard from "../../components/PostCard";
 import {
   Select,
   SelectContent,
@@ -56,7 +64,11 @@ import {
   BookOpen,
   Settings,
   Upload,
-  UserPlus,Mail
+  UserPlus,
+  Mail,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
 } from "lucide-react";
 
 import { useToast } from "@/common/hooks/useToast";
@@ -96,15 +108,24 @@ export default function ClubManage() {
     approveJoinRequest,
     rejectJoinRequest,
     getPostPending,
-    approvePost
+    approvePost,
+    rejectPost,
+    kickClub
   } = useClubApi();
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [isLoading, SetIsloading] = useState(true);
   const [clubInfo, SetClubInfor] = useState({});
   const [joinRequests, SetJoinRequests] = useState([]);
   const [activeTab, setActiveTab] = useState("posts");
-  const [pendingPosts,setPendingPosts] = useState([])
-  const [pageSize,setPageSize] = useState(10)
-const handleChangeRole = (vaitro) => {
+  const [pendingPosts, setPendingPosts] = useState([]);
+  const [pageSize, setPageSize] = useState(10);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [searchMemberTerm, setSearchMemberTerm] = useState("");
+  const filteredMembers =
+    clubInfo?.members?.filter((member) =>
+      member.fullName.toLowerCase().includes(searchMemberTerm.toLowerCase())
+    ) || [];
+  const handleChangeRole = (vaitro) => {
     const mapping = {
       President: "Chủ nhiệm",
       Member: "Thành viên",
@@ -112,9 +133,12 @@ const handleChangeRole = (vaitro) => {
     };
     return mapping[vaitro] || "Không rõ vai trò";
   };
+  const toggleMenu = (memberId) => {
+    setOpenMenuId((prev) => (prev === memberId ? null : memberId));
+  };
   const handleGetClubJoinRequest = async () => {
     try {
-      const response = await getClubJoinRequest(id,pageSize);
+      const response = await getClubJoinRequest(id, pageSize);
       const data = response.data.data;
       SetJoinRequests(data);
     } catch (error) {
@@ -123,29 +147,49 @@ const handleChangeRole = (vaitro) => {
       SetIsloading(false);
     }
   };
-  const handlePostPending = async () =>{
-    try{
-     const response = await getPostPending(id)
-     const data = response.data.data
-     console.log(data)
-     setPendingPosts(data)
-    }catch{
-
-    }
-  }
-  const handleApprovePost = async (id) =>{
+  const handlePostPending = async () => {
     try {
-      await approvePost(id)
-      toast.approvePostSuccess()
-      handlePostPending()
+      const response = await getPostPending(id);
+      const data = response.data.data;
+      console.log(data);
+      setPendingPosts(data);
+    } catch {}
+  };
+  const handleKick = async (userid) =>{
+    try {
+      const payload = {userId :userid,clubId:id}
+      const response = await kickClub(payload)
+      toast.kickClubSuccess()
+      console.log(response)
+      handleGetClubDetail()
     } catch (error) {
-      toast.approveJoinRequestFail()
+      toast.kickClubFail()
     }
   }
+  const handleApprovePost = async (id) => {
+    try {
+      await approvePost(id);
+      toast.approvePostSuccess();
+      handlePostPending();
+    } catch (error) {
+      toast.approveJoinRequestFail();
+    }
+  };
+  const handleRejectPost = async (id) => {
+    try {
+      await rejectPost(id);
+      handlePostPending();
+      toast.rejectPostSuccess()
+    } catch (error) {
+      console.log(error);
+      toast.rejectPostFail()
+    }
+  };
   const handleGetClubDetail = async () => {
     try {
       const response = await getClubDetail(id);
       const data = response.data;
+      console.log(data);
       SetClubInfor(data);
     } catch (error) {
       console.error("Lỗi khi lấy chi tiết câu lạc bộ:", error);
@@ -161,7 +205,7 @@ const handleChangeRole = (vaitro) => {
       toast.approveJoinRequestFail();
     }
   };
-  const handleApproveRejectRequest = async (id) => {
+  const handleRejectRequest = async (id) => {
     try {
       const response = await rejectJoinRequest(id);
       handleGetClubJoinRequest();
@@ -175,7 +219,7 @@ const handleChangeRole = (vaitro) => {
     if (activeTab == "requests") {
       handleGetClubJoinRequest();
     }
-    if(activeTab=="posts"){
+    if (activeTab == "posts") {
       handlePostPending();
     }
   }, [activeTab]);
@@ -280,7 +324,7 @@ const handleChangeRole = (vaitro) => {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="info">
-           <ClubBasicInfoForm clubInfo={clubInfo}/>
+            <ClubBasicInfoForm clubInfo={clubInfo} />
           </TabsContent>
           {/* Members Tab */}
           <TabsContent value="members">
@@ -293,6 +337,8 @@ const handleChangeRole = (vaitro) => {
                   <Input
                     placeholder="Tìm kiếm thành viên..."
                     className="max-w-xs border-gray-300 focus:ring-orange-400"
+                    value={searchMemberTerm}
+                    onChange={(e) => setSearchMemberTerm(e.target.value)}
                   />
                 </div>
               </CardHeader>
@@ -300,9 +346,9 @@ const handleChangeRole = (vaitro) => {
               <CardContent>
                 {/* Grid container */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {clubInfo.members?.map((member) => (
+                  {filteredMembers.map((member) => (
                     <div
-                      key={member.id}
+                      key={member.userId}
                       className="flex items-center justify-between border border-gray-200 rounded-xl p-4 bg-gradient-to-br from-white to-orange-50 hover:shadow-md transition-all"
                     >
                       {/* Left: Avatar + info */}
@@ -334,52 +380,46 @@ const handleChangeRole = (vaitro) => {
                           </div>
                         </div>
                       </div>
-
-                      {/* <div className="flex items-center gap-2">
-                        <Select defaultValue={member.role}>
-                          <SelectTrigger className="w-32 text-sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Quản trị viên</SelectItem>
-                            <SelectItem value="moderator">
-                              Điều hành viên
-                            </SelectItem>
-                            <SelectItem value="member">Thành viên</SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="bg-transparent hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
+                      {member.role === "Member" && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            asChild
+                            onClick={() => toggleMenu(member.userId)}
+                            data-dropdown-trigger
+                          >
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
                             </Button>
-                          </DialogTrigger>
+                          </DropdownMenuTrigger>
 
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Xác nhận gỡ thành viên</DialogTitle>
-                              <DialogDescription>
-                                Bạn có chắc chắn muốn gỡ {member.name} khỏi CLB?
-                                Hành động này không thể hoàn tác.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
-                              <Button
-                                variant="outline"
-                                className="bg-transparent"
+                          {openMenuId === member.userId && (
+                            <DropdownMenuContent
+                              align="end"
+                              isOpen={true}
+                              onClose={() => setOpenMenuId(null)}
+                              className="min-w-[240px] py-3 px-2 w-fit"
+                            >
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleKick(member.userId)
+                                }
+                                className="text-red-600 focus:text-red-700"
                               >
-                                Hủy
-                              </Button>
-                              <Button variant="destructive">Xác nhận gỡ</Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                      </div> */}
+                                <Trash2 className="h-4 w-4 mr-3"/>
+                                Xóa thành viên
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                onClick={() => handleChangeRole(member.userId)}
+                                className="text-blue-600 focus:text-blue-700"
+                              >
+                                <Settings className="h-4 w-4 mr-3" />
+                                Chuyển chức vụ
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          )}
+                        </DropdownMenu>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -544,9 +584,7 @@ const handleChangeRole = (vaitro) => {
                                 size="sm"
                                 variant="destructive"
                                 className="flex-1 bg-red-500 hover:bg-red-700 text-white"
-                                onClick={() =>
-                                  handleApproveRejectRequest(request.id)
-                                }
+                                onClick={() => handleRejectRequest(request.id)}
                               >
                                 <XCircle className="w-4 h-4 mr-2" />
                                 Từ chối
@@ -572,92 +610,212 @@ const handleChangeRole = (vaitro) => {
               </CardContent>
             </Card>
           </TabsContent>
-
           {/* Pending Posts Tab */}
           <TabsContent value="posts">
-            <Card className="glass !bg-white">
+            <Card className="glass !bg-white gap-10">
               <CardHeader>
                 <CardTitle>
                   Bài đăng đang chờ duyệt ({pendingPosts.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {pendingPosts.map((post) => (
-                    <Card key={post.id} className="bg-white/50">
-                      <CardContent className="pt-6">
-                        <div className="flex items-start gap-3 mb-4">
-                          <Avatar>
-                            <AvatarImage
-                              src={
-                                post.avatarUrl ||
-                                "/placeholder.svg?height=40&width=40&query=avatar"
-                              }
-                            />
-                            <AvatarFallback>
-                              {post.userFullName[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <div>
-                                <span className="font-semibold">
-                                  {post.userFullName}
-                                </span>
-                                <span className="text-sm text-gray-500 ml-2">
-                                  {new Date(post.createdAt).toLocaleString(
-                                    "vi-VN"
-                                  )}
-                                </span>
-                              </div>
-                              <Badge
-                                variant="outline"
-                                className="bg-yellow-100 text-yellow-700"
-                              >
-                                Chờ duyệt
-                              </Badge>
-                            </div>
-                            <div className="text-xl font-bold">{post.title}</div>
-                            <div>{post.body}</div>
-                            <p className="text-gray-700 mb-3">{post.content}</p>
-                            {post.attachmentUrls?.length > 0 && (
-                              <div className="mb-3">
+                {pendingPosts.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8">
+                    Không có bài đăng nào đang chờ duyệt.
+                  </div>
+                ) : (
+                  pendingPosts.map((post, index) => {
+                    const {
+                      id,
+                      userFullName,
+                      avatarUrl,
+                      classGroupName,
+                      title,
+                      body,
+                      hashtags = [],
+                      attachmentUrls = [],
+                      createdAt,
+                    } = post;
+
+                    const isVideo = (url) => /\.(mp4|mov|webm|avi)$/i.test(url);
+                    const isGif = (url) => /\.gif$/i.test(url);
+
+                    const prevMedia = () => {
+                      setCurrentMediaIndex((prev) => ({
+                        ...prev,
+                        [id]:
+                          prev[id] && prev[id] > 0
+                            ? prev[id] - 1
+                            : attachmentUrls.length - 1,
+                      }));
+                    };
+
+                    const nextMedia = () => {
+                      setCurrentMediaIndex((prev) => ({
+                        ...prev,
+                        [id]:
+                          prev[id] !== undefined &&
+                          prev[id] < attachmentUrls.length - 1
+                            ? prev[id] + 1
+                            : 0,
+                      }));
+                    };
+
+                    const currentIndex = currentMediaIndex[id] || 0;
+
+                    return (
+                      <Card
+                        key={id}
+                        className="p-4 mb-4 bg-white/90 backdrop-blur-sm border border-orange-100 rounded-xl hover:shadow-md transition-shadow mx-auto"
+                        style={{ width: "600px" }}
+                      >
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-r from-orange-400 to-yellow-400 flex items-center justify-center">
+                              {avatarUrl ? (
                                 <img
-                                  src={
-                                    post.attachmentUrls[0] ||
-                                    "/placeholder.svg?height=200&width=400&query=post image"
-                                  }
-                                  alt="Post image"
-                                  className="rounded-lg max-w-full h-40"
+                                  src={avatarUrl}
+                                  alt={userFullName}
+                                  className="w-full h-full object-cover"
                                 />
+                              ) : (
+                                <span className="text-white font-semibold text-lg">
+                                  {userFullName?.charAt(0) || "A"}
+                                </span>
+                              )}
+                            </div>
+
+                            <div>
+                              <h4 className="font-semibold text-gray-900">
+                                {userFullName || "Ẩn danh"}
+                              </h4>
+                              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                                <span>{classGroupName || "Sinh viên"}</span>
+                                <span>•</span>
+                                <span>
+                                  {new Date(createdAt).toLocaleString("vi-VN")}
+                                </span>
                               </div>
-                            )}
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                className="bg-green-500 hover:bg-green-600 text-white"
-                                onClick={()=>{handleApprovePost(post.id)}}
-                              >
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Duyệt bài
-                              </Button>
-                              <Button size="sm" variant="destructive"
-                              className="bg-red-500 hover:bg-red-700 text-white"
-                              >
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Từ chối
-                              </Button>
                             </div>
                           </div>
+                          <Badge
+                            variant="outline"
+                            className="bg-yellow-100 text-yellow-700"
+                          >
+                            Chờ duyệt
+                          </Badge>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+
+                        {/* Content */}
+                        <div className="mb-3">
+                          {title && (
+                            <p className="text-gray-900 font-bold text-lg mb-2">
+                              {title}
+                            </p>
+                          )}
+                          <p className="text-gray-800 leading-relaxed whitespace-pre-line">
+                            {body}
+                          </p>
+
+                          {hashtags.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {hashtags.map((tag, index) => (
+                                <span
+                                  key={index}
+                                  className="text-blue-600 hover:text-blue-800 cursor-pointer text-sm font-medium"
+                                >
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Media */}
+                        {attachmentUrls.length > 0 && (
+                          <div className="relative group mb-4 rounded-lg overflow-hidden border border-gray-200">
+                            {isVideo(attachmentUrls[currentIndex]) ? (
+                              <video
+                                src={attachmentUrls[currentIndex]}
+                                controls
+                                className="object-contain rounded-lg shadow-md w-3/4 mx-auto"
+                                style={{ maxHeight: "300px" }}
+                              />
+                            ) : (
+                              <img
+                                src={attachmentUrls[currentIndex]}
+                                alt="Post content"
+                                className="object-contain  w-3/4 mx-auto"
+                                style={{ maxHeight: "300px" }}
+                              />
+                            )}
+
+                            {/* Type badges */}
+                            {isGif(attachmentUrls[currentIndex]) && (
+                              <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                <span>GIF</span>
+                              </div>
+                            )}
+                            {isVideo(attachmentUrls[currentIndex]) && (
+                              <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                                <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                                <span>VIDEO</span>
+                              </div>
+                            )}
+
+                            {/* Navigation */}
+                            {attachmentUrls.length > 1 && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={prevMedia}
+                                >
+                                  <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={nextMedia}
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex justify-end gap-2 mt-4">
+                          <Button
+                            size="sm"
+                            className="bg-green-500 hover:bg-green-600 text-white"
+                            onClick={() => handleApprovePost(id)}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Duyệt bài
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="bg-red-500 hover:bg-red-700 text-white"
+                            onClick={() => handleRejectPost(id)}
+                          >
+                            <XCircle className="w-4 h-4 mr-2" />
+                            Từ chối
+                          </Button>
+                        </div>
+                      </Card>
+                    );
+                  })
+                )}
               </CardContent>
             </Card>
           </TabsContent>
-
           {/* Activities Tab */}
           <TabsContent value="activities">
             <div className="space-y-6">
