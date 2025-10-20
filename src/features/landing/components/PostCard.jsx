@@ -37,8 +37,10 @@ import { useState, useEffect } from "react";
 import { usePostApi } from "../post/hooks/usePostApi";
 import { useCollectionApi } from "../collection/hooks/useCollectionApi";
 import { useToast } from "@/common/hooks/useToast";
+import { CommentSection } from "./Comment/components/page";
 export default function PostCard({
   author,
+  avatarUrl,
   class: className,
   time,
   postId,
@@ -50,7 +52,7 @@ export default function PostCard({
   videos, // Array of videos
   hashtags = [], // Array of hashtags
   album, // Album name
-  privacy = "public", // 'public', 'friends', 'private'
+  privacy, // 'public', 'friends', 'private'
   likes,
   comments,
   shares,
@@ -76,7 +78,7 @@ export default function PostCard({
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [isAlbumPopupOpen, setIsAlbumPopupOpen] = useState(false);
   const [userAlbum, setUserAlbum] = useState([]);
-
+  const [showComments, setShowComments] = useState(false);
   const { likePost } = usePostApi();
   const { getCollectionsByUser, addCollectionIteam } = useCollectionApi();
   // Hàm chuyển media (ảnh/gif)
@@ -116,9 +118,9 @@ export default function PostCard({
     try {
       const payload = { postId: postId, collectionId: id };
       const response = await addCollectionIteam(payload);
-      toast.addCollectionIteamSuccess()
+      toast.addCollectionIteamSuccess();
     } catch (err) {
-      toast.addCollectionIteamSuccess()
+      toast.addCollectionIteamSuccess();
     }
   };
 
@@ -187,11 +189,11 @@ export default function PostCard({
   // Hàm render privacy icon
   const getPrivacyIcon = () => {
     switch (privacy) {
-      case "private":
+      case 1:
         return <Lock className="h-3 w-3" />;
       case "friends":
         return <Users className="h-3 w-3" />;
-      case "public":
+      case 0:
       default:
         return <Globe className="h-3 w-3" />;
     }
@@ -200,8 +202,8 @@ export default function PostCard({
   // Hàm render privacy text
   const getPrivacyText = () => {
     switch (privacy) {
-      case "private":
-        return "Chỉ mình tôi";
+      case 1:
+        return "Nội bộ";
       case "friends":
         return "Bạn bè";
       case "public":
@@ -214,6 +216,7 @@ export default function PostCard({
       hanldeUserAlbum();
     }
   }, [isAlbumPopupOpen]);
+
   const isOwner = createdBy && currentUserId && createdBy === currentUserId;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -223,10 +226,18 @@ export default function PostCard({
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full flex items-center justify-center">
-              <span className="text-white font-semibold text-sm">
-                {author ? author.charAt(0) : "?"}
-              </span>
+            <div className="w-12 h-12 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full flex items-center justify-center">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={author}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                  {author.charAt(0)}
+                </div>
+              )}
             </div>
             <div>
               <div className="flex items-center space-x-2">
@@ -437,49 +448,43 @@ export default function PostCard({
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          <div className="flex items-center space-x-6">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleLike(postId)}
-              className={`transition-colors ${
-                liked
-                  ? "text-red-500 hover:text-red-600 hover:bg-red-100"
-                  : "text-gray-600 hover:text-red-500 hover:bg-red-50"
-              }`}
-            >
-              <Heart
-                className={`h-4 w-4 mr-2 ${liked ? "fill-red-500" : ""}`}
-              />
-              <span className="text-sm font-medium">{likeCount}</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-600 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-            >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">{comments}</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-600 hover:text-green-500 hover:bg-green-50 transition-colors"
-            >
-              <Share2 className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">{shares}</span>
-            </Button>
-          </div>
-          {contestEntry && (
-            <Button
-              size="sm"
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-            >
-              Bình chọn
-            </Button>
-          )}
-        </div>
+       {/* Actions */}
+<div className="pt-3 border-t border-gray-100">
+  {/* Hàng nút Like / Comment */}
+  <div className="flex items-center space-x-6">
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => handleLike(postId)}
+      className={`transition-colors ${
+        liked
+          ? "text-red-500 hover:text-red-600 hover:bg-red-100"
+          : "text-gray-600 hover:text-red-500 hover:bg-red-50"
+      }`}
+    >
+      <Heart className={`h-4 w-4 mr-2 ${liked ? "fill-red-500" : ""}`} />
+      <span className="text-sm font-medium">{likeCount}</span>
+    </Button>
+
+    <Button
+      variant="ghost"
+      size="sm"
+      className="text-gray-600 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+      onClick={() => setShowComments((prev) => !prev)}
+    >
+      <MessageCircle className="h-4 w-4 mr-2" />
+      <span className="text-sm font-medium">{comments}</span>
+    </Button>
+  </div>
+
+  {/* Bình luận hiển thị ở đây */}
+  {showComments && (
+    <div className="mt-4">
+      <CommentSection postId={postId} />
+    </div>
+  )}
+</div>
+
       </Card>
       <Dialog open={isAlbumPopupOpen} onOpenChange={setIsAlbumPopupOpen}>
         <DialogContent className="max-w-md !bg-white">

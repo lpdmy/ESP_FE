@@ -5,6 +5,7 @@ import { adminRoutes } from "./AdminRoutes";
 import { profileRoutes } from "./UserProfileRoutes";
 import { onboardingRoutes } from "./OnboardingRoutes";
 import { collectionsRoutes} from "./CollectionRoutes";
+import { clubRoutes } from "./ClubRoutes";
 import { starPointRoutes } from "./StarPointRoutes";
 
 export default function AppRoutes() {
@@ -16,6 +17,7 @@ export default function AppRoutes() {
       {...profileRoutes}
       {...onboardingRoutes}
       {...collectionsRoutes}
+      {...clubRoutes}
       {...starPointRoutes}
     </Routes>
   );

@@ -2,6 +2,8 @@ import { toast } from 'react-toastify'
 import { PROFILE_MESSAGES, AUTH_MESSAGES, COMMON_MESSAGES } from '@/common/constants/messages'
 import { POST_MESSAGES } from '../constants/messages/post'
 import { COLLECTION_MESSAGES } from '../constants/messages/collection'
+import { CLUB_MESSAGES } from '../constants/messages/club'
+import { COMMENT_MESSAGE } from '../constants/messages/comment'
 
 export const useToast = () => {
   const showSuccess = (message, options = {}) => {
@@ -78,7 +80,27 @@ export const useToast = () => {
   const nameIsNull = () => showError(COLLECTION_MESSAGES.ERROR.REQUIRE_NAME)
   const loadAlbumFail = () =>showError(COLLECTION_MESSAGES.ERROR.LOAD_FAILD)
   const addCollectionIteamFail = () => showError(COLLECTION_MESSAGES.ERROR.SAVE_ALBUM_FAILD)
-  const addCollectionIteamSuccess = () => showError(COLLECTION_MESSAGES.SUCCESS.ADD)
+  const addCollectionIteamSuccess = () => showSuccess(COLLECTION_MESSAGES.SUCCESS.ADD)
+  const createClubSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.CREATE)
+  const createClubJoinRequestSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.CREATE_CLUB_JOIN)
+  const createClubJoinRequestFail = () => showError(CLUB_MESSAGES.ERROR.CREATE_CLUB_JOIN)
+  const rejectJoinRequestFail = () => showError(CLUB_MESSAGES.ERROR.REJECT_JOIN)
+  const rejectJoinRequestSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.REJECT_JOIN)
+  const approveJoinRequestSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.APPROVE_JOIN)
+  const approveJoinRequestFail = () => showError(CLUB_MESSAGES.ERROR.APPROVE_JOIN)
+  const approvePostFail = () => showError(CLUB_MESSAGES.ERROR.APPROVE_POST)
+  const approvePostSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.APPROVE_POST)
+  const leaveClubSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.LEAVE_CLUB)
+  const loadClubFail = () => showError(CLUB_MESSAGES.ERROR.LIST)
+  const kickClubFail = () => showError(CLUB_MESSAGES.ERROR.KICK_CLUB)
+  const kickClubSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.KICK_CLUB)
+  const rejectPostFail = () => showError(CLUB_MESSAGES.SUCCESS.REJECT_POST)
+  const rejectPostSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.REJECT_POST)
+  const editCommentSuccess = () => showSuccess(COMMENT_MESSAGE.SUCCESS.EDIT)
+  const editCommentFail = () => showError(COMMENT_MESSAGE.Fail.EDIT)
+  const loadCommentFail = () => showError(COMMENT_MESSAGE.Fail.LOAD)
+  const deleteCommentFail = () =>showError(COMMENT_MESSAGE.Fail.DELETE)
+  const deleteCommentSuccess = () =>showSuccess(COMMENT_MESSAGE.SUCCESS.DELETE)
 
   return {
     // Basic toast methods
@@ -108,6 +130,26 @@ export const useToast = () => {
     loadAlbumFail,
     addCollectionIteamFail,
     addCollectionIteamSuccess,
+    createClubSuccess,
+    createClubJoinRequestSuccess,
+    createClubJoinRequestFail,
+    rejectJoinRequestFail,
+    approveJoinRequestSuccess,
+    rejectJoinRequestSuccess,
+    approveJoinRequestFail,
+    approvePostFail,
+    approvePostSuccess,
+    leaveClubSuccess,
+    loadClubFail,
+    kickClubFail,
+    kickClubSuccess,
+    rejectPostFail,
+    rejectPostSuccess,
+    editCommentSuccess,
+    editCommentFail,
+    loadCommentFail,
+    deleteCommentFail,
+    deleteCommentSuccess,
     // Direct access to messages
     PROFILE_MESSAGES,
     AUTH_MESSAGES,
