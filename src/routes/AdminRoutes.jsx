@@ -14,5 +14,6 @@ export const adminRoutes = [
         <Route key="user-management" path={ROUTES.ADMIN.USER_MANAGEMENT} element={<UserManagementPage />} />,
         <Route key="import-students" path={ROUTES.ADMIN.IMPORT_USERS} element={<ImportStudentsPage />} />
         <Route key="star-point" path={ROUTES.ADMIN.REWARDS} element={<RewardManagementPage />} />
+        <Route key="club-manage" path={ROUTES.ADMIN.CLUB} element={<ClassManagementPage />} />
     </Route>
 ];

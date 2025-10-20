@@ -118,7 +118,7 @@ export const API_CONFIG = {
     CREATE_COMMENT:'/comment',
     GET_BY_POST:'/comment/post',
     GET_BY_COMMENT:'/comment/comment',
-    DELETE_COMMENT:'/comment/{id}'
+    DELETE_COMMENT:'/comment/{id}'},
 
   // Student Import endpoints
   STUDENT_IMPORT: {

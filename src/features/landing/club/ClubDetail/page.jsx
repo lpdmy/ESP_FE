@@ -113,16 +113,16 @@ export default function ClubDetail() {
     setSelectedPost(null);
   };
   const handleConfirmDelete = (postId) => {
-  setPost(prev => prev.filter(p => p.id !== postId));
-  setIsDeleteModalOpen(false);
-  setSelectedPost(null);
-};
+    setPost(prev => prev.filter(p => p.id !== postId));
+    setIsDeleteModalOpen(false);
+    setSelectedPost(null);
+  };
   const handleClubPost = async () => {
     try {
       const response = await getClubPost(clubid);
       const data = response.data;
       setPosts(data);
-      console.log("bài đăng",data);
+      console.log("bài đăng", data);
     } catch (error) {
       console.log(error);
     }
@@ -171,7 +171,7 @@ export default function ClubDetail() {
       await leaveClub(clubid)
       handleClubDetail()
       toast.leaveClubSuccess()
-    } catch (error) {}
+    } catch (error) { }
   };
   const handleRegister = (activityId) => {
     setRegisteredActivities([...registeredActivities, activityId]);
@@ -352,18 +352,18 @@ export default function ClubDetail() {
                           Tham gia câu lạc bộ
                         </Button>
                       )}
-                      <JoinClubModal
-                        open={isDialogOpen}
-                        onClose={closeDialog}
-                        onSubmit={handleSubmit}
-                      />
+
                     </div>
                   </CardContent>
                 </Card>
               )}
             </div>
           </div>
-
+          <JoinClubModal
+            open={isDialogOpen}
+            onClose={closeDialog}
+            onSubmit={handleSubmit}
+          />
           {/* Center Content - Tabs */}
           <div className="lg:col-span-6 ">
             <Tabs defaultValue="posts" className="w-full">

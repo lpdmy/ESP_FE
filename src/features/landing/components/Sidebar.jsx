@@ -1,11 +1,6 @@
 import { Button } from "@/common/components/ui/button";
 import { Card } from "@/common/components/ui/card";
 import { Badge } from "@/common/components/ui/badge";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/common/components/ui/avatar";
 import { useSelector } from "react-redux";
 import {
   SIDEBAR_NAVIGATION,
@@ -35,10 +30,6 @@ export default function Sidebar() {
       : user?.username
       ? user.username[0].toUpperCase()
       : "U";
-        ? user.username[0].toUpperCase()
-        : "U";
-
-  const menuItems = SIDEBAR_NAVIGATION;
 
   const menuItems = SIDEBAR_NAVIGATION;
   const handleClubByUser = async () => {
@@ -63,7 +54,7 @@ export default function Sidebar() {
   return (
     <div className="space-y-4">
       {/* Hồ sơ người dùng */}
-      <Card className="p-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-white">
+      {/* <Card className="p-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-white">
         <div className="flex items-center space-x-3">
           <Avatar className="w-12 h-12 ring-2 ring-white/30">
             <AvatarImage src={user?.avatarUrl || null} alt="User Avatar" />
@@ -90,7 +81,7 @@ export default function Sidebar() {
             <div className="text-xs opacity-90">Điểm</div>
           </div>
         </div>
-      </Card>
+      </Card> */}
 
       {/* Navigation Menu */}
       <Card className="p-2">
