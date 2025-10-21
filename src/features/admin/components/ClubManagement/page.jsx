@@ -34,6 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  useDialog   
 } from "@/common/components/ui/dialog";
 import {
   Select,
@@ -61,7 +62,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-
+import CreateClubDialog from "./CreateClubModal/page";
 import { useClubApi } from "@/features/landing/club/hooks/useClubApi";
 import { useToast } from "@/common/hooks/useToast";
 import ClubApprovalPage from "./ClubCreationPending/page";
@@ -92,6 +93,7 @@ export default function ClubClassManagement() {
     category: "",
     meetingTime: "",
   });
+  const { isOpen, openDialog: openCreateClubDialog, closeDialog } = useDialog(false);
   const { getListClub, getClubCategory } = useClubApi();
   const handleSort = (field) => {
     if (sortField === field) {
@@ -209,7 +211,11 @@ export default function ClubClassManagement() {
     setEditingItem(null);
     setIsDialogOpen(false);
   };
-
+ const handleCreateClub = async (data) => {
+    console.log("CLB mới:", data)
+    // TODO: Gọi API tạo CLB
+    closeDialog()
+  }
   const handleEdit = (item) => {
     setEditingItem(item);
     setFormData(item);
@@ -370,6 +376,12 @@ export default function ClubClassManagement() {
             </form>
           </DialogContent>
         </Dialog>
+        <div className="border rounded-lg p-2 bg-white hover:bg-gray-100 transition">
+          <button onClick={openCreateClubDialog} >
+            Tạo Câu Lạc Bộ mới
+          </button>
+          <CreateClubDialog open={isOpen} onClose={closeDialog} onSubmit={handleCreateClub} />
+        </div>
       </div>
 
       {/* Stats */}

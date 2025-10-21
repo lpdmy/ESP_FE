@@ -101,6 +101,7 @@ export const useToast = () => {
   const loadCommentFail = () => showError(COMMENT_MESSAGE.Fail.LOAD)
   const deleteCommentFail = () =>showError(COMMENT_MESSAGE.Fail.DELETE)
   const deleteCommentSuccess = () =>showSuccess(COMMENT_MESSAGE.SUCCESS.DELETE)
+  const loadClubCategoryFail = () =>showError(CLUB_MESSAGES.ERROR.loadClubCategoryFail)
 
   return {
     // Basic toast methods
@@ -150,6 +151,7 @@ export const useToast = () => {
     loadCommentFail,
     deleteCommentFail,
     deleteCommentSuccess,
+    loadClubCategoryFail,
     // Direct access to messages
     PROFILE_MESSAGES,
     AUTH_MESSAGES,
