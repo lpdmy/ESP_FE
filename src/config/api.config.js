@@ -78,7 +78,7 @@ export const API_CONFIG = {
     ADVANCED: '/search/advanced',
     SUGGESTIONS: '/search/suggestions',
     TRENDING: '/search/trending',
-    HISTORY: '/search/history'
+    HISTORY: '/search/history',
   },
   POST :{
     CREATE_POST : '/post',
@@ -112,7 +112,14 @@ export const API_CONFIG = {
     UPDATE_CLUB:'/club',
     LEAVE_CLUB:'/club-member/{id}',
     KICK_CLUB:'/club-member',
-    CLUB_CREATION_REQUEST:'/club-creation-request'
+    CLUB_CREATION_REQUEST:'/club-creation-request',
+    CLUB_APPROVE_CREATION_REQUEST:'/club-creation-request/approve/{id}',
+    CLUB_REJECT_CREATION_REQUEST:'/club-creation-request/reject',
+    CLUB_SEARCH_USER:'/club/search-users',
+    CLUB_INVITE_MENTOR:'/join-request/invite-mentor',
+    CLUB_GET_INVITATION: '/join-request/user',
+    CLUB_CHANGE_ROLE:'/club-member/change-role',
+    CLUB_DELETE:'/club'
   },
   COMMENT:{
     CREATE_COMMENT:'/comment',

@@ -62,6 +62,7 @@ import {
   AvatarImage,
 } from "@/common/components/ui/avatar";
 import { useClubApi } from "@/features/landing/club/hooks/useClubApi";
+import { useToast } from "@/common/hooks/useToast";
 
 export default function ClubApprovalPage() {
   const [requests, setRequests] = useState([]);
@@ -76,7 +77,10 @@ export default function ClubApprovalPage() {
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  const { getClubJoinCreation } = useClubApi();
+  const [status, setStatus] = useState(-1);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+  const { getClubJoinCreation, approveCreation, rejectCreation } = useClubApi();
+  const toast = useToast();
   const handleSort = (field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -88,49 +92,56 @@ export default function ClubApprovalPage() {
   const toggleMenu = (id) => {
     setOpenMenuId((curr) => (curr === id ? null : id));
   };
-const getStatusBadge = (status) => {
-  let colorClass = "";
-  let label = "";
+  const getStatusBadge = (status) => {
+    let colorClass = "";
+    let label = "";
 
-  switch (status?.toLowerCase()) {
-    case "approved":
-      colorClass = "bg-green-100 text-green-700 border border-green-400";
-      label = "Đã duyệt";
-      break;
-    case "pending":
-      colorClass = "bg-yellow-100 text-yellow-700 border border-yellow-400";
-      label = "Chờ duyệt";
-      break;
-    case "rejected":
-      colorClass = "bg-red-100 text-red-700 border border-red-400";
-      label = "Từ chối";
-      break;
-    default:
-      colorClass = "bg-gray-100 text-gray-700 border border-gray-300";
-      label = status || "Không xác định";
-      break;
-  }
+    switch (status?.toLowerCase()) {
+      case "approved":
+        colorClass = "bg-green-100 text-green-700 border border-green-400";
+        label = "Đã duyệt";
+        break;
+      case "pending":
+        colorClass = "bg-yellow-100 text-yellow-700 border border-yellow-400";
+        label = "Chờ duyệt";
+        break;
+      case "rejected":
+        colorClass = "bg-red-100 text-red-700 border border-red-400";
+        label = "Từ chối";
+        break;
+      default:
+        colorClass = "bg-gray-100 text-gray-700 border border-gray-300";
+        label = status || "Không xác định";
+        break;
+    }
 
-  return (
-    <span
-      className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${colorClass}`}
-    >
-      {label}
-    </span>
-  );
-};
+    return (
+      <span
+        className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${colorClass}`}
+      >
+        {label}
+      </span>
+    );
+  };
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500); // ⏳ delay 0.5s sau khi người dùng ngừng gõ
+    console.log(searchTerm);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
   const handleJoinCreation = async () => {
     try {
       const resposne = await getClubJoinCreation(
         pageNumber,
         pageSize,
-        searchTerm
+        debouncedSearch,
+        status === -1 ? null : status
       );
       const data = resposne.data.data;
       setRequests(data);
       const total = resposne.data.totalCount || data.length;
-      console.log(data);
       setTotalCount(total);
       setTotalPages(Math.ceil(total / pageSize));
     } catch (error) {
@@ -139,29 +150,37 @@ const getStatusBadge = (status) => {
   };
   useEffect(() => {
     handleJoinCreation();
-  }, [pageNumber]);
+  }, [pageNumber, status, debouncedSearch]);
   const handleViewDetails = (request) => {
     setSelectedRequest(request);
     setRejectionReason("");
     setIsDetailDialogOpen(true);
   };
 
-  const handleApprove = () => {
-    if (!selectedRequest) return;
-    setRequests(requests.filter((r) => r.id !== selectedRequest.id));
-    t;
-    setIsDetailDialogOpen(false);
+  const handleApprove = async (id) => {
+    try {
+      await approveCreation(id);
+      toast.approveCreationSucces;
+      handleJoinCreation();
+    } catch (err) {
+      console.log(err);
+      toast.approveCreationFail;
+    } finally {
+      setIsDetailDialogOpen(false);
+    }
   };
 
-  const handleReject = () => {
-    if (!selectedRequest) return;
-    if (!rejectionReason.trim()) {
-      return;
+  const handleReject = async (id) => {
+    try {
+      const payload = { id, reason: rejectionReason };
+      await rejectCreation(payload);
+      toast.rejectCreationRequsetSuccess();
+      handleViewDetails();
+      setIsDetailDialogOpen(false);
+    } catch (err) {
+      setIsDetailDialogOpen(false);
+      toast.showError(err.message);
     }
-    setRequests(requests.filter((r) => r.id !== selectedRequest.id));
-
-    setIsDetailDialogOpen(false);
-    setRejectionReason("");
   };
 
   const formatDate = (dateString) => {
@@ -197,16 +216,17 @@ const getStatusBadge = (status) => {
                 className="pl-10"
               />
             </div>
-            {/* <SimpleSelect
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
+            <SimpleSelect
+              value={status}
+              onValueChange={setStatus}
               options={[
-                { value: "Công nghệ", label: "Công nghệ" },
-                { value: "Nghệ thuật", label: "Nghệ thuật" },
-                
+                { value: -1, label: "Tất cả" },
+                { value: 1, label: "Chờ duyệt" },
+                { value: 2, label: "Đã duyệt" },
+                { value: 0, label: "Đã từ chối" },
               ]}
               className="h-12 text-base px-4"
-            /> */}
+            />
           </div>
 
           <div className="rounded-md border border-gray-200 bg-gray-50 p-2">
@@ -254,33 +274,41 @@ const getStatusBadge = (status) => {
                         {request.categoryName}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatDate(request.requestedAt)}</TableCell>
+                    <TableCell>{formatDate(request.createdAt)}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
                     <TableCell className="text-right relative">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            className="h-8 w-8 p-0"
-                            onClick={() => toggleMenu(request.id)}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          isOpen={openMenuId === request.id}
-                          onClose={() => setOpenMenuId(null)}
-                          className="absolute right-0 mt-2 w-44 min-w-[10rem] max-w-[12rem] rounded-md border border-gray-200 bg-white shadow-lg z-50"
+                      <div className="relative inline-block text-left">
+                        {/* Nút mở menu */}
+                        <button
+                          onClick={() =>
+                            setOpenMenuId(
+                              openMenuId === request.id ? null : request.id
+                            )
+                          }
+                          className="h-8 w-8 p-0 flex items-center justify-center rounded-md hover:bg-gray-100 transition"
                         >
-                          <DropdownMenuItem
-                            onClick={() => handleViewDetails(request)}
+                          <MoreHorizontal className="h-4 w-4 text-gray-600" />
+                        </button>
+
+                        {/* Dropdown menu nổi, không phá layout */}
+                        {openMenuId === request.id && (
+                          <div
+                            className="absolute right-0 top-full mt-2 w-44 min-w-[10rem] rounded-md border border-gray-200 bg-white shadow-md z-[9999] animate-in fade-in zoom-in-95"
+                            style={{ position: "absolute" }}
                           >
-                            <Eye className="mr-2 h-4 w-4" />
-                            Xem chi tiết
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <button
+                              onClick={() => {
+                                handleViewDetails(request);
+                                setOpenMenuId(null);
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                            >
+                              <Eye className="w-4 h-4 text-gray-600" />
+                              Xem chi tiết
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -378,7 +406,7 @@ const getStatusBadge = (status) => {
                   <div>
                     <p className="text-gray-500">Ngày gửi yêu cầu</p>
                     <p className="font-medium text-gray-900">
-                      {formatDate(selectedRequest.requestedAt)}
+                      {formatDate(selectedRequest.createdAt)}
                     </p>
                   </div>
                 </div>
@@ -418,7 +446,7 @@ const getStatusBadge = (status) => {
                   Lý do từ chối (Admin)
                 </h3>
                 <Textarea
-                  value={rejectionReason}
+                  value={rejectionReason || selectedRequest?.rejectReason || ""}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="Nhập lý do từ chối tại đây..."
                 />
@@ -438,16 +466,16 @@ const getStatusBadge = (status) => {
               <>
                 <Button
                   variant="destructive"
-                  onClick={handleReject}
-                  className="!bg-red-500 !hover:bg-red-800 text-white"
+                  onClick={() => handleReject(selectedRequest.id)}
+                  className="!bg-gray-400 !hover:bg-gray-800 hover:text-white "
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Từ chối
                 </Button>
 
                 <Button
-                  onClick={handleApprove}
-                  className="!bg-green-500 !hover:bg-green-800 text-white"
+                  onClick={() => handleApprove(selectedRequest.id)}
+                  className="!bg-blue-500 !hover:bg-green-800 text-white transition-all duration-300 ease-in-out"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Phê duyệt

@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/common/components/ui/card";
+
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
 import { Label } from "@/common/components/ui/label";
@@ -34,6 +35,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  useDialog,
 } from "@/common/components/ui/dialog";
 import {
   Select,
@@ -60,13 +62,17 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  Eye,
 } from "lucide-react";
-
+import ClubDetailModal from "@/features/landing/club/Modal/ClubDetailModal/page";
 import { useClubApi } from "@/features/landing/club/hooks/useClubApi";
 import { useToast } from "@/common/hooks/useToast";
 import ClubApprovalPage from "./ClubCreationPending/page";
 export default function ClubClassManagement() {
-  const toast = useToast()
+  const toast = useToast();
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedClub, setSelectedClub] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
   const [clubsClasses, setClubsClasses] = useState([]);
   const [clubCategory, setClubCategory] = useState([]);
   const [filteredClubs, setFilteredClubs] = useState([]);
@@ -92,7 +98,7 @@ export default function ClubClassManagement() {
     category: "",
     meetingTime: "",
   });
-  const { getListClub, getClubCategory } = useClubApi();
+  const { getListClub, getClubCategory,deleteClub } = useClubApi();
   const handleSort = (field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -101,6 +107,7 @@ export default function ClubClassManagement() {
       setSortDirection("asc");
     }
   };
+  
   useEffect(() => {
     let result = clubsClasses;
 
@@ -125,34 +132,32 @@ export default function ClubClassManagement() {
       setClubsClasses(data);
       console.log(data);
       const total = response.data.totalCount || data.length; // 🔹 dùng totalCount nếu có
-    setClubsClasses(data);
-    setTotalCount(total);
-    setTotalPages(Math.ceil(total / pageSize));
+      setClubsClasses(data);
+      setTotalCount(total);
+      setTotalPages(Math.ceil(total / pageSize));
     } catch (err) {
       console.log(err);
-      toast.loadClubFail()
+      toast.loadClubFail();
     }
   };
   useEffect(() => {
-  handleListClub();
-}, [pageNumber]);
+    handleListClub();
+  }, [pageNumber]);
   const getStatusBadge = (isDeleted) => {
-  const style = {
-    padding: "4px 8px",
-    borderRadius: "4px",
-    fontWeight: "bold",
-    color: "#fff",
-    backgroundColor: isDeleted ? "#888" : "#4caf50",
-    display: "inline-block",
-    fontSize: "12px",
-  };
+    const style = {
+      padding: "4px 8px",
+      borderRadius: "4px",
+      fontWeight: "bold",
+      color: "#fff",
+      backgroundColor: isDeleted ? "#888" : "#4caf50",
+      display: "inline-block",
+      fontSize: "12px",
+    };
 
-  return (
-    <span style={style}>
-      {isDeleted ? "Đã kết thúc" : "Đang hoạt động"}
-    </span>
-  );
-};
+    return (
+      <span style={style}>{isDeleted ? "Đã kết thúc" : "Đang hoạt động"}</span>
+    );
+  };
   const handleListCategory = async () => {
     try {
       const response = await getClubCategory();
@@ -216,11 +221,17 @@ export default function ClubClassManagement() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id) => {
-    setClubsClasses(clubsClasses.filter((item) => item.id !== id));
+  const handleDelete = async(id) => {
+    try{
+      console.log(id)
+      await deleteClub(id)
+      toast.deleteClubSuccess()
+      handleListClub()
+    }catch(err){
+     console.log(err)
+      toast.deleteClubFail()
+    }
   };
-
-  
 
   const SortHeader = ({ field, children }) => (
     <TableHead
@@ -373,7 +384,7 @@ export default function ClubClassManagement() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{clubsClasses.length}</div>
@@ -396,7 +407,7 @@ export default function ClubClassManagement() {
             <p className="text-sm text-gray-600">CLB tạm ngưng</p>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
 
       {/* Table */}
       <Card>
@@ -459,7 +470,9 @@ export default function ClubClassManagement() {
                           <TableCell className="font-medium">
                             {item.name}
                           </TableCell>
-                          <TableCell>{getStatusBadge(item.isDeleted)}</TableCell>
+                          <TableCell>
+                            {getStatusBadge(item.isDeleted)}
+                          </TableCell>
                           <TableCell>
                             <Badge variant="outline" className="text-gray-600">
                               <BookOpen className="h-3 w-3 mr-1" />
@@ -471,23 +484,56 @@ export default function ClubClassManagement() {
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                <Button
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0"
+                                  data-dropdown-trigger
+                                  onClick={() =>
+                                    setOpenMenuId(
+                                      openMenuId === item.id ? null : item.id
+                                    )
+                                  }
+                                >
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleEdit(item)}
+
+                              {openMenuId === item.id && (
+                                <DropdownMenuContent
+                                  align="end"
+                                  isOpen={openMenuId === item.id}
+                                  onClose={() => setOpenMenuId(null)}
+                                  className="absolute right-0 mt-2 min-w-[200px] rounded-md border border-gray-200 bg-white shadow-lg z-[9999] animate-in fade-in-0 zoom-in-95"
                                 >
-                                  <Edit className="mr-2 h-4 w-4" /> Chỉnh sửa
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-red-600"
-                                  onClick={() => handleDelete(item.id)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" /> Xóa
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
+                                  {/* Xem chi tiết */}
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedClub(item);
+                                      setIsDetailOpen(true);
+                                    }}
+                                    className="hover:bg-gray-100 text-gray-700 flex items-center"
+                                  >
+                                    <Eye className="mr-2 h-4 w-4 text-gray-600" />
+                                    Xem chi tiết
+                                  </DropdownMenuItem>
+                                  <ClubDetailModal
+                                    isOpen={isDetailOpen}
+                                    onClose={() => setIsDetailOpen(false)}
+                                    club={selectedClub}
+                                  />
+                                  {/* Xóa câu lạc bộ */}
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      handleDelete(item.id);
+                                      setOpenMenuId(null);
+                                    }}
+                                    className="text-red-600 hover:bg-red-50 focus:bg-red-50 flex items-center"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                                    Tạm ngừng câu lạc bộ
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              )}
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>
@@ -505,61 +551,65 @@ export default function ClubClassManagement() {
                   </TableBody>
                 </Table>
                 {totalPages > 0 && clubsClasses.length > 0 && (
-  <div className="flex items-center justify-between mt-4">
-    <div className="text-sm text-gray-600">
-      Trang {pageNumber} / {totalPages}
-    </div>
-    <div className="flex items-center gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setPageNumber(pageNumber - 1)}
-        disabled={pageNumber === 1}
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Trước
-      </Button>
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="text-sm text-gray-600">
+                      Trang {pageNumber} / {totalPages}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPageNumber(pageNumber - 1)}
+                        disabled={pageNumber === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Trước
+                      </Button>
 
-      <div className="flex gap-1">
-        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-          let pageNum;
-          if (totalPages <= 5) {
-            pageNum = i + 1;
-          } else if (pageNumber <= 3) {
-            pageNum = i + 1;
-          } else if (pageNumber >= totalPages - 2) {
-            pageNum = totalPages - 4 + i;
-          } else {
-            pageNum = pageNumber - 2 + i;
-          }
+                      <div className="flex gap-1">
+                        {Array.from(
+                          { length: Math.min(5, totalPages) },
+                          (_, i) => {
+                            let pageNum;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (pageNumber <= 3) {
+                              pageNum = i + 1;
+                            } else if (pageNumber >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = pageNumber - 2 + i;
+                            }
 
-          return (
-            <Button
-              key={pageNum}
-              variant={pageNumber === pageNum ? "default" : "outline"}
-              size="sm"
-              onClick={() => setPageNumber(pageNum)}
-              className="w-8 h-8 p-0"
-            >
-              {pageNum}
-            </Button>
-          );
-        })}
-      </div>
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={
+                                  pageNumber === pageNum ? "default" : "outline"
+                                }
+                                size="sm"
+                                onClick={() => setPageNumber(pageNum)}
+                                className="w-8 h-8 p-0"
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          }
+                        )}
+                      </div>
 
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setPageNumber(pageNumber + 1)}
-        disabled={pageNumber === totalPages}
-      >
-        Tiếp theo
-        <ChevronRight className="h-4 w-4" />
-      </Button>
-    </div>
-  </div>
-)}
-
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPageNumber(pageNumber + 1)}
+                        disabled={pageNumber === totalPages}
+                      >
+                        Tiếp theo
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </TabsContent>

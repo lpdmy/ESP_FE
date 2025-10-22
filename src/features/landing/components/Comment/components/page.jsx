@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
 import { useCommentApi } from "../hooks/useCommentApi";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal,Settings,Trash } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -311,13 +311,15 @@ export function CommentSection({ postId }) {
                               setOpenMenuId(null);
                             }}
                           >
-                            ✏️ Chỉnh sửa
+                            <Settings className="h-4 w-4 mr-1"/>
+                             Chỉnh sửa
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDeleteClick(comment.id)}
                             className="text-red-500 focus:text-red-600"
                           >
-                            🗑️ Xóa
+                            <Trash className="h-4 w-4 mr-1"/>
+                             Xóa
                           </DropdownMenuItem>
                           <ConfirmDeleteModal
                             isOpen={openConfirm}
@@ -483,13 +485,13 @@ export function CommentSection({ postId }) {
                                       setOpenMenuId(null);
                                     }}
                                   >
-                                    ✏️ Chỉnh sửa
+                                     Chỉnh sửa
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => handleDeleteClick(reply.id)}
                                     className="text-red-500 focus:text-red-600"
                                   >
-                                    🗑️ Xóa
+                                     Xóa
                                   </DropdownMenuItem>
                                   <ConfirmDeleteModal
                             isOpen={openConfirm}

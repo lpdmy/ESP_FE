@@ -127,7 +127,7 @@ function CreateClub() {
       toast.createClubSuccess();
     } catch (error) {
       console.error("Lỗi khi tạo CLB:", error);
-      toast.showError(error);
+      toast.showError(error.message);
     }
   };
 
@@ -183,7 +183,7 @@ function CreateClub() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold gradient-text mb-2">Tạo CLB</h1>
+          <h1 className="text-4xl font-bold gradient-text mb-2">Tạo câu lạc bộ</h1>
           <p className="text-gray-600 text-lg">
             Tạo một cộng đồng học tập và chia sẻ kiến thức
           </p>
@@ -195,14 +195,14 @@ function CreateClub() {
               <CardHeader>
                 <CardTitle className="text-2xl">Thông tin cơ bản</CardTitle>
                 <p className="text-gray-600">
-                  Điền thông tin chi tiết về CLB của bạn
+                  Điền thông tin chi tiết về câu lạc bộ của bạn
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Basic Information */}
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Tên CLB *</Label>
+                    <Label htmlFor="name">Tên câu lạc bộ *</Label>
                     <Input
                       id="name"
                       placeholder="Ví dụ: CLB Lập trình, CLB Toán nâng cao..."
@@ -381,14 +381,6 @@ function CreateClub() {
                         onChange={(e) => setRequirements(e.target.value)}
                       />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="openJoin"
-                        checked={allowAutoJoin}
-                        onChange={setAllowAutoJoin}
-                        label="Cho phép đăng ký tự do (không cần phê duyệt)"
-                      />
-                    </div>
                   </div>
                 </div>
                 {/* Contact Information */}
@@ -454,7 +446,7 @@ function CreateClub() {
                         Đang tạo...
                       </>
                     ) : (
-                      "Tạo CLB"
+                      "Tạo câu lạc bộ"
                     )}
                   </Button>
                 </div>
@@ -512,7 +504,7 @@ function CreateClub() {
                 <div className="flex items-start gap-2">
                   <BookOpen className="w-4 h-4 text-blue-500 mt-0.5" />
                   <div>
-                    <p className="font-medium">Tên CLB/Lớp học</p>
+                    <p className="font-medium">Tên câu lạc bộ</p>
                     <p className="text-gray-600">
                       Chọn tên ngắn gọn, dễ nhớ và thể hiện rõ mục đích
                     </p>
@@ -563,47 +555,9 @@ export default function CreateClubRequestPage() {
   return (
     <div className="max-w-5xl mx-auto py-8">
       <Tabs value={tab} onValueChange={setTab} defaultValue="create">
-        <TabsList className="mb-6 flex justify-center bg-transparent p-0">
-          <TabsTrigger
-            value="create"
-            className="px-4 py-2 text-sm font-medium rounded-md 
-               data-[state=active]:bg-orange-500 
-               data-[state=active]:text-white 
-               bg-gray-100 text-gray-600
-               rounded-l-md 
-               hover:bg-gray-200"
-          >
-            Tạo CLB
-          </TabsTrigger>
-          <TabsTrigger
-            value="posts"
-            className="px-4 py-2 text-sm font-medium rounded-md 
-               data-[state=active]:bg-orange-500 
-               data-[state=active]:text-white 
-               bg-gray-100 text-gray-600 
-               rounded-r-md
-               hover:bg-gray-200"
-          >
-            Bài đăng đã tạo
-          </TabsTrigger>
-        </TabsList>
 
         <TabsContent value="create">
           <CreateClub />
-        </TabsContent>
-
-        <TabsContent value="posts">
-          <Card>
-            <CardHeader>
-              <CardTitle>Bài đăng đã tạo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                <li className="p-3 border rounded-md">Bài đăng 1</li>
-                <li className="p-3 border rounded-md">Bài đăng 2</li>
-              </ul>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

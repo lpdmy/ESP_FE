@@ -40,4 +40,8 @@ export const ROUTES = {
     HISTORY: "/points/history",       
     MY_REDEMPTIONS: "/points/my-redemptions"        
   },
+  SEARCH:{
+    STUDENT:"/Search/students",
+    TEACHER:"/Search/teachers"
+  }
 };
