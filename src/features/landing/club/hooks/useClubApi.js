@@ -54,11 +54,11 @@ export function useClubApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
-  const getClubJoinCreation = useRef(async (pageNumber, pageSize,search="") => {
+  const getClubJoinCreation = useRef(async (pageNumber, pageSize,search="",status) => {
     const token = localStorage.getItem("token");
     return executeApiCall(
       clubService.getClubJoinCreation.bind(clubService),
-      [token,pageNumber, pageSize,search=""],
+      [token,pageNumber, pageSize,search="",status],
       { setLoading: setSaveLoading, setError }
     );
   });
@@ -150,6 +150,62 @@ export function useClubApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
+  const approveCreation = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.approveCreation.bind(clubService),
+      [token,id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const rejectCreation = useRef(async (payload) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.rejectCreation.bind(clubService),
+      [token,payload],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const getTeacher = useRef(async (role,pageNumber, pageSize,search="") => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.getTeacher.bind(clubService),
+      [token,role, pageNumber, pageSize,search],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const inviteMentor = useRef(async (payload) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.inviteMentor.bind(clubService),
+      [token,payload],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const getInvitation = useRef(async (pageNumber, pageSize,search="") => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.getInvitation.bind(clubService),
+      [token, pageNumber, pageSize,search],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const changeRole = async (userId, clubId) => {
+  const token = localStorage.getItem("token");
+  return executeApiCall(
+    clubService.changeRole.bind(clubService),
+    [token, userId, clubId],
+    { setLoading: setSaveLoading, setError }
+  );
+};
+const deleteClub = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.deleteClub.bind(clubService),
+      [token,id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
   return{
     clubLoading,
     saveLoading,
@@ -171,6 +227,13 @@ export function useClubApi() {
     leaveClub : leaveClub.current,
     rejectPost: rejectPost.current,
     getClubJoinCreation : getClubJoinCreation.current,
-    kickClub : kickClub.current
+    kickClub : kickClub.current,
+    approveCreation: approveCreation.current,
+    rejectCreation : rejectCreation.current,
+    getTeacher : getTeacher.current,
+    inviteMentor : inviteMentor.current,
+    getInvitation: getInvitation.current,
+    changeRole,
+    deleteClub : deleteClub.current
   };
 }

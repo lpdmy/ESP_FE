@@ -5,6 +5,7 @@ import ClubListPage from "@/pages/Club/ListClubPage/page";
 import ClubDetailPage from "@/pages/Club/ClubDetailPage/page";
 import ClubManagePage from "@/pages/Club/ClubManagePage/page";
 import ProtectedRoute from "./ProtectedRoute";
+
 export const clubRoutes = [
     <Route element={<ProtectedRoute />}>
     <Route key="club" path={ROUTES.CLUB.CREATE_CLUB} element={<CreateClubPage />} />,

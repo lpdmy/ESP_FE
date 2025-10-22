@@ -1,32 +1,69 @@
-import React from "react";
+import React from 'react';
+import { cn } from "@/lib/utils";
 
-export function RadioGroup({ value, onChange, children, className }) {
+export const RadioGroup = ({ 
+  value, 
+  onValueChange, 
+  children, 
+  className = "",
+  ...props 
+}) => {
   return (
-    <div className={className}>
-      {React.Children.map(children, (child) =>
-        React.cloneElement(child, {
-          name: "radio-group",
-          checked: value === child.props.value,
-          onChange: () => onChange(child.props.value),
-        })
-      )}
+    <div 
+      className={cn("space-y-2", className)} 
+      role="radiogroup"
+      {...props}
+    >
+      {React.Children.map(children, child => {
+        if (React.isValidElement(child)) {
+          return React.cloneElement(child, {
+            selectedValue: value,
+            onValueChange,
+            ...child.props
+          });
+        }
+        return child;
+      })}
     </div>
   );
-}
+};
 
-export function RadioGroupItem({ id, value, checked, onChange, label }) {
+export const RadioGroupItem = ({ 
+  value, 
+  onValueChange, 
+  children, 
+  className = "",
+  selectedValue,
+  ...props 
+}) => {
+  const handleChange = () => {
+    onValueChange && onValueChange(value);
+  };
+
+  const isSelected = selectedValue === value;
+  const id = `radio-${value}`;
+
   return (
-    <label htmlFor={id} className="flex items-center gap-2 cursor-pointer">
+    <div 
+      className={cn(
+        "flex items-start space-x-3 p-4 rounded-lg border hover:bg-gray-50 cursor-pointer transition-colors",
+        isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200",
+        className
+      )}
+      onClick={handleChange}
+    >
       <input
         type="radio"
         id={id}
         name="radio-group"
         value={value}
-        checked={checked}
-        onChange={onChange}
-        className="form-radio text-orange-600"
+        checked={isSelected}
+        onChange={handleChange}
+        className="mt-1 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
       />
-      <span>{label}</span>
-    </label>
+      <div className="flex-1">
+        {children}
+      </div>
+    </div>
   );
-}
+};

@@ -10,7 +10,11 @@ export const CLUB_MESSAGES = {
     LEAVE_CLUB:"Rời câu lạc bộ thành công",
     KICK_CLUB:"Xóa người dùng khỏi câu lạc bộ thành công.",
     REJECT_POST:"Từ chối duyệt bài đăng thành công",
-
+    APPROVE_CREATION:"Duyệt bài tạo câu lạc bộ thành công",
+    REJECT_CREATION:"Từ chối duyệt bài tạo câu lạc bộ thành công",
+    INVITE_MENTOR:"Mời cố vấn cho câu lạc bộ thành công",
+    CHANGE_ROLE:"Chuyển chức vụ thành công",
+    DELETE_CLUB:"Tạm ngừng câu lạc bộ thành công",
   },
   ERROR:{
     CREATE_CLUB_JOIN:"Tạo yêu cầu tham gia câu lạc bộ không thành công",
@@ -21,6 +25,12 @@ export const CLUB_MESSAGES = {
     LIST: "Lỗi khi tải CLUB. Thử lại sau.",
     KICK_CLUB:"Lỗi khi xóa người dùng khỏi câu lạc bộ.Vui lòng thử lại sau.",
     REJECT_POST:"Từ chối duyệt bài đăng thành công",
-    LOAD_CLU_CATEGORY:"Lỗi khi tải thể loại câu lạc bộ, vui lòng thử lại sau"
+    LOAD_CLUB_CATEGORY:"Lỗi khi tải thể loại câu lạc bộ, vui lòng thử lại sau",
+    APPROVE_CREATION:"Duyệt bài tạo câu lạc bộ không thành công, vui lòng thử lại sau",
+    REJECT_CREATION:"Từ chối duyệt bài tạo câu lạc bộ không thành công",
+    INVITE_MENTOR:"Mời cố vấn cho câu lạc bộ không thành công",
+    CHANGE_ROLE:"Chuyển chức vụ thất bại, vui lòng thử lại sau",
+    LOAD_POST:"Tải bài đăng thất bại, vui lòng thử lại sau",
+    DELETE_CLUB:"Tạm ngừng câu lạc bộ thất bại, vui lòng thử lại sau"
   }
 }

@@ -12,10 +12,12 @@ import { Search, Users, Calendar, Plus, Filter } from "lucide-react";
 import { useClubApi } from "../hooks/useClubApi";
 import { useToast } from "@/common/hooks/useToast";
 import { LoadingOverlay } from "@/common/components/ui/loading";
-
+import { useSelector } from "react-redux";
 import { LoadingCollection } from "@/common/components/ui/loading";
+import MentorInvitationModal from "../Modal/MentorInvitationModal/page";
 export default function ClubList() {
   const { getListClub, getClubCategory } = useClubApi();
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitLoading, setIsInitLoading] = useState(true);
   const [pageNumber, setPageNumber] = useState(1);
@@ -27,7 +29,9 @@ export default function ClubList() {
   const [totalCount, setTotalCount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("Tất cả");
   const allCategories = [{ id: 0, name: "Tất cả" }, ...clubCategory];
-  const toast = useToast()
+  const toast = useToast();
+  const user = useSelector((state) => state.user.user);
+  const userRole = user?.role;
   const handleCategoryClick = (name) => {
     setSelectedCategory(name);
   };
@@ -40,11 +44,10 @@ export default function ClubList() {
       setClubs(data);
       setTotalCount(total);
     } catch (error) {
-
       console.error("Lỗi khi lấy danh sách CLB:", error);
-      toast.showError("Lỗi khi tải CLUB. Thử lại sau.")
+      toast.showError("Lỗi khi tải CLUB. Thử lại sau.");
     } finally {
-       setIsLoading(false);
+      setIsLoading(false);
     }
   };
   const handleGetClubCategory = async () => {
@@ -63,13 +66,13 @@ export default function ClubList() {
     };
     fetchData();
   }, []);
-  useEffect(()=>{
-const timer = setTimeout(() => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
       setIsInitLoading(false);
-    }, 2500);
+    }, 1200);
     return () => clearTimeout(timer);
-  })
-    useEffect(() => {
+  });
+  useEffect(() => {
     handleGetListClub();
   }, [pageNumber]);
   useEffect(() => {
@@ -95,9 +98,8 @@ const timer = setTimeout(() => {
   }, [searchTerm, selectedCategory]);
 
   return (
-    
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
-      <LoadingOverlay isLoading={isInitLoading}/>
+      <LoadingOverlay isLoading={isInitLoading} />
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Page Header */}
         <div className="mb-8">
@@ -107,19 +109,33 @@ const timer = setTimeout(() => {
                 Câu lạc bộ
               </h1>
               <p className="text-gray-600 text-lg">
-                Khám phá và tham gia các câu lạc bộ phù hợp với sở
-                thích của bạn
+                Khám phá và tham gia các câu lạc bộ phù hợp với sở thích của bạn
               </p>
             </div>
-            <a href="/club/create-club-creation">
-              <Button className="btn-primary flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Tạo CLB mới
-              </Button>
-            </a>
+            {userRole === 4 && (
+              <a href="/club/create-club-creation">
+                <Button className="btn-primary flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Tạo CLB mới
+                </Button>
+              </a>
+            )}
+            {userRole === 2 && (
+                <Button className="btn-primary flex items-center gap-2"
+                onClick={() => setIsModalOpen(true)}
+                >
+                  <Plus className="w-4 h-4" />
+                  Lời mời cố vấn
+                </Button>
+            )}
+            <MentorInvitationModal 
+             isOpen={isModalOpen}
+             onClose={() => setIsModalOpen(false)}
+             
+             />
           </div>
-        </div>
 
+        </div>
         {/* Search and Filter */}
         <div className="mb-8">
           <Card className="p-6">
@@ -158,7 +174,7 @@ const timer = setTimeout(() => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative min-h-[420px]">
           {isLoading ? (
-              <LoadingCollection  isLoading={isLoading}/>
+            <LoadingCollection isLoading={isLoading} />
           ) : filteredClubs.length > 0 ? (
             filteredClubs.map((item) => (
               <Card
@@ -196,14 +212,10 @@ const timer = setTimeout(() => {
                   </div>
                   <div className="flex gap-2">
                     <a href={`/club/${item.id}`} className="flex-1">
-                      <Button
-                        className="btn-primary !w-full"
-                        variant="outline"
-                      >
+                      <Button className="btn-primary !w-full" variant="outline">
                         Xem chi tiết
                       </Button>
                     </a>
-                    
                   </div>
                 </CardContent>
               </Card>

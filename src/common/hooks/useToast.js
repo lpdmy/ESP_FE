@@ -101,7 +101,17 @@ export const useToast = () => {
   const loadCommentFail = () => showError(COMMENT_MESSAGE.Fail.LOAD)
   const deleteCommentFail = () =>showError(COMMENT_MESSAGE.Fail.DELETE)
   const deleteCommentSuccess = () =>showSuccess(COMMENT_MESSAGE.SUCCESS.DELETE)
-  const loadClubCategoryFail = () =>showError(CLUB_MESSAGES.ERROR.loadClubCategoryFail)
+  const loadClubCategoryFail = () =>showError(CLUB_MESSAGES.ERROR.LOAD_CLUB_CATEGORY)
+  const approveCreationFail = () =>showError(CLUB_MESSAGES.ERROR.APPROVE_CREATION)
+  const approveCreationSucces = () =>showSuccess(CLUB_MESSAGES.ERROR.APPROVE_CREATION)
+  const rejectCreationRequsetSuccess = () =>showError(CLUB_MESSAGES.SUCCESS.REJECT_CREATION)
+  const inviteMentorSuccess = () =>showSuccess(CLUB_MESSAGES.SUCCESS.INVITE_MENTOR)
+  const inviteMentorFail = () => showError(CLUB_MESSAGES.SUCCESS.INVITE_MENTOR)
+  const changeRoleFail = () => showError(CLUB_MESSAGES.ERROR.CHANGE_ROLE)
+  const changeRoleSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.CHANGE_ROLE)
+  const loadPostFail = ()=>showError(CLUB_MESSAGES.ERROR.LOAD_POST)
+  const deleteClubFail = ()=>showError(CLUB_MESSAGES.ERROR.DELETE_CLUB)
+  const deleteClubSuccess = ()=>showSuccess(CLUB_MESSAGES.SUCCESS.DELETE_CLUB)
 
   return {
     // Basic toast methods
@@ -152,6 +162,16 @@ export const useToast = () => {
     deleteCommentFail,
     deleteCommentSuccess,
     loadClubCategoryFail,
+    approveCreationFail,
+    approveCreationSucces,
+    rejectCreationRequsetSuccess,
+    inviteMentorSuccess,
+    inviteMentorFail,
+    changeRoleFail,
+    changeRoleSuccess,
+    loadPostFail,
+    deleteClubFail,
+    deleteClubSuccess,
     // Direct access to messages
     PROFILE_MESSAGES,
     AUTH_MESSAGES,

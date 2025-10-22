@@ -32,6 +32,7 @@ import {
   X,
   Info,
 } from "lucide-react";
+import { Input } from "@/common/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,7 +72,7 @@ export default function ClubDetail() {
     createClubJoinRequest,
     getClubPost,
     cancelJoinRequest,
-    leaveClub
+    leaveClub,
   } = useClubApi(clubid);
   const [registeredActivities, setRegisteredActivities] = useState([]);
   const { isOpen, toggleMenu, closeMenu } = useDropdownMenu();
@@ -84,7 +85,12 @@ export default function ClubDetail() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const payload = { clubId: clubid, classId: null };
+  const [searchMemberTerm, setSearchMemberTerm] = useState("");
   const [post, setPost] = useState([]);
+  const filteredMembers =
+    clubDetail?.members?.filter((member) =>
+      member.fullName.toLowerCase().includes(searchMemberTerm.toLowerCase())
+    ) || [];
   const getTruncatedText = (text, maxLength = 120) => {
     if (!text) return "";
     if (text.length <= maxLength) return text;
@@ -100,7 +106,7 @@ export default function ClubDetail() {
       setIsRequestToJoin(response.data.isRequestToJoin);
       SetIsPresident(response.data.isPresident);
     } catch (error) {
-      toast.loadClubFail()
+      toast.loadClubFail();
       console.log(error);
     }
   };
@@ -113,16 +119,16 @@ export default function ClubDetail() {
     setSelectedPost(null);
   };
   const handleConfirmDelete = (postId) => {
-  setPost(prev => prev.filter(p => p.id !== postId));
-  setIsDeleteModalOpen(false);
-  setSelectedPost(null);
-};
+    setPost((prev) => prev.filter((p) => p.id !== postId));
+    setIsDeleteModalOpen(false);
+    setSelectedPost(null);
+  };
   const handleClubPost = async () => {
     try {
       const response = await getClubPost(clubid);
       const data = response.data;
       setPosts(data);
-      console.log("bài đăng",data);
+      console.log("bài đăng", data);
     } catch (error) {
       console.log(error);
     }
@@ -168,9 +174,9 @@ export default function ClubDetail() {
   };
   const handleLeaveClub = async () => {
     try {
-      await leaveClub(clubid)
-      handleClubDetail()
-      toast.leaveClubSuccess()
+      await leaveClub(clubid);
+      handleClubDetail();
+      toast.leaveClubSuccess();
     } catch (error) {}
   };
   const handleRegister = (activityId) => {
@@ -352,18 +358,17 @@ export default function ClubDetail() {
                           Tham gia câu lạc bộ
                         </Button>
                       )}
-                      <JoinClubModal
-                        open={isDialogOpen}
-                        onClose={closeDialog}
-                        onSubmit={handleSubmit}
-                      />
                     </div>
                   </CardContent>
                 </Card>
               )}
             </div>
           </div>
-
+          <JoinClubModal
+            open={isDialogOpen}
+            onClose={closeDialog}
+            onSubmit={handleSubmit}
+          />
           {/* Center Content - Tabs */}
           <div className="lg:col-span-6 ">
             <Tabs defaultValue="posts" className="w-full">
@@ -551,7 +556,13 @@ export default function ClubDetail() {
                 </CardHeader>
                 <CardContent className="max-h-[calc(100vh-200px)] overflow-y-auto">
                   <div className="space-y-3">
-                    {clubDetail.members?.slice(0, 8).map((m) => (
+                    <Input
+                      placeholder="Tìm kiếm thành viên..."
+                      className="max-w-xs border-gray-300 "
+                      value={searchMemberTerm}
+                      onChange={(e) => setSearchMemberTerm(e.target.value)}
+                    />
+                    {filteredMembers?.slice(0, 8).map((m) => (
                       <div
                         key={m.userId}
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 transition-colors"

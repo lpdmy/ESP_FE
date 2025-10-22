@@ -4,6 +4,7 @@ export class ClubService extends ApiService {
   async createClubCreation(token, payload) {
     return this.post(API_CONFIG.CLUB.CREATE_CLUB, payload, token);
   }
+
   async updateClub(token, payload) {
     return this.put(API_CONFIG.CLUB.UPDATE_CLUB, payload, token);
   }
@@ -29,8 +30,9 @@ export class ClubService extends ApiService {
     }
     return this.get(url, token);
   }
-  async getClubJoinCreation(token, pageNumber = 1, pageSize = 10, search = "") {
-    let url = `${API_CONFIG.CLUB.CLUB_CREATION_REQUEST}?PageNumber=${pageNumber}&PageSize=${pageSize}`;
+  
+  async getClubJoinCreation(token, pageNumber = 1, pageSize = 10, search = "",status) {
+    let url = `${API_CONFIG.CLUB.CLUB_CREATION_REQUEST}?PageNumber=${pageNumber}&PageSize=${pageSize}&status=${status}`;
     if (search && search.trim() !== "") {
       url += `&search=${encodeURIComponent(search.trim())}`;
     }
@@ -43,6 +45,14 @@ export class ClubService extends ApiService {
     const url = API_CONFIG.CLUB.CLUB_APPROVE_JOIN_REQUEST.replace("{id}", id);
     return this.put(url, token);
   }
+  async approveCreation(token, id) {
+    const url = API_CONFIG.CLUB.CLUB_APPROVE_CREATION_REQUEST.replace("{id}", id);
+    return this.put(url, token);
+  }
+  async rejectCreation(token, payload) {
+  const url = `${API_CONFIG.CLUB.CLUB_REJECT_CREATION_REQUEST}`;
+  return this.put(url,  payload,token);
+}
   async cancelJoinRequest(token, id) {
     const url = API_CONFIG.CLUB.CLUB_CANCEL_JOIN_REQUES.replace("{id}", id);
     return this.delete(url, token);
@@ -82,5 +92,29 @@ export class ClubService extends ApiService {
   const url = `${API_CONFIG.CLUB.KICK_CLUB}?userid=${payload.userId}&clubid=${payload.clubId}`;
   return this.delete(url, null, token);
 }
-
+async getTeacher(token,role, pageNumber = 1, pageSize = 10, search = "") {
+    let url = `${API_CONFIG.CLUB.CLUB_SEARCH_USER}?role=${role}&PageNumber=${pageNumber}&PageSize=${pageSize}`;
+    if (search && search.trim() !== "") {
+      url += `&search=${encodeURIComponent(search.trim())}`;
+    }
+    return this.get(url, token);
+  }
+  async inviteMentor(token, payload) {
+   return this.post(API_CONFIG.CLUB.CLUB_INVITE_MENTOR,payload,token)
+} 
+async getInvitation(token, pageNumber = 1, pageSize = 10, search = "") {
+    let url = `${API_CONFIG.CLUB.CLUB_GET_INVITATION}?PageNumber=${pageNumber}&PageSize=${pageSize}`;
+    if (search && search.trim() !== "") {
+      url += `&search=${encodeURIComponent(search.trim())}`;
+    }
+    return this.get(url, token);
+  }
+  async changeRole(token, userid,clubid) {
+    const url = `${API_CONFIG.CLUB.CLUB_CHANGE_ROLE}?userid=${userid}&clubid=${clubid}`;
+    return this.put(url,null, token);
+  }  
+  async deleteClub(token, id) {
+    const url = `${API_CONFIG.CLUB.CLUB_DELETE}/${id}`;
+    return this.delete(url,null, token);
+  } 
 }

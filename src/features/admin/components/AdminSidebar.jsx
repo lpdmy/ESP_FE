@@ -83,7 +83,10 @@ export default function AdminSidebar({ isOpen, onClose }) {
           {/* Navigation */}
           <nav className="flex-1 px-3 py-6 space-y-2">
             {navigation.map((item) => {
-              const isActive = pathname === item.href
+              const isActive =
+              item.href === "/admin"
+                ? pathname === "/admin"
+                : pathname === item.href || pathname.startsWith(item.href + "/");
               const Icon = item.icon
 
               return (

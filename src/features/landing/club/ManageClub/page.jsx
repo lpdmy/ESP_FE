@@ -45,6 +45,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  useDialog,
 } from "@/common/components/ui/dialog";
 import {
   ArrowLeft,
@@ -75,6 +76,8 @@ import { useToast } from "@/common/hooks/useToast";
 import { useClubApi } from "../hooks/useClubApi";
 import { LoadingCollection } from "@/common/components/ui/loading";
 import ClubBasicInfoForm from "@/features/landing/club/ClubBasicInfoForm/page.jsx";
+import FindMentorModal from "../Modal/FindMentorModal/page";
+import { useNavigate } from "react-router-dom";
 const activities = [
   {
     id: 1,
@@ -110,8 +113,12 @@ export default function ClubManage() {
     getPostPending,
     approvePost,
     rejectPost,
-    kickClub
+    kickClub,
+    inviteMentor,
+    changeRole,
   } = useClubApi();
+  const navigate = useNavigate();
+  const [isFindMentorOpen, setIsFindMentorOpen] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [isLoading, SetIsloading] = useState(true);
   const [clubInfo, SetClubInfor] = useState({});
@@ -147,25 +154,51 @@ export default function ClubManage() {
       SetIsloading(false);
     }
   };
+
   const handlePostPending = async () => {
     try {
       const response = await getPostPending(id);
       const data = response.data.data;
       console.log(data);
       setPendingPosts(data);
-    } catch {}
-  };
-  const handleKick = async (userid) =>{
-    try {
-      const payload = {userId :userid,clubId:id}
-      const response = await kickClub(payload)
-      toast.kickClubSuccess()
-      console.log(response)
-      handleGetClubDetail()
-    } catch (error) {
-      toast.kickClubFail()
+    } catch (err) {
+      toast.loadPostFail();
     }
-  }
+  };
+  const handlePromoteToPresident = async (userid) => {
+    try {
+      await changeRole(userid, id);
+      toast.changeRoleSuccess();
+      navigate(`/club/${id}`);
+    } catch (err) {
+      if (err.statusCode == 400) {
+        toast.showError(err.message);
+      } else {
+        toast.changeRoleFail();
+      }
+      console.log(err);
+    }
+  };
+  const handleInviteMentor = async (mentorid) => {
+    try {
+      const payload = { clubId: id, mentorId: mentorid };
+      await inviteMentor(payload);
+      toast.inviteMentorSuccess();
+    } catch (error) {
+      toast.inviteMentorFail();
+    }
+  };
+
+  const handleKick = async (userid) => {
+    try {
+      const payload = { userId: userid, clubId: id };
+      const response = await kickClub(payload);
+      toast.kickClubSuccess();
+      handleGetClubDetail();
+    } catch (error) {
+      toast.kickClubFail();
+    }
+  };
   const handleApprovePost = async (id) => {
     try {
       await approvePost(id);
@@ -179,17 +212,15 @@ export default function ClubManage() {
     try {
       await rejectPost(id);
       handlePostPending();
-      toast.rejectPostSuccess()
+      toast.rejectPostSuccess();
     } catch (error) {
-      console.log(error);
-      toast.rejectPostFail()
+      toast.rejectPostFail();
     }
   };
   const handleGetClubDetail = async () => {
     try {
       const response = await getClubDetail(id);
       const data = response.data;
-      console.log(data);
       SetClubInfor(data);
     } catch (error) {
       console.error("Lỗi khi lấy chi tiết câu lạc bộ:", error);
@@ -381,50 +412,132 @@ export default function ClubManage() {
                         </div>
                       </div>
                       {member.role === "Member" && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            asChild
-                            onClick={() => toggleMenu(member.userId)}
-                            data-dropdown-trigger
+                        <div className="relative">
+                          {/* Nút mở menu */}
+                          <Button
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            onClick={() =>
+                              setOpenMenuId(
+                                openMenuId === member.userId
+                                  ? null
+                                  : member.userId
+                              )
+                            }
                           >
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
 
+                          {/* Dropdown menu hiển thị */}
                           {openMenuId === member.userId && (
-                            <DropdownMenuContent
-                              align="end"
-                              isOpen={true}
-                              onClose={() => setOpenMenuId(null)}
-                              className="min-w-[240px] py-3 px-2 w-fit"
-                            >
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  handleKick(member.userId)
-                                }
-                                className="text-red-600 focus:text-red-700"
+                            <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] overflow-hidden animate-in fade-in zoom-in-95">
+                              <button
+                                onClick={() => {
+                                  handleKick(member.userId);
+                                  setOpenMenuId(null);
+                                }}
+                                className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition"
                               >
-                                <Trash2 className="h-4 w-4 mr-3"/>
+                                <Trash2 className="w-4 h-4 mr-2" />
                                 Xóa thành viên
-                              </DropdownMenuItem>
+                              </button>
 
-                              <DropdownMenuItem
-                                onClick={() => handleChangeRole(member.userId)}
-                                className="text-blue-600 focus:text-blue-700"
+                              <button
+                                onClick={() => {
+                                  handlePromoteToPresident(member.userId);
+                                  setOpenMenuId(null);
+                                }}
+                                className="flex items-center w-full px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 transition"
                               >
-                                <Settings className="h-4 w-4 mr-3" />
+                                <Settings className="w-4 h-4 mr-2" />
                                 Chuyển chức vụ
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
+                              </button>
+                            </div>
                           )}
-                        </DropdownMenu>
+                        </div>
                       )}
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
+            <CardContent className="p-0">
+              {/* Card danh sách cố vấn */}
+              <Card className="glass !bg-white mt-6">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Users className="w-5 h-5 text-orange-500" />
+                    Cố vấn (
+                    {clubInfo?.members?.filter((m) => m.role === "Mentor")
+                      .length || 0}
+                    )
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent>
+                  {clubInfo?.members?.some((m) => m.role === "Mentor") ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {clubInfo.members
+                        .filter((member) => member.role === "Mentor")
+                        .map((mentor) => (
+                          <div
+                            key={mentor.userId}
+                            className="flex items-center justify-between border border-gray-200 rounded-xl p-4 bg-gradient-to-br from-white to-yellow-50 hover:shadow-md transition-all"
+                          >
+                            {/* Left: Avatar + info */}
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage
+                                  src={
+                                    mentor.avatarUrl ||
+                                    "/placeholder.svg?height=40&width=40&query=avatar"
+                                  }
+                                />
+                                <AvatarFallback className="bg-yellow-500 text-white">
+                                  {mentor.fullName?.[0] || "?"}
+                                </AvatarFallback>
+                              </Avatar>
+
+                              <div>
+                                <div className="font-semibold text-gray-800">
+                                  {mentor.fullName}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  Tham gia:{" "}
+                                  {new Date(
+                                    mentor.createdAt
+                                  ).toLocaleDateString("vi-VN")}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  Chức vụ: {handleChangeRole(mentor.role)}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500 bg-white rounded-lg shadow-sm">
+                      <p className="mb-4">
+                        Hiện tại chưa có cố vấn nào trong câu lạc bộ.
+                      </p>
+                      <Button
+                        onClick={() => setIsFindMentorOpen(true)}
+                        className="btn-primary flex items-center gap-2 mx-auto"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        Tìm cố vấn
+                      </Button>
+                      <FindMentorModal
+                        isOpen={isFindMentorOpen}
+                        onClose={() => setIsFindMentorOpen(false)}
+                        onSelect={(mentor) => handleInviteMentor(mentor.id)}
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </CardContent>
           </TabsContent>
 
           {/* Join Requests Tab */}
@@ -572,7 +685,7 @@ export default function ClubManage() {
                               </Dialog>
                               <Button
                                 size="sm"
-                                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                                className="flex-1 bg-orange-400 hover:bg-orange-500 text-white"
                                 onClick={() =>
                                   handleApproveJoinRequest(request.id)
                                 }
@@ -583,7 +696,7 @@ export default function ClubManage() {
                               <Button
                                 size="sm"
                                 variant="destructive"
-                                className="flex-1 bg-red-500 hover:bg-red-700 text-white"
+                                className="flex-1 bg-gray-400 hover:bg-gray-600 text-white"
                                 onClick={() => handleRejectRequest(request.id)}
                               >
                                 <XCircle className="w-4 h-4 mr-2" />
@@ -793,7 +906,7 @@ export default function ClubManage() {
                         <div className="flex justify-end gap-2 mt-4">
                           <Button
                             size="sm"
-                            className="bg-green-500 hover:bg-green-600 text-white"
+                            className="bg-orange-400 hover:bg-orange-500 text-white"
                             onClick={() => handleApprovePost(id)}
                           >
                             <CheckCircle className="w-4 h-4 mr-2" />
@@ -802,7 +915,7 @@ export default function ClubManage() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            className="bg-red-500 hover:bg-red-700 text-white"
+                            className="bg-gray-400 hover:bg-gray-700 text-white"
                             onClick={() => handleRejectPost(id)}
                           >
                             <XCircle className="w-4 h-4 mr-2" />

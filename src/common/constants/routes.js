@@ -10,6 +10,10 @@ export const ROUTES = {
   },
   ADMIN: {
     USER_MANAGEMENT: "/admin/users",
+    MAIN: "/admin",
+    REWARDS: "/admin/rewards",
+    IMPORT_USERS: "/admin/users/import",
+    CLUB:"/admin/clubs"
   },
   USER_PROFILE: {
     PROFILE: "/profile",
@@ -29,5 +33,15 @@ export const ROUTES = {
     LIST_CLUB:"/club/list-club",
     CLUB_DETAIL:"/club/:id",
     MANAGE_CLUB:"/club/manage/:id"
+  },
+  STAR_POINT: {
+    REWARD_STORE: "/reward-store",              
+    REWARD_DETAIL: "/reward-store/:id",       
+    HISTORY: "/points/history",       
+    MY_REDEMPTIONS: "/points/my-redemptions"        
+  },
+  SEARCH:{
+    STUDENT:"/Search/students",
+    TEACHER:"/Search/teachers"
   }
 };
