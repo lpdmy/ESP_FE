@@ -38,7 +38,7 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
-} from "@/common/components/ui/Tabs";
+} from "@/common/components/ui/tabs";
 import { useClubApi } from "../hooks/useClubApi";
 import { useToast } from "@/common/hooks/useToast";
 const categories = [
