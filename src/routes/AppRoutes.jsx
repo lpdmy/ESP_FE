@@ -7,7 +7,8 @@ import { onboardingRoutes } from "./OnboardingRoutes";
 import { collectionsRoutes} from "./CollectionRoutes";
 import { clubRoutes } from "./ClubRoutes";
 import { starPointRoutes } from "./StarPointRoutes";
-
+import { adminSystemNewsAndNoticesRoutes } from "./AdminSystemNewsAndNoticesRoutes";
+import { systemNewsAndNoticesRoutes } from "./SystemNewsAndNoticesRoutes";
 export default function AppRoutes() {
   return (
     <Routes>
@@ -19,6 +20,8 @@ export default function AppRoutes() {
       {...collectionsRoutes}
       {...clubRoutes}
       {...starPointRoutes}
+      {...adminSystemNewsAndNoticesRoutes}
+      {...systemNewsAndNoticesRoutes}
     </Routes>
   );
 }

@@ -1,14 +1,15 @@
-import { 
-  Home, 
-  Users, 
-  Calendar, 
-  Clock, 
-  Activity, 
-  Gift, 
-  GraduationCap, 
-  MessageSquare, 
-  Settings, 
-  User 
+import {
+  Home,
+  Users,
+  Calendar,
+  Clock,
+  Activity,
+  Gift,
+  GraduationCap,
+  MessageSquare,
+  Settings,
+  User,
+  Bell
 } from "lucide-react";
 import { ROUTES } from "@/common/constants/routes";
 
@@ -59,6 +60,15 @@ export const SIDEBAR_NAVIGATION = [
     icon: MessageSquare,
     paths: ["/messages"],
     count: 3,
+  },
+  {
+    label: "Thông báo hệ thống",
+    icon: Bell,
+    paths: [
+      ROUTES.SYSTEM_NEWS_AND_NOTICES.LIST,
+      ROUTES.SYSTEM_NEWS_AND_NOTICES.DETAIL
+    ],
+    count: 2,
   },
   {
     label: "Hồ sơ",
