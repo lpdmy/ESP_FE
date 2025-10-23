@@ -101,6 +101,37 @@ export const ClassGroupService = {
   async getHomeroomTeacher(id, token) {
     return api.get(fillPath(API_CONFIG.CLASS_GROUP.GET_HOMEROOM_TEACHER, { id }), token);
   },
+
+  // Methods cho MyClasses (ClassDetail.jsx)
+  async getCurrentClass(token) {
+    try {
+      const response = await api.get(API_CONFIG.CLASS_GROUP.GET_CURRENT_CLASS, token);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting current class:', error);
+      throw error;
+    }
+  },
+
+  async getCurrentAcademicYear(token) {
+    try {
+      const response = await api.get(API_CONFIG.CLASS_GROUP.GET_CURRENT_ACADEMIC_YEAR, token);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting current academic year:', error);
+      throw error;
+    }
+  },
+
+  async getStudentsInClass(classGroupId, token) {
+    try {
+      const response = await this.getStudents(classGroupId, token);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting students in class:', error);
+      throw error;
+    }
+  },
 };
 
 

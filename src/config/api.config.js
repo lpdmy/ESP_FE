@@ -107,7 +107,10 @@ export const API_CONFIG = {
     REMOVE_HOMEROOM_TEACHER: '/classgroup/{id}/homeroom-teacher',
     GET_HOMEROOM_TEACHER: '/classgroup/{id}/homeroom-teacher',
     // Academic Year endpoints
-    GET_ACADEMIC_YEARS: '/classgroup/academic-years'
+    GET_ACADEMIC_YEARS: '/classgroup/academic-years',
+    GET_CURRENT_ACADEMIC_YEAR: '/classgroup/academic-years-current',
+    // Current Class endpoints
+    GET_CURRENT_CLASS: '/classgroup/current-class'
   }
 };
 

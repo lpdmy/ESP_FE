@@ -8,6 +8,6 @@ import { ROLE } from "@/common/constants/roles";
 export const landingRoutes = [
   <Route element={<ProtectedRoute />}>
     <Route key="landing" path="/" element={<HomePage />} />
-    <Route key="class-detail" path="/my-classes/:id" element={<ClassDetailPage />} />
+    <Route key="my-classes" path="/my-classes" element={<ClassDetailPage />} />
   </Route>
 ];
