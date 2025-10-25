@@ -6,7 +6,7 @@
       import { Button } from "@/common/components/ui/button";
       import { Badge } from "@/common/components/ui/badge";
       import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/common/components/ui/table";
-      import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/common/components/ui/dialog";
+      import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/common/components/ui/dialog";
       import { Input } from "@/common/components/ui/input";
       import { Label } from "@/common/components/ui/label";
       import {
@@ -16,59 +16,21 @@
       Plus,
       Trash2,
       Eye,
+      ArrowUpDown,
+      ArrowUp,
+      ArrowDown,
       } from "lucide-react";
-      import { useSelector } from "react-redux";
       import { toast } from "react-toastify";
       import { ClassGroupService } from "@/services/classgroup.service";
 
 export default function ClassDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const currentUser = useSelector((state) => state.user.user);
 
-  // Add CSS for radio inputs
+  // Add CSS for modal styling
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
-      .radio-inputs {
-        position: relative;
-        display: flex;
-        flex-wrap: wrap;
-        border-radius: 0.5rem;
-        background-color: #EEE;
-        box-sizing: border-box;
-        box-shadow: 0 0 0px 1px rgba(0, 0, 0, 0.06);
-        padding: 0.25rem;
-        width: 100%;
-        font-size: 14px;
-      }
-
-      .radio-inputs .radio {
-        flex: 1 1 auto;
-        text-align: center;
-      }
-
-      .radio-inputs .radio input {
-        display: none;
-      }
-
-      .radio-inputs .radio .name {
-        display: flex;
-        cursor: pointer;
-        align-items: center;
-        justify-content: center;
-        border-radius: 0.5rem;
-        border: none;
-        padding: .5rem 0;
-        color: rgba(51, 65, 85, 1);
-        transition: all .15s ease-in-out;
-      }
-
-      .radio-inputs .radio input:checked + .name {
-        background-color: #fff;
-        font-weight: 600;
-      }
-
       /* Modal styling overrides */
       [data-radix-dialog-content] {
         background-color: white !important;
@@ -110,73 +72,86 @@ export default function ClassDetailPage() {
       const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
       const [confirmAction, setConfirmAction] = useState(null);
       const [confirmData, setConfirmData] = useState(null);
+      
+      // Sort states
+      const [sortBy, setSortBy] = useState('name'); // 'name', 'email', or null
+      const [sortOrder, setSortOrder] = useState('asc'); // 'asc' or 'desc'
 
-      // Fetch class data
-      useEffect(() => {
-         const fetchClassData = async () => {
-            try {
-            setLoading(true);
-            const token = localStorage.getItem('token');
-            
-            console.log('Fetching class data for ID:', id);
-            console.log('Token:', token ? 'Present' : 'Missing');
-            
-            // Check if we should open assign teacher modal
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('assignTeacher') === 'true') {
-               setIsAssignTeacherModalOpen(true);
-               // Clean up URL
-               window.history.replaceState({}, '', window.location.pathname);
-            }
-            
-            // Fetch class detail
-            const classResponse = await ClassGroupService.getDetail(id, token);
-            console.log('Class response:', classResponse);
-            
-            if (classResponse && classResponse.data) {
-               setClassData(classResponse.data);
-            } else {
-               console.log('No class data found, trying basic getById...');
-               // Fallback to basic getById if detail endpoint fails
-               const basicResponse = await ClassGroupService.getById(id, token);
-               console.log('Basic response:', basicResponse);
-               if (basicResponse && basicResponse.data) {
-                  setClassData(basicResponse.data);
-               }
-            }
-            
-            // Fetch students
-            const studentsResponse = await ClassGroupService.getStudents(id, token);
-            console.log('Students response:', studentsResponse);
-            
-            if (studentsResponse && studentsResponse.data) {
-               setStudents(studentsResponse.data);
-            }
-            
-            // Fetch homeroom teacher
-            try {
-               const teacherResponse = await ClassGroupService.getHomeroomTeacher(id, token);
-               console.log('Homeroom teacher response:', teacherResponse);
-               
-               if (teacherResponse && teacherResponse.data) {
-                  setHomeroomTeacher(teacherResponse.data);
-               }
-            } catch (teacherError) {
-               console.log('No homeroom teacher found or error:', teacherError);
-               setHomeroomTeacher(null);
-            }
-            } catch (error) {
-            console.error("Error fetching class data:", error);
-            toast.error("Không thể tải thông tin lớp học: " + error.message);
-            } finally {
-            setLoading(false);
-            }
-         };
+             // Fetch students when sort changes
+       useEffect(() => {
+          const fetchStudents = async () => {
+             if (!id) return;
+             try {
+                const token = localStorage.getItem('token');
+                const studentsResponse = await ClassGroupService.getStudents(id, token, sortBy, sortOrder);
+                if (studentsResponse && studentsResponse.data) {
+                   setStudents(studentsResponse.data);
+                }
+             } catch (error) {
+                console.error("Error fetching students:", error);
+             }
+          };
+          fetchStudents();
+       }, [id, sortBy, sortOrder]);
 
-         if (id) {
-            fetchClassData();
-         }
-      }, [id]);
+       // Fetch class data
+       useEffect(() => {
+          const fetchClassData = async () => {
+             try {
+             setLoading(true);
+             const token = localStorage.getItem('token');
+             
+             console.log('Fetching class data for ID:', id);
+             console.log('Token:', token ? 'Present' : 'Missing');
+             
+             // Check if we should open assign teacher modal
+             const urlParams = new URLSearchParams(window.location.search);
+             if (urlParams.get('assignTeacher') === 'true') {
+                setIsAssignTeacherModalOpen(true);
+                // Clean up URL
+                window.history.replaceState({}, '', window.location.pathname);
+             }
+             
+             // Fetch class detail
+             const classResponse = await ClassGroupService.getDetail(id, token);
+             console.log('Class response:', classResponse);
+             
+             if (classResponse && classResponse.data) {
+                setClassData(classResponse.data);
+             } else {
+                console.log('No class data found, trying basic getById...');
+                // Fallback to basic getById if detail endpoint fails
+                const basicResponse = await ClassGroupService.getById(id, token);
+                console.log('Basic response:', basicResponse);
+                if (basicResponse && basicResponse.data) {
+                   setClassData(basicResponse.data);
+                }
+             }
+             
+             // Fetch homeroom teacher
+             try {
+                const teacherResponse = await ClassGroupService.getHomeroomTeacher(id, token);
+                console.log('Homeroom teacher response:', teacherResponse);
+                
+                if (teacherResponse && teacherResponse.data) {
+                   setHomeroomTeacher(teacherResponse.data);
+                }
+             } catch (teacherError) {
+                console.log('No homeroom teacher found or error:', teacherError);
+                setHomeroomTeacher(null);
+             }
+             } catch (error) {
+             console.error("Error fetching class data:", error);
+             toast.error("Không thể tải thông tin lớp học: " + error.message);
+             } finally {
+             setLoading(false);
+             }
+          };
+
+          if (id) {
+             fetchClassData();
+          }
+       }, [id]);
 
       const handleBack = () => {
          // Preserve academic year filter when going back
@@ -208,17 +183,17 @@ export default function ClassDetailPage() {
             
             console.log('Add student response:', response);
             
-            if (response && response.data && response.data.success) {
-               // Refresh students list
-               const studentsResponse = await ClassGroupService.getStudents(id, token);
-               if (studentsResponse && studentsResponse.data) {
-                  setStudents(studentsResponse.data);
-               }
-               
-               setNewStudent({ email: "" });
-               setEmailError("");
-               setIsAddStudentModalOpen(false);
-               toast.success(response.data.message || "Thêm học sinh thành công!");
+                         if (response && response.data && response.data.success) {
+                // Refresh students list with current sort
+                const studentsResponse = await ClassGroupService.getStudents(id, token, sortBy, sortOrder);
+                if (studentsResponse && studentsResponse.data) {
+                   setStudents(studentsResponse.data);
+                }
+                
+                setNewStudent({ email: "" });
+                setEmailError("");
+                setIsAddStudentModalOpen(false);
+                toast.success(response.data.message || "Thêm học sinh thành công!");
             } else {
                // Backend handles all validation logic, just display the error message
                const errorMessage = response?.data?.message || response?.message || "Không thể thêm học sinh";
@@ -237,14 +212,14 @@ export default function ClassDetailPage() {
             const token = localStorage.getItem('token');
             const response = await ClassGroupService.removeStudent(id, studentId, token);
             
-            if (response && response.data !== undefined) {
-               // Refresh students list
-               const studentsResponse = await ClassGroupService.getStudents(id, token);
-               if (studentsResponse && studentsResponse.data) {
-                  setStudents(studentsResponse.data);
-               }
-               
-               toast.success("Xóa học sinh thành công!");
+                         if (response && response.data !== undefined) {
+                // Refresh students list with current sort
+                const studentsResponse = await ClassGroupService.getStudents(id, token, sortBy, sortOrder);
+                if (studentsResponse && studentsResponse.data) {
+                   setStudents(studentsResponse.data);
+                }
+                
+                toast.success("Xóa học sinh thành công!");
             } else {
                toast.error(response?.message || "Không thể xóa học sinh");
             }
@@ -313,16 +288,16 @@ export default function ClassDetailPage() {
                setNewTeacher({ email: "" });
                setTeacherEmailError("");
                setIsAssignTeacherModalOpen(false);
-               toast.success(response.data.message || "Gán giáo viên chủ nhiệm thành công!");
+               toast.success(response.data.message || "Thêm giáo viên chủ nhiệm thành công!");
             } else {
                // Backend handles all validation logic, just display the error message
-               const errorMessage = response?.data?.message || response?.message || "Không thể gán giáo viên chủ nhiệm";
+               const errorMessage = response?.data?.message || response?.message || "Không thể thêm giáo viên chủ nhiệm";
                setTeacherEmailError(errorMessage);
             }
          } catch (error) {
             console.error("Error assigning teacher:", error);
             // Backend handles all validation logic, just display the error message
-            const errorMessage = error?.response?.data?.message || error?.message || "Không thể gán giáo viên chủ nhiệm";
+            const errorMessage = error?.response?.data?.message || error?.message || "Không thể thêm giáo viên chủ nhiệm";
             setTeacherEmailError(errorMessage);
          }
       };
@@ -345,6 +320,19 @@ export default function ClassDetailPage() {
             toast.error("Không thể bỏ gán giáo viên chủ nhiệm");
          }
       };
+
+      // Sort handler
+      const handleSort = (field) => {
+         if (sortBy === field) {
+            // Toggle sort order if clicking on the same field
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+         } else {
+            setSortBy(field);
+            setSortOrder('asc');
+         }
+      };
+
+      
 
       if (loading) {
          return (
@@ -409,7 +397,7 @@ export default function ClassDetailPage() {
                      <Users className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                     <div className="text-lg font-bold text-gray-900">{classData.currentStudentCount}</div>
+                     <div className="text-lg font-bold text-gray-900">{students.length}</div>
                      <div className="text-xs text-gray-600">Số học sinh</div>
                   </div>
                   </div>
@@ -454,8 +442,8 @@ export default function ClassDetailPage() {
                         <Button
                            size="sm"
                            onClick={() => setIsAssignTeacherModalOpen(true)}
-                           className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700 text-white"
-                           title="Gán giáo viên chủ nhiệm"
+                           className="h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700 text-white"
+                           title="Thêm giáo viên chủ nhiệm"
                         >
                            <Plus className="h-4 w-4" />
                         </Button>
@@ -490,7 +478,7 @@ export default function ClassDetailPage() {
             </h3>
             <Button 
               onClick={() => setIsAddStudentModalOpen(true)}
-              className="!bg-gray-900 hover:!bg-gray-800 !text-white !rounded-lg !px-4 !py-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-4 py-2"
             >
               <Plus className="h-4 w-4 mr-2" />
               Thêm học sinh
@@ -500,19 +488,55 @@ export default function ClassDetailPage() {
         <CardContent className="!p-0">
           <div className="!overflow-hidden !rounded-xl">
             <Table>
-              <TableHeader>
-                <TableRow className="!border-b !border-gray-200 !bg-gray-50">
-                  <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">STT</TableHead>
-                  <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Họ tên</TableHead>
-                  <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Email</TableHead>
+                            <TableHeader>
+                 <TableRow className="!border-b !border-gray-200 !bg-gray-50">
+                   <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">
+                     <button
+                       onClick={() => handleSort('studentcode')}
+                       className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+                     >
+                       Mã số học sinh
+                       {sortBy === 'studentcode' ? (
+                         sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+                       ) : (
+                         <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                       )}
+                     </button>
+                   </TableHead>
+                   <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">
+                     <button
+                       onClick={() => handleSort('name')}
+                       className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+                     >
+                       Họ tên
+                       {sortBy === 'name' ? (
+                         sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+                       ) : (
+                         <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                       )}
+                     </button>
+                   </TableHead>
+                  <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">
+                    <button
+                      onClick={() => handleSort('email')}
+                      className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+                    >
+                      Email
+                      {sortBy === 'email' ? (
+                        sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+                      ) : (
+                        <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                      )}
+                    </button>
+                  </TableHead>
                   <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Ngày sinh</TableHead>
                   <TableHead className="!text-gray-700 !font-medium !py-3 !px-4">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {students.map((student, index) => (
+                             <TableBody>
+                 {students.map((student, index) => (
                   <TableRow key={student.id} className="!border-b !border-gray-200 hover:!bg-gray-50">
-                    <TableCell className="!text-gray-600 !py-3 !px-4">{index + 1}</TableCell>
+                    <TableCell className="!text-gray-600 !py-3 !px-4">{student.studentCode || '-'}</TableCell>
                     <TableCell className="!font-medium !text-gray-900 !py-3 !px-4">{student.fullName}</TableCell>
                     <TableCell className="!text-gray-600 !py-3 !px-4">{student.email}</TableCell>
                     <TableCell className="!text-gray-600 !py-3 !px-4">
@@ -630,13 +654,13 @@ export default function ClassDetailPage() {
               <DialogContent className="sm:max-w-[500px] !bg-white !border-0 !shadow-xl !rounded-xl">
                 <DialogHeader className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 bg-green-100 rounded-xl">
-                      <GraduationCap className="h-5 w-5 text-green-600" />
+                    <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-xl">
+                      <GraduationCap className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
-                      <DialogTitle className="text-xl font-semibold text-gray-900">Gán giáo viên chủ nhiệm</DialogTitle>
+                      <DialogTitle className="text-xl font-semibold text-gray-900">Thêm giáo viên chủ nhiệm</DialogTitle>
                       <DialogDescription className="text-sm text-gray-600">
-                        Gán giáo viên làm chủ nhiệm lớp {classData.name}. Nhập email giáo viên để gán làm chủ nhiệm.
+                        Thêm giáo viên làm chủ nhiệm lớp {classData.name}. Nhập email giáo viên để gán làm chủ nhiệm.
                       </DialogDescription>
                     </div>
                   </div>
@@ -660,7 +684,7 @@ export default function ClassDetailPage() {
                         setTeacherEmailError(""); // Clear error when user types
                       }}
                       placeholder="Nhập email giáo viên (ví dụ: teacher@email.com)"
-                      className={`h-11 border-gray-200 focus:border-green-500 focus:ring-green-500 ${teacherEmailError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                      className={`h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500 ${teacherEmailError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                     />
                     {teacherEmailError && (
                       <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
@@ -692,7 +716,7 @@ export default function ClassDetailPage() {
                   </Button>
                   <Button 
                     onClick={handleAssignTeacher}
-                    className="h-11 px-6 bg-green-600 hover:bg-green-700 text-white"
+                    className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <GraduationCap className="h-4 w-4 mr-2" />
                     Gán giáo viên

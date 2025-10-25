@@ -363,7 +363,7 @@ export default function ClassManagementPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Tìm kiếm lớp học hoặc giáo viên..."
+            placeholder="Tìm kiếm lớp học..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 rounded-2xl border-gray-200"
@@ -632,7 +632,7 @@ export default function ClassManagementPage() {
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
               Hủy
             </Button>
-            <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleCreateClass}>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreateClass}>
               Tạo lớp học
             </Button>
           </DialogFooter>
@@ -696,7 +696,7 @@ export default function ClassManagementPage() {
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Hủy
             </Button>
-            <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleUpdateClass}>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleUpdateClass}>
               Cập nhật lớp học
             </Button>
           </DialogFooter>

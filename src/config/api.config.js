@@ -65,14 +65,17 @@ export const API_CONFIG = {
   },
 
   UPLOAD: {
-    UPLOAD_IMAGE: '/upload'
+    UPLOAD_IMAGE: '/upload',
+    UPLOAD_FILE: '/upload/file'
   },
   POST :{
     CREATE_POST : '/post',
     USER_POST:'/post/user',
     DELETE_POST:'/post',
     UPDATE_POST:'/post',
-    LIKE_POST:'/post/like'
+    LIKE_POST:'/post/like',
+    GET_ALL_POSTS: '/post',
+    GET_POSTS_BY_CLASS_GROUP: '/post/classgroup/{id}'
   },
   COLLECTION :{
     CREATE_COLLECTION :'/collection',

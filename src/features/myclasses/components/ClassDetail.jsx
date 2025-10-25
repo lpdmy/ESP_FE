@@ -19,6 +19,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avat
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/common/components/ui/tabs"
 import { ClassGroupService } from "@/services/classgroup.service"
 import { useToast } from "@/common/hooks/useToast"
+import TeacherPosts from "./TeacherPosts"
+import ClassStats from "./ClassStats"
 
 // Loading state component
 const LoadingSpinner = () => (
@@ -37,6 +39,12 @@ export default function ClassDetail() {
   const [students, setStudents] = useState([])
   const [academicYear, setAcademicYear] = useState(null)
   const [userRole, setUserRole] = useState(null)
+  const [posts, setPosts] = useState([])
+
+  // Function to handle posts update from TeacherPosts
+  const handlePostsUpdate = (updatedPosts) => {
+    setPosts(updatedPosts)
+  }
 
   // Load data from API - Luôn lấy lớp học hiện tại của user
   useEffect(() => {
@@ -149,14 +157,13 @@ export default function ClassDetail() {
                 <TabsTrigger value="students">Danh sách học sinh</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="posts" className="space-y-6 mt-6">
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                  <CardContent className="text-center py-8">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Bài đăng của giáo viên</h3>
-                    <p className="text-gray-600">Chức năng này đang được phát triển</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+            <TabsContent value="posts" className="space-y-6 mt-6">
+              <TeacherPosts
+                classGroupId={classData.id}
+                userRole={userRole}
+                onPostsUpdate={handlePostsUpdate}
+              />
+            </TabsContent>
 
               <TabsContent value="students" className="space-y-4 mt-6">
                 <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
@@ -232,25 +239,7 @@ export default function ClassDetail() {
             </Card>
 
             {/* Quick Stats */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle>Thống kê nhanh</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Bài đăng tuần này</span>
-                  <Badge variant="secondary">3</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Tệp đính kèm</span>
-                  <Badge variant="secondary">5</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Liên kết hữu ích</span>
-                  <Badge variant="secondary">6</Badge>
-                </div>
-              </CardContent>
-            </Card>
+            <ClassStats posts={posts} />
           </div>
         </div>
       </div>

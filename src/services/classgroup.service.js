@@ -73,8 +73,17 @@ export const ClassGroupService = {
     return api.get(fillPath(API_CONFIG.CLASS_GROUP.GET_DETAIL, { id }), token);
   },
 
-  async getStudents(id, token) {
-    return api.get(fillPath(API_CONFIG.CLASS_GROUP.GET_STUDENTS, { id }), token);
+  async getStudents(id, token, sortBy = null, sortOrder = 'asc') {
+    const params = new URLSearchParams();
+    if (sortBy) {
+      params.append('sortBy', sortBy);
+      params.append('sortOrder', sortOrder);
+    }
+    const queryString = params.toString();
+    const url = queryString 
+      ? `${fillPath(API_CONFIG.CLASS_GROUP.GET_STUDENTS, { id })}?${queryString}`
+      : fillPath(API_CONFIG.CLASS_GROUP.GET_STUDENTS, { id });
+    return api.get(url, token);
   },
 
   async addStudent(id, email, token) {
