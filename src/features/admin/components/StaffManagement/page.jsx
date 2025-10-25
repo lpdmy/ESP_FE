@@ -150,7 +150,7 @@ export default function StaffManagement() {
   };
   useEffect(() => {
     handleGetAllStaff();
-  }, [pageNumber]);
+  }, [pageNumber,searchTerm]);
   return (
     <div className="space-y-6">
       <div className="mb-8 flex justify-between items-center">

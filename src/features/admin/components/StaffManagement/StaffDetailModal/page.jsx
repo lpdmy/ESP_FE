@@ -3,7 +3,8 @@ import { X, Edit3, Save } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
 import { Badge } from "@/common/components/ui/badge";
 import { Input } from "@/common/components/ui/input";
-
+import { Label } from "@/common/components/ui/label";
+import { Checkbox } from "@/common/components/ui/checkbox";
 export default function StaffDetailModal({
   employee,
   permissionsList,
@@ -12,11 +13,20 @@ export default function StaffDetailModal({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(employee || {});
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
 
   useEffect(() => {
-    if (employee) setFormData(employee);
+    if (employee) {
+      setFormData(employee);
+      setSelectedPermissions(employee.permissions || []);
+      console.log(employee);
+    }
   }, [employee]);
-
+const mapLabelsToIds = (labels, permissionsList) => {
+  return permissionsList
+    .filter((perm) => labels.includes(perm.label))
+    .map((perm) => perm.id);
+};
   if (!employee || !open) return null;
 
   const permissionNames =
@@ -30,11 +40,15 @@ export default function StaffDetailModal({
   };
 
   const handleSave = () => {
-    console.log("Dữ liệu đã chỉnh sửa:", formData);
-    // TODO: Gọi API cập nhật thông tin ở đây
-    setIsEditing(false);
-  };
+  const permissionIds = mapLabelsToIds(selectedPermissions, permissionsList);
 
+  const updatedData = {
+    ...formData,
+    permissions: permissionIds, // 👈 mảng số nguyên
+  };
+  console.log("Dữ liệu đã chuyển sang int:", updatedData);
+  setIsEditing(false);
+};
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
@@ -137,11 +151,55 @@ export default function StaffDetailModal({
             )}
           </div>
           <div className="col-span-2">
-            <p className="text-sm text-gray-500 font-medium mb-2">
-              Quyền được cấp:
-            </p>
-            {permissionNames.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
+            {isEditing ? (
+              <div className="grid gap-2">
+                <Label>Chọn quyền nhân viên</Label>
+                <div className="grid grid-cols-2 gap-3 max-h-70 overflow-y-auto">
+                  {permissionsList.map((permission) => (
+                    <div
+                      key={permission.id}
+                      className="flex items-start space-x-2"
+                    >
+                      <Checkbox
+                        id={permission.id}
+                        checked={
+                          !!selectedPermissions.includes(permission.label)
+                        } // ép kiểu boolean
+                        onChange={(isChecked) => {
+                          if (isChecked) {
+                            setSelectedPermissions([
+                              ...selectedPermissions,
+                              permission.label,
+                            ]);
+                          } else {
+                            setSelectedPermissions(
+                              selectedPermissions.filter(
+                                (p) => p !== permission.label
+                              )
+                            );
+                          }
+                        }}
+                      />
+                      <div className="grid gap-1.5 leading-none">
+                        <label
+                          htmlFor={permission.id}
+                          className="text-sm font-medium"
+                        >
+                          {permission.name}
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          {permission.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : permissionNames.length > 0 ? (
+              <div className=" flex-wrap gap-2">
+                <p className="text-sm text-gray-500 font-medium mb-2">
+                  Quyền được cấp:
+                </p>
                 {permissionNames.map((name, idx) => (
                   <Badge
                     key={idx}
