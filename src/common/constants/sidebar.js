@@ -53,6 +53,7 @@ export const SIDEBAR_NAVIGATION = [
   {
     label: "Lớp học của tôi",
     icon: GraduationCap,
+    key: "my-class",
     paths: ["/my-classes"],
   },
   {

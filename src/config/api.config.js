@@ -81,19 +81,6 @@ export const API_CONFIG = {
     TRENDING: '/search/trending',
     HISTORY: '/search/history',
   },
-  // Search endpoints  
-  SEARCH: {
-    GLOBAL: '/search',
-    USERS: '/search/users',
-    POSTS: '/search/posts',
-    ACTIVITIES: '/search/activities',
-    CLUBS: '/search/clubs',
-    HASHTAGS: '/search/hashtags',
-    ADVANCED: '/search/advanced',
-    SUGGESTIONS: '/search/suggestions',
-    TRENDING: '/search/trending',
-    HISTORY: '/search/history',
-  },
   POST :{
     CREATE_POST : '/post',
     USER_POST:'/post/user',
