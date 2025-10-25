@@ -4,16 +4,18 @@ import storage from "redux-persist/lib/storage";
 
 import userReducer from "./user/userSlice";
 import pointReducer from "./star-point/pointSlice";
+import systemAnnouncementsReducer from "./slices/systemAnnouncementsSlice";
 
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["user", "points"], 
+  whitelist: ["user", "points"],
 };
 
 const rootReducer = combineReducers({
   user: userReducer,
-  points: pointReducer
+  points: pointReducer,
+  systemAnnouncements: systemAnnouncementsReducer
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

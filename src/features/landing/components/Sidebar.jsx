@@ -7,7 +7,7 @@ import {
   SIDEBAR_DEFAULT_TAB,
 } from "@/common/constants/sidebar";
 import { useClubApi } from "../club/hooks/useClubApi";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Plus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -32,14 +32,17 @@ export default function Sidebar() {
       : "U";
 
   const menuItems = SIDEBAR_NAVIGATION;
-  const handleClubByUser = async () => {
+  
+  const handleClubByUser = useCallback(async () => {
     try {
       const respsone = await getClubByUser();
       const data = respsone.data.data;
-      console.log(data);
       setJoinedClubs(data);
-    } catch (error) {}
-  };
+    } catch (error) {
+      console.error('Error fetching clubs:', error);
+    }
+  }, [getClubByUser]);
+  
   const handleChangeRole = (vaitro) => {
     const mapping = {
       President: "Chủ nhiệm",
@@ -48,9 +51,10 @@ export default function Sidebar() {
     };
     return mapping[vaitro] || "Không rõ vai trò";
   };
+  
   useEffect(() => {
     handleClubByUser();
-  }, []);
+  }, [handleClubByUser]);
   return (
     <div className="space-y-4">
       {/* Hồ sơ người dùng */}
