@@ -61,25 +61,8 @@ export default function ClassDetail() {
           setUserRole(currentClass.userRole)
         }
         
-        // Tạm thời thêm fallback data để test
-        if (!currentClass) {
-          const fallbackClass = {
-            id: 1,
-            name: "11A3",
-            grade: 11,
-            studentCount: 32,
-            homeroomTeacher: {
-              id: 1,
-              firstName: "Nguyễn Thị",
-              lastName: "Lan",
-              email: "lan.nguyen@fptschool.edu.vn",
-              avatarUrl: null
-            }
-          }
-          setClassData(fallbackClass)
-        } else {
-          setClassData(currentClass)
-        }
+        // Set class data
+        setClassData(currentClass)
         
         // Load students if we have class data
         if (currentClass?.id) {
