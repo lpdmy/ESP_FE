@@ -128,7 +128,7 @@ export default function ClubApprovalPage() {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
     }, 500); // ⏳ delay 0.5s sau khi người dùng ngừng gõ
-    console.log(searchTerm);
+
     return () => clearTimeout(timer);
   }, [searchTerm]);
   const handleJoinCreation = async () => {
@@ -139,16 +139,20 @@ export default function ClubApprovalPage() {
         debouncedSearch,
         status === -1 ? null : status
       );
+      
       const data = resposne.data.data;
       setRequests(data);
+        console.log(status)
       const total = resposne.data.totalCount || data.length;
       setTotalCount(total);
       setTotalPages(Math.ceil(total / pageSize));
+      
     } catch (error) {
       console.log(error);
     }
   };
   useEffect(() => {
+    
     handleJoinCreation();
   }, [pageNumber, status, debouncedSearch]);
   const handleViewDetails = (request) => {
@@ -274,7 +278,7 @@ export default function ClubApprovalPage() {
                         {request.categoryName}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatDate(request.createdAt)}</TableCell>
+                    <TableCell>{formatDate(request.requestedAt)}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
                     <TableCell className="text-right relative">
                       <div className="relative inline-block text-left">
@@ -406,7 +410,7 @@ export default function ClubApprovalPage() {
                   <div>
                     <p className="text-gray-500">Ngày gửi yêu cầu</p>
                     <p className="font-medium text-gray-900">
-                      {formatDate(selectedRequest.createdAt)}
+                      {formatDate(selectedRequest.requestedAt)}
                     </p>
                   </div>
                 </div>

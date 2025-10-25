@@ -152,6 +152,10 @@ export const API_CONFIG = {
     GET_ALL_REDEMPTIONS_ADMIN: "/redeems/admin",
     GET_MY_REDEMPTIONS: "/redeems/me",
     PICKUP_REDEMPTION: "/redeems/{id}/pickup"
+  },
+  STAFF:{
+    LINK:"/staff",
+    CREATE:"/auth/create-staff"
   }
 };
 

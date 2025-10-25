@@ -6,6 +6,7 @@ import ImportStudentsPage from "@/pages/Admin/ImportStudentsPage";
 import { ROLE } from "@/common/constants/roles";
 import ProtectedRoute from "./ProtectedRoute";
 import RewardManagementPage from "@/pages/Admin/StarPointManagement/RewardManagementPage";
+import StaffManagementPage from "@/pages/Admin/StaffManagerPage";
 import { ROUTES } from "@/common/constants/routes";
 
 export const adminRoutes = [
@@ -15,5 +16,6 @@ export const adminRoutes = [
         <Route key="import-students" path={ROUTES.ADMIN.IMPORT_USERS} element={<ImportStudentsPage />} />
         <Route key="star-point" path={ROUTES.ADMIN.REWARDS} element={<RewardManagementPage />} />
         <Route key="club-manage" path={ROUTES.ADMIN.CLUB} element={<ClassManagementPage />} />
+        <Route key="staff-manage" path={ROUTES.ADMIN.STAFF} element={<StaffManagementPage />} />
     </Route>
 ];

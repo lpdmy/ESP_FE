@@ -15,7 +15,9 @@ export const ROUTES = {
     IMPORT_USERS: "/admin/users/import",
     CLUB: "/admin/clubs",
     SYSTEM_NEWS_AND_NOTICES: "/admin/system-news-and-notices",
-    SYSTEM_NEWS_AND_NOTICES_DETAIL: "/admin/system-news-and-notices/:id"
+    SYSTEM_NEWS_AND_NOTICES_DETAIL: "/admin/system-news-and-notices/:id",
+    CLUB:"/admin/clubs",
+    STAFF:"/admin/staff"
   },
   USER_PROFILE: {
     PROFILE: "/profile",
