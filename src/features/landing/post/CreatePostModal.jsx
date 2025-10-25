@@ -123,22 +123,26 @@ const PRIVACY_OPTIONS = [
     description: "Mọi người có thể xem",
   },
   {
-    value: 2,
-    label: "Bạn bè",
-    icon: <Users className="h-4 w-4" />,
-    description: "Chỉ bạn bè có thể xem",
-  },
-  {
     value: 1,
-    label: "Chỉ mình tôi",
+    label: "Nội bộ",
     icon: <Lock className="h-4 w-4" />,
-    description: "Chỉ bạn có thể xem",
+    description: "Chỉ bạn và mọi người trong CLB có thể xem",
   },
 ];
 
-const CreatePostModal = ({ isOpen, onClose, onCreate }) => {
+const CreatePostModal = ({
+  isOpen,
+  onClose,
+  onCreate,
+  payload = {},
+  isPresident,
+}) => {
   const user = useSelector((state) => state.user.user);
+  const clubId = payload.clubId;
+  const classId = payload.classId;
+
   const { showError } = useToast();
+  const [status, setStatus] = useState(0);
   const toast = useToast();
   const userName =
     user?.firstName && user?.lastName
@@ -155,10 +159,10 @@ const CreatePostModal = ({ isOpen, onClose, onCreate }) => {
   const [formData, setFormData] = useState({
     title: "",
     body: "",
-    classGroupId: null,
-    clubId: null,
+    classGroupId: classId,
+    clubId: clubId,
     privacyLevel: 0,
-    status: 0,
+    status: status,
     callToAction: "",
     hashtags: [],
     mentionUsernames: [],
@@ -400,7 +404,7 @@ const CreatePostModal = ({ isOpen, onClose, onCreate }) => {
   const handlePost = async () => {
     if (!canPost) return;
     setUiState((prev) => ({ ...prev, isAnimating: true }));
-    setErrorMessage(""); // reset lỗi cũ trước khi gửi  
+    setErrorMessage(""); // reset lỗi cũ trước khi gửi
 
     try {
       const uploadedAttachments = [];
@@ -486,6 +490,7 @@ const CreatePostModal = ({ isOpen, onClose, onCreate }) => {
         error?.response?.data?.message ||
         error?.message ||
         "Có lỗi xảy ra khi đăng bài.";
+        console.log(error)
       setErrorMessage(message);
     } finally {
       setUiState((prev) => ({ ...prev, isAnimating: false }));
@@ -761,7 +766,12 @@ const CreatePostModal = ({ isOpen, onClose, onCreate }) => {
       selectedImageUrl: null,
     }));
   };
-
+  useEffect(() => {
+  if (isPresident) {
+    setStatus(1);
+    setFormData((prev) => ({ ...prev, status: 1 }));
+  }
+}, [isPresident]);
   useEffect(() => {
     if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     autoSaveTimeoutRef.current = setTimeout(() => {
@@ -782,9 +792,6 @@ const CreatePostModal = ({ isOpen, onClose, onCreate }) => {
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [formData.body]);
-  useEffect(() => {
-    console.log("Dữ liệu form sau khi cập nhật:", formData);
-  }, [formData]);
   useEffect(() => {
     if (formData.body.length > 0 || formData.title.length > 0) {
       setUiState((prev) => ({ ...prev, showSparkles: true }));

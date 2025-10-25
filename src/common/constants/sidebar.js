@@ -1,15 +1,90 @@
-import { Home, Users, Calendar, Clock, Activity, Gift, GraduationCap, MessageSquare, Settings } from "lucide-react";
+import {
+  Home,
+  Users,
+  Calendar,
+  Clock,
+  Activity,
+  Gift,
+  GraduationCap,
+  MessageSquare,
+  Settings,
+  User,
+  Bell
+} from "lucide-react";
+import { ROUTES } from "@/common/constants/routes";
 
 export const SIDEBAR_NAVIGATION = [
-  { icon: Home, label: "Trang chủ", key: "home", href: "/" },
-  { icon: Users, label: "Bạn bè", key: "friends", count: 24, href: "/friends" },
-  { icon: Calendar, label: "Sự kiện", key: "events", count: 5, href: "/events" },
-  { icon: Clock, label: "Dòng thời gian", key: "timeline", href: "/timeline" },
-  { icon: Activity, label: "Hoạt động", key: "activities", href: "/activities" },
-  { icon: Gift, label: "Đổi thưởng", key: "rewards", href: "/rewards" },
-  { icon: GraduationCap, label: "Lớp học của tôi", key: "my-class", href: "/my-classes" },
-  { icon: MessageSquare, label: "Tin nhắn", key: "messages", count: 3, href: "/messages" },
-  { icon: Settings, label: "Cài đặt", key: "settings", href: "/settings" },
+  {
+    label: "Trang chủ",
+    icon: Home,
+    paths: [ROUTES.LANDING.HOME],
+  },
+  {
+    label: "Bạn bè",
+    icon: Users,
+    paths: ["/friends"],
+    count: 24,
+  },
+  {
+    label: "Sự kiện",
+    icon: Calendar,
+    paths: ["/events"],
+    count: 5,
+  },
+  {
+    label: "Dòng thời gian",
+    icon: Clock,
+    paths: ["/timeline"],
+  },
+  {
+    label: "Hoạt động",
+    icon: Activity,
+    paths: ["/activities"],
+  },
+  {
+    label: "Đổi thưởng",
+    icon: Gift,
+    paths: [
+      ROUTES.STAR_POINT.REWARD_STORE,
+      ROUTES.STAR_POINT.REWARD_DETAIL,
+      ROUTES.STAR_POINT.HISTORY,
+    ],
+  },
+  {
+    label: "Lớp học của tôi",
+    icon: GraduationCap,
+    paths: ["/my-classes"],
+  },
+  {
+    label: "Tin nhắn",
+    icon: MessageSquare,
+    paths: ["/messages"],
+    count: 3,
+  },
+  {
+    label: "Thông báo hệ thống",
+    icon: Bell,
+    paths: [
+      ROUTES.SYSTEM_NEWS_AND_NOTICES.LIST,
+      ROUTES.SYSTEM_NEWS_AND_NOTICES.DETAIL
+    ],
+    count: 2,
+  },
+  {
+    label: "Hồ sơ",
+    icon: User,
+    paths: [
+      ROUTES.USER_PROFILE.PROFILE,
+      ROUTES.USER_PROFILE.EDIT,
+      ROUTES.USER_PROFILE.TEACHER_PROFILE,
+      ROUTES.USER_PROFILE.EDIT_TEACHER,
+    ],
+  },
+  {
+    label: "Cài đặt",
+    icon: Settings,
+    paths: ["/settings"],
+  },
 ];
 
 export const SIDEBAR_DEFAULT_TAB = "Trang chủ";

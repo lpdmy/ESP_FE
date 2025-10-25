@@ -1,14 +1,14 @@
 import { Link } from "react-router-dom"
-import { Bell, Search, User, Menu, Calendar, Trophy, Star, LogOut, Settings } from "lucide-react"
+import { Bell, User, Menu, Calendar, Trophy, Star, LogOut, Settings } from "lucide-react"
 import { Button } from "@/common/components/ui/button"
 import { Badge } from "@/common/components/ui/badge"
-import { Input } from "@/common/components/ui/input"
 import { ROUTES } from "@/common/constants/routes"
 import { ROLE } from "@/common/constants/roles"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, useDropdownMenu } from "@/common/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
+import { GlobalSearch } from "@/common/components/search/GlobalSearch"
 
 import { clearUser } from "@/store/user/userSlice";
 
@@ -52,13 +52,13 @@ export default function Header() {
 
         {/* Search Bar */}
         <div className="hidden md:block flex-1 max-w-2xl mx-8">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-orange-500 transition-colors" />
-            <Input
-              placeholder="Tìm kiếm bạn bè, sự kiện, cuộc thi..."
-              className="pl-12 pr-4 h-11 text-base border-gray-200 focus:border-orange-300 focus:ring-orange-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
-            />
-          </div>
+          <GlobalSearch 
+            placeholder="Tìm kiếm bạn bè, bài viết, sự kiện, cuộc thi..."
+            variant="default"
+            onResultClick={(result, type) => {
+              console.log('Search result clicked:', { result, type });
+            }}
+          />
         </div>
 
         {/* Navigation Actions */}

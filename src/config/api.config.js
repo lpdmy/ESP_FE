@@ -3,17 +3,17 @@ export const API_CONFIG = {
   // Base URLs
   BASE_URL: (() => {
     const hostname = window.location.hostname;
-    
+
     // Development environment
     if (hostname.includes("edusphere-dev")) {
       return "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net/api";
     }
-    
+
     // Local development
     if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
       return "https://localhost:7084/api";
     }
-    
+
     // Production environment
     return "https://esp-prod-api.yourdomain.com/api";
   })(),
@@ -68,21 +68,106 @@ export const API_CONFIG = {
     UPLOAD_IMAGE: '/upload',
     UPLOAD_FILE: '/upload/file'
   },
+  // Search endpoints  
+  SEARCH: {
+    GLOBAL: '/search',
+    USERS: '/search/users',
+    POSTS: '/search/posts',
+    ACTIVITIES: '/search/activities',
+    CLUBS: '/search/clubs',
+    HASHTAGS: '/search/hashtags',
+    ADVANCED: '/search/advanced',
+    SUGGESTIONS: '/search/suggestions',
+    TRENDING: '/search/trending',
+    HISTORY: '/search/history',
+  },
+  // Search endpoints  
+  SEARCH: {
+    GLOBAL: '/search',
+    USERS: '/search/users',
+    POSTS: '/search/posts',
+    ACTIVITIES: '/search/activities',
+    CLUBS: '/search/clubs',
+    HASHTAGS: '/search/hashtags',
+    ADVANCED: '/search/advanced',
+    SUGGESTIONS: '/search/suggestions',
+    TRENDING: '/search/trending',
+    HISTORY: '/search/history',
+  },
   POST :{
     CREATE_POST : '/post',
     USER_POST:'/post/user',
     DELETE_POST:'/post',
     UPDATE_POST:'/post',
     LIKE_POST:'/post/like',
+    CLUB_PENDING_POST:'/post/club/pending',
+    APPROVE_POST:'/post/approve/{id}',
+    CLUB_POST:'/post/club',
+    REJECT_POST:'/post/reject',
+    GET_POSTS_BY_CLASS_GROUP: '/post/classgroup/{id}',
     GET_ALL_POSTS: '/post',
-    GET_POSTS_BY_CLASS_GROUP: '/post/classgroup/{id}'
   },
-  COLLECTION :{
-    CREATE_COLLECTION :'/collection',
-    DELETE_COLLECTION :'/collection',
-    UPDATE_COLLECTION :'/collection',
-    USER_COLLECTION :'/collection/user',
+  COLLECTION: {
+    CREATE_COLLECTION: '/collection',
+    DELETE_COLLECTION: '/collection',
+    UPDATE_COLLECTION: '/collection',
+    USER_COLLECTION: '/collection/user',
     ADD_COLLECTION_ITEAM: '/collection/add-collection-iteam'
+  },
+  CLUB:{
+    CREATE_CLUB:'/club-creation-request',
+    LIST_CLUB:'/club',
+    CLUB_CATEGORY:'/club/categories',
+    CLUB_DETAIL:'/club/{id}',
+    CLUB_JOIN_REQUEST:'/join-request/club',
+    CLUB_CREATE_JOIN_REQUES:'/join-request',
+    CLUB_CANCEL_JOIN_REQUES:'/join-request/{id}',
+    CLUB_APPROVE_JOIN_REQUEST:'/join-request/approve/{id}',
+    CLUB_REJECT_JOIN_REQUEST:'/join-request/reject/{id}',
+    USER_CLUB :'/club-member/user',
+    UPDATE_CLUB:'/club',
+    LEAVE_CLUB:'/club-member/{id}',
+    KICK_CLUB:'/club-member',
+    CLUB_CREATION_REQUEST:'/club-creation-request',
+    CLUB_APPROVE_CREATION_REQUEST:'/club-creation-request/approve/{id}',
+    CLUB_REJECT_CREATION_REQUEST:'/club-creation-request/reject',
+    CLUB_SEARCH_USER:'/club/search-users',
+    CLUB_INVITE_MENTOR:'/join-request/invite-mentor',
+    CLUB_GET_INVITATION: '/join-request/user',
+    CLUB_CHANGE_ROLE:'/club-member/change-role',
+    CLUB_DELETE:'/club'
+  },
+  COMMENT:{
+    CREATE_COMMENT:'/comment',
+    GET_BY_POST:'/comment/post',
+    GET_BY_COMMENT:'/comment/comment',
+    DELETE_COMMENT:'/comment/{id}'},
+
+  // Student Import endpoints
+  STUDENT_IMPORT: {
+    IMPORT_STUDENTS: '/admin/students/import',
+    VALIDATE_STUDENTS: '/admin/students/validate',
+    DOWNLOAD_TEMPLATE: '/admin/students/template'
+  },
+
+  STAR_POINT: {
+    // Rules
+    UPDATE_REWARD_RULE: "/admin/rules/{actionType}/points",
+    GET_RULES: "/admin/rules",
+
+    // Rewards
+    GET_ALL_REWARDS: "/admin/rewards",
+    GET_REWARD_BY_ID: "/admin/rewards/{id}",
+    CREATE_REWARD: "/admin/rewards",
+    UPDATE_REWARD: "/admin/rewards/{id}",
+    DELETE_REWARD: "/admin/rewards/{id}",
+    REDEEM_REWARD: "/rewards/redeem",
+    GET_POINT_HISTORY: '/points/history',
+    GET_USER_POINTS: "/points/current",
+
+    GET_ALL_REDEMPTIONS_ADMIN: "/redeems/admin",
+    GET_MY_REDEMPTIONS: "/redeems/me",
+    PICKUP_REDEMPTION: "/redeems/{id}/pickup"
   },
   // Class Group endpoints
   CLASS_GROUP: {
@@ -127,7 +212,7 @@ export const getAuthHeaders = (token) => ({
 export async function handleApiResponse(response) {
   console.log('API Response status:', response.status);
   console.log('API Response headers:', response.headers);
-  
+
   const contentType = response.headers.get("content-type");
   if (!response.ok) {
     console.log('API Error - Status:', response.status);
