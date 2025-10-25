@@ -548,7 +548,7 @@ export default function ClassManagementPage() {
                                   navigate(`/admin/classes/${cls.id}?assignTeacher=true`);
                                 }}
                                 className="h-6 w-6 p-0 text-green-600 hover:text-green-800 hover:bg-green-50"
-                                title="Gán giáo viên chủ nhiệm"
+                                title="Thêm giáo viên chủ nhiệm"
                               >
                                 <Plus className="h-3 w-3" />
                               </Button>
