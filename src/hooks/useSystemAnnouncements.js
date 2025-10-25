@@ -56,16 +56,17 @@ export const useSystemAnnouncements = () => {
    const getPublicAnnouncements = useCallback(() => {
       // Only fetch if we don't have data yet
       if (publicAnnouncements.length === 0 && !loading) {
-         console.log('📡 Fetching public announcements from API');
          dispatch(fetchPublicAnnouncements());
-      } else {
-         console.log('📋 Using cached public announcements:', publicAnnouncements.length);
       }
    }, [dispatch, publicAnnouncements.length, loading]);
 
-   const markAsViewed = useCallback((id) => {
-      dispatch(markAnnouncementAsViewed(id));
-      dispatch(markAsViewedLocally(id));
+   const markAsViewed = useCallback((announcementId, userId) => {
+      if (userId) {
+         dispatch(markAnnouncementAsViewed(announcementId));
+         dispatch(markAsViewedLocally({ userId: userId, announcementId }));
+      } else {
+         console.error('No userId provided to mark as viewed');
+      }
    }, [dispatch]);
 
    // Utility functions
@@ -87,26 +88,18 @@ export const useSystemAnnouncements = () => {
    }, [viewedAnnouncements]);
 
    const getUnviewedAnnouncements = useCallback((userId = null) => {
-      // Use provided userId or get from Redux store
-      const currentUserId = userId || (typeof window !== 'undefined' ?
-         JSON.parse(localStorage.getItem('user') || '{}')?.id : null);
-
-      if (!currentUserId) {
-         console.log('⚠️ No user ID available');
+      if (!userId) {
          return [];
       }
 
-      const userViewed = viewedAnnouncements[currentUserId] || {};
+      // Get from localStorage to ensure we have latest data
+      const viewedFromStorage = JSON.parse(localStorage.getItem('viewedAnnouncements') || '{}');
+      const userViewed = viewedFromStorage[userId] || {};
 
-      console.log('🔍 getUnviewedAnnouncements called for user:', currentUserId);
-      console.log('📊 Public announcements:', publicAnnouncements.length);
-      console.log('👀 User viewed:', userViewed);
+      const unviewed = publicAnnouncements.filter(announcement => {
+         return !userViewed[announcement.id];
+      });
 
-      const unviewed = publicAnnouncements.filter(announcement =>
-         !userViewed[announcement.id]
-      );
-
-      console.log('✅ Unviewed announcements:', unviewed.length);
       return unviewed;
    }, [publicAnnouncements, viewedAnnouncements]);
 

@@ -12,7 +12,10 @@ import {
   FileText, 
   Trash2, 
   Calendar,
-  X
+  X,
+  File,
+  FileSpreadsheet,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useToast } from '@/common/hooks/useToast';
 import { LoadingOverlay } from '@/common/components/ui/loading';
@@ -28,6 +31,7 @@ export default function CreateNewsAndNoticeModal({ isOpen, onClose, onSuccess })
     files: []
   });
   const [loading, setLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const toast = useToast();
   const { createNewAnnouncement } = useSystemAnnouncements();
 
@@ -39,14 +43,94 @@ export default function CreateNewsAndNoticeModal({ isOpen, onClose, onSuccess })
   ];
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const updates = { [field]: value };
+      
+      // Tự động set isUrgent = true khi chọn loại "urgent"
+      if (field === 'announcementType') {
+        if (value === 'urgent') {
+          updates.isUrgent = true;
+        } else if (prev.announcementType === 'urgent') {
+          // Reset isUrgent khi chuyển từ urgent sang loại khác
+          updates.isUrgent = false;
+        }
+      }
+      
+      return { ...prev, ...updates };
+    });
+  };
+
+  // Get file type info (icon, color, label)
+  const getFileTypeInfo = (file) => {
+    const extension = file.name.split('.').pop().toLowerCase();
+    const type = file.type;
+
+    // Image files
+    if (type.startsWith('image/')) {
+      return {
+        icon: ImageIcon,
+        color: 'text-purple-500 bg-purple-50',
+        label: extension.toUpperCase(),
+        isImage: true
+      };
+    }
+
+    // Document types
+    const fileTypes = {
+      pdf: { icon: FileText, color: 'text-red-500 bg-red-50', label: 'PDF' },
+      doc: { icon: File, color: 'text-blue-500 bg-blue-50', label: 'DOC' },
+      docx: { icon: File, color: 'text-blue-500 bg-blue-50', label: 'DOCX' },
+      xls: { icon: FileSpreadsheet, color: 'text-green-500 bg-green-50', label: 'XLS' },
+      xlsx: { icon: FileSpreadsheet, color: 'text-green-500 bg-green-50', label: 'XLSX' },
+    };
+
+    return fileTypes[extension] || { 
+      icon: FileText, 
+      color: 'text-gray-500 bg-gray-50', 
+      label: extension.toUpperCase(),
+      isImage: false
+    };
+  };
+
+  // Create image preview URL
+  const getImagePreview = (file) => {
+    if (file.type.startsWith('image/')) {
+      return URL.createObjectURL(file);
+    }
+    return null;
   };
 
   const handleFileUpload = (event) => {
     const files = Array.from(event.target.files);
+    setFormData(prev => ({
+      ...prev,
+      files: [...prev.files, ...files]
+    }));
+  };
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
     setFormData(prev => ({
       ...prev,
       files: [...prev.files, ...files]
@@ -185,18 +269,20 @@ export default function CreateNewsAndNoticeModal({ isOpen, onClose, onSuccess })
             />
           </div>
 
-          {/* Urgent Toggle */}
-          <div className="flex items-center space-x-3">
-            <Switch
-              id="isUrgent"
-              checked={formData.isUrgent}
-              onCheckedChange={(checked) => handleInputChange('isUrgent', checked)}
-            />
-            <Label htmlFor="isUrgent" className="flex items-center space-x-2">
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-              <span className="text-sm font-medium text-gray-700">Thông báo khẩn cấp</span>
-            </Label>
-          </div>
+          {/* Urgent Toggle - Ẩn khi đã chọn loại "Khẩn cấp" */}
+          {formData.announcementType !== 'urgent' && (
+            <div className="flex items-center space-x-3">
+              <Switch
+                id="isUrgent"
+                checked={formData.isUrgent}
+                onCheckedChange={(checked) => handleInputChange('isUrgent', checked)}
+              />
+              <Label htmlFor="isUrgent" className="flex items-center space-x-2">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <span className="text-sm font-medium text-gray-700">Thông báo khẩn cấp</span>
+              </Label>
+            </div>
+          )}
 
           {/* Expiry Date */}
           <div className="space-y-2">
@@ -215,14 +301,24 @@ export default function CreateNewsAndNoticeModal({ isOpen, onClose, onSuccess })
             </div>
           </div>
 
-          {/* File Upload */}
+          {/* File Upload with Drag & Drop */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-gray-700">
               File đính kèm
             </Label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+            <div 
+              className={`border-2 border-dashed rounded-lg p-6 transition-colors ${
+                isDragging 
+                  ? 'border-blue-500 bg-blue-50' 
+                  : 'border-gray-300 hover:border-gray-400'
+              }`}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <div className="text-center">
-                <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                <Upload className={`mx-auto h-12 w-12 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
                 <div className="mt-4">
                   <label htmlFor="file-upload" className="cursor-pointer">
                     <span className="mt-2 block text-sm font-medium text-gray-900">
@@ -245,36 +341,62 @@ export default function CreateNewsAndNoticeModal({ isOpen, onClose, onSuccess })
               </div>
             </div>
 
-            {/* File List */}
+            {/* File List with Preview */}
             {formData.files.length > 0 && (
-              <div className="mt-4 space-y-2">
-                <h4 className="text-sm font-medium text-gray-700">Files đã chọn:</h4>
-                {formData.files.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <FileText className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                        <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+              <div className="mt-4 space-y-3">
+                <h4 className="text-sm font-medium text-gray-700">Files đã chọn ({formData.files.length}):</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {formData.files.map((file, index) => {
+                    const fileInfo = getFileTypeInfo(file);
+                    const imagePreview = getImagePreview(file);
+                    const IconComponent = fileInfo.icon;
+
+                    return (
+                      <div key={index} className="relative group">
+                        <div className="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                          {/* Preview/Icon */}
+                          {imagePreview ? (
+                            <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
+                              <img 
+                                src={imagePreview} 
+                                alt={file.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className={`flex-shrink-0 w-16 h-16 rounded-lg ${fileInfo.color} flex flex-col items-center justify-center`}>
+                              <IconComponent className="h-6 w-6" />
+                              <span className="text-xs font-medium mt-1">{fileInfo.label}</span>
+                            </div>
+                          )}
+                          
+                          {/* File Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                            <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                          </div>
+
+                          {/* Remove Button */}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(index)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile(index)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-6 border-t">
+          <div className="flex justify-end space-x-3 pt-6">
             <Button
               type="button"
               variant="outline"

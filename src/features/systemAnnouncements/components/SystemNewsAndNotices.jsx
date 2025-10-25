@@ -8,7 +8,10 @@ import {
   Calendar,
   Download,
   Eye,
-  Clock
+  Clock,
+  File,
+  FileSpreadsheet,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useToast } from '@/common/hooks/useToast';
 import { useSystemAnnouncements } from '@/hooks/useSystemAnnouncements';
@@ -30,14 +33,16 @@ export default function SystemNewsAndNotices() {
 
   useEffect(() => {
     getPublicAnnouncements();
-  }, [getPublicAnnouncements]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (error) {
       toast.showError(error);
       clearErrors();
     }
-  }, [error, toast, clearErrors]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
 
   const typeLabels = {
     exam: "Lịch thi",
@@ -80,6 +85,46 @@ export default function SystemNewsAndNotices() {
   const isExpired = (expiryDate) => {
     if (!expiryDate) return false;
     return new Date(expiryDate) < new Date();
+  };
+
+  // Get file type info (icon, color, label)
+  const getFileTypeInfo = (attachment) => {
+    const fileName = attachment.fileUrl || '';
+    const extension = fileName.split('.').pop().toLowerCase();
+    const fileType = attachment.fileType || '';
+
+    // Image files
+    if (fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+      return {
+        icon: ImageIcon,
+        color: 'text-purple-500 bg-purple-50',
+        label: extension.toUpperCase(),
+        isImage: true
+      };
+    }
+
+    // Document types
+    const fileTypes = {
+      pdf: { icon: FileText, color: 'text-red-500 bg-red-50', label: 'PDF' },
+      doc: { icon: File, color: 'text-blue-500 bg-blue-50', label: 'DOC' },
+      docx: { icon: File, color: 'text-blue-500 bg-blue-50', label: 'DOCX' },
+      xls: { icon: FileSpreadsheet, color: 'text-green-500 bg-green-50', label: 'XLS' },
+      xlsx: { icon: FileSpreadsheet, color: 'text-green-500 bg-green-50', label: 'XLSX' },
+    };
+
+    return fileTypes[extension] || { 
+      icon: FileText, 
+      color: 'text-gray-500 bg-gray-50', 
+      label: extension.toUpperCase() || 'FILE',
+      isImage: false
+    };
+  };
+
+  // Check if file is an image
+  const isImageFile = (attachment) => {
+    const fileName = attachment.fileUrl || '';
+    const extension = fileName.split('.').pop().toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension);
   };
 
   if (loading) {
@@ -172,38 +217,74 @@ export default function SystemNewsAndNotices() {
                   dangerouslySetInnerHTML={{ __html: announcement.content }}
                 />
 
-                {/* Attachments */}
+                {/* Attachments - Separate Images and Files */}
                 {announcement.attachments && announcement.attachments.length > 0 && (
-                  <div className="border-t pt-4">
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">File đính kèm:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {announcement.attachments.map((attachment, index) => (
-                        <div 
-                          key={index}
-                          className="flex items-center justify-between bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <FileText className="h-5 w-5 text-gray-400" />
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                {attachment.fileType?.toUpperCase()} File
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {attachment.fileType}
-                              </p>
-                            </div>
+                  <div className="pt-4 space-y-4 border-t">
+                    {/* Image Attachments - Display Large */}
+                    {announcement.attachments.filter(att => isImageFile(att)).length > 0 && (
+                      <div className="space-y-3">
+                        {announcement.attachments.filter(att => isImageFile(att)).map((attachment, index) => (
+                          <div key={`image-${index}`} className="rounded-lg overflow-hidden border border-gray-200">
+                            <img 
+                              src={attachment.fileUrl} 
+                              alt={attachment.fileName || 'Image attachment'}
+                              className="w-full h-auto max-h-80 object-contain bg-gray-50"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                              }}
+                            />
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownloadAttachment(attachment)}
-                            className="text-blue-600 hover:text-blue-700"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* File Attachments - Display as Cards */}
+                    {announcement.attachments.filter(att => !isImageFile(att)).length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-900 mb-3">
+                          Tài liệu đính kèm ({announcement.attachments.filter(att => !isImageFile(att)).length}):
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {announcement.attachments.filter(att => !isImageFile(att)).map((attachment, index) => {
+                            const fileInfo = getFileTypeInfo(attachment);
+                            const IconComponent = fileInfo.icon;
+
+                            return (
+                              <div 
+                                key={`file-${index}`}
+                                className="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                              >
+                                {/* File Icon */}
+                                <div className={`flex-shrink-0 w-14 h-14 rounded-lg ${fileInfo.color} flex flex-col items-center justify-center`}>
+                                  <IconComponent className="h-5 w-5" />
+                                  <span className="text-xs font-medium mt-1">{fileInfo.label}</span>
+                                </div>
+                                
+                                {/* File Info */}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {attachment.fileName || `${fileInfo.label} File`}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {attachment.fileType || fileInfo.label}
+                                  </p>
+                                </div>
+
+                                {/* Download Button */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDownloadAttachment(attachment)}
+                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

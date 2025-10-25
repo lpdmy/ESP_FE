@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/common/components/ui/dialog';
 import { Button } from '@/common/components/ui/button';
 import { Badge } from '@/common/components/ui/badge';
@@ -8,14 +9,16 @@ import {
   Calendar,
   Download,
   Clock,
-  X
+  X,
+  File,
+  FileSpreadsheet,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useSystemAnnouncements } from '@/hooks/useSystemAnnouncements';
 
-export default function SystemNewsAndNoticesModal({ isOpen, onClose, mockAnnouncements = [] }) {
+export default function SystemNewsAndNoticesModal({ isOpen, onClose }) {
   const {
     publicAnnouncements,
-    getPublicAnnouncements,
     markAsViewed,
     getUnviewedAnnouncements,
     getUrgentAnnouncements
@@ -23,32 +26,26 @@ export default function SystemNewsAndNoticesModal({ isOpen, onClose, mockAnnounc
 
   const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0);
   const [unviewedAnnouncements, setUnviewedAnnouncements] = useState([]);
+  
+  // Get current user from Redux store
+  const { user } = useSelector(state => state.user);
 
+  // Update unviewed list when public announcements change
   useEffect(() => {
-    if (isOpen) {
-      if (mockAnnouncements.length > 0) {
-        // Use mock data when API fails
-        console.log('🧪 Using mock announcements:', mockAnnouncements);
-        setUnviewedAnnouncements(mockAnnouncements);
-        setCurrentAnnouncementIndex(0);
-      } else {
-        // Use real API data
-        getPublicAnnouncements();
-      }
-    }
-  }, [isOpen, getPublicAnnouncements, mockAnnouncements]);
-
-  useEffect(() => {
-    if (publicAnnouncements.length > 0) {
-      const unviewed = getUnviewedAnnouncements();
+    if (isOpen && publicAnnouncements.length > 0 && user?.id) {
+      const unviewed = getUnviewedAnnouncements(user.id);
       const urgent = getUrgentAnnouncements();
       
       // Prioritize urgent announcements
-      const prioritized = [...urgent.filter(a => !a.viewed), ...unviewed.filter(a => !urgent.includes(a))];
+      const prioritized = [
+        ...urgent.filter(a => !unviewed.some(u => u.id === a.id)),
+        ...unviewed
+      ];
+      
       setUnviewedAnnouncements(prioritized);
       setCurrentAnnouncementIndex(0);
     }
-  }, [publicAnnouncements, getUnviewedAnnouncements, getUrgentAnnouncements]);
+  }, [isOpen, publicAnnouncements, user, getUnviewedAnnouncements, getUrgentAnnouncements]);
 
   const currentAnnouncement = unviewedAnnouncements[currentAnnouncementIndex];
 
@@ -76,41 +73,66 @@ export default function SystemNewsAndNoticesModal({ isOpen, onClose, mockAnnounc
     });
   };
 
+  // Get file type info (icon, color, label)
+  const getFileTypeInfo = (attachment) => {
+    const fileName = attachment.fileUrl || '';
+    const extension = fileName.split('.').pop().toLowerCase();
+    const fileType = attachment.fileType || '';
+
+    // Image files
+    if (fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+      return {
+        icon: ImageIcon,
+        color: 'text-purple-500 bg-purple-50',
+        label: extension.toUpperCase(),
+        isImage: true
+      };
+    }
+
+    // Document types
+    const fileTypes = {
+      pdf: { icon: FileText, color: 'text-red-500 bg-red-50', label: 'PDF' },
+      doc: { icon: File, color: 'text-blue-500 bg-blue-50', label: 'DOC' },
+      docx: { icon: File, color: 'text-blue-500 bg-blue-50', label: 'DOCX' },
+      xls: { icon: FileSpreadsheet, color: 'text-green-500 bg-green-50', label: 'XLS' },
+      xlsx: { icon: FileSpreadsheet, color: 'text-green-500 bg-green-50', label: 'XLSX' },
+    };
+
+    return fileTypes[extension] || { 
+      icon: FileText, 
+      color: 'text-gray-500 bg-gray-50', 
+      label: extension.toUpperCase() || 'FILE',
+      isImage: false
+    };
+  };
+
+  // Check if file is an image
+  const isImageFile = (attachment) => {
+    const fileName = attachment.fileUrl || '';
+    const extension = fileName.split('.').pop().toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension);
+  };
+
   const handleMarkAsViewed = async () => {
-    if (currentAnnouncement) {
+    if (currentAnnouncement && user?.id) {
       try {
-        console.log('📝 Marking announcement as viewed:', currentAnnouncement.id);
+        // Mark as viewed via API and localStorage
+        markAsViewed(currentAnnouncement.id, user.id);
         
-        if (mockAnnouncements.length > 0) {
-          // Handle mock data - just remove from list
-          console.log('🧪 Mock data - removing from unviewed list');
-          const updatedUnviewed = unviewedAnnouncements.filter(
-            ann => ann.id !== currentAnnouncement.id
-          );
-          setUnviewedAnnouncements(updatedUnviewed);
-          
-          // Move to next announcement or close
-          if (updatedUnviewed.length === 0) {
-            handleClose();
-          } else if (currentAnnouncementIndex >= updatedUnviewed.length) {
-            setCurrentAnnouncementIndex(updatedUnviewed.length - 1);
-          }
-        } else {
-          // Handle real API data
-          await markAsViewed(currentAnnouncement.id);
-          
-          // Refresh unviewed list
-          const updatedUnviewed = getUnviewedAnnouncements();
-          setUnviewedAnnouncements(updatedUnviewed);
-          
-          if (updatedUnviewed.length === 0) {
-            handleClose();
-          } else if (currentAnnouncementIndex >= updatedUnviewed.length) {
-            setCurrentAnnouncementIndex(updatedUnviewed.length - 1);
-          }
+        // Remove from unviewed list
+        const updatedUnviewed = unviewedAnnouncements.filter(
+          ann => ann.id !== currentAnnouncement.id
+        );
+        setUnviewedAnnouncements(updatedUnviewed);
+        
+        // Move to next announcement or close
+        if (updatedUnviewed.length === 0) {
+          handleClose();
+        } else if (currentAnnouncementIndex >= updatedUnviewed.length) {
+          setCurrentAnnouncementIndex(updatedUnviewed.length - 1);
         }
       } catch (error) {
-        console.error('❌ Error marking as viewed:', error);
+        console.error('Error marking as viewed:', error);
       }
     }
   };
@@ -207,43 +229,79 @@ export default function SystemNewsAndNoticesModal({ isOpen, onClose, mockAnnounc
             dangerouslySetInnerHTML={{ __html: currentAnnouncement.content }}
           />
 
-          {/* Attachments */}
+          {/* Attachments - Separate Images and Files */}
           {currentAnnouncement.attachments && currentAnnouncement.attachments.length > 0 && (
-            <div className="border-t pt-4">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">File đính kèm:</h4>
-              <div className="space-y-2">
-                {currentAnnouncement.attachments.map((attachment, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-center justify-between bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <FileText className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {attachment.fileType?.toUpperCase()} File
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {attachment.fileType}
-                        </p>
-                      </div>
+            <div className="pt-4 space-y-4">
+              {/* Image Attachments - Display Large */}
+              {currentAnnouncement.attachments.filter(att => isImageFile(att)).length > 0 && (
+                <div className="space-y-3">
+                  {currentAnnouncement.attachments.filter(att => isImageFile(att)).map((attachment, index) => (
+                    <div key={`image-${index}`} className="rounded-lg overflow-hidden border border-gray-200">
+                      <img 
+                        src={attachment.fileUrl} 
+                        alt={attachment.fileName || 'Image attachment'}
+                        className="w-full h-auto max-h-96 object-contain bg-gray-50"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDownloadAttachment(attachment)}
-                      className="text-blue-600 hover:text-blue-700"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
+                  ))}
+                </div>
+              )}
+
+              {/* File Attachments - Display as Cards */}
+              {currentAnnouncement.attachments.filter(att => !isImageFile(att)).length > 0 && (
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">
+                    File đính kèm ({currentAnnouncement.attachments.filter(att => !isImageFile(att)).length}):
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {currentAnnouncement.attachments.filter(att => !isImageFile(att)).map((attachment, index) => {
+                      const fileInfo = getFileTypeInfo(attachment);
+                      const IconComponent = fileInfo.icon;
+
+                      return (
+                        <div 
+                          key={`file-${index}`}
+                          className="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                        >
+                          {/* File Icon */}
+                          <div className={`flex-shrink-0 w-16 h-16 rounded-lg ${fileInfo.color} flex flex-col items-center justify-center`}>
+                            <IconComponent className="h-6 w-6" />
+                            <span className="text-xs font-medium mt-1">{fileInfo.label}</span>
+                          </div>
+                          
+                          {/* File Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {attachment.fileName || `${fileInfo.label} File`}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {attachment.fileType || fileInfo.label}
+                            </p>
+                          </div>
+
+                          {/* Download Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownloadAttachment(attachment)}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex justify-between items-center pt-4 border-t">
+          <div className="flex justify-between items-center pt-4">
             <div className="flex space-x-2">
               {currentAnnouncementIndex > 0 && (
                 <Button

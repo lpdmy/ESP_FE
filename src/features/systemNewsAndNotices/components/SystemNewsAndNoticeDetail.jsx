@@ -7,7 +7,10 @@ import {
   FileText, 
   Download, 
   Calendar,
-  ArrowLeft
+  ArrowLeft,
+  File,
+  FileSpreadsheet,
+  Image as ImageIcon
 } from 'lucide-react';
 import { LoadingOverlay } from '@/common/components/ui/loading';
 import { useToast } from '@/common/hooks/useToast';
@@ -145,6 +148,45 @@ export default function SystemNewsAndNoticeDetail() {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
+  // Get file type info (icon, color, label)
+  const getFileTypeInfo = (file) => {
+    const fileName = file.url || file.name || '';
+    const extension = fileName.split('.').pop().toLowerCase();
+
+    // Image files
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+      return {
+        icon: ImageIcon,
+        color: 'text-purple-500 bg-purple-50',
+        label: extension.toUpperCase(),
+        isImage: true
+      };
+    }
+
+    // Document types
+    const fileTypes = {
+      pdf: { icon: FileText, color: 'text-red-500 bg-red-50', label: 'PDF' },
+      doc: { icon: File, color: 'text-blue-500 bg-blue-50', label: 'DOC' },
+      docx: { icon: File, color: 'text-blue-500 bg-blue-50', label: 'DOCX' },
+      xls: { icon: FileSpreadsheet, color: 'text-green-500 bg-green-50', label: 'XLS' },
+      xlsx: { icon: FileSpreadsheet, color: 'text-green-500 bg-green-50', label: 'XLSX' },
+    };
+
+    return fileTypes[extension] || { 
+      icon: FileText, 
+      color: 'text-gray-500 bg-gray-50', 
+      label: extension.toUpperCase() || 'FILE',
+      isImage: false
+    };
+  };
+
+  // Check if file is an image
+  const isImageFile = (file) => {
+    const fileName = file.url || file.name || '';
+    const extension = fileName.split('.').pop().toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension);
+  };
+
   const handleDownload = (file) => {
     // TODO: Implement download functionality
     console.log('Download file:', file);
@@ -242,41 +284,78 @@ export default function SystemNewsAndNoticeDetail() {
             </div>
           </div>
 
-          {/* Attachments */}
+          {/* Attachments - Separate Images and Files */}
           {newsAndNotice.files && newsAndNotice.files.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                Tệp đính kèm ({newsAndNotice.files.length})
-              </h2>
-              <div className="space-y-3">
-                {newsAndNotice.files.map((file, index) => (
-                  <Card key={index} className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="font-medium text-gray-900">{file.name}</p>
-                          <p className="text-sm text-gray-500">{formatFileSize(file.size)}</p>
-                        </div>
+            <div className="space-y-6">
+              {/* Image Attachments - Display Large */}
+              {newsAndNotice.files.filter(file => isImageFile(file)).length > 0 && (
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                    Hình ảnh ({newsAndNotice.files.filter(file => isImageFile(file)).length})
+                  </h2>
+                  <div className="space-y-4">
+                    {newsAndNotice.files.filter(file => isImageFile(file)).map((file, index) => (
+                      <div key={`image-${index}`} className="rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                        <img 
+                          src={file.url} 
+                          alt={file.name}
+                          className="w-full h-auto max-h-[600px] object-contain"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-orange-600 border-orange-200 hover:bg-orange-50"
-                        onClick={() => handleDownload(file)}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Tải xuống
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* File Attachments - Display as Cards */}
+              {newsAndNotice.files.filter(file => !isImageFile(file)).length > 0 && (
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                    Tài liệu đính kèm ({newsAndNotice.files.filter(file => !isImageFile(file)).length})
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {newsAndNotice.files.filter(file => !isImageFile(file)).map((file, index) => {
+                      const fileInfo = getFileTypeInfo(file);
+                      const IconComponent = fileInfo.icon;
+
+                      return (
+                        <Card key={`file-${index}`} className="p-4 hover:shadow-md transition-shadow">
+                          <div className="flex items-center space-x-3">
+                            {/* File Icon */}
+                            <div className={`flex-shrink-0 w-20 h-20 rounded-lg ${fileInfo.color} flex flex-col items-center justify-center`}>
+                              <IconComponent className="h-7 w-7" />
+                              <span className="text-xs font-medium mt-1">{fileInfo.label}</span>
+                            </div>
+                            
+                            {/* File Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{file.name}</p>
+                              <p className="text-sm text-gray-500">{formatFileSize(file.size)}</p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-orange-600 border-orange-200 hover:bg-orange-50 mt-2"
+                                onClick={() => handleDownload(file)}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Tải xuống
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-6 border-t mt-8">
+          <div className="flex justify-end space-x-3 pt-6  mt-8">
             <Button variant="outline" onClick={() => navigate('/system-news-and-notices')}>
               Quay lại
             </Button>

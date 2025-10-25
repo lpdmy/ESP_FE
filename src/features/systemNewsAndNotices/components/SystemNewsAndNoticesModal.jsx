@@ -176,7 +176,7 @@ const SystemNewsAndNoticesModal = ({
 
             {/* Attachments */}
             {newsAndNotice.files && newsAndNotice.files.length > 0 && (
-              <div className="pt-4 border-t">
+              <div className="pt-4 ">
                 <p className="text-sm font-medium text-gray-700 mb-3">
                   Tệp đính kèm ({newsAndNotice.files.length})
                 </p>

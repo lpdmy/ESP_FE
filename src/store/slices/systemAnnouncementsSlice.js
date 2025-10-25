@@ -81,6 +81,7 @@ export const fetchPublicAnnouncements = createAsyncThunk(
          const response = await systemAnnouncementService.getPublicAnnouncements();
          return response.data;
       } catch (error) {
+         console.error('Fetch public announcements failed:', error);
          return rejectWithValue(error.message);
       }
    }
@@ -111,7 +112,8 @@ const initialState = {
    },
    loading: false,
    error: null,
-   viewedAnnouncements: JSON.parse(localStorage.getItem('viewedAnnouncements') || '[]')
+   // Structure: { userId: { announcementId: true, announcementId2: true } }
+   viewedAnnouncements: JSON.parse(localStorage.getItem('viewedAnnouncements') || '{}')
 };
 
 // Slice
@@ -129,11 +131,18 @@ const systemAnnouncementsSlice = createSlice({
          state.pagination = { ...state.pagination, ...action.payload };
       },
       markAsViewedLocally: (state, action) => {
-         const announcementId = action.payload;
-         if (!state.viewedAnnouncements.includes(announcementId)) {
-            state.viewedAnnouncements.push(announcementId);
-            localStorage.setItem('viewedAnnouncements', JSON.stringify(state.viewedAnnouncements));
+         const { userId, announcementId } = action.payload;
+
+         // Initialize user's viewed announcements if not exists
+         if (!state.viewedAnnouncements[userId]) {
+            state.viewedAnnouncements[userId] = {};
          }
+
+         // Mark as viewed
+         state.viewedAnnouncements[userId][announcementId] = true;
+
+         // Save to localStorage
+         localStorage.setItem('viewedAnnouncements', JSON.stringify(state.viewedAnnouncements));
       }
    },
    extraReducers: (builder) => {
@@ -259,15 +268,12 @@ const systemAnnouncementsSlice = createSlice({
 
          // Mark as Viewed
          .addCase(markAnnouncementAsViewed.pending, (state) => {
-            state.loading = true;
+            state.loading = false; // Don't show loading for mark as viewed
             state.error = null;
          })
          .addCase(markAnnouncementAsViewed.fulfilled, (state, action) => {
             state.loading = false;
-            if (!state.viewedAnnouncements.includes(action.payload)) {
-               state.viewedAnnouncements.push(action.payload);
-               localStorage.setItem('viewedAnnouncements', JSON.stringify(state.viewedAnnouncements));
-            }
+            // Mark as viewed is handled by markAsViewedLocally action
          })
          .addCase(markAnnouncementAsViewed.rejected, (state, action) => {
             state.loading = false;
