@@ -70,10 +70,9 @@ const availablePermissions = [
   { label: "MANAGE_EVENTS", name: "Quản lý sự kiện", id: 6 },
   { label: "MANAGE_CLUBS", name: "Quản lý câu lạc bộ", id: 7 },
   { label: "MANAGE_ANNOUNCEMENTS", name: "Quản lý thông báo", id: 8 },
-  { label: "VIEW_ANALYTICS", name: "Xem thống kê" },
   { label: "MANAGE_REWARDS", name: "Quản lý phần thưởng", id: 10 },
 ];
-
+import { useToast } from "@/common/hooks/useToast";
 const roleTemplates = [
   {
     name: "Moderator",
@@ -104,6 +103,7 @@ const roleTemplates = [
 
 export default function StaffManagement() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDiagOpen, setCreateDiagOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [isGrantDialogOpen, setIsGrantDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -111,11 +111,12 @@ export default function StaffManagement() {
   const [selectedRole, setSelectedRole] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const { getAllStaff } = useStaffApi();
+  const { getAllStaff, deleteStaff, recoveryStaff } = useStaffApi();
   const [staff, setStaff] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const toast = useToast();
   const handleGetAllStaff = async () => {
     setIsLoading(true);
     try {
@@ -129,6 +130,32 @@ export default function StaffManagement() {
       console.log(error);
     } finally {
       setIsLoading(false);
+    }
+  };
+  const handleDeleteStaff = async (id) => {
+    try {
+      await deleteStaff(id);
+      toast.deleteStaffSuccess();
+      handleGetAllStaff();
+    } catch (error) {
+      if (error.statusCode == 400) {
+        toast.showError(error.message);
+      } else {
+        toast.deleteStaffFail();
+      }
+    }
+  };
+  const handleRecoveryStaff = async (id) => {
+    try {
+      await recoveryStaff(id);
+      toast.recoveryStaffSuccess();
+      handleGetAllStaff();
+    } catch (error) {
+      if (error.statusCode == 400) {
+        toast.showError(error.message);
+      } else {
+        toast.recoveryStaffFail;
+      }
     }
   };
   const handleRoleSelect = (roleName) => {
@@ -150,7 +177,7 @@ export default function StaffManagement() {
   };
   useEffect(() => {
     handleGetAllStaff();
-  }, [pageNumber,searchTerm]);
+  }, [pageNumber, searchTerm]);
   return (
     <div className="space-y-6">
       <div className="mb-8 flex justify-between items-center">
@@ -160,7 +187,20 @@ export default function StaffManagement() {
           </h1>
           <p className="text-gray-600">Cấp quyền và quản lý nhân sự hệ thống</p>
         </div>
-        <CreateEmployeeModal permissions={availablePermissions} />
+        <Button
+          className="bg-blue-600 hover:bg-blue-700 text-white p-5"
+          onClick={() => setCreateDiagOpen(true)}
+        >
+          Tạo nhân viên
+        </Button>
+        <CreateEmployeeModal
+          permissions={availablePermissions}
+          open={createDiagOpen}
+          onClose={() => {
+            setCreateDiagOpen(false);
+            handleGetAllStaff();
+          }}
+        />
       </div>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -216,12 +256,6 @@ export default function StaffManagement() {
       </div>
 
       <Tabs defaultValue="staff" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="staff">Danh sách nhân sự</TabsTrigger>
-          <TabsTrigger value="roles">Mẫu vai trò</TabsTrigger>
-        </TabsList>
-
-        {/* Staff List Tab */}
         <TabsContent value="staff" className="space-y-6">
           <Card>
             <CardHeader>
@@ -372,9 +406,28 @@ export default function StaffManagement() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
+                                className={`border ${
+                                  staff.isDeleted
+                                    ? "text-green-600 border-green-300 hover:bg-green-50"
+                                    : "text-red-600 border-red-200 hover:bg-red-50"
+                                } bg-transparent`}
+                                onClick={() => {
+                                  if (staff.isDeleted) {
+                                    handleRecoveryStaff(staff.id);
+                                  } else {
+                                    handleDeleteStaff(staff.id); 
+                                  }
+                                }}
                               >
-                                <UserMinus className="h-4 w-4" />
+                                {staff.isDeleted ? (
+                                  <>
+                                    <UserPlus className="h-4 w-4" />{" "}
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserMinus className="h-4 w-4" />{" "}
+                                  </>
+                                )}
                               </Button>
                             </div>
                           </TableCell>
@@ -382,59 +435,6 @@ export default function StaffManagement() {
                       ))}
                   </TableBody>
                 </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Role Templates Tab */}
-        <TabsContent value="roles" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-purple-600" />
-                Mẫu vai trò
-              </CardTitle>
-              <CardDescription>
-                Các mẫu vai trò có sẵn với quyền hạn được định sẵn
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {roleTemplates.map((role) => (
-                  <Card
-                    key={role.name}
-                    className="border-2 hover:shadow-lg transition-shadow"
-                  >
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">{role.name}</CardTitle>
-                      <CardDescription>{role.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">
-                          Quyền hạn:
-                        </Label>
-                        <div className="flex flex-wrap gap-1">
-                          {role.permissions.map((permissionId) => {
-                            const permission = availablePermissions.find(
-                              (p) => p.id === permissionId
-                            );
-                            return (
-                              <Badge
-                                key={permissionId}
-                                variant="secondary"
-                                className="text-xs"
-                              >
-                                {permission?.name}
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
               </div>
             </CardContent>
           </Card>
@@ -499,7 +499,10 @@ export default function StaffManagement() {
         employee={selectedStaff}
         permissionsList={availablePermissions}
         open={editDialogOpen}
-        onClose={() => setEditDialogOpen(false)}
+        onClose={() => {
+          setEditDialogOpen(false);
+          handleGetAllStaff();
+        }}
         onCreated={handleGetAllStaff}
       />
     </div>

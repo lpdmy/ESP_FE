@@ -115,6 +115,12 @@ export const useToast = () => {
   const deleteClubSuccess = ()=>showSuccess(CLUB_MESSAGES.SUCCESS.DELETE_CLUB)
   const createStaffSuccess = ()=>showSuccess(STAFF_MESSAGE.SUCCESS.CREATE)
   const createStaffFail = ()=>showError(STAFF_MESSAGE.ERROR.CREATE)
+  const updateStaffFail =()=>showError(STAFF_MESSAGE.ERROR.UPDATE)
+  const updateStaffSuccess =()=>showSuccess(STAFF_MESSAGE.SUCCESS.UPDATE)
+  const deleteStaffSuccess =()=>showSuccess(STAFF_MESSAGE.SUCCESS.DELETE)
+  const deleteStaffFail =()=>showSuccess(STAFF_MESSAGE.ERROR.DELETE)
+  const recoveryStaffSuccess =()=>showSuccess(STAFF_MESSAGE.SUCCESS.RECOVERY)
+  const recoveryStaffFail =()=>showSuccess(STAFF_MESSAGE.ERROR.RECOVERY)
 
 
   return {
@@ -178,6 +184,13 @@ export const useToast = () => {
     deleteClubSuccess,
     createStaffSuccess,
     createStaffFail,
+    updateStaffFail,
+    updateStaffSuccess,
+    deleteStaffFail,
+    deleteStaffSuccess,
+    recoveryStaffSuccess,
+    recoveryStaffFail,
+    
     // Direct access to messages
     PROFILE_MESSAGES,
     AUTH_MESSAGES,

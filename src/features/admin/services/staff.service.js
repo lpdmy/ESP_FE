@@ -16,4 +16,15 @@ export class StaffService extends ApiService{
     async createStaff(token,payload){
         return this.post(API_CONFIG.STAFF.CREATE,payload,token)
     }
+    async updateStaff(token,payload){
+        return this.put(API_CONFIG.STAFF.LINK,payload,token)
+    }
+    async deleteStaff(token,id){
+        let url = `${API_CONFIG.STAFF.LINK}/${id}`
+        return this.delete(url,token)
+    }
+    async recoveryStaff(token,id){
+        let url = `${API_CONFIG.STAFF.LINK}/${id}`
+        return this.put(url,token)
+    }
 }

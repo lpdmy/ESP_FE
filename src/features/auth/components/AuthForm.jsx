@@ -13,7 +13,8 @@ import { setPoints } from "@/store/star-point/pointSlice";
 import { ROUTES } from "@/common/constants/routes"
 import { ROLE } from "@/common/constants/roles"
 import { starPointService } from "@/features/admin/services/starpoint.service"
-
+import { setPermissions } from "@/store/permission/permissionSlice"
+import { jwtDecode } from "jwt-decode"
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
@@ -24,7 +25,17 @@ export default function AuthForm() {
   const [loginError, setLoginError] = useState("");
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
+const PERMISSION_ROUTE_MAP = {
+  MANAGE_USER: "/admin/users",
+  MANAGE_EVENTS: "/admin/activities",
+  MANAGE_CLUBS: "/admin/clubs",
+  MANAGE_CLASSES: "/admin/classes",
+  MANAGE_POSTS: "/admin/posts",
+  MANAGE_REWARDS: "/admin/rewards",
+  MANAGE_STAFF: "/admin/staff",
+  MANAGE_ANNOUNCEMENTS: "/admin/system-news-and-notices",
+  MODERATE_CONTENT: "/admin/moderation",
+};
   //TO DO: Delete example test API call
   const { test, loading, error, login, getMe } = useAuthApi();
   const [testResult, setTestResult] = useState(null);
@@ -46,17 +57,28 @@ export default function AuthForm() {
         localStorage.setItem("token", result.data.accessToken);
         localStorage.setItem("refreshToken", result.data.refreshToken);
         const resultUser = await getMe();
+        const decoded = jwtDecode(result.data.accessToken);
         dispatch(setUser(resultUser?.data));
-
+        dispatch(setPermissions(decoded.Permission))
         const resp = await starPointService.getUserPoints(resultUser?.data.id);
         dispatch(setPoints(resp.data.points ?? 0));
-
-        if (resultUser?.data.role == ROLE.ADMIN) {
-          navigate(ROUTES.ADMIN.USER_MANAGEMENT);
+        if (resultUser?.data.role === ROLE.ADMIN) {
+        navigate(ROUTES.ADMIN.MAIN);
+      } 
+      else if (resultUser?.data.role === ROLE.STAFF) {
+        const userPermissions = decoded.Permission || [];
+        const firstAllowedRoute = Object.entries(PERMISSION_ROUTE_MAP).find(
+          ([perm]) => userPermissions.includes(perm)
+        )?.[1];
+        if (firstAllowedRoute) {
+          navigate(firstAllowedRoute);
+        } else {
+          navigate(ROUTES.ADMIN.MAIN);
         }
-        else {
-          navigate(ROUTES.LANDING.HOME);
-        }
+      } 
+      else {
+        navigate(ROUTES.LANDING.HOME);
+      }
       }
     } catch (err) {
       setLoginError(err.message || "Đăng nhập thất bại");

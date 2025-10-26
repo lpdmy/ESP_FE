@@ -5,28 +5,31 @@ import { Badge } from "@/common/components/ui/badge";
 import { Input } from "@/common/components/ui/input";
 import { Label } from "@/common/components/ui/label";
 import { Checkbox } from "@/common/components/ui/checkbox";
+import { useStaffApi } from "@/features/admin/hooks/useStaffApi";
+import { useToast } from "@/common/hooks/useToast";
 export default function StaffDetailModal({
   employee,
   permissionsList,
   open,
   onClose,
 }) {
+  const { updateStaff } = useStaffApi();
+  const toast = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(employee || {});
   const [selectedPermissions, setSelectedPermissions] = useState([]);
-
+  const [isSaving, setIsSaving] = useState(false);
   useEffect(() => {
     if (employee) {
       setFormData(employee);
       setSelectedPermissions(employee.permissions || []);
-      console.log(employee);
     }
   }, [employee]);
-const mapLabelsToIds = (labels, permissionsList) => {
-  return permissionsList
-    .filter((perm) => labels.includes(perm.label))
-    .map((perm) => perm.id);
-};
+  const mapLabelsToIds = (labels, permissionsList) => {
+    return permissionsList
+      .filter((perm) => labels.includes(perm.label))
+      .map((perm) => perm.id);
+  };
   if (!employee || !open) return null;
 
   const permissionNames =
@@ -39,16 +42,28 @@ const mapLabelsToIds = (labels, permissionsList) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
-  const permissionIds = mapLabelsToIds(selectedPermissions, permissionsList);
+  const handleSave = async (id) => {
+    const permissionIds = mapLabelsToIds(selectedPermissions, permissionsList);
 
-  const updatedData = {
-    ...formData,
-    permissions: permissionIds, // 👈 mảng số nguyên
+    const updatedData = {
+      ...formData,
+      permission: permissionIds,
+      id: id,
+    };
+    try {
+      await updateStaff(updatedData);
+      toast.updateStaffSuccess();
+    } catch (err) {
+      if (err.statusCode == 400) {
+        toast.showError(err.messsage);
+      } else {
+        toast.updateStaffFail();
+      }
+    } finally {
+      setIsEditing(false);
+      setIsSaving(false);
+    }
   };
-  console.log("Dữ liệu đã chuyển sang int:", updatedData);
-  setIsEditing(false);
-};
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
@@ -59,6 +74,14 @@ const mapLabelsToIds = (labels, permissionsList) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-6">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            aria-label="Đóng"
+            type="button"
+          >
+            <X className="w-5 h-5" />
+          </button>
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-semibold text-gray-900">
@@ -72,25 +95,15 @@ const mapLabelsToIds = (labels, permissionsList) => {
                   : "Dưới đây là thông tin chi tiết của nhân viên"}
               </p>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditing((prev) => !prev)}
-              className={`flex items-center gap-2 ${
-                isEditing
-                  ? "border-green-500 text-green-600 hover:bg-green-50"
-                  : "border-blue-500 text-blue-600 hover:bg-blue-50"
-              }`}
-            >
-              {isEditing ? (
-                <>
-                  <Save className="w-4 h-4" /> Lưu
-                </>
-              ) : (
-                <>
-                  <Edit3 className="w-4 h-4" /> Chỉnh sửa
-                </>
-              )}
-            </Button>
+            {!isEditing && (
+              <Button
+                variant="outline"
+                onClick={() => setIsEditing(true)}
+                className="flex items-center gap-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+              >
+                <Edit3 className="w-4 h-4" /> Chỉnh sửa
+              </Button>
+            )}
           </div>
         </div>
         {/* Nội dung */}
@@ -124,11 +137,13 @@ const mapLabelsToIds = (labels, permissionsList) => {
           </div>
 
           <div className="col-span-2">
-            <p className="text-sm text-gray-500 font-medium">Email:</p>
+            <p className="text-sm text-gray-500 font-medium ">Email:</p>
             {isEditing ? (
               <Input
                 value={formData.email || ""}
                 onChange={(e) => handleChange("email", e.target.value)}
+                disabled
+                className="bg-gray-100 cursor-not-allowed"
               />
             ) : (
               <p className="text-base font-semibold text-gray-900">
@@ -136,7 +151,23 @@ const mapLabelsToIds = (labels, permissionsList) => {
               </p>
             )}
           </div>
-
+          <div className="col-span-2">
+            {isEditing && (
+              <>
+                <p className="text-sm text-gray-500 font-medium">
+                  Mật khẩu mới:
+                </p>
+                <Input
+                  type="password"
+                  onChange={(e) => handleChange("password", e.target.value)}
+                  placeholder="Nhập mật khẩu mới (nếu muốn đổi)"
+                />
+                <p className="text-xs text-gray-400 italic mt-1">
+                  Để trống nếu không muốn thay đổi mật khẩu
+                </p>
+              </>
+            )}
+          </div>
           <div>
             <p className="text-sm text-gray-500 font-medium">Số điện thoại:</p>
             {isEditing ? (
@@ -221,23 +252,28 @@ const mapLabelsToIds = (labels, permissionsList) => {
         {/* Footer */}
         <div className="flex justify-end mt-8 border-t border-gray-100 pt-4 gap-3">
           {isEditing && (
-            <Button
-              onClick={() => {
-                setIsEditing(false);
-                setFormData(employee); // hủy
-              }}
-              variant="outline"
-              className="border-gray-300"
-            >
-              Hủy
-            </Button>
+            <div className="flex justify-end gap-3">
+              <Button
+                onClick={() => {
+                  setIsEditing(false);
+                  setFormData(employee); // hủy chỉnh sửa
+                }}
+                variant="outline"
+                className="border-gray-300"
+              >
+                Hủy
+              </Button>
+
+              <Button
+                onClick={() => handleSave(employee.id)}
+                disabled={isSaving}
+                className="border border-green-500 text-green-600 hover:bg-green-50"
+              >
+                <Save />
+                {isSaving ? "Đang lưu..." : "Lưu"}
+              </Button>
+            </div>
           )}
-          <Button
-            onClick={onClose}
-            className="px-6 py-2 border border-gray-300"
-          >
-            Đóng
-          </Button>
         </div>
       </div>
     </div>

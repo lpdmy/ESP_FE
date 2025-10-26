@@ -33,12 +33,39 @@ export const useStaffApi = () => {
       { setLoading: setSaveLoading, setError }
     );
   });
+  const updateStaff = useRef(async (payload) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      staffService.updateStaff.bind(staffService),
+      [token, payload],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const deleteStaff = useCallback(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      staffService.deleteStaff.bind(staffService),
+      [token, id],
+      { setLoading: setSaveLoading, setError }
+    );
+  }, []);
+  const recoveryStaff = useCallback(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      staffService.recoveryStaff.bind(staffService),
+      [token, id],
+      { setLoading: setSaveLoading, setError }
+    );
+  }, []);
   return {
     staffLoading,
     saveLoading,
     error,
     getAllStaff,
     getStaffById,
-    createStaff : createStaff.current
+    createStaff : createStaff.current,
+    updateStaff: updateStaff.current,
+    deleteStaff,
+    recoveryStaff
   };
 };
