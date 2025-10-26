@@ -32,6 +32,21 @@ export default function Sidebar() {
       : "U";
 
   const menuItems = SIDEBAR_NAVIGATION;
+
+  const handleNavigation = (item) => {
+    // Special handling for "Lớp học của tôi" - redirect to user's specific class
+    if (item.key === "my-class" && user?.classGroupId) {
+      navigate(`/my-classes/${user.classGroupId}`)
+      return
+    }
+    
+    // Handle navigation with paths array
+    const paths = Array.isArray(item.paths) ? item.paths : [item.href];
+    if (paths[0]) {
+      navigate(paths[0])
+    }
+  }
+
   
   const handleClubByUser = useCallback(async () => {
     try {
@@ -91,13 +106,19 @@ export default function Sidebar() {
       <Card className="p-2">
         <nav className="space-y-1">
           {menuItems.map((item, index) => {
-            const paths = Array.isArray(item.paths) ? item.paths : [item.path];
-
-            const isActive = paths.some((p) =>
-              p === "/"
-                ? location.pathname === "/" // chỉ đúng trang chủ
-                : location.pathname.startsWith(p)
-            );
+            // Get paths array for navigation
+            const paths = Array.isArray(item.paths) ? item.paths : [item.href];
+            
+            // Check if current path matches the item's paths
+            // Special handling for "Lớp học của tôi" to match both /my-classes and /my-classes/:id
+            const isMyClassActive = item.key === "my-class" && location.pathname.startsWith("/my-classes");
+            const isActive = isMyClassActive 
+              ? true
+              : paths.some((p) =>
+                  p === "/"
+                    ? location.pathname === "/" // chỉ đúng trang chủ
+                    : location.pathname.startsWith(p)
+                );
 
             return (
               <Button
@@ -107,7 +128,7 @@ export default function Sidebar() {
                     ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
                     : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"
                   }`}
-                onClick={() => navigate(paths[0])}
+                onClick={() => handleNavigation(item)}
               >
                 <item.icon className="h-5 w-5 mr-3" />
                 <span className="flex-1 text-left">{item.label}</span>

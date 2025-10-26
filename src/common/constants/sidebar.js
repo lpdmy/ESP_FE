@@ -53,7 +53,8 @@ export const SIDEBAR_NAVIGATION = [
   {
     label: "Lớp học của tôi",
     icon: GraduationCap,
-    paths: ["/my-class"],
+    key: "my-class",
+    paths: ["/my-classes"],
   },
   {
     label: "Tin nhắn",
@@ -88,3 +89,16 @@ export const SIDEBAR_NAVIGATION = [
 ];
 
 export const SIDEBAR_DEFAULT_TAB = "Trang chủ";
+
+// Active tab constants for easy reference
+export const ACTIVE_TABS = {
+  HOME: "Trang chủ",
+  FRIENDS: "Bạn bè",
+  EVENTS: "Sự kiện",
+  TIMELINE: "Dòng thời gian",
+  ACTIVITIES: "Hoạt động",
+  REWARDS: "Đổi thưởng",
+  MY_CLASS: "Lớp học của tôi",
+  MESSAGES: "Tin nhắn",
+  SETTINGS: "Cài đặt"
+};
