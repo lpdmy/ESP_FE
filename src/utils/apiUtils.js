@@ -1,7 +1,7 @@
 import { API_CONFIG } from '@/config/api.config';
 import { toast } from 'react-toastify';
 
-const API_BASE_URL = API_CONFIG.BASE_URL || 'https://localhost:7084';
+const API_BASE_URL = API_CONFIG.BASE_HUB_URL || 'https://localhost:7084';
 
 // Get token from localStorage
 const getAuthToken = () => {
