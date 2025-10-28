@@ -1,9 +1,9 @@
 import AdminPageLayout from "@/features/admin/components/AdminPageLayout"
-import ClubClassManagement from "@/features/admin/components/ClubManagement/page"
+import ClassManagement from "@/features/admin/components/ClassManagement/page"
 export default function ClassManagementPage() {
   return (
     <AdminPageLayout>
-      <ClubClassManagement />
+      <ClassManagement />
     </AdminPageLayout>
   )
 }

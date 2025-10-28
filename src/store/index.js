@@ -6,11 +6,12 @@ import userReducer from "./user/userSlice";
 import pointReducer from "./star-point/pointSlice";
 import notificationReducer from "./notification/notificationSlice";
 import chatReducer from "./chat/chatSlice";
+import systemAnnouncementsReducer from "./slices/systemAnnouncementsSlice";
 
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["user", "points"], 
+  whitelist: ["user", "points"],
 };
 
 const rootReducer = combineReducers({
@@ -18,6 +19,7 @@ const rootReducer = combineReducers({
   points: pointReducer,
   notifications: notificationReducer,
   chat: chatReducer,
+  systemAnnouncements: systemAnnouncementsReducer
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

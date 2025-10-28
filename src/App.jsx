@@ -8,6 +8,7 @@ import { loadNotificationsFromStorage } from "./store/notification/notificationS
 import { initGlobalNotification } from "./common/signalr/useGlobalNotification";
 import { useSelector } from "react-redux";
 import { getUserId } from "./common/utils/userUtils";
+import SystemAnnouncementProvider from "./components/SystemAnnouncementProvider";
 
 export default function App() {
   const dispatch = useDispatch();
@@ -22,7 +23,9 @@ export default function App() {
 
   return (
     <Router>
-      <AppRoutes />
+      <SystemAnnouncementProvider>
+        <AppRoutes />
+      </SystemAnnouncementProvider>
       <ToastContainer
         position="top-right"
         autoClose={5000}

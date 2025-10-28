@@ -53,12 +53,12 @@ const navigation = [
   },
   {
     name: "Thông báo",
-    href: "/admin/notifications",
+    href: "/admin/system-news-and-notices",
     icon: Bell,
   },
   {
     name: "Trung tâm kiểm duyệt",
-    href: "/admin/notifications",
+    href: "/admin/moderation",
     icon: Shield,
   },
 ]

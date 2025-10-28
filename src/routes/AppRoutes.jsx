@@ -9,7 +9,8 @@ import { clubRoutes } from "./ClubRoutes";
 import { starPointRoutes } from "./StarPointRoutes";
 import { chatRoutes } from "./ChatRoutes";
 import { notificationRoutes } from "./NotificationRoutes";
-
+import { adminSystemNewsAndNoticesRoutes } from "./AdminSystemNewsAndNoticesRoutes";
+import { systemNewsAndNoticesRoutes } from "./SystemNewsAndNoticesRoutes";
 export default function AppRoutes() {
   return (
     <Routes>
@@ -23,6 +24,8 @@ export default function AppRoutes() {
       {...starPointRoutes}
       {...chatRoutes}
       {...notificationRoutes}
+      {...adminSystemNewsAndNoticesRoutes}
+      {...systemNewsAndNoticesRoutes}
     </Routes>
   );
 }

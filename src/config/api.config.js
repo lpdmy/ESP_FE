@@ -83,7 +83,8 @@ export const API_CONFIG = {
   },
 
   UPLOAD: {
-    UPLOAD_IMAGE: '/upload'
+    UPLOAD_IMAGE: '/upload',
+    UPLOAD_FILE: '/upload/file'
   },
   // Search endpoints  
   SEARCH: {
@@ -108,6 +109,8 @@ export const API_CONFIG = {
     APPROVE_POST:'/post/approve/{id}',
     CLUB_POST:'/post/club',
     REJECT_POST:'/post/reject',
+    GET_POSTS_BY_CLASS_GROUP: '/post/classgroup/{id}',
+    GET_ALL_POSTS: '/post',
   },
   COLLECTION: {
     CREATE_COLLECTION: '/collection',
@@ -185,7 +188,38 @@ export const API_CONFIG = {
     ROOMS: '/chat/rooms',
     MESSAGES: '/chat/messages',
     GET_MESSAGES: '/chat/messages/{roomId}',
-    MARK_AS_READ: '/chat/messages/{roomId}/read',
+    MARK_AS_READ: '/chat/messages/{roomId}/read', 
+  },
+  // Class Group endpoints
+  CLASS_GROUP: {
+    LIST: '/classgroup',
+    GET_BY_ID: '/classgroup/{id}',
+    GET_DETAIL: '/classgroup/{id}/detail',
+    GET_BY_NAME: '/classgroup/by-name',
+    DASHBOARD: '/classgroup/dashboard',
+    BY_GRADE: '/classgroup/by-grade/{grade}',
+    WITHOUT_GRADE: '/classgroup/without-grade',
+    BY_ACADEMIC_YEAR: '/classgroup/by-academic-year/{academicYearId}',
+    WITHOUT_ACADEMIC_YEAR: '/classgroup/without-academic-year',
+    DELETED: '/classgroup/deleted',
+    FILTER: '/classgroup/filter',
+    CHECK_NAME_EXISTS: '/classgroup/check-name-exists',
+    CREATE: '/classgroup',
+    UPDATE: '/classgroup/{id}',
+    DELETE: '/classgroup/{id}',
+    // Student management endpoints
+    GET_STUDENTS: '/classgroup/{id}/students',
+    ADD_STUDENT: '/classgroup/{id}/students',
+    REMOVE_STUDENT: '/classgroup/{id}/students/{studentId}',
+    // Homeroom Teacher management endpoints
+    ASSIGN_HOMEROOM_TEACHER: '/classgroup/{id}/homeroom-teacher',
+    REMOVE_HOMEROOM_TEACHER: '/classgroup/{id}/homeroom-teacher',
+    GET_HOMEROOM_TEACHER: '/classgroup/{id}/homeroom-teacher',
+    // Academic Year endpoints
+    GET_ACADEMIC_YEARS: '/classgroup/academic-years',
+    GET_CURRENT_ACADEMIC_YEAR: '/classgroup/academic-years-current',
+    // Current Class endpoints
+    GET_CURRENT_CLASS: '/classgroup/current-class'
   }
 };
 
