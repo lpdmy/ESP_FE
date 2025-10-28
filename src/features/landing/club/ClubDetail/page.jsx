@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/common/components/ui/card";
+import { getUserId } from "@/common/utils/userUtils";
 import { Button } from "@/common/components/ui/button";
 import { Badge } from "@/common/components/ui/badge";
 import {
@@ -97,7 +98,7 @@ export default function ClubDetail() {
     return text.slice(0, maxLength) + "...";
   };
   const user = useSelector((state) => state.user.user);
-  const currentUserId = user?.userId || user?.id || 1;
+  const currentUserId = getUserId(user) || 1;
   const handleClubDetail = async () => {
     try {
       const response = await getClubDetail(clubid);

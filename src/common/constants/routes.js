@@ -43,5 +43,12 @@ export const ROUTES = {
   SEARCH:{
     STUDENT:"/Search/students",
     TEACHER:"/Search/teachers"
+  },
+  CHAT: {
+    CHAT_PAGE: "/chat/:roomId",
+    INBOX: "/chat",
+  },
+  NOTIFICATION: {
+    LIST_NOTIFICATION: "/notifications",
   }
 };

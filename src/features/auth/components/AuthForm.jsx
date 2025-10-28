@@ -13,6 +13,8 @@ import { setPoints } from "@/store/star-point/pointSlice";
 import { ROUTES } from "@/common/constants/routes"
 import { ROLE } from "@/common/constants/roles"
 import { starPointService } from "@/features/admin/services/starpoint.service"
+import { initGlobalNotification } from "@/common/signalr/useGlobalNotification"
+import { addNotification } from "@/store/notification/notificationSlice"
 
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true)
@@ -51,6 +53,8 @@ export default function AuthForm() {
         const resp = await starPointService.getUserPoints(resultUser?.data.id);
         dispatch(setPoints(resp.data.points ?? 0));
 
+        initGlobalNotification(resultUser?.data.id, dispatch);
+        
         if (resultUser?.data.role == ROLE.ADMIN) {
           navigate(ROUTES.ADMIN.USER_MANAGEMENT);
         }

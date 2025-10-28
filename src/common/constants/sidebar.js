@@ -57,7 +57,7 @@ export const SIDEBAR_NAVIGATION = [
   {
     label: "Tin nhắn",
     icon: MessageSquare,
-    paths: ["/messages"],
+    paths: ['/chat'],
     count: 3,
   },
   {

@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/common/components/ui
 import { Loading, LoadingOverlay, LoadingCard } from "@/common/components/ui/loading"
 import { useToast } from "@/common/hooks/useToast"
 import { useProfileApi } from "@/features/user-profile/hooks/useProfileApi"
+import { getUserId } from "@/common/utils/userUtils"
 import CreatePostInput from "@/features/landing/post/CreatePostInput"
 import CreatePostModal from "@/features/landing/post/CreatePostModal"
 import UpdatePostModal from "@/features/landing/post/UpdatePostModal"
@@ -51,7 +52,7 @@ export default function TeacherProfile() {
     const { isOpen: isSortDropdownOpen, openMenu: openSortDropdown, closeMenu: closeSortDropdown, toggleMenu: toggleSortDropdown } = useDropdownMenu(false);
     const toast = useToast();
     const user = useSelector((state) => state.user.user);
-    const currentUserId = user?.userId || user?.id || 1;
+    const currentUserId = getUserId(user) || 1;
 
     // Profile API hook
     const { profileLoading, getMyTeacherProfile } = useProfileApi();

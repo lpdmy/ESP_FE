@@ -7,6 +7,8 @@ import { onboardingRoutes } from "./OnboardingRoutes";
 import { collectionsRoutes} from "./CollectionRoutes";
 import { clubRoutes } from "./ClubRoutes";
 import { starPointRoutes } from "./StarPointRoutes";
+import { chatRoutes } from "./ChatRoutes";
+import { notificationRoutes } from "./NotificationRoutes";
 
 export default function AppRoutes() {
   return (
@@ -19,6 +21,8 @@ export default function AppRoutes() {
       {...collectionsRoutes}
       {...clubRoutes}
       {...starPointRoutes}
+      {...chatRoutes}
+      {...notificationRoutes}
     </Routes>
   );
 }
