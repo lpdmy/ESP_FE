@@ -13,6 +13,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { clearUser } from "@/store/user/userSlice";
 import { ROUTES } from "@/common/constants/routes";
+import { disconnectNotificationHub } from "@/features/notifications/services/signalr/notificationHub";
 
 export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
   const user = useSelector((state) => state.user.user);
@@ -29,7 +30,9 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
 
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");
-
+    
+    disconnectNotificationHub();
+    disconnectChatHub();
     navigate(ROUTES.LOGIN);
   };
 

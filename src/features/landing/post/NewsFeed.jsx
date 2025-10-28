@@ -5,6 +5,7 @@ import CreatePostModal from './CreatePostModal';
 import UpdatePostModal from './UpdatePostModal';
 import DeletePostModal from './DeletePostModal';
 import { useSelector } from 'react-redux';
+import { getUserId } from '@/common/utils/userUtils';
 
 // Import mock data
 const postsData = [
@@ -221,7 +222,7 @@ export default function NewsFeed() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [posts, setPosts] = useState(postsData);
   const user = useSelector((state) => state.user.user);
-  const currentUserId = user?.userId || user?.id || 1; 
+  const currentUserId = getUserId(user) || 1; 
 
   const handleOpenModal = () => {
     setIsModalOpen(true);

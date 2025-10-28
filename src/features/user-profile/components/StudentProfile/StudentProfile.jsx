@@ -60,6 +60,7 @@ import PostCard from "@/features/landing/components/PostCard";
 import { Textarea } from "@/common/components/ui/textarea";
 import { usePostApi } from "@/features/landing/post/hooks/usePostApi";
 import { useSelector } from "react-redux";
+import { getUserId } from "@/common/utils/userUtils";
 
 export default function StudentProfile() {
   const [profile, setProfile] = useState(null);
@@ -80,7 +81,7 @@ export default function StudentProfile() {
 
   const toast = useToast();
   const user = useSelector((state) => state.user.user);
-  const currentUserId = user?.userId || user?.id || 1;
+  const currentUserId = getUserId(user) || 1;
 
   // Profile API hook
   const { profileLoading, getMyProfile } = useProfileApi();
