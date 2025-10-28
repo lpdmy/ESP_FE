@@ -49,7 +49,7 @@ export default function ChatDetail() {
             const room = response;
 
             // ✅ Lưu tin nhắn vào store
-            setMessages(roomId, room.messages || [])
+            setMessages(roomId, (room.messages || []).reverse());
 
             // ✅ Xác định người còn lại (friend)
             const currentUserId = getUserId(user)
@@ -226,7 +226,7 @@ export default function ChatDetail() {
     <LoadingCard isLoading={messagesLoading}>
 
       <div className="min-h-[100%] bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
-        <div className="max-w-7xl mx-auto flex flex-col h-[40rem]">
+        <div className="max-w-7xl mx-auto flex flex-col h-[calc(100vh-9rem)]">
           {/* Header */}
           <div className="bg-white/80 backdrop-blur-md border-b border-orange-100 p-4 flex items-center justify-between sticky top-0 z-10">
             <div className="flex items-center gap-3">
