@@ -290,7 +290,7 @@ export default function ClubDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Sidebar - Club Overview */}
           <div className="lg:col-span-3">
-            <div className="top-6 space-y-6">
+            <div className=" sticky top-24 space-y-6">
               <Card className="glass !bg-white">
                 <CardHeader>
                   <div className="flex items-center gap-2">
@@ -546,7 +546,7 @@ export default function ClubDetail() {
 
           {/* Right Sidebar - Members Quick View */}
           <div className="lg:col-span-3 ">
-            <div className="top-6 !bg-white">
+            <div className="top-24 !bg-white sticky">
               <Card className="glass">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

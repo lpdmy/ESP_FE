@@ -773,9 +773,7 @@ export default function ClubManage() {
                             : 0,
                       }));
                     };
-
                     const currentIndex = currentMediaIndex[id] || 0;
-
                     return (
                       <Card
                         key={id}
