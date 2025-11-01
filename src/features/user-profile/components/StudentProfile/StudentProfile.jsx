@@ -45,8 +45,10 @@ import {
   Video,
   Smile,
   Plus,
+  MessageCircle,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
+
 import { ROUTES } from "@/common/constants/routes";
 import { useState, useEffect } from "react";
 import {
@@ -61,11 +63,15 @@ import { Textarea } from "@/common/components/ui/textarea";
 import { usePostApi } from "@/features/landing/post/hooks/usePostApi";
 import { useSelector } from "react-redux";
 import { getUserId } from "@/common/utils/userUtils";
-
+import { useChatApi } from "@/features/chat/hooks/useChatApi";
 export default function StudentProfile() {
+  const { id } = useParams();
+  const { createRoom } = useChatApi();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
+  const [creatingRoom, setCreatingRoom] = useState(false);
   const [extraData, setExtraData] = useState({});
-  const [sortBy, setSortBy] =useState("newest");
+  const [sortBy, setSortBy] = useState("newest");
   const [post, setPost] = useState([]);
   const [postContent, setPostContent] = useState("");
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
@@ -78,19 +84,47 @@ export default function StudentProfile() {
     closeMenu: closeSortDropdown,
     toggleMenu: toggleSortDropdown,
   } = useDropdownMenu(false);
-
   const toast = useToast();
   const user = useSelector((state) => state.user.user);
   const currentUserId = getUserId(user) || 1;
 
   // Profile API hook
-  const { profileLoading, getMyProfile } = useProfileApi();
+  const { profileLoading, getMyProfile, getStudentProfileRef } =
+    useProfileApi();
   const { userPost, saveLoading, error } = usePostApi();
+  const createChatRoom = async (participantIds) => {
+    setCreatingRoom(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await createRoom(
+        {
+          participantIds: participantIds,
+        },
+        token
+      );
 
+      const roomId = res.id || res.roomId || res.data?.id;
+      if (!roomId) throw new Error("Phòng chat trả về id không hợp lệ");
+
+      navigate(`/chat/${roomId}`);
+    } catch (error) {
+      console.error("Create chat room error:", error);
+    } finally {
+      setCreatingRoom(false);
+    }
+  };
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const response = await getMyProfile();
+        let response;
+
+        if (id) {
+          // Nếu có id trên URL thì lấy profile theo id
+          response = await getStudentProfileRef(id);
+        } else {
+          // Nếu không có id thì lấy profile của người đang đăng nhập
+          response = await getMyProfile();
+        }
         const profileData = response.data;
         setProfile(profileData);
 
@@ -111,32 +145,31 @@ export default function StudentProfile() {
     };
 
     loadProfile();
-  }, []); // Empty dependency array to run only once
+  }, [id]); // Empty dependency array to run only once
   useEffect(() => {
-  const loadPost = async () => {
-    try {
-      const response = await userPost(sortBy);
-      setPost(response?.data || []);
-    } catch (error) {
-      console.error("❌ Lỗi khi load post:", error);
-    }
-  };
-  loadPost();
-}, [sortBy]); 
+    const loadPost = async () => {
+      try {
+        const response = await userPost(sortBy);
+        setPost(response?.data || []);
+      } catch (error) {
+        console.error("❌ Lỗi khi load post:", error);
+      }
+    };
+    loadPost();
+  }, [sortBy]);
 
   // CreatePostModal handlers
   const handleOpenCreatePostModal = () => {
     setIsCreatePostModalOpen(true);
   };
   const handleCreatePost = async (newPost) => {
-  try {
-    const response = await userPost(sortBy); // gọi lại API
-    setPost(response?.data || []);
-  } catch (error) {
-    console.error("❌ Lỗi khi reload bài đăng:", error);
-  }
-};
-
+    try {
+      const response = await userPost(sortBy); // gọi lại API
+      setPost(response?.data || []);
+    } catch (error) {
+      console.error("❌ Lỗi khi reload bài đăng:", error);
+    }
+  };
 
   const handleCloseCreatePostModal = () => {
     setIsCreatePostModalOpen(false);
@@ -154,16 +187,16 @@ export default function StudentProfile() {
 
   const handleUpdatePost = (updatedPost) => {
     // TODO: Implement update post logic
-    console.log('Update post:', updatedPost);
+    console.log("Update post:", updatedPost);
     setIsUpdateModalOpen(false);
     setSelectedPost(null);
   };
 
   const handleConfirmDelete = (postId) => {
-  setPost(prev => prev.filter(p => p.id !== postId));
-  setIsDeleteModalOpen(false);
-  setSelectedPost(null);
-};
+    setPost((prev) => prev.filter((p) => p.id !== postId));
+    setIsDeleteModalOpen(false);
+    setSelectedPost(null);
+  };
 
   const handleCloseUpdateModal = () => {
     setIsUpdateModalOpen(false);
@@ -266,13 +299,57 @@ export default function StudentProfile() {
                       </p>
                     </div>
                   </div>
-
-                  <Link to={ROUTES.USER_PROFILE.EDIT}>
-                    <Button className="btn-primary flex items-center gap-2">
-                      <Edit className="w-4 h-4" />
-                      {toast.PROFILE_MESSAGES.BUTTON.EDIT}
+                  {id && profile?.id !== currentUserId ? (
+                    // Nếu có id trong URL và id khác user hiện tại → hiển thị nút "Nhắn tin"
+                    <Button
+                      className={`flex items-center gap-2 border bg-orange-400 text-white transition-colors 
+    hover:!bg-orange-500 hover:!text-white
+    ${creatingRoom ? "opacity-70 cursor-not-allowed" : ""}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        createChatRoom([id, currentUserId]);
+                      }}
+                    >
+                      {creatingRoom ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                            ></path>
+                          </svg>
+                          <span>Đang mở chat...</span>
+                        </>
+                      ) : (
+                        <>
+                          <MessageCircle className="w-4 h-4" />
+                          Nhắn tin
+                        </>
+                      )}
                     </Button>
-                  </Link>
+                  ) : (
+                    // Nếu không có id (nghĩa là đang xem profile của chính mình)
+                    <Link to={ROUTES.USER_PROFILE.EDIT}>
+                      <Button className="btn-primary flex items-center gap-2">
+                        <Edit className="w-4 h-4" />
+                        {toast.PROFILE_MESSAGES.BUTTON.EDIT}
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -695,36 +772,42 @@ export default function StudentProfile() {
                       isLiked={p.isLikedByCurrentUser}
                       class={p.classGroupId || "Học sinh"}
                       time={p.createdAt}
-                       content={p.body}
-                       image={
-                         p.attachmentUrls && p.attachmentUrls.length > 0
-                           ? p.attachmentUrls[0]
-                           : null
-                       }
-                       images={p.attachmentUrls || []}
+                      content={p.body}
+                      image={
+                        p.attachmentUrls && p.attachmentUrls.length > 0
+                          ? p.attachmentUrls[0]
+                          : null
+                      }
+                      images={p.attachmentUrls || []}
                       likes={p.likeCount}
                       comments={p.comments?.length || 0}
                       hashtags={p.hashtags || []}
                       shares={0} // nếu backend chưa trả về shareCount
                       isVerified={true}
-                       createdBy={p.userId || currentUserId} // ID của người tạo bài đăng
-                       currentUserId={currentUserId} // ID của người dùng hiện tại
-                       onEdit={() => handleEditPost(p)}
-                       onDelete={() => handleDeletePost(p)}
-                       title={p.title}
-                     />
+                      createdBy={p.userId || currentUserId} // ID của người tạo bài đăng
+                      currentUserId={currentUserId} // ID của người dùng hiện tại
+                      onEdit={() => handleEditPost(p)}
+                      onDelete={() => handleDeletePost(p)}
+                      title={p.title}
+                    />
                   ))
                 ) : (
                   <>
                     {/* Demo posts khi chưa có data từ API */}
                     <PostCard
-                      author={profile?.firstName && profile?.lastName 
-                        ? `${profile.firstName} ${profile.lastName}` 
-                        : profile?.username || "Tôi"}
+                      author={
+                        profile?.firstName && profile?.lastName
+                          ? `${profile.firstName} ${profile.lastName}`
+                          : profile?.username || "Tôi"
+                      }
                       class={profile?.classGroupName || "Học sinh"}
                       time="2 giờ trước"
                       content="Hôm nay học lập trình React rất vui! Tạo được component đầu tiên rồi 🚀 #React #LậpTrình #HọcTập"
-                      images={["/Picturemockdata/DSC03778.jpg", "/Picturemockdata/DSC04766.jpg", "/Picturemockdata/IMG_1492.jpg"]}
+                      images={[
+                        "/Picturemockdata/DSC03778.jpg",
+                        "/Picturemockdata/DSC04766.jpg",
+                        "/Picturemockdata/IMG_1492.jpg",
+                      ]}
                       hashtags={["React", "LậpTrình", "HọcTập", "FPT"]}
                       album="Dự án React"
                       privacy="public"
@@ -734,25 +817,40 @@ export default function StudentProfile() {
                       isVerified={true}
                       createdBy={currentUserId}
                       currentUserId={currentUserId}
-                      onEdit={() => handleEditPost({
-                        id: 1,
-                        content: "Hôm nay học lập trình React rất vui! Tạo được component đầu tiên rồi 🚀 #React #LậpTrình #HọcTập",
-                        images: ["/Picturemockdata/DSC03778.jpg", "/Picturemockdata/DSC04766.jpg", "/Picturemockdata/IMG_1492.jpg"]
-                      })}
-                      onDelete={() => handleDeletePost({
-                        id: 1,
-                        content: "Hôm nay học lập trình React rất vui! Tạo được component đầu tiên rồi 🚀 #React #LậpTrình #HọcTập"
-                      })}
+                      onEdit={() =>
+                        handleEditPost({
+                          id: 1,
+                          content:
+                            "Hôm nay học lập trình React rất vui! Tạo được component đầu tiên rồi 🚀 #React #LậpTrình #HọcTập",
+                          images: [
+                            "/Picturemockdata/DSC03778.jpg",
+                            "/Picturemockdata/DSC04766.jpg",
+                            "/Picturemockdata/IMG_1492.jpg",
+                          ],
+                        })
+                      }
+                      onDelete={() =>
+                        handleDeletePost({
+                          id: 1,
+                          content:
+                            "Hôm nay học lập trình React rất vui! Tạo được component đầu tiên rồi 🚀 #React #LậpTrình #HọcTập",
+                        })
+                      }
                     />
 
                     <PostCard
-                      author={profile?.firstName && profile?.lastName 
-                        ? `${profile.firstName} ${profile.lastName}` 
-                        : profile?.username || "Tôi"}
+                      author={
+                        profile?.firstName && profile?.lastName
+                          ? `${profile.firstName} ${profile.lastName}`
+                          : profile?.username || "Tôi"
+                      }
                       class={profile?.classGroupName || "Học sinh"}
                       time="1 ngày trước"
                       content="Tham gia cuộc thi hackathon với team! Cảm ơn mọi người đã hỗ trợ 💻✨"
-                      images={["/Picturemockdata/IMG_1492.jpg", "/Picturemockdata/DSC03778.jpg"]}
+                      images={[
+                        "/Picturemockdata/IMG_1492.jpg",
+                        "/Picturemockdata/DSC03778.jpg",
+                      ]}
                       gif="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif"
                       hashtags={["Hackathon", "Teamwork", "LậpTrình", "FPT"]}
                       album="Cuộc thi hackathon"
@@ -763,19 +861,30 @@ export default function StudentProfile() {
                       isVerified={true}
                       createdBy={currentUserId}
                       currentUserId={currentUserId}
-                      onEdit={() => handleEditPost({
-                        id: 2,
-                        content: "Tham gia cuộc thi hackathon với team! Cảm ơn mọi người đã hỗ trợ 💻✨",
-                        images: ["/Picturemockdata/IMG_1492.jpg", "/Picturemockdata/DSC03778.jpg"],
-                        gif: "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif"
-                      })}
-                      onDelete={() => handleDeletePost({
-                        id: 2,
-                        content: "Tham gia cuộc thi hackathon với team! Cảm ơn mọi người đã hỗ trợ 💻✨"
-                      })}
+                      onEdit={() =>
+                        handleEditPost({
+                          id: 2,
+                          content:
+                            "Tham gia cuộc thi hackathon với team! Cảm ơn mọi người đã hỗ trợ 💻✨",
+                          images: [
+                            "/Picturemockdata/IMG_1492.jpg",
+                            "/Picturemockdata/DSC03778.jpg",
+                          ],
+                          gif: "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
+                        })
+                      }
+                      onDelete={() =>
+                        handleDeletePost({
+                          id: 2,
+                          content:
+                            "Tham gia cuộc thi hackathon với team! Cảm ơn mọi người đã hỗ trợ 💻✨",
+                        })
+                      }
                     />
 
-                    <p className="text-gray-500 italic mt-4">Demo posts - Sẽ hiển thị bài đăng thực từ API khi có data</p>
+                    <p className="text-gray-500 italic mt-4">
+                      Demo posts - Sẽ hiển thị bài đăng thực từ API khi có data
+                    </p>
                   </>
                 )}
               </div>

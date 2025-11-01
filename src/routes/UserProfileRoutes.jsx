@@ -8,12 +8,43 @@ import EditTeacherProfilePage from "@/pages/UserProfile/TeacherProfile/EditTeach
 import { ROUTES } from "@/common/constants/routes";
 
 export const profileRoutes = [
-    <Route element={<ProtectedRoute allowedRoles={[ROLE.STUDENT]} />}>
-        <Route key="user-profile" path={ROUTES.USER_PROFILE.PROFILE} element={<StudentProfilePage />} />,
-        <Route key="edit-user-profile" path={ROUTES.USER_PROFILE.EDIT} element={<EditStudentProfilePage />} />
-    </Route>,
-    <Route element={<ProtectedRoute allowedRoles={[ROLE.TEACHER]} />}>
-        <Route key="teacher-profile-alt" path={ROUTES.USER_PROFILE.TEACHER_PROFILE} element={<TeacherProfilePage />} />,
-        <Route key="edit-teacher-profile-alt" path={ROUTES.USER_PROFILE.EDIT_TEACHER} element={<EditTeacherProfilePage />} />
-    </Route>
+  <Route element={<ProtectedRoute allowedRoles={[ROLE.STUDENT]} />}>
+    <Route
+      key="user-profile"
+      path={ROUTES.USER_PROFILE.PROFILE}
+      element={<StudentProfilePage />}
+    />
+    ,
+    <Route
+      key="edit-user-profile"
+      path={ROUTES.USER_PROFILE.EDIT}
+      element={<EditStudentProfilePage />}
+    />
+  </Route>,
+  <Route element={<ProtectedRoute allowedRoles={[ROLE.TEACHER]} />}>
+    <Route
+      key="teacher-profile-alt"
+      path={ROUTES.USER_PROFILE.TEACHER_PROFILE}
+      element={<TeacherProfilePage />}
+    />
+    ,
+    <Route
+      key="edit-teacher-profile-alt"
+      path={ROUTES.USER_PROFILE.EDIT_TEACHER}
+      element={<EditTeacherProfilePage />}
+    />
+  </Route>,
+
+  <Route element={<ProtectedRoute allowedRoles={[ROLE.TEACHER , ROLE.STUDENT]} />}>
+  <Route
+    key="student-profile-id"
+    path={ROUTES.USER_PROFILE.PROFILEId}
+    element={<StudentProfilePage />}
+  />
+  <Route
+    key="teacher-profile-id"
+    path={ROUTES.USER_PROFILE.TEACHER_PROFILE_id}
+    element={<TeacherProfilePage />}
+  />
+</Route>
 ];
