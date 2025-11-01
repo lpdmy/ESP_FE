@@ -4,6 +4,8 @@ import storage from "redux-persist/lib/storage";
 
 import userReducer from "./user/userSlice";
 import pointReducer from "./star-point/pointSlice";
+import notificationReducer from "./notification/notificationSlice";
+import chatReducer from "./chat/chatSlice";
 import systemAnnouncementsReducer from "./slices/systemAnnouncementsSlice";
 
 const persistConfig = {
@@ -15,6 +17,8 @@ const persistConfig = {
 const rootReducer = combineReducers({
   user: userReducer,
   points: pointReducer,
+  notifications: notificationReducer,
+  chat: chatReducer,
   systemAnnouncements: systemAnnouncementsReducer
 });
 

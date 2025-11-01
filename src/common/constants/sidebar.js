@@ -59,8 +59,8 @@ export const SIDEBAR_NAVIGATION = [
   {
     label: "Tin nhắn",
     icon: MessageSquare,
-    paths: ["/messages"],
-    count: 3,
+    paths: ['/chat'],
+    // count: 3,
   },
   {
     label: "Thông báo hệ thống",

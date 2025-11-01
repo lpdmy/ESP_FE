@@ -151,13 +151,16 @@ export function LoadingCard({
 }) {
   if (isLoading) {
     return (
-      <div className={`p-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200 ${className}`}>
+      <div
+        className={`p-8 rounded-2xl border shadow-sm flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm border-orange-200 ${className}`}
+      >
         <div className="animate-in fade-in-0 slide-in-from-top-2 duration-300">
           <Loading text={text} size="lg" variant={variant} />
         </div>
       </div>
-    )
+    );
   }
 
-  return children
+  return children;
 }
+

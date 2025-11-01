@@ -20,6 +20,7 @@
     "@hello-pangea/dnd": "^17.0.0",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.2",
+    "@microsoft/signalr": "^9.0.6",
     "@payos/payos-checkout": "^1.0.8",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-dialog": "^1.1.15",

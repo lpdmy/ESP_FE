@@ -18,6 +18,24 @@ export const API_CONFIG = {
     return "https://esp-prod-api.yourdomain.com/api";
   })(),
 
+  BASE_HUB_URL: (() => {
+    const hostname = window.location.hostname;
+
+    // Development environment
+    if (hostname.includes("edusphere-dev")) {
+      return "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net";
+    }
+
+    // Local development
+    if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
+      return "https://localhost:7084";
+    }
+
+    // Production environment
+    return "https://esp-prod-api.yourdomain.com";
+  })(),
+
+
   // Auth endpoints
   AUTH: {
     LOGIN: '/auth/login',
@@ -162,6 +180,21 @@ export const API_CONFIG = {
     CREATE:"/auth/create-staff"
   },
 
+  NOTIFICATION: {
+    BASE: '/notification',
+    GET_BY_USER: '/notification/user',
+    MARK_AS_READ: '/notification/{id}/read',
+    ADD: '/notification',
+    ADD_TEST: '/notification/test'
+  },
+
+  // Chat endpoints
+  CHAT: {
+    ROOMS: '/chat/rooms',
+    MESSAGES: '/chat/messages',
+    GET_MESSAGES: '/chat/messages/{roomId}',
+    MARK_AS_READ: '/chat/messages/{roomId}/read', 
+  },
   // Class Group endpoints
   CLASS_GROUP: {
     LIST: '/classgroup',

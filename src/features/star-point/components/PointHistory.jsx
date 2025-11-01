@@ -57,7 +57,7 @@ const historyData = [
 
 export default function PointHistory() {
   const [tab, setTab] = useState("all");
-  const [totalPoints, setTotalPoints] = useState(10000); // có thể từ user info
+  const [totalPoints, setTotalPoints] = useState(0); // có thể từ user info
   const [historyData, setHistoryData] = useState([]);
   const { getPointHistory, error } = useStarPointApi();
   const [loading, setLoading] = useState(false);

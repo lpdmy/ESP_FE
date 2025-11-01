@@ -15,6 +15,9 @@ import { ROLE } from "@/common/constants/roles"
 import { starPointService } from "@/features/admin/services/starpoint.service"
 import { setPermissions } from "@/store/permission/permissionSlice"
 import { jwtDecode } from "jwt-decode"
+import { initGlobalNotification } from "@/common/signalr/useGlobalNotification"
+import { addNotification } from "@/store/notification/notificationSlice"
+
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
@@ -62,6 +65,7 @@ const PERMISSION_ROUTE_MAP = {
         dispatch(setPermissions(decoded.Permission))
         const resp = await starPointService.getUserPoints(resultUser?.data.id);
         dispatch(setPoints(resp.data.points ?? 0));
+        initGlobalNotification(resultUser?.data.id, dispatch);
         if (resultUser?.data.role === ROLE.ADMIN) {
         navigate(ROUTES.ADMIN.MAIN);
       } 
