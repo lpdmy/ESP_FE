@@ -206,38 +206,17 @@ export default function UserManagement() {
   
   const fetchUsers = async () => {
     try {
-      console.log("Fetching users with params:", { pageNumber, pageSize, searchTerm: actualSearchTerm, statusFilter, roleFilter });
-      
-      // Check current user info from Redux
-      console.log("Current user from Redux:", currentUser);
-      console.log("Current user role:", currentUser?.role);
-      
-      // Check if user has Admin role
-      if (currentUser?.role !== 0) {
-        console.error("User does not have Admin role. Current role:", currentUser?.role);
-        toast.error("Bạn không có quyền truy cập chức năng này");
-        return;
-      }
-      
       // Prepare filter parameters
       const statusParam = statusFilter === "all" ? null : parseInt(statusFilter);
       const roleParam = roleFilter === "all" ? null : roleFilter;
       
       // Send all parameters to backend for filtering and sorting
       const response = await getAllUsers(pageNumber, pageSize, actualSearchTerm, statusParam, roleParam, sortField, sortDirection);
-      console.log("API Response:", response);
-      
       if (response?.data) {
         // Backend returns PaginationResponseDto<UserDto>
         const userData = response.data.data || [];
         const totalCount = response.data.totalCount || 0;
-        
-        console.log("User data:", userData);
-        console.log("Total count:", totalCount);
-        
         const userArray = Array.isArray(userData) ? userData : [];
-        
-        // Backend now handles all filtering and sorting
         setUsers(userArray);
         setFilteredUsers(userArray);
         setTotalCount(totalCount);
@@ -248,14 +227,12 @@ export default function UserManagement() {
           await fetchTotalStats();
         }
       } else {
-        console.warn("No data in response:", response);
         setUsers([]);
         setFilteredUsers([]);
         setTotalCount(0);
         setTotalPages(0);
       }
     } catch (error) {
-      console.error("Error fetching users:", error);
       toast.error("Không thể tải danh sách người dùng");
       setUsers([]);
       setFilteredUsers([]);

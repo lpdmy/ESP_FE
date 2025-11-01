@@ -175,6 +175,11 @@ export const API_CONFIG = {
     PICKUP_REDEMPTION: "/redeems/{id}/pickup"
   },
 
+  STAFF:{
+    LINK:"/staff",
+    CREATE:"/auth/create-staff"
+  },
+
   NOTIFICATION: {
     BASE: '/notification',
     GET_BY_USER: '/notification/user',
@@ -220,6 +225,7 @@ export const API_CONFIG = {
     GET_CURRENT_ACADEMIC_YEAR: '/classgroup/academic-years-current',
     // Current Class endpoints
     GET_CURRENT_CLASS: '/classgroup/current-class'
+
   }
 };
 
