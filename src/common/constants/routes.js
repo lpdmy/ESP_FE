@@ -17,7 +17,13 @@ export const ROUTES = {
     SYSTEM_NEWS_AND_NOTICES: "/admin/system-news-and-notices",
     SYSTEM_NEWS_AND_NOTICES_DETAIL: "/admin/system-news-and-notices/:id",
     CLUB:"/admin/clubs",
-    STAFF:"/admin/staff"
+    STAFF:"/admin/staff",
+    ACTIVITIES:"/admin/activities",
+    CREATE_ACTIVITY:"/admin/activities/create",
+    EDIT_ACTIVITY:"/admin/activities/:id/edit",
+    AI_SCHEDULE:"/admin/activities/:id/ai-schedule",
+    CLASSES: 'admin/classes',
+    CLASS_DETAIL:'/admin/classes/:id'
   },
   USER_PROFILE: {
     PROFILE: "/profile",

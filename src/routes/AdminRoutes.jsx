@@ -10,6 +10,10 @@ import ProtectedRoute from "./ProtectedRoute";
 import RewardManagementPage from "@/pages/Admin/StarPointManagement/RewardManagementPage";
 import StaffManagementPage from "@/pages/Admin/StaffManagerPage";
 import { ROUTES } from "@/common/constants/routes";
+import CreateActivityPage from "@/pages/Admin/Activities/CreateActivityPage";
+import ActivityManagementPage from "@/pages/Admin/Activities/ActivityManagementPage";
+import EditActivityPage from "@/pages/Admin/Activities/EditActivityPage";
+import AISchedulePage from "@/pages/Admin/Activities/AISchedulePage";
 
 export const adminRoutes = [
   <Route
@@ -86,11 +90,31 @@ export const adminRoutes = [
     <Route
       key="club-manage"
       path={ROUTES.ADMIN.CLUB}
-      element={<ClassManagementPage />}
+      element={<ClubManagementPage />}
     />
   </Route>,
 
-  // 👨‍💼 Quản lý nhân viên
+  // 🏫 Quản lý Lớp
+  <Route
+    element={
+      <ProtectedRoute
+        allowedRoles={[ROLE.ADMIN, ROLE.STAFF]}
+        requiredPermissions={["MANAGE_CLASSES"]}
+      />
+    }
+    key="class-manage-route"
+  >
+    <Route
+      key="class-manage"
+      path={ROUTES.ADMIN.CLASSES}
+      element={<ClassManagementPage />}
+    />
+    <Route
+      key="class-detail"
+      path={ROUTES.ADMIN.CLASS_DETAIL}
+      element={<ClassDetailPage  />}
+    />
+  </Route>,
   <Route
     element={
       <ProtectedRoute
@@ -104,6 +128,36 @@ export const adminRoutes = [
       key="staff-manage"
       path={ROUTES.ADMIN.STAFF}
       element={<StaffManagementPage />}
+    />
+  </Route>,
+  <Route
+    element={
+      <ProtectedRoute
+        allowedRoles={[ROLE.ADMIN, ROLE.STAFF]}
+        requiredPermissions={["MANAGE_ACTIVITIES"]}
+      />
+    }
+    key="activity-manage-route"
+  >
+    <Route
+      key="activity-manage"
+      path={ROUTES.ADMIN.CREATE_ACTIVITY}
+      element={<CreateActivityPage />}
+    />
+    <Route
+      key="activity-manage"
+      path={ROUTES.ADMIN.ACTIVITIES}
+      element={<ActivityManagementPage />}
+    />
+    <Route
+      key="activity-edit"
+      path={ROUTES.ADMIN.EDIT_ACTIVITY}
+      element={<EditActivityPage />}
+    />
+    <Route
+      key="activity-ai-schedule"
+      path={ROUTES.ADMIN.AI_SCHEDULE}
+      element={<AISchedulePage />}
     />
   </Route>,
 ];
