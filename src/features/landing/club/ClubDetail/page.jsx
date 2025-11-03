@@ -48,7 +48,7 @@ import { LoadingOverlay } from "@/common/components/ui/loading";
 import { useDialog } from "@/common/components/ui/dialog";
 import JoinClubModal from "../Modal/JoinClubModal/page";
 import { useToast } from "@/common/hooks/useToast";
-
+import { ROUTES } from '@/common/constants/routes';
 import { LeaveClubDialogConfirm } from "../Modal/LeaveClubModal/page";
 const clubActivities = []; // 👈 Giả sử chưa có hoạt động
 import CreatePostInput from "../../post/CreatePostInput";
@@ -111,6 +111,16 @@ export default function ClubDetail() {
       console.log(error);
     }
   };
+  const getProfileRoute = (user) => {
+      console.log("User object:", user);
+      const role = Number(user?.userRole);
+    switch (role) {
+      case 2:
+        return `${ROUTES.USER_PROFILE.TEACHER_PROFILE}/${user.userId}`;
+      default:
+        return `${ROUTES.USER_PROFILE.PROFILE}/${user.userId}`;
+    }
+  }
   const handleDeletePost = (post) => {
     setSelectedPost(post);
     setIsDeleteModalOpen(true);
@@ -567,6 +577,7 @@ export default function ClubDetail() {
                       <div
                         key={m.userId}
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 transition-colors"
+                        onClick={()=>navigate(getProfileRoute(m))}
                       >
                         <Avatar className="w-10 h-10">
                           <AvatarImage
