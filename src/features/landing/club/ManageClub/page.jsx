@@ -128,13 +128,21 @@ export default function ClubManage() {
   const [pageSize, setPageSize] = useState(10);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [searchMemberTerm, setSearchMemberTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [pageSizeMember, setPageSizeMember] = useState(9);
+  const [currentPage, setCurrentPage] = useState(1);
   const filteredMembers =
   clubInfo?.members?.filter(
     (member) =>
       member.role !== 'Mentor' &&
       member.fullName.toLowerCase().includes(searchMemberTerm.toLowerCase())
-  ) || [];
-
+    ) || [];
+  const totalPages = Math.ceil(filteredMembers.length / pageSizeMember);
+  const pagedMembers = filteredMembers.slice(
+    (currentPage - 1) * pageSizeMember,
+    currentPage * pageSizeMember
+  );
   const handleChangeRole = (vaitro) => {
     const mapping = {
       President: "Chủ nhiệm",
@@ -177,6 +185,21 @@ export default function ClubManage() {
       toast.loadPostFail();
     }
   };
+  const openModal = (member) => {
+    setSelectedMember(member);
+    console.log(member)
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedMember(null);
+  };
+
+  const confirmTransfer = () => {
+    handlePromoteToPresident(selectedMember.userId);
+    closeModal();
+  };
   const handlePromoteToPresident = async (userid) => {
     try {
       await changeRole(userid, id);
@@ -197,7 +220,11 @@ export default function ClubManage() {
       await inviteMentor(payload);
       toast.inviteMentorSuccess();
     } catch (error) {
-      toast.inviteMentorFail();
+      if (error.statusCode == 400) {
+        toast.showError(error.message);
+      } else {
+        toast.inviteMentorFail();
+      }
     }
   };
 
@@ -269,6 +296,9 @@ export default function ClubManage() {
   useEffect(() => {
     handleGetClubDetail();
   }, []);
+  useEffect(() => {
+  setCurrentPage(1);
+}, [searchMemberTerm]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -371,7 +401,7 @@ export default function ClubManage() {
           </TabsContent>
           {/* Members Tab */}
           <TabsContent value="members">
-            <Card className="glass !bg-white">
+            <Card className="glass !bg-white ">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg font-semibold">
@@ -386,14 +416,14 @@ export default function ClubManage() {
                 </div>
               </CardHeader>
 
-              <CardContent>
+              <CardContent className="max-h-[calc(100vh-450px)] overflow-y-auto">
                 {/* Grid container */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredMembers.map((member) => (
+                  {pagedMembers.map((member) => (
                     <div
                       key={member.userId}
                       className="flex items-center justify-between border border-gray-200 rounded-xl p-4 bg-gradient-to-br from-white to-orange-50 hover:shadow-md transition-all"
-                      
+                      onClick={()=>setSelectedMember(member)}
                     >
                       {/* Left: Avatar + info */}
                       <div className="flex items-center gap-3"
@@ -459,10 +489,7 @@ export default function ClubManage() {
                               </button>
 
                               <button
-                                onClick={() => {
-                                  handlePromoteToPresident(member.userId);
-                                  setOpenMenuId(null);
-                                }}
+                                onClick={() => openModal(member)}
                                 className="flex items-center w-full px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 transition"
                               >
                                 <Settings className="w-4 h-4 mr-2" />
@@ -474,6 +501,29 @@ export default function ClubManage() {
                       )}
                     </div>
                   ))}
+                </div>
+                <div className="flex justify-center items-center gap-2 mt-6">
+                  <button
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 bg-orange-400 rounded-lg hover:bg-orange-600 disabled:opacity-50"
+                  >
+                    Trước
+                  </button>
+                  <span>
+                    Trang {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 bg-orange-400 rounded-lg hover:bg-orange-600 disabled:opacity-50"
+                  >
+                    Sau
+                  </button>
                 </div>
               </CardContent>
             </Card>
@@ -789,9 +839,7 @@ export default function ClubManage() {
                             : 0,
                       }));
                     };
-
                     const currentIndex = currentMediaIndex[id] || 0;
-
                     return (
                       <Card
                         key={id}
@@ -1168,6 +1216,34 @@ export default function ClubManage() {
           </TabsContent>
         </Tabs>
       </div>
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/30 z-[9999] flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-[90%] max-w-md animate-scaleIn">
+            <h3 className="text-xl font-bold text-gray-800 mb-2">
+              Xác Nhận Chuyển Quyền
+            </h3>
+            <p className="text-gray-700">
+              Bạn có chắc muốn chuyển quyền
+              <b> Chủ nhiệm</b> cho <strong>{selectedMember?.fullName}</strong>{" "}
+              không?
+            </p>
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                onClick={closeModal}
+                className="px-2 py-2 rounded rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmTransfer()}
+                className="px-2 py-2 rounded rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

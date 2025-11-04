@@ -4,6 +4,7 @@ import { POST_MESSAGES } from '../constants/messages/post'
 import { COLLECTION_MESSAGES } from '../constants/messages/collection'
 import { CLUB_MESSAGES } from '../constants/messages/club'
 import { COMMENT_MESSAGE } from '../constants/messages/comment'
+import { STAFF_MESSAGE } from '../constants/messages/staff'
 
 export const useToast = () => {
   const showSuccess = (message, options = {}) => {
@@ -106,12 +107,23 @@ export const useToast = () => {
   const approveCreationSucces = () =>showSuccess(CLUB_MESSAGES.ERROR.APPROVE_CREATION)
   const rejectCreationRequsetSuccess = () =>showError(CLUB_MESSAGES.SUCCESS.REJECT_CREATION)
   const inviteMentorSuccess = () =>showSuccess(CLUB_MESSAGES.SUCCESS.INVITE_MENTOR)
-  const inviteMentorFail = () => showError(CLUB_MESSAGES.SUCCESS.INVITE_MENTOR)
+  const inviteMentorFail = () => showError(CLUB_MESSAGES.ERROR.INVITE_MENTOR)
   const changeRoleFail = () => showError(CLUB_MESSAGES.ERROR.CHANGE_ROLE)
   const changeRoleSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.CHANGE_ROLE)
   const loadPostFail = ()=>showError(CLUB_MESSAGES.ERROR.LOAD_POST)
   const deleteClubFail = ()=>showError(CLUB_MESSAGES.ERROR.DELETE_CLUB)
   const deleteClubSuccess = ()=>showSuccess(CLUB_MESSAGES.SUCCESS.DELETE_CLUB)
+  const createStaffSuccess = ()=>showSuccess(STAFF_MESSAGE.SUCCESS.CREATE)
+  const createStaffFail = ()=>showError(STAFF_MESSAGE.ERROR.CREATE)
+  const updateStaffFail =()=>showError(STAFF_MESSAGE.ERROR.UPDATE)
+  const updateStaffSuccess =()=>showSuccess(STAFF_MESSAGE.SUCCESS.UPDATE)
+  const deleteStaffSuccess =()=>showSuccess(STAFF_MESSAGE.SUCCESS.DELETE)
+  const deleteStaffFail =()=>showSuccess(STAFF_MESSAGE.ERROR.DELETE)
+  const recoveryStaffSuccess =()=>showSuccess(STAFF_MESSAGE.SUCCESS.RECOVERY)
+  const recoveryStaffFail =()=>showSuccess(STAFF_MESSAGE.ERROR.RECOVERY)
+  const approveInvitationSuccess =()=>showSuccess(CLUB_MESSAGES.SUCCESS.APPROVE_INVITAION)
+  const approveInvitationFail =()=>showError(CLUB_MESSAGES.ERROR.APPROVE_INVITAION)
+
 
   return {
     // Basic toast methods
@@ -172,6 +184,17 @@ export const useToast = () => {
     loadPostFail,
     deleteClubFail,
     deleteClubSuccess,
+    createStaffSuccess,
+    createStaffFail,
+    updateStaffFail,
+    updateStaffSuccess,
+    deleteStaffFail,
+    deleteStaffSuccess,
+    recoveryStaffSuccess,
+    recoveryStaffFail,
+    approveInvitationSuccess,
+    approveInvitationFail,
+    
     // Direct access to messages
     PROFILE_MESSAGES,
     AUTH_MESSAGES,

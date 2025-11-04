@@ -29,6 +29,11 @@ export function useProfileApi() {
   });
   const getStudentProfileRef = useRef(async (id) => {
     const token = localStorage.getItem('token');
+    return executeApiCall(userService.getMyTeacherProfile.bind(userService), [id,token], { setLoading: setProfileLoading, setError });
+  });
+
+  const getStudentProfileRef = useRef(async (id) => {
+    const token = localStorage.getItem('token');
     return executeApiCall(userService.getStudentProfileById.bind(userService), [id,token], { setLoading: setProfileLoading, setError });
   });
   const getTeacherProfileRef = useRef(async (id) => {
@@ -43,6 +48,9 @@ export function useProfileApi() {
     updateMyPersonalInfo: updateMyPersonalInfoRef.current,
     getMyTeacherProfile: getMyTeacherProfileRef.current,
     updateMyTeacherProfile: updateMyTeacherProfileRef.current,
+    getStudentProfileRef : getStudentProfileRef.current,
+    clearError: () => setError(null),
+    
     getStudentProfileRef : getStudentProfileRef.current,
     getTeacherProfileRef: getTeacherProfileRef.current,
     clearError: () => setError(null)

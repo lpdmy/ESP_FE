@@ -142,7 +142,7 @@ export const API_CONFIG = {
     CLUB_INVITE_MENTOR:'/join-request/invite-mentor',
     CLUB_GET_INVITATION: '/join-request/user',
     CLUB_CHANGE_ROLE:'/club-member/change-role',
-    CLUB_DELETE:'/club'
+    CLUB_DELETE:'/club',
   },
   COMMENT:{
     CREATE_COMMENT:'/comment',
@@ -175,6 +175,11 @@ export const API_CONFIG = {
     GET_ALL_REDEMPTIONS_ADMIN: "/redeems/admin",
     GET_MY_REDEMPTIONS: "/redeems/me",
     PICKUP_REDEMPTION: "/redeems/{id}/pickup"
+  },
+
+  STAFF:{
+    LINK:"/staff",
+    CREATE:"/auth/create-staff"
   },
 
   NOTIFICATION: {
@@ -222,6 +227,7 @@ export const API_CONFIG = {
     GET_CURRENT_ACADEMIC_YEAR: '/classgroup/academic-years-current',
     // Current Class endpoints
     GET_CURRENT_CLASS: '/classgroup/current-class'
+
   }
 };
 
