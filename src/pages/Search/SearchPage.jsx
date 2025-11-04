@@ -14,6 +14,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { clearUser } from '@/store/user/userSlice';
 import PostCard from '@/features/landing/components/PostCard';
+import { disconnectNotificationHub } from '@/features/notifications/services/signalr/notificationHub';
+import { disconnectChatHub } from '@/common/signalr/chatHub';
+import { useChatApi } from '@/features/chat/hooks/useChatApi';
+import { getUserId } from '@/common/utils/userUtils';
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -41,6 +45,8 @@ export default function SearchPage() {
     dispatch(clearUser());
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");
+    disconnectChatHub();
+    disconnectNotificationHub();
     navigate(ROUTES.LOGIN);
   };
 
@@ -508,6 +514,12 @@ const SearchResults = ({ results, activeFilter, query, onFilterChange }) => {
 
 // Individual Search Result List Item (Facebook-style)
 const SearchResultListItem = ({ result, type, color, query, onClick }) => {
+  const navigate = useNavigate();
+  const toast = useToast();
+  const [creatingRoom, setCreatingRoom] = useState(false);
+  const { createRoom } = useChatApi();
+  const user = useSelector((state) => state.user.user);
+  const userId = getUserId(user);
   const getResultContent = () => {
     switch(type) {
       case 'users':
@@ -552,6 +564,38 @@ const SearchResultListItem = ({ result, type, color, query, onClick }) => {
   };
 
   const content = getResultContent();
+
+  // safe toast helper (server / hook may expose different API shapes)
+  const showError = (message) => {
+    if (toast) {
+      if (typeof toast.error === 'function') return toast.error(message);
+      if (typeof toast === 'function') return toast(message);
+      if (typeof toast.show === 'function') return toast.show({ type: 'error', message });
+    }
+    // fallback
+    alert(message);
+  };
+
+  // Create chat room with user and navigate to it
+  const createChatRoom = async (participantIds) => {
+    setCreatingRoom(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await createRoom({
+        participantIds: participantIds
+      }, token);
+
+      const roomId = res.id || res.roomId || res.data?.id;
+      if (!roomId) throw new Error('Phòng chat trả về id không hợp lệ');
+
+      navigate(`/chat/${roomId}`);
+    } catch (error) {
+      console.error('Create chat room error:', error);
+      showError(error?.message || 'Không thể bắt đầu trò chuyện. Vui lòng thử lại.');
+    } finally {
+      setCreatingRoom(false);
+    }
+  };
 
   // For posts, render PostCard component
   if (type === 'posts') {
@@ -620,11 +664,23 @@ const SearchResultListItem = ({ result, type, color, query, onClick }) => {
         <button 
           onClick={(e) => {
             e.stopPropagation();
-            onClick();
+            // If this is a user item, start/create chat room and navigate there
+            if (type === 'users') {
+              if (!result.id) {
+                toast.error('Người dùng không hợp lệ');
+                return;
+              }
+              createChatRoom([result.id, userId]);
+              return;
+            }
+
+            // default behaviour for other types
+            onClick && onClick();
           }}
-          className={`px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors`}
+          disabled={creatingRoom}
+          className={`px-4 py-2 text-sm font-medium text-white ${creatingRoom ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} rounded-lg transition-colors`}
         >
-          {content.action}
+          {creatingRoom ? 'Đang tạo...' : content.action}
         </button>
       </div>
     </div>

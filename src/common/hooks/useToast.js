@@ -4,6 +4,7 @@ import { POST_MESSAGES } from '../constants/messages/post'
 import { COLLECTION_MESSAGES } from '../constants/messages/collection'
 import { CLUB_MESSAGES } from '../constants/messages/club'
 import { COMMENT_MESSAGE } from '../constants/messages/comment'
+import { STAFF_MESSAGE } from '../constants/messages/staff'
 
 export const useToast = () => {
   const showSuccess = (message, options = {}) => {
@@ -112,6 +113,15 @@ export const useToast = () => {
   const loadPostFail = ()=>showError(CLUB_MESSAGES.ERROR.LOAD_POST)
   const deleteClubFail = ()=>showError(CLUB_MESSAGES.ERROR.DELETE_CLUB)
   const deleteClubSuccess = ()=>showSuccess(CLUB_MESSAGES.SUCCESS.DELETE_CLUB)
+  const createStaffSuccess = ()=>showSuccess(STAFF_MESSAGE.SUCCESS.CREATE)
+  const createStaffFail = ()=>showError(STAFF_MESSAGE.ERROR.CREATE)
+  const updateStaffFail =()=>showError(STAFF_MESSAGE.ERROR.UPDATE)
+  const updateStaffSuccess =()=>showSuccess(STAFF_MESSAGE.SUCCESS.UPDATE)
+  const deleteStaffSuccess =()=>showSuccess(STAFF_MESSAGE.SUCCESS.DELETE)
+  const deleteStaffFail =()=>showSuccess(STAFF_MESSAGE.ERROR.DELETE)
+  const recoveryStaffSuccess =()=>showSuccess(STAFF_MESSAGE.SUCCESS.RECOVERY)
+  const recoveryStaffFail =()=>showSuccess(STAFF_MESSAGE.ERROR.RECOVERY)
+
 
   return {
     // Basic toast methods
@@ -172,6 +182,15 @@ export const useToast = () => {
     loadPostFail,
     deleteClubFail,
     deleteClubSuccess,
+    createStaffSuccess,
+    createStaffFail,
+    updateStaffFail,
+    updateStaffSuccess,
+    deleteStaffFail,
+    deleteStaffSuccess,
+    recoveryStaffSuccess,
+    recoveryStaffFail,
+    
     // Direct access to messages
     PROFILE_MESSAGES,
     AUTH_MESSAGES,

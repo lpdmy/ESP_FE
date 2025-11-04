@@ -13,7 +13,11 @@ export const ROUTES = {
     MAIN: "/admin",
     REWARDS: "/admin/rewards",
     IMPORT_USERS: "/admin/users/import",
-    CLUB:"/admin/clubs"
+    CLUB: "/admin/clubs",
+    SYSTEM_NEWS_AND_NOTICES: "/admin/system-news-and-notices",
+    SYSTEM_NEWS_AND_NOTICES_DETAIL: "/admin/system-news-and-notices/:id",
+    CLUB:"/admin/clubs",
+    STAFF:"/admin/staff"
   },
   USER_PROFILE: {
     PROFILE: "/profile",
@@ -24,24 +28,35 @@ export const ROUTES = {
   ONBOARDING: {
     ONBOARDING: "/onboarding",
   },
-  COLLECTION:{
-    LIST_COLLECTION : "/list-collection",
+  COLLECTION: {
+    LIST_COLLECTION: "/list-collection",
     COLLECTION_DETAIL: "/collection-detail/:id"
   },
-  CLUB:{
-    CREATE_CLUB:"/club/create-club-creation",
-    LIST_CLUB:"/club/list-club",
-    CLUB_DETAIL:"/club/:id",
-    MANAGE_CLUB:"/club/manage/:id"
+  CLUB: {
+    CREATE_CLUB: "/club/create-club-creation",
+    LIST_CLUB: "/club/list-club",
+    CLUB_DETAIL: "/club/:id",
+    MANAGE_CLUB: "/club/manage/:id"
   },
   STAR_POINT: {
-    REWARD_STORE: "/reward-store",              
-    REWARD_DETAIL: "/reward-store/:id",       
-    HISTORY: "/points/history",       
-    MY_REDEMPTIONS: "/points/my-redemptions"        
+    REWARD_STORE: "/reward-store",
+    REWARD_DETAIL: "/reward-store/:id",
+    HISTORY: "/points/history",
+    MY_REDEMPTIONS: "/points/my-redemptions"
+  },
+  SYSTEM_NEWS_AND_NOTICES: {  // Thay đổi từ SYSTEM_ANNOUNCEMENTS
+    LIST: "/system-news-and-notices",
+    DETAIL: "/system-news-and-notices/:id"
   },
   SEARCH:{
     STUDENT:"/Search/students",
     TEACHER:"/Search/teachers"
+  },
+  CHAT: {
+    CHAT_PAGE: "/chat/:roomId",
+    INBOX: "/chat",
+  },
+  NOTIFICATION: {
+    LIST_NOTIFICATION: "/notifications",
   }
 };

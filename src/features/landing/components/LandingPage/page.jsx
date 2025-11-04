@@ -1,8 +1,20 @@
 import Sidebar from "@/features/landing/components/Sidebar"
 import NewsFeed from "@/features/landing/post/NewsFeed"
 import RightPanel from "@/features/landing/components/RightPanel"
+import SystemNewsAndNoticesModal from "@/features/systemNewsAndNotices/components/SystemNewsAndNoticesModal"
+import { useSystemNewsAndNoticesModal } from "@/features/systemNewsAndNotices/hooks/useSystemNewsAndNoticesModal"
 
 export default function LandingContent() {
+  const {
+    isModalOpen,
+    currentNewsAndNotice,
+    currentNewsAndNoticeIndex,
+    totalNewsAndNotices,
+    handleMarkAsViewed,
+    handleNext,
+    handleClose,
+  } = useSystemNewsAndNoticesModal();
+
   return (
     <div className="w-full py-6">
   {/* Welcome Banner */}
@@ -31,6 +43,17 @@ export default function LandingContent() {
       </aside>
     </div>
   </div>
+
+  {/* System NewsAndNotices Modal */}
+  <SystemNewsAndNoticesModal
+    isOpen={isModalOpen}
+    newsAndNotice={currentNewsAndNotice}
+    currentIndex={currentNewsAndNoticeIndex}
+    totalCount={totalNewsAndNotices}
+    onMarkAsViewed={handleMarkAsViewed}
+    onNext={handleNext}
+    onClose={handleClose}
+  />
 </div>
   )
 }

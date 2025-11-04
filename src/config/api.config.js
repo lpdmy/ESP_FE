@@ -18,6 +18,24 @@ export const API_CONFIG = {
     return "https://esp-prod-api.yourdomain.com/api";
   })(),
 
+  BASE_HUB_URL: (() => {
+    const hostname = window.location.hostname;
+
+    // Development environment
+    if (hostname.includes("edusphere-dev")) {
+      return "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net";
+    }
+
+    // Local development
+    if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
+      return "https://localhost:7084";
+    }
+
+    // Production environment
+    return "https://esp-prod-api.yourdomain.com";
+  })(),
+
+
   // Auth endpoints
   AUTH: {
     LOGIN: '/auth/login',
@@ -65,7 +83,8 @@ export const API_CONFIG = {
   },
 
   UPLOAD: {
-    UPLOAD_IMAGE: '/upload'
+    UPLOAD_IMAGE: '/upload',
+    UPLOAD_FILE: '/upload/file'
   },
   // Search endpoints  
   SEARCH: {
@@ -90,6 +109,8 @@ export const API_CONFIG = {
     APPROVE_POST:'/post/approve/{id}',
     CLUB_POST:'/post/club',
     REJECT_POST:'/post/reject',
+    GET_POSTS_BY_CLASS_GROUP: '/post/classgroup/{id}',
+    GET_ALL_POSTS: '/post',
   },
   COLLECTION: {
     CREATE_COLLECTION: '/collection',
@@ -152,6 +173,59 @@ export const API_CONFIG = {
     GET_ALL_REDEMPTIONS_ADMIN: "/redeems/admin",
     GET_MY_REDEMPTIONS: "/redeems/me",
     PICKUP_REDEMPTION: "/redeems/{id}/pickup"
+  },
+
+  STAFF:{
+    LINK:"/staff",
+    CREATE:"/auth/create-staff"
+  },
+
+  NOTIFICATION: {
+    BASE: '/notification',
+    GET_BY_USER: '/notification/user',
+    MARK_AS_READ: '/notification/{id}/read',
+    ADD: '/notification',
+    ADD_TEST: '/notification/test'
+  },
+
+  // Chat endpoints
+  CHAT: {
+    ROOMS: '/chat/rooms',
+    MESSAGES: '/chat/messages',
+    GET_MESSAGES: '/chat/messages/{roomId}',
+    MARK_AS_READ: '/chat/messages/{roomId}/read', 
+  },
+  // Class Group endpoints
+  CLASS_GROUP: {
+    LIST: '/classgroup',
+    GET_BY_ID: '/classgroup/{id}',
+    GET_DETAIL: '/classgroup/{id}/detail',
+    GET_BY_NAME: '/classgroup/by-name',
+    DASHBOARD: '/classgroup/dashboard',
+    BY_GRADE: '/classgroup/by-grade/{grade}',
+    WITHOUT_GRADE: '/classgroup/without-grade',
+    BY_ACADEMIC_YEAR: '/classgroup/by-academic-year/{academicYearId}',
+    WITHOUT_ACADEMIC_YEAR: '/classgroup/without-academic-year',
+    DELETED: '/classgroup/deleted',
+    FILTER: '/classgroup/filter',
+    CHECK_NAME_EXISTS: '/classgroup/check-name-exists',
+    CREATE: '/classgroup',
+    UPDATE: '/classgroup/{id}',
+    DELETE: '/classgroup/{id}',
+    // Student management endpoints
+    GET_STUDENTS: '/classgroup/{id}/students',
+    ADD_STUDENT: '/classgroup/{id}/students',
+    REMOVE_STUDENT: '/classgroup/{id}/students/{studentId}',
+    // Homeroom Teacher management endpoints
+    ASSIGN_HOMEROOM_TEACHER: '/classgroup/{id}/homeroom-teacher',
+    REMOVE_HOMEROOM_TEACHER: '/classgroup/{id}/homeroom-teacher',
+    GET_HOMEROOM_TEACHER: '/classgroup/{id}/homeroom-teacher',
+    // Academic Year endpoints
+    GET_ACADEMIC_YEARS: '/classgroup/academic-years',
+    GET_CURRENT_ACADEMIC_YEAR: '/classgroup/academic-years-current',
+    // Current Class endpoints
+    GET_CURRENT_CLASS: '/classgroup/current-class'
+
   }
 };
 

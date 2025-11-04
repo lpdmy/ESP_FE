@@ -9,10 +9,11 @@ import {
 } from "@/common/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar"
 import { useSelector, useDispatch } from "react-redux";
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { clearUser } from "@/store/user/userSlice";
 import { ROUTES } from "@/common/constants/routes";
+import { disconnectNotificationHub } from "@/features/notifications/services/signalr/notificationHub";
 
 export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
   const user = useSelector((state) => state.user.user);
@@ -29,10 +30,11 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
 
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");
-
+    
+    disconnectNotificationHub();
+    disconnectChatHub();
     navigate(ROUTES.LOGIN);
   };
-
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
       <div className="flex items-center justify-between h-16 px-6">
@@ -68,9 +70,9 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
               <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-100" data-dropdown-trigger="true">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="/admin-avatar.png" />
-                  <AvatarFallback className="bg-blue-100 text-blue-600">AD</AvatarFallback>
+                  <AvatarFallback className="bg-blue-100 text-blue-600">{user.firstName.charAt(0)||'A'}</AvatarFallback>
                 </Avatar>
-                <span className="text-sm font-medium text-gray-700">{user ? user.username : "Guest"}</span>
+                <span className="text-sm font-medium text-gray-700">{user ? user.fullName : "Guest"}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent 

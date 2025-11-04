@@ -26,6 +26,8 @@ import { setUser } from "@/store/user/userSlice";
 import { ROUTES } from "@/common/constants/routes";
 import { toast } from "react-toastify";
 import { ROLE } from "@/common/constants/roles";
+import { initGlobalNotification } from "@/common/signalr/useGlobalNotification";
+import { addNotification } from "@/store/notification/notificationSlice";
 
 export default function ResetPasswordForm() {
     const location = useLocation();
@@ -85,6 +87,9 @@ export default function ResetPasswordForm() {
                 localStorage.setItem("token", result.data.accessToken);
                 localStorage.setItem("refreshToken", result.data.refreshToken);
                 const resultUser = await getMe();
+                
+                initGlobalNotification(resultUser?.data.id);
+                
                 dispatch(setUser(resultUser?.data));
                 if (resultUser?.data.role == ROLE.ADMIN) {
                     navigate(ROUTES.ADMIN.USER_MANAGEMENT);
