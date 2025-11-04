@@ -32,6 +32,7 @@ import {
   LogOut,
   X,
   Info,
+  CheckCircle,
 } from "lucide-react";
 import { Input } from "@/common/components/ui/input";
 import {
@@ -106,6 +107,7 @@ export default function ClubDetail() {
       SetIsJoined(response.data.isMember);
       setIsRequestToJoin(response.data.isRequestToJoin);
       SetIsPresident(response.data.isPresident);
+      console.log(response);
     } catch (error) {
       toast.loadClubFail();
       console.log(error);
@@ -183,10 +185,12 @@ export default function ClubDetail() {
   const handleRegister = (activityId) => {
     setRegisteredActivities([...registeredActivities, activityId]);
   };
+  const handleAcceptMentorInvite = () => {};
 
   useEffect(() => {
     handleClubDetail();
     handleClubPost();
+    console.log(user);
   }, []);
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -337,12 +341,20 @@ export default function ClubDetail() {
                   </div>
                 </CardContent>
               </Card>
-              {/* Join/Cancel buttons */}
-              {!isJoined && (
+              {(user?.role === 2 && clubDetail.isMentorInvite) ||
+              (user?.role === 4 && !isJoined) ? (
                 <Card className="glass sticky bottom-6 !bg-white">
                   <CardContent>
-                    <div className="flex flex-col gap-2 ">
-                      {isRequestToJoin ? (
+                    <div className="flex flex-col gap-2">
+                      {user?.role === 2 && clubDetail.isMentorInvite ? (
+                        <Button
+                          className="w-full bg-orange-400 hover:bg-orange-600 text-white flex items-center gap-2"
+                          onClick={handleAcceptMentorInvite}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Chấp nhận lời mời làm cố vấn
+                        </Button>
+                      ) : isRequestToJoin ? (
                         <Button
                           className="w-full bg-red-500 hover:bg-red-600 text-white flex items-center gap-2"
                           onClick={handleCancelRequest}
@@ -362,7 +374,7 @@ export default function ClubDetail() {
                     </div>
                   </CardContent>
                 </Card>
-              )}
+              ) : null}
             </div>
           </div>
           <JoinClubModal
@@ -555,7 +567,7 @@ export default function ClubDetail() {
                     Thành viên ({clubDetail.members?.length || 0})
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="max-h-[calc(100vh-200px)] overflow-y-auto">
+                <CardContent className="max-h-[calc(100vh-450px)] overflow-y-auto">
                   <div className="space-y-3">
                     <Input
                       placeholder="Tìm kiếm thành viên..."
@@ -563,7 +575,7 @@ export default function ClubDetail() {
                       value={searchMemberTerm}
                       onChange={(e) => setSearchMemberTerm(e.target.value)}
                     />
-                    {filteredMembers?.slice(0, 8).map((m) => (
+                    {filteredMembers?.map((m) => (
                       <div
                         key={m.userId}
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 transition-colors"
