@@ -140,7 +140,7 @@ export const API_CONFIG = {
     CLUB_INVITE_MENTOR:'/join-request/invite-mentor',
     CLUB_GET_INVITATION: '/join-request/user',
     CLUB_CHANGE_ROLE:'/club-member/change-role',
-    CLUB_DELETE:'/club'
+    CLUB_DELETE:'/club',
   },
   COMMENT:{
     CREATE_COMMENT:'/comment',

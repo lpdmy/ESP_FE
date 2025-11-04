@@ -51,7 +51,7 @@ import JoinClubModal from "../Modal/JoinClubModal/page";
 import { useToast } from "@/common/hooks/useToast";
 
 import { LeaveClubDialogConfirm } from "../Modal/LeaveClubModal/page";
-const clubActivities = []; // 👈 Giả sử chưa có hoạt động
+const clubActivities = []; 
 import CreatePostInput from "../../post/CreatePostInput";
 import CreatePostModal from "../../post/CreatePostModal";
 import DeletePostModal from "../../post/DeletePostModal";
@@ -75,6 +75,7 @@ export default function ClubDetail() {
     getClubPost,
     cancelJoinRequest,
     leaveClub,
+    approveInvitation,
   } = useClubApi(clubid);
   const [registeredActivities, setRegisteredActivities] = useState([]);
   const { isOpen, toggleMenu, closeMenu } = useDropdownMenu();
@@ -185,7 +186,15 @@ export default function ClubDetail() {
   const handleRegister = (activityId) => {
     setRegisteredActivities([...registeredActivities, activityId]);
   };
-  const handleAcceptMentorInvite = () => {};
+  const handleAcceptMentorInvite = async () => {
+    try {
+      await approveInvitation(clubid);
+      toast.approveInvitationSuccess()
+    } catch (error) {
+      toast.approveInvitationFail()
+      console.log(error)
+    }
+  };
 
   useEffect(() => {
     handleClubDetail();
