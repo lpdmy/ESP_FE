@@ -128,7 +128,9 @@ function CreateClub() {
     } catch (error) {
       console.error("Lỗi khi tạo CLB:", error);
       toast.showError(error.message);
-    }
+    } finally {
+    setLoading(false);
+  }
   };
 
   const handleChooseAvatar = (e) => {

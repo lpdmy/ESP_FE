@@ -1,10 +1,9 @@
 import { Route } from "react-router-dom";
 import UserManagementPage from "@/pages/Admin/UserManagementPage";
-import ClubManagementPage from "@/pages/Admin/ClubManagementPage";
 import ClassManagementPage from "@/pages/Admin/ClassManagementPage";
+import ClubManagementPage from "@/pages/Admin/ClubManagementPage";
 import DashboardPage from "@/pages/Admin/DashboardPage";
 import ImportStudentsPage from "@/pages/Admin/ImportStudentsPage";
-import ClassDetailPage from "@/pages/Admin/ClassDetailPage";
 import { ROLE } from "@/common/constants/roles";
 import ProtectedRoute from "./ProtectedRoute";
 import RewardManagementPage from "@/pages/Admin/StarPointManagement/RewardManagementPage";
@@ -86,6 +85,21 @@ export const adminRoutes = [
     <Route
       key="club-manage"
       path={ROUTES.ADMIN.CLUB}
+      element={<ClubManagementPage />}
+    />
+  </Route>,
+  <Route
+    element={
+      <ProtectedRoute
+        allowedRoles={[ROLE.ADMIN, ROLE.STAFF]}
+        requiredPermissions={["MANAGE_CLASS"]}
+      />
+    }
+    key="class-Class-route"
+  >
+    <Route
+      key="class-manage"
+      path={ROUTES.ADMIN.CLASS}
       element={<ClassManagementPage />}
     />
   </Route>,

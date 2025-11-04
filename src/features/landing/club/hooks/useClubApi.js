@@ -190,6 +190,7 @@ export function useClubApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
+  
   const changeRole = async (userId, clubId) => {
   const token = localStorage.getItem("token");
   return executeApiCall(
@@ -202,6 +203,14 @@ const deleteClub = useRef(async (id) => {
     const token = localStorage.getItem("token");
     return executeApiCall(
       clubService.deleteClub.bind(clubService),
+      [token,id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const approveInvitation = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.approveInvitation.bind(clubService),
       [token,id],
       { setLoading: setSaveLoading, setError }
     );
@@ -234,6 +243,7 @@ const deleteClub = useRef(async (id) => {
     inviteMentor : inviteMentor.current,
     getInvitation: getInvitation.current,
     changeRole,
-    deleteClub : deleteClub.current
+    deleteClub : deleteClub.current,
+    approveInvitation : approveInvitation.current
   };
 }
