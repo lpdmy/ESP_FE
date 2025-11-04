@@ -63,6 +63,7 @@ import {
 import CreateEmployeeModal from "./CreateStaffModal/page"; // Mock data
 import { useStaffApi } from "../../hooks/useStaffApi";
 const availablePermissions = [
+  { label: "MANAGE_CLASS", name: "Quản lý lớp học", id: 1 },
   { label: "MANAGE_USER", name: "Quản lý người dùng", id: 2 },
   { label: "MANAGE_POST", name: "Quản lý bài đăng", id: 3 },
   { label: "VIEW_REPORT", name: "Xem báo cáo", id: 4 },
