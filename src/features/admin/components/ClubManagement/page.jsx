@@ -144,20 +144,21 @@ export default function ClubClassManagement() {
     handleListClub();
   }, [pageNumber]);
   const getStatusBadge = (isDeleted) => {
-    const style = {
-      padding: "4px 8px",
-      borderRadius: "4px",
-      fontWeight: "bold",
-      color: "#fff",
-      backgroundColor: isDeleted ? "#888" : "#4caf50",
-      display: "inline-block",
-      fontSize: "12px",
-    };
+  const colorClass = isDeleted
+    ? "bg-gray-200 text-gray-700 border border-gray-400"
+    : "bg-green-100 text-green-700 border border-green-400";
 
-    return (
-      <span style={style}>{isDeleted ? "Đã kết thúc" : "Đang hoạt động"}</span>
-    );
-  };
+  const label = isDeleted ? "Đã kết thúc" : "Đang hoạt động";
+
+  return (
+    <span
+      className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${colorClass}`}
+    >
+      {label}
+    </span>
+  );
+};
+
   const handleListCategory = async () => {
     try {
       const response = await getClubCategory();

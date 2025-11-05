@@ -71,7 +71,7 @@ import {
   ChevronRight,
   MoreHorizontal,
 } from "lucide-react";
-
+import { ROUTES } from '@/common/constants/routes';
 import { useToast } from "@/common/hooks/useToast";
 import { useClubApi } from "../hooks/useClubApi";
 import { LoadingCollection } from "@/common/components/ui/loading";
@@ -133,7 +133,9 @@ export default function ClubManage() {
   const [pageSizeMember, setPageSizeMember] = useState(9);
   const [currentPage, setCurrentPage] = useState(1);
   const filteredMembers =
-    clubInfo?.members?.filter((member) =>
+  clubInfo?.members?.filter(
+    (member) =>
+      member.role !== 'Mentor' &&
       member.fullName.toLowerCase().includes(searchMemberTerm.toLowerCase())
     ) || [];
   const totalPages = Math.ceil(filteredMembers.length / pageSizeMember);
@@ -163,7 +165,16 @@ export default function ClubManage() {
       SetIsloading(false);
     }
   };
-
+  const getProfileRoute = (user) => {
+        console.log("User object:", user);
+        const role = Number(user?.userRole);
+      switch (role) {
+        case 2:
+          return `${ROUTES.USER_PROFILE.TEACHER_PROFILE}/${user.userId}`;
+        default:
+          return `${ROUTES.USER_PROFILE.PROFILE}/${user.userId}`;
+      }
+    }
   const handlePostPending = async () => {
     try {
       const response = await getPostPending(id);
@@ -415,7 +426,9 @@ export default function ClubManage() {
                       onClick={()=>setSelectedMember(member)}
                     >
                       {/* Left: Avatar + info */}
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3"
+                      onClick={()=> navigate(getProfileRoute(member))}
+                      >
                         <Avatar>
                           <AvatarImage
                             src={
@@ -429,7 +442,8 @@ export default function ClubManage() {
                         </Avatar>
 
                         <div>
-                          <div className="font-semibold text-gray-800">
+                          <div className="font-semibold text-gray-800"
+                          >
                             {member.fullName}
                           </div>
                           <div className="text-sm text-gray-500">
