@@ -2,6 +2,10 @@ export const ROUTES = {
   LANDING: {
     HOME: "/",
   },
+  ACTIVITIES: {
+    LIST: "/activities",
+    DETAIL: "/activities/:id"
+  },
   AUTH: {
     LOGIN: "/auth/login",
     ONE_TIME_LOGIN: "/auth/one-time-login",
