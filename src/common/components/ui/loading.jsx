@@ -126,6 +126,19 @@ export function LoadingAdmin({ isLoading, className = "" }) {
     </div>
   );
 }
+export function LoadingSubmission({ isLoading, className = "" }) {
+  if (!isLoading) return null;
+
+  return (
+    <div
+      className={`absolute inset-0 flex items-center justify-center bg-white/70 z-50 ${className}`}
+    >
+      <div className="relative w-12 h-12">
+        <div className="absolute inset-0 rounded-full border-4 border-blue-200 border-t-blue-500 animate-spin"></div>
+      </div>
+    </div>
+  );
+}
 export function LoadingCollection({ 
   isLoading, 
   className = "",
