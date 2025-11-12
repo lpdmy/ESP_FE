@@ -50,12 +50,18 @@ export default function SearchPage() {
     navigate(ROUTES.LOGIN);
   };
 
-  const getProfileRoute = () => {
-    if (user?.role === ROLE.TEACHER) {
-      return ROUTES.USER_PROFILE.TEACHER_PROFILE;
-    }
-    return ROUTES.USER_PROFILE.PROFILE;
-  };
+  const getProfileRoute = (user) => {
+    console.log("User object:", user);
+  switch (user?.role) {
+    case ROLE.TEACHER:
+      return `${ROUTES.USER_PROFILE.TEACHER_PROFILE}/${user.id}`;
+    case ROLE.STUDENT:
+      return `${ROUTES.USER_PROFILE.PROFILE}/${user.id}`;
+    default:
+      return ROUTES.USER_PROFILE.PROFILE;
+  }
+};
+
 
   const filterOptions = [
     { id: 'all', label: 'Tất cả', icon: Search, color: 'text-gray-700' },
@@ -98,6 +104,7 @@ export default function SearchPage() {
       });
       
       setResults(searchResults.data?.results || {});
+      console.log(searchResults.data.results)
     } catch (error) {
       console.error('Search error:', error);
       toast.error('Có lỗi xảy ra khi tìm kiếm');
@@ -247,7 +254,7 @@ export default function SearchPage() {
                   onClick={closeMenu}
                 >
                   <Link
-                    to={getProfileRoute()}
+                    to={getProfileRoute(user)}
                     className="inline-flex items-center w-full px-3 py-2"
                   >
                     <User className="mr-3 h-4 w-4" />
@@ -400,7 +407,7 @@ export default function SearchPage() {
                 ))}
               </div>
             ) : query ? (
-              <SearchResults results={results} activeFilter={activeFilter} query={query} onFilterChange={setActiveFilter} />
+              <SearchResults results={results} activeFilter={activeFilter} query={query} onFilterChange={setActiveFilter} getProfileRoute={getProfileRoute} />
             ) : (
               <div className="text-center py-12">
                 <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
@@ -418,7 +425,7 @@ export default function SearchPage() {
 }
 
 // Search Results Component
-const SearchResults = ({ results, activeFilter, query, onFilterChange }) => {
+const SearchResults = ({ results, activeFilter, query, onFilterChange,getProfileRoute }) => {
   const navigate = useNavigate();
 
   const resultTypes = [
@@ -475,7 +482,7 @@ const SearchResults = ({ results, activeFilter, query, onFilterChange }) => {
                   onClick={() => {
                     switch(key) {
                       case 'users':
-                        navigate(`/profile/${item.id}`);
+                        navigate(getProfileRoute(item));
                         break;
                       case 'posts':
                         navigate(`/posts/${item.id}`);
@@ -492,7 +499,6 @@ const SearchResults = ({ results, activeFilter, query, onFilterChange }) => {
                   }}
                 />
               ))}
-              
               {/* See All Button for Users - only show when in "all" filter */}
               {key === 'users' && activeFilter === 'all' && items.length > 5 && (
                 <div className="pt-3 border-t border-gray-100">
@@ -693,7 +699,6 @@ const HighlightText = ({ text, highlight }) => {
   
   const regex = new RegExp(`(${highlight})`, 'gi');
   const parts = text.split(regex);
-  
   return parts.map((part, i) => 
     regex.test(part) ? (
       <mark key={i} className="bg-gradient-to-r from-yellow-200 to-orange-200 text-orange-800 px-1 rounded shadow-sm">

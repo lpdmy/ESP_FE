@@ -30,7 +30,6 @@ export class ClubService extends ApiService {
     }
     return this.get(url, token);
   }
-  
   async getClubJoinCreation(token, pageNumber = 1, pageSize = 10, search = "",status) {
     let url = `${API_CONFIG.CLUB.CLUB_CREATION_REQUEST}?PageNumber=${pageNumber}&PageSize=${pageSize}&status=${status}`;
     if (search && search.trim() !== "") {
@@ -116,5 +115,9 @@ async getInvitation(token, pageNumber = 1, pageSize = 10, search = "") {
   async deleteClub(token, id) {
     const url = `${API_CONFIG.CLUB.CLUB_DELETE}/${id}`;
     return this.delete(url,null, token);
-  } 
+  }
+  async approveInvitation(token,id){
+    const url = `${API_CONFIG.CLUB.CLUB_INVITE_MENTOR}?id=${id}`;
+    return this.put(url,null, token);
+  }
 }

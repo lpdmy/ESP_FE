@@ -24,11 +24,14 @@ export const ROUTES = {
     AI_SCHEDULE:"/admin/activities/:id/ai-schedule",
     CLASSES: 'admin/classes',
     CLASS_DETAIL:'/admin/classes/:id'
+
   },
   USER_PROFILE: {
     PROFILE: "/profile",
+    PROFILEId: "/profile/:id",
     EDIT: "/profile/edit",
     TEACHER_PROFILE: "/profile/teacher",
+    TEACHER_PROFILE_id: "/profile/teacher/:id",
     EDIT_TEACHER: "/profile/teacher/edit",
   },
   ONBOARDING: {

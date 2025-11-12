@@ -1,10 +1,9 @@
 import { Route } from "react-router-dom";
 import UserManagementPage from "@/pages/Admin/UserManagementPage";
-import ClubManagementPage from "@/pages/Admin/ClubManagementPage";
 import ClassManagementPage from "@/pages/Admin/ClassManagementPage";
+import ClubManagementPage from "@/pages/Admin/ClubManagementPage";
 import DashboardPage from "@/pages/Admin/DashboardPage";
 import ImportStudentsPage from "@/pages/Admin/ImportStudentsPage";
-import ClassDetailPage from "@/pages/Admin/ClassDetailPage";
 import { ROLE } from "@/common/constants/roles";
 import ProtectedRoute from "./ProtectedRoute";
 import RewardManagementPage from "@/pages/Admin/StarPointManagement/RewardManagementPage";
