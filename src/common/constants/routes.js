@@ -62,6 +62,9 @@ export const ROUTES = {
     CHAT_PAGE: "/chat/:roomId",
     INBOX: "/chat",
   },
+  ACTIVITY: {
+    VIEW_ACTIVITY: "/activities/:id",
+  },
   NOTIFICATION: {
     LIST_NOTIFICATION: "/notifications",
   }

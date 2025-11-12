@@ -226,6 +226,20 @@ export const API_CONFIG = {
     // Current Class endpoints
     GET_CURRENT_CLASS: '/classgroup/current-class'
 
+  },
+
+  // Activity endpoints
+  ACTIVITY: {
+    GET_ALL: '/activity',
+    GET_BY_ID: '/activity/{id}',
+    CREATE: '/activity',
+    UPDATE: '/activity',
+  },
+
+  // Activity Participant endpoints
+  ACTIVITY_PARTICIPANT: {
+    ADD: '/activityparticipant',
+    REMOVE: '/activityparticipant',
   }
 };
 

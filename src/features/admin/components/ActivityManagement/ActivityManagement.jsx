@@ -33,6 +33,10 @@ import {
   Filter,
   Download,
   Trophy,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Maximize2,
 } from "lucide-react"
 import { ROUTES } from "@/common/constants/routes"
 
@@ -44,6 +48,15 @@ export default function ActivityManagement() {
   const [showAIModal, setShowAIModal] = useState(false)
   const [aiGenerating, setAiGenerating] = useState(false)
   const [aiSchedule, setAiSchedule] = useState([])
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  
+  // Advanced filters
+  const [subTypeFilter, setSubTypeFilter] = useState("")
+  const [dateFromFilter, setDateFromFilter] = useState("")
+  const [dateToFilter, setDateToFilter] = useState("")
+  const [minParticipantsFilter, setMinParticipantsFilter] = useState("")
+  const [maxParticipantsFilter, setMaxParticipantsFilter] = useState("")
+  const [organizerFilter, setOrganizerFilter] = useState("")
 
   // AI Form State
   const [aiForm, setAiForm] = useState({
@@ -182,11 +195,11 @@ export default function ActivityManagement() {
     )
   }
 
-  const handleSelectAll = () => {
-    if (selectedActivities.length === activities.length) {
-      setSelectedActivities([])
-    } else {
+  const handleSelectAll = (checked) => {
+    if (checked) {
       setSelectedActivities(activities.map((a) => a.id))
+    } else {
+      setSelectedActivities([])
     }
   }
 
@@ -264,6 +277,42 @@ export default function ActivityManagement() {
     { value: "Seminar", label: "Hội thảo" },
     { value: "Contest", label: "Cuộc thi" },
   ]
+
+  const subTypeOptions = [
+    { value: "all", label: "Tất cả" },
+    { value: "SportsFestival", label: "Hội thao" },
+    { value: "DrawingContest", label: "Cuộc thi vẽ" },
+    { value: "CreativeWriting", label: "Sáng tác" },
+    { value: "Seminar", label: "Hội thảo" },
+    { value: "Workshop", label: "Workshop" },
+    { value: "Other", label: "Khác" },
+  ]
+
+  const handleResetFilters = () => {
+    setCategoryFilter("")
+    setStatusFilter("")
+    setSubTypeFilter("")
+    setDateFromFilter("")
+    setDateToFilter("")
+    setMinParticipantsFilter("")
+    setMaxParticipantsFilter("")
+    setOrganizerFilter("")
+    setSearchQuery("")
+  }
+
+  const hasActiveFilters = () => {
+    return (
+      categoryFilter ||
+      statusFilter ||
+      subTypeFilter ||
+      dateFromFilter ||
+      dateToFilter ||
+      minParticipantsFilter ||
+      maxParticipantsFilter ||
+      organizerFilter ||
+      searchQuery
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -360,12 +409,12 @@ export default function ActivityManagement() {
                           <Checkbox
                             id="avoidClassTime"
                             checked={aiForm.constraints.avoidClassTime}
-                            onCheckedChange={(checked) =>
+                            onChange={(checked) =>
                               setAiForm({
                                 ...aiForm,
                                 constraints: {
                                   ...aiForm.constraints,
-                                  avoidClassTime: !!checked,
+                                  avoidClassTime: checked,
                                 },
                               })
                             }
@@ -378,12 +427,12 @@ export default function ActivityManagement() {
                           <Checkbox
                             id="avoidLunch"
                             checked={aiForm.constraints.avoidLunch}
-                            onCheckedChange={(checked) =>
+                            onChange={(checked) =>
                               setAiForm({
                                 ...aiForm,
                                 constraints: {
                                   ...aiForm.constraints,
-                                  avoidLunch: !!checked,
+                                  avoidLunch: checked,
                                 },
                               })
                             }
@@ -526,11 +575,95 @@ export default function ActivityManagement() {
               options={statusOptions}
               className="w-full md:w-48"
             />
-            <Button variant="outline">
+            <Button
+              variant="outline"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="relative"
+            >
               <Filter className="w-4 h-4 mr-2" />
               Lọc
+              {hasActiveFilters() && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  !
+                </span>
+              )}
+              {showAdvancedFilters ? (
+                <ChevronUp className="w-4 h-4 ml-2" />
+              ) : (
+                <ChevronDown className="w-4 h-4 ml-2" />
+              )}
             </Button>
+            {hasActiveFilters() && (
+              <Button variant="ghost" size="sm" onClick={handleResetFilters}>
+                <X className="w-4 h-4 mr-2" />
+                Xóa bộ lọc
+              </Button>
+            )}
           </div>
+
+          {/* Advanced Filters Panel */}
+          {showAdvancedFilters && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <Label className="mb-2 block">Phân loại</Label>
+                  <SimpleSelect
+                    value={subTypeFilter}
+                    onValueChange={setSubTypeFilter}
+                    placeholder="Chọn phân loại"
+                    options={subTypeOptions}
+                  />
+                </div>
+
+                <div>
+                  <Label className="mb-2 block">Ngày bắt đầu từ</Label>
+                  <Input
+                    type="date"
+                    value={dateFromFilter}
+                    onChange={(e) => setDateFromFilter(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Label className="mb-2 block">Ngày kết thúc đến</Label>
+                  <Input
+                    type="date"
+                    value={dateToFilter}
+                    onChange={(e) => setDateToFilter(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Label className="mb-2 block">Đơn vị tổ chức</Label>
+                  <Input
+                    placeholder="Tìm đơn vị tổ chức..."
+                    value={organizerFilter}
+                    onChange={(e) => setOrganizerFilter(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Label className="mb-2 block">Số người tham gia tối thiểu</Label>
+                  <Input
+                    type="number"
+                    placeholder="VD: 10"
+                    value={minParticipantsFilter}
+                    onChange={(e) => setMinParticipantsFilter(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Label className="mb-2 block">Số người tham gia tối đa</Label>
+                  <Input
+                    type="number"
+                    placeholder="VD: 500"
+                    value={maxParticipantsFilter}
+                    onChange={(e) => setMaxParticipantsFilter(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {selectedActivities.length > 0 && (
             <div className="mt-4 flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
@@ -557,16 +690,8 @@ export default function ActivityManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedActivities.length === activities.length}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>Thumbnail</TableHead>
                   <TableHead>Tiêu đề</TableHead>
                   <TableHead>Loại</TableHead>
-                  <TableHead>Phân loại</TableHead>
                   <TableHead>Ngày bắt đầu</TableHead>
                   <TableHead>Ngày kết thúc</TableHead>
                   <TableHead>Trạng thái</TableHead>
@@ -577,27 +702,11 @@ export default function ActivityManagement() {
               <TableBody>
                 {activities.map((activity) => (
                   <TableRow key={activity.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedActivities.includes(activity.id)}
-                        onCheckedChange={() => handleSelectActivity(activity.id)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <img
-                        src={activity.thumbnail || "/placeholder.svg"}
-                        alt={activity.title}
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
-                    </TableCell>
                     <TableCell className="font-medium max-w-xs">
                       <div className="line-clamp-2">{activity.title}</div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{activity.category}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{activity.subType}</Badge>
                     </TableCell>
                     <TableCell>{activity.startDate}</TableCell>
                     <TableCell>{activity.endDate}</TableCell>
@@ -618,8 +727,8 @@ export default function ActivityManagement() {
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="ghost" size="icon" asChild>
-                          <Link to={`${ROUTES.ADMIN.ACTIVITIES}/${activity.id}`}>
-                            <Eye className="w-4 h-4" />
+                          <Link to={`${ROUTES.ACTIVITY.VIEW_ACTIVITY.replace(':id', String(activity.id))}?isPreview=true`}>
+                            <Eye className="w-4 h-4 text-blue-500" />
                           </Link>
                         </Button>
                         <Button variant="ghost" size="icon" asChild>
