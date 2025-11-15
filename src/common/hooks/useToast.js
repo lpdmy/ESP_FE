@@ -107,7 +107,7 @@ export const useToast = () => {
   const approveCreationSucces = () =>showSuccess(CLUB_MESSAGES.ERROR.APPROVE_CREATION)
   const rejectCreationRequsetSuccess = () =>showError(CLUB_MESSAGES.SUCCESS.REJECT_CREATION)
   const inviteMentorSuccess = () =>showSuccess(CLUB_MESSAGES.SUCCESS.INVITE_MENTOR)
-  const inviteMentorFail = () => showError(CLUB_MESSAGES.SUCCESS.INVITE_MENTOR)
+  const inviteMentorFail = () => showError(CLUB_MESSAGES.ERROR.INVITE_MENTOR)
   const changeRoleFail = () => showError(CLUB_MESSAGES.ERROR.CHANGE_ROLE)
   const changeRoleSuccess = () => showSuccess(CLUB_MESSAGES.SUCCESS.CHANGE_ROLE)
   const loadPostFail = ()=>showError(CLUB_MESSAGES.ERROR.LOAD_POST)
@@ -121,6 +121,8 @@ export const useToast = () => {
   const deleteStaffFail =()=>showSuccess(STAFF_MESSAGE.ERROR.DELETE)
   const recoveryStaffSuccess =()=>showSuccess(STAFF_MESSAGE.SUCCESS.RECOVERY)
   const recoveryStaffFail =()=>showSuccess(STAFF_MESSAGE.ERROR.RECOVERY)
+  const approveInvitationSuccess =()=>showSuccess(CLUB_MESSAGES.SUCCESS.APPROVE_INVITAION)
+  const approveInvitationFail =()=>showError(CLUB_MESSAGES.ERROR.APPROVE_INVITAION)
 
 
   return {
@@ -190,6 +192,8 @@ export const useToast = () => {
     deleteStaffSuccess,
     recoveryStaffSuccess,
     recoveryStaffFail,
+    approveInvitationSuccess,
+    approveInvitationFail,
     
     // Direct access to messages
     PROFILE_MESSAGES,

@@ -28,6 +28,9 @@ const categories = [
 
 export default function ClubBasicInfoForm({ clubInfo }) {
   const { updateClub } = useClubApi();
+  const [avatarUrl, setAvatarUrl] = useState(clubInfo?.avatarUrl || "");
+  const [coverUrl, setCoverUrl] = useState(clubInfo?.coverUrl || "");
+
   const [clubName, setClubName] = useState(clubInfo?.name || "");
   const [shortDescription, setShortDescription] = useState(
     clubInfo?.shortDescription || ""
@@ -39,7 +42,7 @@ export default function ClubBasicInfoForm({ clubInfo }) {
   const [description, setDescription] = useState(clubInfo?.description || "");
   const [category, setCategory] = useState(clubInfo?.categoryId || "");
   const [avatarFile, setAvatarFile] = useState(null);
-  const [categoryId, setCategoryId] = useState(0);
+  const [categoryId, setCategoryId] = useState(clubInfo?.categoryId || 0);
   const [coverFile, setCoverFile] = useState(null);
   const [requirements, setRequirements] = useState(
     clubInfo?.requirements || ""
@@ -58,10 +61,12 @@ export default function ClubBasicInfoForm({ clubInfo }) {
   const [error, setError] = useState("");
   const handleRemoveAvatar = () => {
     setAvatarFile(null);
+    setAvatarUrl(""); // ✅ Xóa link cũ
     if (avatarInputRef.current) avatarInputRef.current.value = "";
   };
   const handleRemoveCover = () => {
     setCoverFile(null);
+    setCoverUrl(""); // ✅ Xóa link cũ
     if (coverInputRef.current) coverInputRef.current.value = "";
   };
   const avatarInputRef = useRef(null);
@@ -77,7 +82,7 @@ export default function ClubBasicInfoForm({ clubInfo }) {
       const payload = {
         id,
         presidentUserId,
-        name : clubName,
+        name: clubName,
         shortDescription,
         description,
         categoryId,
@@ -160,13 +165,11 @@ export default function ClubBasicInfoForm({ clubInfo }) {
           />
           <div className="border border-dashed p-4 rounded-lg text-center">
             <div className="relative w-32 h-32 mx-auto">
-              {avatarFile || clubInfo?.avatarUrl ? (
+              {avatarFile || avatarUrl ? (
                 <>
                   <img
                     src={
-                      avatarFile
-                        ? URL.createObjectURL(avatarFile)
-                        : clubInfo.avatarUrl
+                      avatarFile ? URL.createObjectURL(avatarFile) : avatarUrl
                     }
                     alt="Ảnh đại diện"
                     className="rounded-lg w-full h-full object-cover"
@@ -209,19 +212,15 @@ export default function ClubBasicInfoForm({ clubInfo }) {
           />
           <div className="border border-dashed p-4 rounded-lg text-center">
             <div className="relative w-full h-40 mx-auto">
-              {coverFile || clubInfo?.coverUrl ? (
+              {coverFile || coverUrl ? (
                 <>
                   <img
-                    src={
-                      coverFile
-                        ? URL.createObjectURL(coverFile)
-                        : clubInfo.coverUrl
-                    }
+                    src={coverFile ? URL.createObjectURL(coverFile) : coverUrl}
                     alt="Ảnh bìa"
                     className="rounded-lg w-full h-40 object-cover"
                   />
                   <button
-                    onClick={() => handleRemoveCover()}
+                    onClick={handleRemoveCover}
                     className="absolute top-2 right-2 bg-white rounded-full p-1 shadow"
                   >
                     <X className="w-4 h-4 text-gray-600" />

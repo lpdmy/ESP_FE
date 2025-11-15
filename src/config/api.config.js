@@ -66,6 +66,8 @@ export const API_CONFIG = {
     MY_TEACHER_PROFILE: '/userprofile/my-teacher-profile',
     ALL_PROFILES: '/userprofile/all',
     PROFILE_BY_ID: '/userprofile/{id}',
+    PROFILE_BY_USER_ID:'/userprofile/user/{id}',
+    TEACHER_PROFILE_BY_USER_ID:'/userprofile/teachers/user/{id}',
     CREATE_PROFILE: '/userprofile',
     UPDATE_PROFILE: '/userprofile/{id}',
     UPDATE_TEACHER_PROFILE: '/userprofile/my-teacher-profile',
@@ -140,7 +142,7 @@ export const API_CONFIG = {
     CLUB_INVITE_MENTOR:'/join-request/invite-mentor',
     CLUB_GET_INVITATION: '/join-request/user',
     CLUB_CHANGE_ROLE:'/club-member/change-role',
-    CLUB_DELETE:'/club'
+    CLUB_DELETE:'/club',
   },
   COMMENT:{
     CREATE_COMMENT:'/comment',

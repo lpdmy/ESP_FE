@@ -15,6 +15,7 @@ export const CLUB_MESSAGES = {
     INVITE_MENTOR:"Mời cố vấn cho câu lạc bộ thành công",
     CHANGE_ROLE:"Chuyển chức vụ thành công",
     DELETE_CLUB:"Tạm ngừng câu lạc bộ thành công",
+    APPROVE_INVITAION:"Chấp nhận lời mời làm cố vấn thành công",
   },
   ERROR:{
     CREATE_CLUB_JOIN:"Tạo yêu cầu tham gia câu lạc bộ không thành công",
@@ -31,6 +32,7 @@ export const CLUB_MESSAGES = {
     INVITE_MENTOR:"Mời cố vấn cho câu lạc bộ không thành công",
     CHANGE_ROLE:"Chuyển chức vụ thất bại, vui lòng thử lại sau",
     LOAD_POST:"Tải bài đăng thất bại, vui lòng thử lại sau",
-    DELETE_CLUB:"Tạm ngừng câu lạc bộ thất bại, vui lòng thử lại sau"
+    DELETE_CLUB:"Tạm ngừng câu lạc bộ thất bại, vui lòng thử lại sau",
+    APPROVE_INVITAION:"Chấp nhận lời mời làm cố vấn thất bại, vui lòng thử lại sau",
   }
 }
