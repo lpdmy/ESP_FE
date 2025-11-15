@@ -18,7 +18,13 @@ export const ROUTES = {
     SYSTEM_NEWS_AND_NOTICES_DETAIL: "/admin/system-news-and-notices/:id",
     CLUB:"/admin/clubs",
     STAFF:"/admin/staff",
-    CLASS:"/admin/classes"
+    ACTIVITIES:"/admin/activities",
+    CREATE_ACTIVITY:"/admin/activities/create",
+    EDIT_ACTIVITY:"/admin/activities/:id/edit",
+    AI_SCHEDULE:"/admin/activities/:id/ai-schedule",
+    CLASSES: 'admin/classes',
+    CLASS_DETAIL:'/admin/classes/:id'
+
   },
   USER_PROFILE: {
     PROFILE: "/profile",
@@ -58,6 +64,9 @@ export const ROUTES = {
   CHAT: {
     CHAT_PAGE: "/chat/:roomId",
     INBOX: "/chat",
+  },
+  ACTIVITY: {
+    VIEW_ACTIVITY: "/activities/:id",
   },
   NOTIFICATION: {
     LIST_NOTIFICATION: "/notifications",
