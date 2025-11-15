@@ -7,6 +7,7 @@ import { Label } from "@/common/components/ui/label"
 import { Textarea } from "@/common/components/ui/textarea"
 import { SimpleSelect } from "@/common/components/ui/select"
 import { Checkbox } from "@/common/components/ui/checkbox"
+import { Switch } from "@/common/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import { ROUTES } from "@/common/constants/routes"
 import { uploadImage } from "@/common/utils/upload"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
+import { GradingCriteriaSection } from "./GradingCriteriaSection"
 
 export default function EditActivity() {
   const params = useParams()
@@ -38,6 +40,9 @@ export default function EditActivity() {
   const [customSportInput, setCustomSportInput] = useState("")
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [gradingEnabled, setGradingEnabled] = useState(false)
+  const [gradingCriteria, setGradingCriteria] = useState([])
+  const [onlyTeacherCanRegister, setOnlyTeacherCanRegister] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -160,6 +165,18 @@ export default function EditActivity() {
               })) || []
             },
           })
+          
+          // Load grading settings (enabled is determined by presence of gradingSettings)
+          if (activityData.gradingSettings && activityData.gradingSettings.criteria) {
+            setGradingEnabled(true)
+            setGradingCriteria(activityData.gradingSettings.criteria || [])
+          } else {
+            setGradingEnabled(false)
+            setGradingCriteria([])
+          }
+          
+          // Load registration settings
+          setOnlyTeacherCanRegister(activityData.onlyTeacherCanRegister || false)
         }
       } catch (error) {
         console.error("Error loading activity:", error)
@@ -418,7 +435,13 @@ export default function EditActivity() {
         starPointRewards: {
           registration: formData.starPointRewards.registration || "",
           awards: formData.starPointRewards.awards || []
-        }
+        },
+        // Grading Settings (only criteria, enabled is stored in IsGrade column)
+        gradingSettings: gradingEnabled && gradingCriteria && gradingCriteria.length > 0 ? {
+          criteria: gradingCriteria
+        } : null,
+        // Registration Settings
+        onlyTeacherCanRegister: onlyTeacherCanRegister
       }
 
       const response = await executeApiCall(
@@ -1177,6 +1200,20 @@ export default function EditActivity() {
                 <div className="text-center py-12 text-gray-500">Vui lòng chọn phân loại hoạt động ở trên</div>
               )}
             </div>
+            
+            {/* Grading Criteria Section */}
+            <GradingCriteriaSection
+              enabled={gradingEnabled}
+              onEnabledChange={(newEnabled) => {
+                setGradingEnabled(newEnabled)
+                // Clear criteria when disabled
+                if (!newEnabled) {
+                  setGradingCriteria([])
+                }
+              }}
+              onCriteriaChange={setGradingCriteria}
+              initialCriteria={gradingCriteria}
+            />
           </CardContent>
         </Card>
 
@@ -1226,6 +1263,36 @@ export default function EditActivity() {
             </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Registration Settings */}
+              <div className="border-t pt-6 mt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <Label className="text-base font-semibold">Cài đặt đăng ký</Label>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Chỉ giáo viên chủ nhiệm mới được đăng ký đại diện lớp
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="only-teacher-register" className="cursor-pointer text-sm font-medium">
+                      Chỉ giáo viên
+                    </Label>
+                    <Switch 
+                      id="only-teacher-register" 
+                      checked={onlyTeacherCanRegister} 
+                      onCheckedChange={setOnlyTeacherCanRegister}
+                      className={onlyTeacherCanRegister ? "!bg-blue-500 focus-visible:!ring-blue-500" : "bg-gray-200"}
+                    />
+                  </div>
+                </div>
+                {onlyTeacherCanRegister && (
+                  <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-800">
+                      <strong>Lưu ý:</strong> Khi bật tùy chọn này, chỉ có giáo viên mới có thể đăng ký tham gia hoạt động. Học sinh/sinh viên sẽ không thể đăng ký.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -1408,6 +1475,43 @@ export default function EditActivity() {
                               </li>
                             ))}
                         </ul>
+                      </div>
+                    )}
+
+                    {/* Grading Settings */}
+                    {gradingEnabled && gradingCriteria && gradingCriteria.length > 0 && (
+                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <CheckCircle className="w-5 h-5 text-blue-500" />
+                          <p className="font-semibold">Cài đặt chấm điểm</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600 mb-2">Tiêu chí chấm điểm:</p>
+                          <div className="space-y-2">
+                            {gradingCriteria.map((criterion, index) => (
+                              <div key={index} className="flex items-center gap-2">
+                                <span className="text-blue-600">•</span>
+                                <span className="text-sm text-gray-700">{criterion}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Registration Settings */}
+                    {onlyTeacherCanRegister && (
+                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="w-5 h-5 text-blue-500" />
+                          <p className="font-semibold">Cài đặt đăng ký</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <span className="text-sm text-gray-700">
+                            Chỉ giáo viên chủ nhiệm mới được đăng ký đại diện lớp
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>

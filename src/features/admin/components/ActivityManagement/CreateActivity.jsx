@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { Button } from "@/common/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
@@ -7,6 +7,7 @@ import { Label } from "@/common/components/ui/label"
 import { Textarea } from "@/common/components/ui/textarea"
 import { SimpleSelect } from "@/common/components/ui/select"
 import { Checkbox } from "@/common/components/ui/checkbox"
+import { Switch } from "@/common/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import { ROUTES } from "@/common/constants/routes"
 import { uploadImage } from "@/common/utils/upload"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
+import { GradingCriteriaSection } from "./GradingCriteriaSection"
 
 export default function CreateActivity() {
   const navigate = useNavigate()
@@ -36,6 +38,11 @@ export default function CreateActivity() {
   const [speakerForm, setSpeakerForm] = useState({ name: "", title: "", bio: "", image: "" })
   const [programForm, setProgramForm] = useState({ title: "", time: "", description: "" })
   const [customSportInput, setCustomSportInput] = useState("")
+  const [thumbnailFile, setThumbnailFile] = useState(null) // Lưu file object chưa upload
+  const [thumbnailPreview, setThumbnailPreview] = useState("") // URL preview từ local file
+  const [gradingEnabled, setGradingEnabled] = useState(false) // Bật/tắt chấm điểm
+  const [gradingCriteria, setGradingCriteria] = useState([]) // Danh sách tiêu chí chấm điểm
+  const [onlyTeacherCanRegister, setOnlyTeacherCanRegister] = useState(false) // Chỉ giáo viên mới được đăng ký
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -314,20 +321,71 @@ export default function CreateActivity() {
       toast.error("Vui lòng nhập ít nhất một quy định")
       return
     }
+    
+    // Validate grading settings if enabled
+    if (gradingEnabled) {
+      if (!gradingCriteria || gradingCriteria.length === 0) {
+        toast.error("Vui lòng chọn hoặc thêm ít nhất 1 tiêu chí chấm điểm")
+        return
+      }
+    }
 
     setIsSubmitting(true)
     const token = localStorage.getItem("token")
     
     try {
+      // Upload ảnh lên BE nếu có file mới được chọn
+      let thumbnailUrl = formData.thumbnail // Giữ URL cũ nếu đã có (khi edit)
+      
+      if (thumbnailFile) {
+        setIsUploadingThumbnail(true)
+        try {
+          thumbnailUrl = await uploadImage(thumbnailFile)
+          if (!thumbnailUrl) {
+            toast.error("Không thể upload ảnh. Vui lòng thử lại.")
+            setIsSubmitting(false)
+            setIsUploadingThumbnail(false)
+            return
+          }
+          // Cleanup preview URL sau khi upload thành công
+          if (thumbnailPreview) {
+            URL.revokeObjectURL(thumbnailPreview)
+            setThumbnailPreview("")
+          }
+          setThumbnailFile(null)
+          setFormData({ ...formData, thumbnail: thumbnailUrl })
+          toast.success("Đã upload ảnh thành công")
+        } catch (error) {
+          console.error("Error uploading image:", error)
+          toast.error(error.message || "Có lỗi xảy ra khi upload ảnh")
+          setIsSubmitting(false)
+          setIsUploadingThumbnail(false)
+          return
+        } finally {
+          setIsUploadingThumbnail(false)
+        }
+      } else if (!thumbnailUrl) {
+        toast.error("Vui lòng chọn ảnh đại diện cho hoạt động")
+        setIsSubmitting(false)
+        return
+      }
+
       // Map formData to API format
+      // Convert category string to enum number: "activity" -> 1 (Activity), "event" -> 2 (Event)
+      const categoryMap = {
+        "activity": 1, // ActivityType.Activity
+        "event": 2    // ActivityType.Event
+      };
+      const categoryValue = categoryMap[formData.category] || 1; // Default to Activity (1)
+      
       const activityData = {
         title: formData.title,
         description: formData.description,
-        category: formData.category || "activity", // Default to "activity"
+        category: categoryValue,
         subType: formData.subType,
         location: formData.location,
         organizer: formData.organizer,
-        thumbnailUrl: formData.thumbnail,
+        thumbnailUrl: thumbnailUrl,
         startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
         registerDate: formData.registerDate ? new Date(formData.registerDate).toISOString() : null,
@@ -362,7 +420,13 @@ export default function CreateActivity() {
         starPointRewards: {
           registration: formData.starPointRewards.registration || "",
           awards: formData.starPointRewards.awards || []
-        }
+        },
+        // Grading Settings (only criteria, enabled is stored in IsGrade column)
+        gradingSettings: gradingEnabled && gradingCriteria && gradingCriteria.length > 0 ? {
+          criteria: gradingCriteria
+        } : null,
+        // Registration Settings
+        onlyTeacherCanRegister: onlyTeacherCanRegister
       }
 
       const response = await executeApiCall(
@@ -373,7 +437,7 @@ export default function CreateActivity() {
 
       if (response?.data) {
         toast.success("Hoạt động mới đã được xuất bản thành công.")
-        navigate("/activities")
+        navigate("/admin/activities")
       }
     } catch (err) {
       console.error("Error creating activity:", err)
@@ -390,7 +454,7 @@ export default function CreateActivity() {
   // File upload handlers
   const fileInputRef = useRef(null)
 
-  const handleFileSelect = async (e) => {
+  const handleFileSelect = (e) => {
     const file = e.target.files?.[0]
     if (file) {
       // Validate file type
@@ -404,23 +468,19 @@ export default function CreateActivity() {
         return
       }
       
-      // Upload file directly
-      setIsUploadingThumbnail(true)
-      try {
-        const uploadedUrl = await uploadImage(file)
-        if (uploadedUrl) {
-          setFormData({ ...formData, thumbnail: uploadedUrl })
-          toast.success("Đã upload ảnh thành công")
-        }
-      } catch (error) {
-        console.error("Error uploading image:", error)
-        toast.error(error.message || "Có lỗi xảy ra khi upload ảnh")
-      } finally {
-        setIsUploadingThumbnail(false)
-        if (fileInputRef.current) {
-          fileInputRef.current.value = ""
-        }
+      // Cleanup preview URL cũ nếu có
+      if (thumbnailPreview) {
+        URL.revokeObjectURL(thumbnailPreview)
       }
+      
+      // Chỉ lưu file và tạo preview, không upload ngay
+      setThumbnailFile(file)
+      
+      // Tạo preview URL từ local file
+      const previewUrl = URL.createObjectURL(file)
+      setThumbnailPreview(previewUrl)
+      
+      toast.success("Ảnh đã được chọn. Ảnh sẽ được upload khi bạn tạo hoạt động.")
     }
   }
 
@@ -429,7 +489,7 @@ export default function CreateActivity() {
     e.stopPropagation()
   }
 
-  const handleDrop = async (e) => {
+  const handleDrop = (e) => {
     e.preventDefault()
     e.stopPropagation()
     
@@ -446,30 +506,44 @@ export default function CreateActivity() {
         return
       }
       
-      // Upload file directly
-      setIsUploadingThumbnail(true)
-      try {
-        const uploadedUrl = await uploadImage(file)
-        if (uploadedUrl) {
-          setFormData({ ...formData, thumbnail: uploadedUrl })
-          toast.success("Đã upload ảnh thành công")
-        }
-      } catch (error) {
-        console.error("Error uploading image:", error)
-        toast.error(error.message || "Có lỗi xảy ra khi upload ảnh")
-      } finally {
-        setIsUploadingThumbnail(false)
+      // Cleanup preview URL cũ nếu có
+      if (thumbnailPreview) {
+        URL.revokeObjectURL(thumbnailPreview)
       }
+      
+      // Chỉ lưu file và tạo preview, không upload ngay
+      setThumbnailFile(file)
+      
+      // Tạo preview URL từ local file
+      const previewUrl = URL.createObjectURL(file)
+      setThumbnailPreview(previewUrl)
+      
+      toast.success("Ảnh đã được chọn. Ảnh sẽ được upload khi bạn tạo hoạt động.")
     }
   }
 
   const handleRemoveImage = () => {
+    // Cleanup preview URL để tránh memory leak
+    if (thumbnailPreview) {
+      URL.revokeObjectURL(thumbnailPreview)
+    }
+    setThumbnailFile(null)
+    setThumbnailPreview("")
     setFormData({ ...formData, thumbnail: "" })
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
     toast.success("Đã xóa ảnh")
   }
+
+  // Cleanup preview URL khi component unmount hoặc khi thay đổi file
+  useEffect(() => {
+    return () => {
+      if (thumbnailPreview) {
+        URL.revokeObjectURL(thumbnailPreview)
+      }
+    }
+  }, [thumbnailPreview])
 
 
   return (
@@ -591,10 +665,10 @@ export default function CreateActivity() {
                   onChange={handleFileSelect}
                   className="hidden"
                 />
-                {formData.thumbnail ? (
+                {(thumbnailPreview || formData.thumbnail) ? (
                   <div className="relative">
                     <img
-                      src={formData.thumbnail}
+                      src={thumbnailPreview || formData.thumbnail}
                       alt="Preview"
                       className="w-full h-64 object-cover rounded-lg border border-gray-300"
                     />
@@ -606,6 +680,11 @@ export default function CreateActivity() {
                         </div>
                       ) : (
                         <>
+                          {thumbnailFile && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                              <span className="text-sm text-blue-700">Ảnh sẽ được upload khi tạo hoạt động</span>
+                            </div>
+                          )}
                       <Button
                         type="button"
                         variant="outline"
@@ -649,6 +728,11 @@ export default function CreateActivity() {
                     <Upload className="w-12 h-12 mx-auto text-gray-400 mb-3" />
                     <p className="text-sm text-gray-600">Kéo thả ảnh vào đây hoặc click để chọn</p>
                     <p className="text-xs text-gray-500 mt-1">PNG, JPG tối đa 10MB</p>
+                        {thumbnailFile && (
+                          <p className="text-xs text-blue-600 mt-2 font-medium">
+                            ⓘ Ảnh sẽ được upload khi bạn tạo hoạt động
+                          </p>
+                        )}
                       </>
                     )}
                   </div>
@@ -1113,6 +1197,20 @@ export default function CreateActivity() {
                 </div>
               </div>
 
+              {/* Grading Criteria Section */}
+              <GradingCriteriaSection
+                enabled={gradingEnabled}
+                onEnabledChange={(newEnabled) => {
+                  setGradingEnabled(newEnabled)
+                  // Clear criteria when disabled
+                  if (!newEnabled) {
+                    setGradingCriteria([])
+                  }
+                }}
+                onCriteriaChange={setGradingCriteria}
+                initialCriteria={gradingCriteria}
+              />
+
               {!formData.subType && (
                 <div className="text-center py-12 text-gray-500">Vui lòng chọn phân loại hoạt động ở trên</div>
               )}
@@ -1158,6 +1256,36 @@ export default function CreateActivity() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Registration Settings */}
+              <div className="border-t pt-6 mt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <Label className="text-base font-semibold">Cài đặt đăng ký</Label>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Chỉ giáo viên chủ nhiệm mới được đăng ký đại diện lớp
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="only-teacher-register" className="cursor-pointer text-sm font-medium">
+                      Chỉ giáo viên
+                    </Label>
+                    <Switch 
+                      id="only-teacher-register" 
+                      checked={onlyTeacherCanRegister} 
+                      onCheckedChange={setOnlyTeacherCanRegister}
+                      className={onlyTeacherCanRegister ? "!bg-blue-500 focus-visible:!ring-blue-500" : "bg-gray-200"}
+                    />
+                  </div>
+                </div>
+                {onlyTeacherCanRegister && (
+                  <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-800">
+                      <strong>Lưu ý:</strong> Khi bật tùy chọn này, chỉ có giáo viên mới có thể đăng ký tham gia hoạt động. Học sinh/sinh viên sẽ không thể đăng ký.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1367,6 +1495,49 @@ export default function CreateActivity() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Grading Settings */}
+              {gradingEnabled && gradingCriteria && gradingCriteria.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-blue-500" />
+                      Cài đặt chấm điểm
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600 mb-2">Tiêu chí chấm điểm:</p>
+                      {gradingCriteria.map((criterion, index) => (
+                        <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                          <span className="text-blue-600">•</span>
+                          <span className="text-sm text-gray-700">{criterion}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Registration Settings */}
+              {onlyTeacherCanRegister && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-blue-500" />
+                      Cài đặt đăng ký
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <span className="text-sm text-gray-700">
+                        Chỉ giáo viên chủ nhiệm mới được đăng ký đại diện lớp
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
 
@@ -1408,10 +1579,10 @@ export default function CreateActivity() {
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       {/* Thumbnail */}
-                      {formData.thumbnail && (
+                      {(thumbnailPreview || formData.thumbnail) && (
                         <div className="relative h-48 rounded-lg overflow-hidden">
                           <img
-                            src={formData.thumbnail || "/placeholder.svg"}
+                            src={thumbnailPreview || formData.thumbnail || "/placeholder.svg"}
                             alt={formData.title}
                             className="w-full h-full object-cover"
                           />
@@ -1550,6 +1721,27 @@ export default function CreateActivity() {
                         </>
                       )}
 
+                      {/* Grading Settings */}
+                      {gradingEnabled && gradingCriteria && gradingCriteria.length > 0 && (
+                        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                          <div className="flex items-center gap-2 mb-3">
+                            <CheckCircle className="w-5 h-5 text-blue-500" />
+                            <p className="font-semibold">Cài đặt chấm điểm</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600 mb-2">Tiêu chí chấm điểm:</p>
+                            <div className="space-y-2">
+                              {gradingCriteria.map((criterion, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                  <span className="text-blue-600">•</span>
+                                  <span className="text-sm text-gray-700">{criterion}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Rules */}
                       {formData.rules.filter((r) => r).length > 0 && (
                         <div className="bg-gray-50 rounded-lg p-4">
@@ -1564,6 +1756,22 @@ export default function CreateActivity() {
                                 </li>
                               ))}
                           </ul>
+                        </div>
+                      )}
+
+                      {/* Registration Settings */}
+                      {onlyTeacherCanRegister && (
+                        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Users className="w-5 h-5 text-blue-500" />
+                            <p className="font-semibold">Cài đặt đăng ký</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <span className="text-sm text-gray-700">
+                              Chỉ giáo viên chủ nhiệm mới được đăng ký đại diện lớp
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>

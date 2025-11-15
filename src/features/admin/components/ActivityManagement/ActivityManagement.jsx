@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Link } from "react-router-dom"
 import { Button } from "@/common/components/ui/button"
 import { Input } from "@/common/components/ui/input"
@@ -37,10 +37,27 @@ import {
   ChevronUp,
   X,
   Maximize2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { ROUTES } from "@/common/constants/routes"
+import { executeApiCall } from "@/common/utils/executeApiCall"
+import { activityService } from "@/features/activities/services/activity.service"
+import { LoadingCard } from "@/common/components/ui/loading"
 
 export default function ActivityManagement() {
+  // Data state
+  const [activities, setActivities] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  
+  // Pagination state
+  const [pageNumber, setPageNumber] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  
+  // Search and filters
   const [searchQuery, setSearchQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
@@ -57,6 +74,9 @@ export default function ActivityManagement() {
   const [minParticipantsFilter, setMinParticipantsFilter] = useState("")
   const [maxParticipantsFilter, setMaxParticipantsFilter] = useState("")
   const [organizerFilter, setOrganizerFilter] = useState("")
+  
+  // Debounce search
+  const [searchDebounce, setSearchDebounce] = useState("")
 
   // AI Form State
   const [aiForm, setAiForm] = useState({
@@ -70,122 +90,193 @@ export default function ActivityManagement() {
     },
   })
 
-  // Mock stats data
-  const stats = [
+  // Stats data (calculated from activities)
+  const [stats, setStats] = useState([
     {
       title: "Đang diễn ra",
-      value: "8",
+      value: "0",
       icon: CheckCircle,
       color: "text-green-600",
       bgColor: "bg-green-50",
-      trend: "+2 từ tuần trước",
+      trend: "Tính từ dữ liệu",
     },
     {
       title: "Sắp tới",
-      value: "15",
+      value: "0",
       icon: Clock,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
-      trend: "+5 hoạt động mới",
+      trend: "Tính từ dữ liệu",
     },
     {
       title: "Đã hoàn thành",
-      value: "42",
+      value: "0",
       icon: CheckCircle,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
-      trend: "Tháng này",
-    },
-    {
-      title: "Chờ duyệt",
-      value: "3",
-      icon: XCircle,
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-      trend: "Cần xử lý",
+      trend: "Tính từ dữ liệu",
     },
     {
       title: "Tổng người tham gia",
-      value: "1,234",
+      value: "0",
       icon: Users,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
-      trend: "+156 tuần này",
+      trend: "Tính từ dữ liệu",
     },
-  ]
-
-  // Mock activities data
-  const activities = [
-    {
-      id: 1,
-      thumbnail: "/sports-festival.jpg",
-      title: "Hội thao Liên trường 2024",
-      category: "Activity",
-      subType: "SportsFestival",
-      startDate: "2024-03-15",
-      endDate: "2024-03-17",
-      status: "Active",
-      participants: 342,
-      maxParticipants: 500,
-    },
-    {
-      id: 2,
-      thumbnail: "/drawing-contest.jpg",
-      title: "Cuộc thi vẽ tranh 'Mùa xuân'",
-      category: "Event",
-      subType: "DrawingContest",
-      startDate: "2024-03-20",
-      endDate: "2024-03-25",
-      status: "Upcoming",
-      participants: 67,
-      maxParticipants: 100,
-    },
-    {
-      id: 3,
-      thumbnail: "/ai-seminar.jpg",
-      title: "Hội thảo 'AI trong Giáo dục'",
-      category: "Event",
-      subType: "Seminar",
-      startDate: "2024-03-18",
-      endDate: "2024-03-18",
-      status: "Upcoming",
-      participants: 156,
-      maxParticipants: 200,
-    },
-    {
-      id: 4,
-      thumbnail: "/writing-contest.jpg",
-      title: "Cuộc thi sáng tác 'Tuổi trẻ và ước mơ'",
-      category: "Event",
-      subType: "CreativeWriting",
-      startDate: "2024-03-22",
-      endDate: "2024-04-05",
-      status: "Pending",
-      participants: 89,
-      maxParticipants: 150,
-    },
-    {
-      id: 5,
-      thumbnail: "/football-tournament.jpg",
-      title: "Giải bóng đá Khoa Công nghệ",
-      category: "Activity",
-      subType: "SportsFestival",
-      startDate: "2024-02-20",
-      endDate: "2024-02-28",
-      status: "Ended",
-      participants: 200,
-      maxParticipants: 200,
-    },
-  ]
+  ])
+  
+  // Calculate activity status based on dates
+  const getActivityStatus = (activity) => {
+    const now = new Date()
+    const startDate = activity.startDate ? new Date(activity.startDate) : null
+    const endDate = activity.endDate ? new Date(activity.endDate) : null
+    
+    // If missing dates, consider as Upcoming (not Pending)
+    if (!startDate || !endDate) return "Upcoming"
+    
+    // Check current status based on dates
+    if (now >= startDate && now <= endDate) {
+      return "Active" // Đang diễn ra
+    }
+    
+    if (now > endDate) {
+      return "Ended" // Đã kết thúc
+    }
+    
+    // If now < startDate, it's upcoming
+    return "Upcoming" // Sắp tới
+  }
+  
+  // Fetch activities from BE
+  const fetchActivities = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    
+    try {
+      const token = localStorage.getItem("token")
+      const search = searchDebounce.trim() || null
+      
+      const response = await executeApiCall(
+        activityService.getAllActivities.bind(activityService),
+        [pageNumber, pageSize, search, token],
+        { setLoading, setError }
+      )
+      
+      if (response?.data) {
+        const paginationData = response.data
+        const activitiesData = paginationData.data || []
+        
+        // Map BE data to FE format
+        const mappedActivities = activitiesData.map(activity => ({
+          id: activity.id,
+          thumbnail: activity.thumbnailUrl || "",
+          title: activity.title || "",
+          category: activity.category === 1 ? "Activity" : "Event",
+          subType: activity.subType || "",
+          startDate: activity.startDate ? new Date(activity.startDate).toISOString().split("T")[0] : "",
+          endDate: activity.endDate ? new Date(activity.endDate).toISOString().split("T")[0] : "",
+          registerDate: activity.registerDate ? new Date(activity.registerDate).toISOString().split("T")[0] : "",
+          endRegisterDate: activity.endRegisterDate ? new Date(activity.endRegisterDate).toISOString().split("T")[0] : "",
+          status: getActivityStatus(activity),
+          participants: activity.numberOfParticipants || 0,
+          maxParticipants: activity.maxParticipants || 0,
+          location: activity.location || "",
+          organizer: activity.organizer || "",
+          description: activity.description || "",
+          onlyTeacherCanRegister: activity.onlyTeacherCanRegister || false,
+          gradingSettings: activity.gradingSettings || null,
+        }))
+        
+        setActivities(mappedActivities)
+        setTotalCount(paginationData.totalCount || 0)
+        setTotalPages(Math.ceil((paginationData.totalCount || 0) / pageSize))
+        
+        // Calculate stats
+        const now = new Date()
+        const activeCount = mappedActivities.filter(a => {
+          const start = a.startDate ? new Date(a.startDate) : null
+          const end = a.endDate ? new Date(a.endDate) : null
+          return start && end && now >= start && now <= end
+        }).length
+        
+        const upcomingCount = mappedActivities.filter(a => {
+          const start = a.startDate ? new Date(a.startDate) : null
+          return start && now < start
+        }).length
+        
+        const endedCount = mappedActivities.filter(a => {
+          const end = a.endDate ? new Date(a.endDate) : null
+          return end && now > end
+        }).length
+        
+        const totalParticipants = mappedActivities.reduce((sum, a) => sum + a.participants, 0)
+        
+        setStats([
+          {
+            title: "Đang diễn ra",
+            value: activeCount.toString(),
+            icon: CheckCircle,
+            color: "text-green-600",
+            bgColor: "bg-green-50",
+            trend: "Tính từ dữ liệu",
+          },
+          {
+            title: "Sắp tới",
+            value: upcomingCount.toString(),
+            icon: Clock,
+            color: "text-orange-600",
+            bgColor: "bg-orange-50",
+            trend: "Tính từ dữ liệu",
+          },
+          {
+            title: "Đã hoàn thành",
+            value: endedCount.toString(),
+            icon: CheckCircle,
+            color: "text-blue-600",
+            bgColor: "bg-blue-50",
+            trend: "Tính từ dữ liệu",
+          },
+          {
+            title: "Tổng người tham gia",
+            value: totalParticipants.toLocaleString(),
+            icon: Users,
+            color: "text-purple-600",
+            bgColor: "bg-purple-50",
+            trend: "Tính từ dữ liệu",
+          },
+        ])
+      }
+    } catch (err) {
+      console.error("Error fetching activities:", err)
+      toast.error(err?.message || "Không thể tải danh sách hoạt động")
+    } finally {
+      setLoading(false)
+    }
+  }, [pageNumber, pageSize, searchDebounce])
+  
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchDebounce(searchQuery)
+      setPageNumber(1) // Reset to first page when search changes
+    }, 500)
+    
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+  
+  // Fetch activities when filters change
+  useEffect(() => {
+    fetchActivities()
+  }, [fetchActivities])
 
   const getStatusBadge = (status) => {
     const statusConfig = {
       Active: { label: "Đang diễn ra", className: "bg-green-100 text-green-700" },
       Upcoming: { label: "Sắp tới", className: "bg-orange-100 text-orange-700" },
       Ended: { label: "Đã kết thúc", className: "bg-gray-100 text-gray-700" },
-      Pending: { label: "Chờ duyệt", className: "bg-red-100 text-red-700" },
     }
-    const config = statusConfig[status] || statusConfig.Pending
+    const config = statusConfig[status] || statusConfig.Upcoming
     return <Badge className={config.className}>{config.label}</Badge>
   }
 
@@ -197,7 +288,7 @@ export default function ActivityManagement() {
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedActivities(activities.map((a) => a.id))
+      setSelectedActivities(filteredActivities.map((a) => a.id))
     } else {
       setSelectedActivities([])
     }
@@ -211,44 +302,12 @@ export default function ActivityManagement() {
   const handleGenerateSchedule = () => {
     setAiGenerating(true)
 
-    // Simulate AI generation
+    // TODO: Implement actual AI schedule generation API call
+    // For now, show message that feature is not yet implemented
     setTimeout(() => {
-      const mockSchedule = [
-        {
-          date: "2025-11-10",
-          time: "08:00 - 10:00",
-          activity: "100m Run",
-          participants: ["ClassA", "ClassB"],
-          location: "Stadium",
-        },
-        {
-          date: "2025-11-10",
-          time: "10:30 - 12:00",
-          activity: "Long Jump",
-          participants: ["ClassC", "ClassD"],
-          location: "Sports Hall",
-        },
-        {
-          date: "2025-11-11",
-          time: "13:00 - 15:00",
-          activity: "Basketball",
-          participants: ["ClassA", "ClassC"],
-          location: "Basketball Court",
-        },
-        {
-          date: "2025-11-11",
-          time: "15:30 - 17:00",
-          activity: "Volleyball",
-          participants: ["ClassB", "ClassD"],
-          location: "Volleyball Court",
-        },
-      ]
-
-      setAiSchedule(mockSchedule)
       setAiGenerating(false)
-
-      toast.success("AI đã tạo lịch thi đấu tối ưu cho bạn.")
-    }, 2000)
+      toast.info("Tính năng AI tạo lịch thi đấu đang được phát triển. Vui lòng quay lại sau.")
+    }, 1000)
   }
 
   const handleApproveSchedule = () => {
@@ -269,7 +328,6 @@ export default function ActivityManagement() {
     { value: "active", label: "Đang diễn ra" },
     { value: "upcoming", label: "Sắp tới" },
     { value: "ended", label: "Đã kết thúc" },
-    { value: "pending", label: "Chờ duyệt" },
   ]
 
   const activityTypeOptions = [
@@ -281,12 +339,21 @@ export default function ActivityManagement() {
   const subTypeOptions = [
     { value: "all", label: "Tất cả" },
     { value: "SportsFestival", label: "Hội thao" },
-    { value: "DrawingContest", label: "Cuộc thi vẽ" },
-    { value: "CreativeWriting", label: "Sáng tác" },
-    { value: "Seminar", label: "Hội thảo" },
-    { value: "Workshop", label: "Workshop" },
+    { value: "CreativeContest", label: "Cuộc thi sáng tạo" },
+    { value: "SeminarWorkshop", label: "Hội thảo / Workshop" },
     { value: "Other", label: "Khác" },
   ]
+
+  // Map SubType to Vietnamese label
+  const getSubTypeLabel = (subType) => {
+    const subTypeMap = {
+      "SportsFestival": "Hội thao",
+      "CreativeContest": "Cuộc thi sáng tạo",
+      "SeminarWorkshop": "Hội thảo / Workshop",
+      "Other": "Khác",
+    }
+    return subTypeMap[subType] || subType || "-"
+  }
 
   const handleResetFilters = () => {
     setCategoryFilter("")
@@ -312,6 +379,59 @@ export default function ActivityManagement() {
       organizerFilter ||
       searchQuery
     )
+  }
+  
+  // Filter activities on client side (since BE only supports search by title)
+  // Note: Search is done on BE, but other filters are done on client side
+  const filteredActivities = activities.filter(activity => {
+    // Category filter
+    if (categoryFilter && categoryFilter !== "all") {
+      const categoryMatch = categoryFilter === "activity" 
+        ? activity.category === "Activity"
+        : activity.category === "Event"
+      if (!categoryMatch) return false
+    }
+    
+    // Status filter
+    if (statusFilter && statusFilter !== "all") {
+      const statusMap = {
+        "active": "Active",
+        "upcoming": "Upcoming",
+        "ended": "Ended"
+      }
+      if (activity.status !== statusMap[statusFilter]) return false
+    }
+    
+    // SubType filter
+    if (subTypeFilter && subTypeFilter !== "all") {
+      if (activity.subType !== subTypeFilter) return false
+    }
+    
+    // Date filters
+    if (dateFromFilter && activity.startDate && activity.startDate < dateFromFilter) return false
+    if (dateToFilter && activity.endDate && activity.endDate > dateToFilter) return false
+    
+    // Participants filters
+    if (minParticipantsFilter && activity.participants < parseInt(minParticipantsFilter)) return false
+    if (maxParticipantsFilter && activity.participants > parseInt(maxParticipantsFilter)) return false
+    
+    // Organizer filter (client-side search)
+    if (organizerFilter && activity.organizer && !activity.organizer.toLowerCase().includes(organizerFilter.toLowerCase())) return false
+    
+    return true
+  })
+  
+  // Handle pagination
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPageNumber(newPage)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+  
+  const handlePageSizeChange = (newSize) => {
+    setPageSize(newSize)
+    setPageNumber(1)
   }
 
   return (
@@ -531,7 +651,7 @@ export default function ActivityManagement() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat, index) => (
             <Card key={index} className="hover-lift">
               <CardContent>
@@ -683,32 +803,79 @@ export default function ActivityManagement() {
       {/* Activities Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Danh sách hoạt động</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Danh sách hoạt động</CardTitle>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span>Tổng: {totalCount} hoạt động</span>
+              <span>•</span>
+              <span>Trang {pageNumber}/{totalPages || 1}</span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tiêu đề</TableHead>
-                  <TableHead>Loại</TableHead>
-                  <TableHead>Ngày bắt đầu</TableHead>
-                  <TableHead>Ngày kết thúc</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead>Người tham gia</TableHead>
-                  <TableHead className="text-right">Thao tác</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activities.map((activity) => (
-                  <TableRow key={activity.id}>
-                    <TableCell className="font-medium max-w-xs">
-                      <div className="line-clamp-2">{activity.title}</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{activity.category}</Badge>
-                    </TableCell>
-                    <TableCell>{activity.startDate}</TableCell>
+          {loading ? (
+            <LoadingCard text="Đang tải danh sách hoạt động..." />
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-600 mb-4">{error}</p>
+              <Button onClick={fetchActivities} variant="outline">
+                Thử lại
+              </Button>
+            </div>
+          ) : filteredActivities.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Không tìm thấy hoạt động nào</p>
+              {hasActiveFilters() && (
+                <Button onClick={handleResetFilters} variant="outline" className="mt-4">
+                  Xóa bộ lọc
+                </Button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedActivities.length === filteredActivities.length && filteredActivities.length > 0}
+                          onChange={(checked) => {
+                            if (checked) {
+                              setSelectedActivities(filteredActivities.map(a => a.id))
+                            } else {
+                              setSelectedActivities([])
+                            }
+                          }}
+                        />
+                      </TableHead>
+                      <TableHead>Tiêu đề</TableHead>
+                      <TableHead>Phân loại</TableHead>
+                      <TableHead>Ngày bắt đầu</TableHead>
+                      <TableHead>Ngày kết thúc</TableHead>
+                      <TableHead>Trạng thái</TableHead>
+                      <TableHead>Người tham gia</TableHead>
+                      <TableHead className="text-right">Thao tác</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredActivities.map((activity) => (
+                      <TableRow key={activity.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedActivities.includes(activity.id)}
+                            onChange={() => handleSelectActivity(activity.id)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium max-w-xs">
+                          <div className="line-clamp-2">{activity.title}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                            {getSubTypeLabel(activity.subType)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{activity.startDate}</TableCell>
                     <TableCell>{activity.endDate}</TableCell>
                     <TableCell>{getStatusBadge(activity.status)}</TableCell>
                     <TableCell>
@@ -751,12 +918,82 @@ export default function ActivityManagement() {
                         <Trash2 className="w-4 h-4 text-red-500" />
                       </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm">Hiển thị:</Label>
+                  <SimpleSelect
+                    value={pageSize.toString()}
+                    onValueChange={(value) => handlePageSizeChange(parseInt(value))}
+                    options={[
+                      { value: "10", label: "10" },
+                      { value: "20", label: "20" },
+                      { value: "50", label: "50" },
+                      { value: "100", label: "100" },
+                    ]}
+                    className="w-20"
+                  />
+                  <span className="text-sm text-gray-600">mục mỗi trang</span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pageNumber - 1)}
+                    disabled={pageNumber === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum
+                      if (totalPages <= 5) {
+                        pageNum = i + 1
+                      } else if (pageNumber <= 3) {
+                        pageNum = i + 1
+                      } else if (pageNumber >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i
+                      } else {
+                        pageNum = pageNumber - 2 + i
+                      }
+                      
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={pageNumber === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum)}
+                          className="min-w-[40px]"
+                        >
+                          {pageNum}
+                        </Button>
+                      )
+                    })}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pageNumber + 1)}
+                    disabled={pageNumber === totalPages}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+          )}
         </CardContent>
       </Card>
 

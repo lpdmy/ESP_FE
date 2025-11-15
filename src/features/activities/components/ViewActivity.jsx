@@ -63,7 +63,7 @@ export default function ViewActivity() {
   // Fetch activity data
   useEffect(() => {
     const fetchActivity = async () => {
-      if (!params.id || isPreview) {
+      if (!params.id) {
         setLoading(false)
         return
       }
@@ -77,40 +77,92 @@ export default function ViewActivity() {
         )
 
         if (response?.data) {
-          const activityData = response.data
-          // Map API response to component state
+          // Handle nested data structure: response.data.data or response.data
+          const activityData = response.data?.data || response.data
+          if (!activityData) {
+            setError("Không tìm thấy dữ liệu hoạt động")
+            setLoading(false)
+            return
+          }
+          
+          const now = new Date()
+          
+          // Calculate status based on dates
+          const startDate = activityData.startDate ? new Date(activityData.startDate) : null
+          const endDate = activityData.endDate ? new Date(activityData.endDate) : null
+          const registerDate = activityData.registerDate ? new Date(activityData.registerDate) : null
+          const endRegisterDate = activityData.endRegisterDate ? new Date(activityData.endRegisterDate) : null
+          
+          let status = "Đang đăng ký"
+          if (startDate && endDate) {
+            if (now >= startDate && now <= endDate) {
+              status = "Đang diễn ra"
+            } else if (now > endDate) {
+              status = "Đã kết thúc"
+            } else if (now >= registerDate && now < startDate) {
+              status = "Sắp tới"
+            }
+          }
+          
+          // Calculate timeline status
+          const getTimelineStatus = (date) => {
+            if (!date) return "upcoming"
+            const dateObj = new Date(date)
+            return now >= dateObj ? "completed" : "upcoming"
+          }
+          
+          // Map API response to component state with null checks
           setActivity({
-            id: activityData.id,
-            title: activityData.title || "",
-            description: activityData.description || "",
-            category: activityData.category || "Activity",
-            subType: activityData.subType || "",
-            thumbnail: activityData.thumbnailUrl || "",
-            startDate: activityData.startDate ? new Date(activityData.startDate).toISOString().split("T")[0] : "",
-            endDate: activityData.endDate ? new Date(activityData.endDate).toISOString().split("T")[0] : "",
-            registerDate: activityData.registerDate ? new Date(activityData.registerDate).toISOString().split("T")[0] : "",
-            endRegisterDate: activityData.endRegisterDate ? new Date(activityData.endRegisterDate).toISOString().split("T")[0] : "",
-            location: activityData.location || "",
-            organizer: activityData.organizer || "",
-            maxParticipants: activityData.maxParticipants || 0,
-            currentParticipants: activityData.numberOfParticipants || 0,
-            status: "Đang đăng ký", // TODO: Calculate based on dates
-            sportsCategories: activityData.sports?.map(s => s.sportName) || [],
-            competitionType: activityData.activityDetail?.competitionType || "",
-            rules: activityData.rules || [],
+            id: activityData?.id || 0,
+            title: activityData?.title || "",
+            description: activityData?.description || "",
+            category: activityData?.category === 1 ? "Activity" : "Event",
+            subType: activityData?.subType || "",
+            thumbnail: activityData?.thumbnailUrl || "",
+            startDate: activityData?.startDate ? new Date(activityData.startDate).toISOString().split("T")[0] : "",
+            endDate: activityData?.endDate ? new Date(activityData.endDate).toISOString().split("T")[0] : "",
+            registerDate: activityData?.registerDate ? new Date(activityData.registerDate).toISOString().split("T")[0] : "",
+            endRegisterDate: activityData?.endRegisterDate ? new Date(activityData.endRegisterDate).toISOString().split("T")[0] : "",
+            location: activityData?.location || "",
+            organizer: activityData?.organizer || "",
+            maxParticipants: activityData?.maxParticipants || 0,
+            currentParticipants: activityData?.numberOfParticipants || 0,
+            status: status,
+            sportsCategories: activityData?.sports?.map(s => s?.sportName).filter(Boolean) || [],
+            competitionType: activityData?.activityDetail?.competitionType || "",
+            rules: activityData?.rules || [],
             timeline: [
-              { date: activityData.registerDate ? new Date(activityData.registerDate).toISOString().split("T")[0] : "", title: "Mở đăng ký", status: "completed" },
-              { date: activityData.endRegisterDate ? new Date(activityData.endRegisterDate).toISOString().split("T")[0] : "", title: "Đóng đăng ký", status: "upcoming" },
-              { date: activityData.startDate ? new Date(activityData.startDate).toISOString().split("T")[0] : "", title: "Khai mạc", status: "upcoming" },
-              { date: activityData.endDate ? new Date(activityData.endDate).toISOString().split("T")[0] : "", title: "Bế mạc & Trao giải", status: "upcoming" },
+              { 
+                date: activityData?.registerDate ? new Date(activityData.registerDate).toISOString().split("T")[0] : "", 
+                title: "Mở đăng ký", 
+                status: getTimelineStatus(activityData?.registerDate) 
+              },
+              { 
+                date: activityData?.endRegisterDate ? new Date(activityData.endRegisterDate).toISOString().split("T")[0] : "", 
+                title: "Đóng đăng ký", 
+                status: getTimelineStatus(activityData?.endRegisterDate) 
+              },
+              { 
+                date: activityData?.startDate ? new Date(activityData.startDate).toISOString().split("T")[0] : "", 
+                title: "Khai mạc", 
+                status: getTimelineStatus(activityData?.startDate) 
+              },
+              { 
+                date: activityData?.endDate ? new Date(activityData.endDate).toISOString().split("T")[0] : "", 
+                title: "Bế mạc & Trao giải", 
+                status: getTimelineStatus(activityData?.endDate) 
+              },
             ],
-            awards: activityData.awards?.map(a => ({
-              rank: a.name || a.rank || "",
-              prize: `${a.starPoints || a.points || 0} điểm`
-            })) || [],
-            speakers: activityData.speakers || [],
-            programs: activityData.programs || [],
-            participants: activityData.participants || [],
+            awards: activityData?.awards?.map(a => ({
+              rank: a?.name || a?.rank || "",
+              prize: `${a?.starPoints || a?.points || 0} điểm`
+            })).filter(Boolean) || [],
+            speakers: activityData?.speakers || [],
+            programs: activityData?.programs || [],
+            participants: activityData?.participants || [],
+            onlyTeacherCanRegister: activityData?.onlyTeacherCanRegister || false,
+            gradingSettings: activityData?.gradingSettings || null,
+            registrationReward: activityData?.registrationReward || null,
           })
           
           // Check if user is already registered
@@ -263,10 +315,15 @@ export default function ViewActivity() {
           <div className="absolute inset-0 bg-black/40"></div>
           <div className="absolute bottom-6 left-6 text-white">
             <div className="flex items-center gap-3 mb-2">
-              <Badge className="bg-orange-500">Hoạt động</Badge>
+              <Badge className="bg-orange-500">{activity.category}</Badge>
               <Badge variant="outline" className="bg-white/20 text-white border-white/30">
                 {activity.subType}
               </Badge>
+              {activity.onlyTeacherCanRegister && (
+                <Badge variant="outline" className="bg-blue-500/20 text-white border-white/30">
+                  Chỉ giáo viên
+                </Badge>
+              )}
             </div>
             <h1 className="text-4xl font-bold mb-2">{activity.title}</h1>
             <p className="text-lg opacity-90">{activity.organizer}</p>
@@ -528,6 +585,49 @@ export default function ViewActivity() {
                     </ul>
                   </CardContent>
                 </Card>
+
+                {/* Grading Settings */}
+                {activity.gradingSettings && activity.gradingSettings.criteria && activity.gradingSettings.criteria.length > 0 && (
+                  <Card className="glass hover-lift">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-blue-500" />
+                        Cài đặt chấm điểm
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-600 mb-2">Tiêu chí chấm điểm:</p>
+                        {activity.gradingSettings.criteria.map((criterion, index) => (
+                          <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                            <span className="text-blue-600">•</span>
+                            <span className="text-sm text-gray-700">{criterion}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Registration Settings */}
+                {activity.onlyTeacherCanRegister && (
+                  <Card className="glass hover-lift">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="w-5 h-5 text-blue-500" />
+                        Cài đặt đăng ký
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span className="text-sm text-gray-700">
+                          Chỉ giáo viên chủ nhiệm mới được đăng ký đại diện lớp
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               <TabsContent value="participants" className="space-y-4">
