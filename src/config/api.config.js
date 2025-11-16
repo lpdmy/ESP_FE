@@ -228,18 +228,6 @@ export const API_CONFIG = {
     // Current Class endpoints
     GET_CURRENT_CLASS: '/classgroup/current-class'
 
-  },
-  JURY:{
-    JURY_API:"/jury",
-    JURY_ACTIVITY:"/jury/activity",
-    JURY_ASSIGN:"/jury/assign",
-    RANDOM_ASSIGN:"/jury/random-assign",
-    DELETE_RANDOM_ASSIGN:"/jury/delete-assign-activity",
-    GET_ASSIGN_USER:"/jury/assign/user",
-    GET_ASSIGN_USER_NOT_GRADE:"/jury/assign-not-grading/user",
-  },
-  SUBMISSION:{
-    GET_SUBMISSION_ACTIVITY:"/submission/activity"
   }
 };
 

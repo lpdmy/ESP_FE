@@ -11,7 +11,11 @@ import { chatRoutes } from "./ChatRoutes";
 import { notificationRoutes } from "./NotificationRoutes";
 import { adminSystemNewsAndNoticesRoutes } from "./AdminSystemNewsAndNoticesRoutes";
 import { systemNewsAndNoticesRoutes } from "./SystemNewsAndNoticesRoutes";
+
 import { juryRoutes } from "./JuryRoutes";
+
+import { activityRoutes } from "./ActivityRoutes";
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -28,6 +32,8 @@ export default function AppRoutes() {
       {...adminSystemNewsAndNoticesRoutes}
       {...systemNewsAndNoticesRoutes}
       {...juryRoutes}
+      {...activityRoutes}
+
     </Routes>
   );
 }
