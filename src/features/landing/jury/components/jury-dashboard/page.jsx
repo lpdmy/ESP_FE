@@ -5,37 +5,57 @@ import { Link } from "react-router-dom";
 import { Button } from "@/common/components/ui/button";
 import { Card, CardContent } from "@/common/components/ui/card";
 import { Badge } from "@/common/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/common/components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/common/components/ui/tabs";
 import { Input } from "@/common/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/common/components/ui/select";
-import { Clock, CheckCircle2, AlertCircle, Eye, Star, Search, Calendar, ArrowRight } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/common/components/ui/select";
+import {
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Eye,
+  Star,
+  Search,
+  Calendar,
+  ArrowRight,
+} from "lucide-react";
 import { useJuryApi } from "../../hooks/useJuryApi";
 export default function JuryDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [pageSize,setPageSize] = useState(10);
-  const [pageNumber,setPageNumber] = useState(1);
-  const [juryActivity,setJuryActivity] = useState([])
-  const {getJuryAcitivty} = useJuryApi()
-  const handldeLoadActivity = async() =>{
-     try {
-        const response = await getJuryAcitivty(searchQuery,pageSize,pageNumber)
-        setJuryActivity(response.data.data)
-        console.log(response.data.data)
-     } catch (error) {
-        console.log(error)
-     }
-  }
+  const [pageSize, setPageSize] = useState(10);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [juryActivity, setJuryActivity] = useState([]);
+  const { getJuryAcitivty } = useJuryApi();
+  const handldeLoadActivity = async () => {
+    try {
+      const response = await getJuryAcitivty(searchQuery, pageSize, pageNumber);
+      setJuryActivity(response.data.data);
+      console.log(response.data.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
   function formatVietnamDate(dateString) {
-  const date = new Date(dateString);
+    const date = new Date(dateString);
 
-  return date.toLocaleDateString("vi-VN", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-}
+    return date.toLocaleDateString("vi-VN", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  }
 
   const juryAssignments = [
     {
@@ -138,11 +158,23 @@ export default function JuryDashboard() {
   function getStatusBadge(status) {
     switch (status) {
       case "in-progress":
-        return <Badge className="bg-orange-100 text-orange-700 border-orange-200">Đang chấm</Badge>;
+        return (
+          <Badge className="bg-orange-100 text-orange-700 border-orange-200">
+            Đang chấm
+          </Badge>
+        );
       case "completed":
-        return <Badge className="bg-green-100 text-green-700 border-green-200">Hoàn thành</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-700 border-green-200">
+            Hoàn thành
+          </Badge>
+        );
       case "pending":
-        return <Badge className="bg-blue-100 text-blue-700 border-blue-200">Chưa bắt đầu</Badge>;
+        return (
+          <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+            Chưa bắt đầu
+          </Badge>
+        );
       default:
         return null;
     }
@@ -156,20 +188,27 @@ export default function JuryDashboard() {
   }
 
   const filteredAssignments = juryAssignments.filter((assignment) => {
-    const matchesSearch = assignment.activityTitle.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || assignment.status === statusFilter;
+    const matchesSearch = assignment.activityTitle
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || assignment.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
-useEffect(()=>{
-handldeLoadActivity()
-},[pageNumber,searchQuery])
+  useEffect(() => {
+    handldeLoadActivity();
+  }, [pageNumber, searchQuery]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold gradient-text mb-2">Danh sách giám khảo</h1>
-          <p className="text-gray-600">Quản lý các hoạt động và bài nộp được phân công</p>
+          <h1 className="text-4xl font-bold gradient-text mb-2">
+            Danh sách giám khảo
+          </h1>
+          <p className="text-gray-600">
+            Quản lý các hoạt động và bài nộp được phân công
+          </p>
         </div>
 
         {/* Stats Grid */}
@@ -183,7 +222,9 @@ handldeLoadActivity()
                     <div>
                       <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
                       <p className="text-3xl font-bold">{stat.value}</p>
-                      <p className="text-xs text-gray-500 mt-1">{stat.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {stat.description}
+                      </p>
                     </div>
                     <div className={`${stat.bgColor} p-3 rounded-lg`}>
                       <Icon className={`w-6 h-6 ${stat.color}`} />
@@ -226,35 +267,52 @@ handldeLoadActivity()
         {/* Activities List */}
         <Tabs defaultValue="all" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="all">Tất cả ({juryAssignments.length})</TabsTrigger>
+            <TabsTrigger value="all">
+              Tất cả ({juryAssignments.length})
+            </TabsTrigger>
             <TabsTrigger value="pending">
-              Chưa bắt đầu ({juryAssignments.filter((a) => a.status === "pending").length})
+              Chưa bắt đầu (
+              {juryAssignments.filter((a) => a.status === "pending").length})
             </TabsTrigger>
             <TabsTrigger value="in-progress">
-              Đang chấm ({juryAssignments.filter((a) => a.status === "in-progress").length})
+              Đang chấm (
+              {juryAssignments.filter((a) => a.status === "in-progress").length}
+              )
             </TabsTrigger>
             <TabsTrigger value="completed">
-              Hoàn thành ({juryAssignments.filter((a) => a.status === "completed").length})
+              Hoàn thành (
+              {juryAssignments.filter((a) => a.status === "completed").length})
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="space-y-4">
             {juryActivity.length > 0 ? (
               juryActivity.map((assignment) => (
-                <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
+                <Card
+                  key={assignment.id}
+                  className="hover:shadow-lg transition-shadow"
+                >
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row gap-6">
                       {/* Left: Activity Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4 mb-4">
                           <div>
-                            <h3 className="text-xl font-bold mb-2">{assignment.activity.title}</h3>
+                            <h3 className="text-xl font-bold mb-2">
+                              {assignment.activity.title}
+                            </h3>
                             <div className="flex items-center gap-3 mb-3">
-                              <Badge variant="outline" className="bg-orange-50 border-orange-200 text-orange-700">
+                              <Badge
+                                variant="outline"
+                                className="bg-orange-50 border-orange-200 text-orange-700"
+                              >
                                 {assignment.activity.subType}
                               </Badge>
                               {getStatusBadge(assignment.status)}
-                              <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                              <Badge
+                                variant="secondary"
+                                className="bg-blue-50 text-blue-700"
+                              >
                                 {assignment.role}
                               </Badge>
                             </div>
@@ -263,27 +321,41 @@ handldeLoadActivity()
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
                           <div>
-                            <div className="text-sm text-gray-600">Tổng bài nộp</div>
-                            <div className="text-2xl font-bold">{assignment.submissionCount}</div>
+                            <div className="text-sm text-gray-600">
+                              Tổng bài nộp
+                            </div>
+                            <div className="text-2xl font-bold">
+                              {assignment.activity.numberOfSubmission}
+                            </div>
                           </div>
                           <div>
                             <div className="text-sm text-gray-600 flex items-center gap-1">
                               <CheckCircle2 className="w-4 h-4 text-green-500" />
                               Đã chấm
                             </div>
-                            <div className="text-2xl font-bold text-green-600">{assignment.submissionsGraded}</div>
+                            <div className="text-2xl font-bold text-green-600">
+                              {assignment.activity.numberOfCompletedSubmission}
+                            </div>
                           </div>
                           <div>
                             <div className="text-sm text-gray-600 flex items-center gap-1">
                               <Clock className="w-4 h-4 text-orange-500" />
                               Chưa chấm
                             </div>
-                            <div className="text-2xl font-bold text-orange-600">{assignment.submissionsPending}</div>
+                            <div className="text-2xl font-bold text-orange-600">
+                              {assignment.activity.numberOfPendingSubmission}
+                            </div>
                           </div>
                           <div>
                             <div className="text-sm text-gray-600">Tiến độ</div>
                             <div className="text-2xl font-bold">
-                              {Math.round((assignment.submissionsGraded / assignment.submissionCount) * 100)}%
+                              {Math.round(
+                                (assignment.activity
+                                  .numberOfCompletedSubmission /
+                                  assignment.activity.numberOfSubmission) *
+                                  100
+                              )}
+                              %
                             </div>
                           </div>
                         </div>
@@ -291,19 +363,27 @@ handldeLoadActivity()
                         {/* Progress Bar */}
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Tiến độ chấm điểm</span>
+                            <span className="text-gray-600">
+                              Tiến độ chấm điểm
+                            </span>
                             <span className="font-medium">
-                              {assignment.submissionsGraded}/{assignment.submissionCount}
+                              {assignment.activity.numberOfCompletedSubmission}/
+                              {assignment.activity.numberOfSubmission}
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                             <div
                               className={`h-full ${getProgressColor(
-                                assignment.submissionsGraded,
-                                assignment.submissionCount
+                                assignment.activity.numberOfCompletedSubmission,
+                                assignment.activity.numberOfSubmission
                               )} rounded-full transition-all`}
                               style={{
-                                width: `${(assignment.submissionsGraded / assignment.submissionCount) * 100}%`,
+                                width: `${
+                                  (assignment.activity
+                                    .numberOfCompletedSubmission /
+                                    assignment.activity.numberOfSubmission) *
+                                  100
+                                }%`,
                               }}
                             />
                           </div>
@@ -318,29 +398,40 @@ handldeLoadActivity()
                               <Calendar className="w-4 h-4 text-gray-500" />
                               <div>
                                 <div className="text-gray-600">Bắt đầu</div>
-                                <div className="font-medium">{formatVietnamDate(assignment.activity.startDate)}</div>
+                                <div className="font-medium">
+                                  {formatVietnamDate(
+                                    assignment.activity.startDate
+                                  )}
+                                </div>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
                               <Calendar className="w-4 h-4 text-gray-500" />
                               <div>
                                 <div className="text-gray-600">Kết thúc</div>
-                                <div className="font-medium">{formatVietnamDate(assignment.activity.endDate)}</div>
+                                <div className="font-medium">
+                                  {formatVietnamDate(
+                                    assignment.activity.endDate
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Link href={`/activities/${assignment.id}/jury-submissions`}>
-                            <Button className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white gap-2">
+                          <a href={`/jury/submission/${assignment.activityId}`}>
+                            <button className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white gap-2 flex items-center px-4 py-2 rounded">
                               <Eye className="h-4 w-4" />
                               Xem bài nộp
-                            </Button>
-                          </Link>
+                            </button>
+                          </a>
                           {assignment.submissionsPending > 0 && (
                             <Link href={`/activities/${assignment.id}/grade`}>
-                              <Button variant="outline" className="w-full gap-2 bg-transparent">
+                              <Button
+                                variant="outline"
+                                className="w-full gap-2 bg-transparent"
+                              >
                                 <Star className="h-4 w-4" />
                                 Chấm điểm
                               </Button>
@@ -356,7 +447,9 @@ handldeLoadActivity()
               <Card>
                 <CardContent className="p-12 text-center">
                   <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Không tìm thấy hoạt động phù hợp</p>
+                  <p className="text-gray-600">
+                    Không tìm thấy hoạt động phù hợp
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -366,12 +459,19 @@ handldeLoadActivity()
             {filteredAssignments
               .filter((a) => a.status === "pending")
               .map((assignment) => (
-                <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
+                <Card
+                  key={assignment.id}
+                  className="hover:shadow-lg transition-shadow"
+                >
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-lg font-bold mb-1">{assignment.activityTitle}</h3>
-                        <p className="text-sm text-gray-600">Sắp bắt đầu chấm: {assignment.submissionCount} bài nộp</p>
+                        <h3 className="text-lg font-bold mb-1">
+                          {assignment.activityTitle}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          Sắp bắt đầu chấm: {assignment.submissionCount} bài nộp
+                        </p>
                       </div>
                       <Button className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white">
                         Xem chi tiết
@@ -387,16 +487,24 @@ handldeLoadActivity()
             {filteredAssignments
               .filter((a) => a.status === "in-progress")
               .map((assignment) => (
-                <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
+                <Card
+                  key={assignment.id}
+                  className="hover:shadow-lg transition-shadow"
+                >
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-lg font-bold mb-1">{assignment.activityTitle}</h3>
-                        <p className="text-sm text-gray-600">Còn {assignment.submissionsPending} bài chưa chấm</p>
+                        <h3 className="text-lg font-bold mb-1">
+                          {assignment.activityTitle}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          Còn {assignment.submissionsPending} bài chưa chấm
+                        </p>
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-orange-600">
-                          {assignment.submissionsGraded}/{assignment.submissionCount}
+                          {assignment.submissionsGraded}/
+                          {assignment.submissionCount}
                         </div>
                         <p className="text-sm text-gray-600">bài đã chấm</p>
                       </div>
@@ -410,14 +518,22 @@ handldeLoadActivity()
             {filteredAssignments
               .filter((a) => a.status === "completed")
               .map((assignment) => (
-                <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
+                <Card
+                  key={assignment.id}
+                  className="hover:shadow-lg transition-shadow"
+                >
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-lg font-bold mb-1">{assignment.activityTitle}</h3>
+                        <h3 className="text-lg font-bold mb-1">
+                          {assignment.activityTitle}
+                        </h3>
                         <p className="text-sm text-green-600 flex items-center gap-1">
                           <CheckCircle2 className="w-4 h-4" />
-                          Hoàn thành chấm điểm – {assignment.submissionCount} bài
+                          Hoàn thành chấm điểm – {
+                            assignment.submissionCount
+                          }{" "}
+                          bài
                         </p>
                       </div>
                       <Button variant="outline" className="bg-transparent">

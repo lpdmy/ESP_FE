@@ -10,6 +10,7 @@ import {
   UserMinus,
   ChevronLeft,
   ChevronRight,
+  Trash,
 } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
 import {
@@ -50,9 +51,11 @@ import { useEffect, useState } from "react";
 import TeacherSearchDialog from "../add-jury/page";
 import { useToast } from "@/common/hooks/useToast";
 import { LoadingSubmission } from "@/common/components/ui/loading";
+import RandomAssignDialog from "../Modal/auto-assign/page";
+import ConfirmDeleteAssignDialog from "../Modal/delete/page";
 export default function AssignJury() {
-  const params = useParams();
-  const { getJuryByClubId, deleteJury, getSubmissionByAcitivty, assignJury } =
+  const {id} = useParams();
+  const { getJuryByClubId, deleteJury, getSubmissionByAcitivty, deleteRandomAssign,ramdomAssignJury } =
     useJuryApi();
   const [isAssigning, setIsAssigning] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,66 +73,56 @@ export default function AssignJury() {
   const [openDialogAssign, setOpenDialogAssign] = useState(false);
   const [idSubmission, setIdSubmission] = useState(0);
   const [checkedJury, setCheckedJury] = useState([]);
+  const [openRandomDialog,setOpenRandomDialog] = useState(false)
+  const [openDeleteRandomDialog,setOpenDeleteRandomDialog] = useState(false)
   const toast = useToast();
   const hanldeOpenAddJury = () => {
     setIsOpenAddJury(true);
   };
   const handleLoadJury = async () => {
     try {
-      const response = await getJuryByClubId(6, searchTerm);
+      const response = await getJuryByClubId(id, searchTerm);
       setJury(response.data);
       console.log(response.data);
     } catch (err) {
       toast.loadJuryListFail();
     }
   };
-  const MAX_JURY_PER_SUBMISSION = 4;
 
-  const handleRandomForAll = async () => {
+  const handleRandomForAll = async (numberOfJury) => {
     setIsAssigning(true);
     try {
-      const updatedAssignments = [];
-      const newSubmissionState = submission.map((sub) => {
-        const current = sub.users || [];
-        const need = MAX_JURY_PER_SUBMISSION - current.length;
-        if (need <= 0) return sub;
-
-        let available = jury.filter((j) => !current.includes(j.userId));
-        available = [...available].sort((a, b) => a.assigned - b.assigned);
-
-        const newPicked = [];
-        for (let i = 0; i < Math.min(need, available.length); i++) {
-          const topCandidates = available.slice(0, 4);
-          const random =
-            topCandidates[Math.floor(Math.random() * topCandidates.length)];
-          newPicked.push(random.userId);
-
-          random.assigned++;
-          available = available.filter((j) => j.userId !== random.userId);
-        }
-
-        const finalUsers = [...current, ...newPicked];
-        updatedAssignments.push({ submissionId: sub.id, userId: finalUsers });
-
-        return { ...sub, users: finalUsers };
-      });
-
-      setSubmission(newSubmissionState);
-
-      for (const assign of updatedAssignments) {
-        await assignJury(assign);
-      }
-
-      toast.success("Phân công ngẫu nhiên thành công!");
+      const payload = {activityId : id, numberOfJury:numberOfJury}
+      await ramdomAssignJury(payload)
+      toast.showSuccess("Phân công ngẫu nhiên thành công!");
       handleLoadSubmission();
+      handleLoadJury()
     } catch (error) {
-      toast.error("Phân công thất bại!");
+      if(error.statusCode==400){
+      toast.showError(error.message)
+    }else{
+    toast.showError("Phân công thất bại")
+    }
       console.error(error);
     } finally {
       setIsAssigning(false);
     }
   };
-
+  const handleDeleteRandom = async () =>{
+  try {
+    await deleteRandomAssign(id)
+    toast.showSuccess("Xóa phân công thành công")
+    handleLoadSubmission()
+    handleLoadJury()
+  } catch (error) {
+    if(error.statusCode==400){
+      toast.showError(error.message)
+    }else{
+    toast.showError("Xóa thất bại")
+    }
+    console.log(error)
+  }
+  }
   const handleDeleteJury = async (id) => {
     try {
       await deleteJury(id);
@@ -175,7 +168,7 @@ export default function AssignJury() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <Link to={`/activities/${params}/manage`}>
+          <Link to={`/activities/${6}/manage`}>
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Quay lại quản lý
@@ -189,62 +182,17 @@ export default function AssignJury() {
               <p className="text-muted-foreground">Cuộc thi Lập trình 2024</p>
             </div>
             <div className="flex gap-2">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="gap-2 bg-transparent">
-                    <Shuffle className="h-4 w-4" />
-                    Phân công tự động
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Phân công tự động</DialogTitle>
-                    <DialogDescription>
-                      Hệ thống sẽ tự động phân công giám khảo cho các bài nộp
-                      chưa có giám khảo
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Số giám khảo mỗi bài</Label>
-                      <Select defaultValue="2">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">1 giám khảo</SelectItem>
-                          <SelectItem value="2">2 giám khảo</SelectItem>
-                          <SelectItem value="3">3 giám khảo</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Phương pháp phân công</Label>
-                      <Select defaultValue="balanced">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="balanced">Cân bằng tải</SelectItem>
-                          <SelectItem value="random">Ngẫu nhiên</SelectItem>
-                          <SelectItem value="expertise">
-                            Theo chuyên môn
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline">Hủy</Button>
-                    <Button className="bg-gradient-to-r from-orange-500 to-yellow-500">
-                      Xác nhận
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button
+              variant="red"
+                className="gap-2  text-white"
+                onClick={()=>setOpenDeleteRandomDialog(true)}
+              >
+                <Trash className="h-4 w-4" />
+                Xóa phân công
+              </Button>
               <Button
                 className="gap-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white"
-                onClick={handleRandomForAll}
+                onClick={()=>setOpenRandomDialog(true)}
               >
                 <Shuffle className="h-4 w-4" />
                 Phân công ngẫu nhiên toàn bộ
@@ -254,7 +202,7 @@ export default function AssignJury() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="gr6 grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -367,7 +315,7 @@ export default function AssignJury() {
                                   </span>
                                   <span>•</span>
                                   <span>
-                                    {submissionItem.numberJurys}/2 giám khảo
+                                    {submissionItem.numberJurys} giám khảo
                                   </span>
                                 </div>
                               </div>
@@ -591,6 +539,16 @@ export default function AssignJury() {
         juryList={jury}
         id={idSubmission}
         assignedJuryIds={checkedJury}
+      />
+      <RandomAssignDialog
+      isOpen={openRandomDialog}
+      onClose={()=>setOpenRandomDialog(false)}
+      onConfirm={handleRandomForAll}
+      />
+      <ConfirmDeleteAssignDialog
+      isOpen ={openDeleteRandomDialog}
+      onClose ={()=> setOpenDeleteRandomDialog(false)}
+      onConfirm={handleDeleteRandom}
       />
       {isAssigning && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999]">

@@ -1,35 +1,56 @@
 import { ApiService } from "@/services/api.service";
 import { API_CONFIG } from "@/config/api.config";
 export class JuryService extends ApiService {
-async createJury(token, payload) {
+  async createJury(token, payload) {
     return this.post(API_CONFIG.JURY.JURY_API, payload, token);
   }
-async getJuryByClubId(token, id, Search = "") {
-  let url = `${API_CONFIG.JURY.JURY_API}/${id}`;
-  if (Search && Search.trim() !== "") {
-    url += `?search=${encodeURIComponent(Search.trim())}`;
+  async getJuryByClubId(token, id, Search = "") {
+    let url = `${API_CONFIG.JURY.JURY_API}/${id}`;
+    if (Search && Search.trim() !== "") {
+      url += `?search=${encodeURIComponent(Search.trim())}`;
+    }
+    return this.get(url, token);
   }
-  return this.get(url, token);
-}
-async deleteJury(token, id) {
-  let url = `${API_CONFIG.JURY.JURY_API}/${id}`;
-  return this.delete(url, token);
-}
-async getSubmissionByAcitivty(token, id, Search = "",pageSize,pageNumber) {
-  let url = `${API_CONFIG.SUBMISSION.GET_SUBMISSION_ACTIVITY}/${id}?PageNumber=${pageNumber}&PageSize=${pageSize}`;
-  if (Search && Search.trim() !== "") {
-    url += `&search=${encodeURIComponent(Search.trim())}`;
+  async deleteJury(token, id) {
+    let url = `${API_CONFIG.JURY.JURY_API}/${id}`;
+    return this.delete(url, token);
   }
-  return this.get(url, token);
-}
-async getJuryAcitivty(token, Search = "",pageSize,pageNumber) {
-  let url = `${API_CONFIG.JURY.JURY_ACTIVITY}?PageNumber=${pageNumber}&PageSize=${pageSize}`;
-  if (Search && Search.trim() !== "") {
-    url += `&Search=${encodeURIComponent(Search.trim())}`;
+  async getSubmissionByAcitivty(token, id, Search = "", pageSize, pageNumber) {
+    let url = `${API_CONFIG.SUBMISSION.GET_SUBMISSION_ACTIVITY}/${id}?PageNumber=${pageNumber}&PageSize=${pageSize}`;
+    if (Search && Search.trim() !== "") {
+      url += `&search=${encodeURIComponent(Search.trim())}`;
+    }
+    return this.get(url, token);
   }
-  return this.get(url, token);
-}
-async assignJury(token, payload) {
+  async getJuryAcitivty(token, Search = "", pageSize, pageNumber) {
+    let url = `${API_CONFIG.JURY.JURY_ACTIVITY}?PageNumber=${pageNumber}&PageSize=${pageSize}`;
+    if (Search && Search.trim() !== "") {
+      url += `&Search=${encodeURIComponent(Search.trim())}`;
+    }
+    return this.get(url, token);
+  }
+  async assignJury(token, payload) {
     return this.post(API_CONFIG.JURY.JURY_ASSIGN, payload, token);
+  }
+  async ramdomAssignJury(token, payload) {
+    return this.post(API_CONFIG.JURY.RANDOM_ASSIGN, payload, token);
+  }
+  async deleteRandomAssign(token, id) {
+    let url = `${API_CONFIG.JURY.DELETE_RANDOM_ASSIGN}/${id}`;
+    return this.delete(url, token);
+  }
+  async getJuryAssign(token,id, Search = "", pageSize, pageNumber) {
+    let url = `${API_CONFIG.JURY.GET_ASSIGN_USER}/${id}?PageNumber=${pageNumber}&PageSize=${pageSize}`;
+    if (Search && Search.trim() !== "") {
+      url += `&Search=${encodeURIComponent(Search.trim())}`;
+    }
+    return this.get(url, token);
+  }
+  async getJuryAssignNotGrade(token,id, Search = "", pageSize, pageNumber) {
+    let url = `${API_CONFIG.JURY.GET_ASSIGN_USER_NOT_GRADE}/${id}?PageNumber=${pageNumber}&PageSize=${pageSize}`;
+    if (Search && Search.trim() !== "") {
+      url += `&Search=${encodeURIComponent(Search.trim())}`;
+    }
+    return this.get(url, token);
   }
 }

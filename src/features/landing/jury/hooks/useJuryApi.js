@@ -54,12 +54,49 @@ export function useJuryApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
+  const ramdomAssignJury = useRef(async (payload) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      juryService.ramdomAssignJury.bind(juryService),
+      [token, payload],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const deleteRandomAssign = async (id) => {
+  const token = localStorage.getItem("token");
+  return executeApiCall(
+    () => juryService.deleteRandomAssign(token, id),
+    [],
+    { setLoading: setSaveLoading, setError }
+  );
+};
+const getJuryAssign = async (id, search, pageSize, pageNumber) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      juryService.getJuryAssign.bind(juryService),
+      [token, id, search, pageSize, pageNumber],
+      { setLoading: setSaveLoading, setError }
+    );
+  };
+  const getJuryAssignNotGrade = async (id, search, pageSize, pageNumber) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      juryService.getJuryAssignNotGrade.bind(juryService),
+      [token, id, search, pageSize, pageNumber],
+      { setLoading: setSaveLoading, setError }
+    );
+  };
+
   return {
     createJury: createJury.current,
     getJuryByClubId,
     deleteJury,
     getSubmissionByAcitivty,
     getJuryAcitivty,
-    assignJury : assignJury.current
+    assignJury : assignJury.current,
+    ramdomAssignJury: ramdomAssignJury.current,
+    deleteRandomAssign,
+    getJuryAssign,
+    getJuryAssignNotGrade
   };
 }
