@@ -13,6 +13,7 @@ import CreateActivityPage from "@/pages/Admin/Activities/CreateActivityPage";
 import ActivityManagementPage from "@/pages/Admin/Activities/ActivityManagementPage";
 import EditActivityPage from "@/pages/Admin/Activities/EditActivityPage";
 import AISchedulePage from "@/pages/Admin/Activities/AISchedulePage";
+import ClassDetailPage from "@/pages/Admin/ClassDetailPage";
 
 export const adminRoutes = [
   <Route
