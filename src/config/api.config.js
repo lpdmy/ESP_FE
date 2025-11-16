@@ -235,11 +235,23 @@ export const API_CONFIG = {
     CREATE: '/activity',
     UPDATE: '/activity',
   },
-
   // Activity Participant endpoints
   ACTIVITY_PARTICIPANT: {
     ADD: '/activityparticipant',
     REMOVE: '/activityparticipant',
+  },
+   JURY:{
+    ASSIGN_JURY:"/jury/assign-jury/:id",
+    JURY_DASHBOARD:"/jury/dashboard",
+    JURY_SUBMISSION:"/jury/submission/:id",
+    JURY_GRADE :"/jury/grade",
+    RANDOM_ASSIGN:"/jury/random-assign",
+    DELETE_RANDOM_ASSIGN:"/jury/delete-assign-activity",
+    GET_ASSIGN_USER:"/jury/assign/user",
+    GET_ASSIGN_USER_NOT_GRADE:"/jury/assign-not-grading/user",
+  },
+   SUBMISSION:{
+    GET_SUBMISSION_ACTIVITY:"/submission/activity"
   }
 };
 
