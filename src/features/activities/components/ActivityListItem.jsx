@@ -4,7 +4,19 @@ import { Calendar, MapPin, Users } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
 import { Badge } from "@/common/components/ui/badge";
 
-export default function ActivityListItem({ activity }) {
+export default function ActivityListItem({
+  activity,
+  onRegister,
+  isRegistering,
+  canRegister = true,
+  showTeacherNote = false,
+}) {
+  const handleRegister = () => {
+    if (onRegister) {
+      onRegister(activity);
+    }
+  };
+
   return (
     <div className="flex items-start gap-4 p-4 border-b border-gray-100 hover:bg-orange-50/50 transition-colors">
       <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
@@ -49,9 +61,17 @@ export default function ActivityListItem({ activity }) {
           </div>
           
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            <Button variant="orange" size="sm">
-              Đăng ký
-            </Button>
+            {canRegister ? (
+              <Button variant="orange" size="sm" onClick={handleRegister} disabled={isRegistering}>
+                {isRegistering ? "Đang đăng ký..." : "Đăng ký"}
+              </Button>
+            ) : (
+              showTeacherNote && (
+                <span className="text-[11px] text-gray-500 text-right">
+                  Chỉ giáo viên chủ nhiệm được đăng ký
+                </span>
+              )
+            )}
             <Link
               to={`/activities/${activity.id}`}
               className="text-xs text-orange-600 hover:text-orange-700 hover:underline"

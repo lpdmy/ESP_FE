@@ -66,8 +66,8 @@ export const API_CONFIG = {
     MY_TEACHER_PROFILE: '/userprofile/my-teacher-profile',
     ALL_PROFILES: '/userprofile/all',
     PROFILE_BY_ID: '/userprofile/{id}',
-    PROFILE_BY_USER_ID:'/userprofile/user/{id}',
-    TEACHER_PROFILE_BY_USER_ID:'/userprofile/teachers/user/{id}',
+    PROFILE_BY_USER_ID: '/userprofile/user/{id}',
+    TEACHER_PROFILE_BY_USER_ID: '/userprofile/teachers/user/{id}',
     CREATE_PROFILE: '/userprofile',
     UPDATE_PROFILE: '/userprofile/{id}',
     UPDATE_TEACHER_PROFILE: '/userprofile/my-teacher-profile',
@@ -101,18 +101,31 @@ export const API_CONFIG = {
     TRENDING: '/search/trending',
     HISTORY: '/search/history',
   },
-  POST :{
-    CREATE_POST : '/post',
-    USER_POST:'/post/user',
-    DELETE_POST:'/post',
-    UPDATE_POST:'/post',
-    LIKE_POST:'/post/like',
-    CLUB_PENDING_POST:'/post/club/pending',
-    APPROVE_POST:'/post/approve/{id}',
-    CLUB_POST:'/post/club',
-    REJECT_POST:'/post/reject',
+  POST: {
+    CREATE_POST: '/post',
+    USER_POST: '/post/user',
+    DELETE_POST: '/post',
+    UPDATE_POST: '/post',
+    LIKE_POST: '/post/like',
+    CLUB_PENDING_POST: '/post/club/pending',
+    APPROVE_POST: '/post/approve/{id}',
+    CLUB_POST: '/post/club',
+    REJECT_POST: '/post/reject',
     GET_POSTS_BY_CLASS_GROUP: '/post/classgroup/{id}',
     GET_ALL_POSTS: '/post',
+  },
+  ACTIVITY: {
+    LIST: '/activity',
+    DETAIL: '/activity/{id}',
+  },
+  ACTIVITY_MATCH: {
+    BRACKET: '/activity-match/bracket',
+    MATCH_DETAIL: '/activity-match/{id}',
+    BY_ROUND: '/activity-match/round/{round}',
+    ELIGIBLE_CLASSES: '/activity-match/eligible-classes',
+  },
+  ACTIVITY_PARTICIPANT: {
+    BASE: '/activityparticipant',
   },
   COLLECTION: {
     CREATE_COLLECTION: '/collection',
@@ -121,34 +134,35 @@ export const API_CONFIG = {
     USER_COLLECTION: '/collection/user',
     ADD_COLLECTION_ITEAM: '/collection/add-collection-iteam'
   },
-  CLUB:{
-    CREATE_CLUB:'/club-creation-request',
-    LIST_CLUB:'/club',
-    CLUB_CATEGORY:'/club/categories',
-    CLUB_DETAIL:'/club/{id}',
-    CLUB_JOIN_REQUEST:'/join-request/club',
-    CLUB_CREATE_JOIN_REQUES:'/join-request',
-    CLUB_CANCEL_JOIN_REQUES:'/join-request/{id}',
-    CLUB_APPROVE_JOIN_REQUEST:'/join-request/approve/{id}',
-    CLUB_REJECT_JOIN_REQUEST:'/join-request/reject/{id}',
-    USER_CLUB :'/club-member/user',
-    UPDATE_CLUB:'/club',
-    LEAVE_CLUB:'/club-member/{id}',
-    KICK_CLUB:'/club-member',
-    CLUB_CREATION_REQUEST:'/club-creation-request',
-    CLUB_APPROVE_CREATION_REQUEST:'/club-creation-request/approve/{id}',
-    CLUB_REJECT_CREATION_REQUEST:'/club-creation-request/reject',
-    CLUB_SEARCH_USER:'/club/search-users',
-    CLUB_INVITE_MENTOR:'/join-request/invite-mentor',
+  CLUB: {
+    CREATE_CLUB: '/club-creation-request',
+    LIST_CLUB: '/club',
+    CLUB_CATEGORY: '/club/categories',
+    CLUB_DETAIL: '/club/{id}',
+    CLUB_JOIN_REQUEST: '/join-request/club',
+    CLUB_CREATE_JOIN_REQUES: '/join-request',
+    CLUB_CANCEL_JOIN_REQUES: '/join-request/{id}',
+    CLUB_APPROVE_JOIN_REQUEST: '/join-request/approve/{id}',
+    CLUB_REJECT_JOIN_REQUEST: '/join-request/reject/{id}',
+    USER_CLUB: '/club-member/user',
+    UPDATE_CLUB: '/club',
+    LEAVE_CLUB: '/club-member/{id}',
+    KICK_CLUB: '/club-member',
+    CLUB_CREATION_REQUEST: '/club-creation-request',
+    CLUB_APPROVE_CREATION_REQUEST: '/club-creation-request/approve/{id}',
+    CLUB_REJECT_CREATION_REQUEST: '/club-creation-request/reject',
+    CLUB_SEARCH_USER: '/club/search-users',
+    CLUB_INVITE_MENTOR: '/join-request/invite-mentor',
     CLUB_GET_INVITATION: '/join-request/user',
-    CLUB_CHANGE_ROLE:'/club-member/change-role',
-    CLUB_DELETE:'/club',
+    CLUB_CHANGE_ROLE: '/club-member/change-role',
+    CLUB_DELETE: '/club',
   },
-  COMMENT:{
-    CREATE_COMMENT:'/comment',
-    GET_BY_POST:'/comment/post',
-    GET_BY_COMMENT:'/comment/comment',
-    DELETE_COMMENT:'/comment/{id}'},
+  COMMENT: {
+    CREATE_COMMENT: '/comment',
+    GET_BY_POST: '/comment/post',
+    GET_BY_COMMENT: '/comment/comment',
+    DELETE_COMMENT: '/comment/{id}'
+  },
 
   // Student Import endpoints
   STUDENT_IMPORT: {
@@ -177,9 +191,9 @@ export const API_CONFIG = {
     PICKUP_REDEMPTION: "/redeems/{id}/pickup"
   },
 
-  STAFF:{
-    LINK:"/staff",
-    CREATE:"/auth/create-staff"
+  STAFF: {
+    LINK: "/staff",
+    CREATE: "/auth/create-staff"
   },
 
   NOTIFICATION: {
@@ -195,7 +209,7 @@ export const API_CONFIG = {
     ROOMS: '/chat/rooms',
     MESSAGES: '/chat/messages',
     GET_MESSAGES: '/chat/messages/{roomId}',
-    MARK_AS_READ: '/chat/messages/{roomId}/read', 
+    MARK_AS_READ: '/chat/messages/{roomId}/read',
   },
   // Class Group endpoints
   CLASS_GROUP: {
