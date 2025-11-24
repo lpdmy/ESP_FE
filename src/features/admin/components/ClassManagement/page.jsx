@@ -24,6 +24,10 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { ClassGroupService } from "@/services/classgroup.service";
 import { AcademicYearService } from "@/services/academicyear.service";
+import ClassScheduleEditor from "./ClassScheduleEditor";
+import ClassScheduleView from "./ClassScheduleView";
+import EditableClassScheduleView from "./EditableClassScheduleView";
+import SimpleClassScheduleEditor from "./SimpleClassScheduleEditor";
 
 const grades = [
   { value: 10, label: "Khối 10" },
@@ -56,6 +60,7 @@ export default function ClassManagementPage() {
     grade: "",
     description: "",
     academicYearId: null,
+    schedules: [],
   })
   
   const [formErrors, setFormErrors] = useState({})
@@ -187,12 +192,49 @@ export default function ClassManagementPage() {
 
   const handleEditClass = (classItem) => {
     setSelectedClass(classItem);
-    setNewClass({
-      name: classItem.name || "",
-      grade: classItem.grade || "",
-      description: classItem.description || "",
-      academicYearId: classItem.academicYearId || null,
-    });
+    // Load full class data with schedules
+    const loadClassWithSchedules = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await ClassGroupService.getById(classItem.id, token);
+        const fullClass = res?.data || res;
+        setNewClass({
+          name: fullClass.name || "",
+          grade: fullClass.grade || "",
+          description: fullClass.description || "",
+          academicYearId: fullClass.academicYearId || null,
+          schedules: fullClass.schedules ? fullClass.schedules.map(s => {
+            // Convert TimeSpan từ backend (format "HH:mm:ss") thành "HH:mm" cho input type="time"
+            const formatTimeForInput = (timeSpan) => {
+              if (!timeSpan) return "07:00";
+              // Nếu là string, lấy 5 ký tự đầu (HH:mm)
+              if (typeof timeSpan === 'string') {
+                return timeSpan.substring(0, 5);
+              }
+              return "07:00";
+            };
+            return {
+              dayOfWeek: s.dayOfWeek,
+              period: s.period,
+              startTime: formatTimeForInput(s.startTime),
+              endTime: formatTimeForInput(s.endTime),
+              subject: s.subject || "",
+            };
+          }) : [],
+        });
+      } catch (error) {
+        console.error("Error loading class:", error);
+        // Fallback to basic data
+        setNewClass({
+          name: classItem.name || "",
+          grade: classItem.grade || "",
+          description: classItem.description || "",
+          academicYearId: classItem.academicYearId || null,
+          schedules: [],
+        });
+      }
+    };
+    loadClassWithSchedules();
     setIsEditModalOpen(true);
   };
 
@@ -223,11 +265,29 @@ export default function ClassManagementPage() {
     }
     try {
       const token = localStorage.getItem('token');
+      // Format time từ "HH:mm" thành "HH:mm:ss" cho TimeSpan
+      const formatTimeForBackend = (timeStr) => {
+        if (!timeStr) return "00:00:00";
+        // Nếu đã có format HH:mm:ss thì giữ nguyên
+        if (timeStr.split(':').length === 3) return timeStr;
+        // Nếu là HH:mm thì thêm :00
+        return timeStr + ":00";
+      };
+
       const payload = {
         name: newClass.name,
         description: newClass.description || undefined,
         grade: Number(newClass.grade),
         academicYearId: newClass.academicYearId,
+        schedules: newClass.schedules && newClass.schedules.length > 0 
+          ? newClass.schedules.map(s => ({
+              dayOfWeek: s.dayOfWeek,
+              period: s.period,
+              startTime: formatTimeForBackend(s.startTime),
+              endTime: formatTimeForBackend(s.endTime),
+              subject: s.subject || undefined,
+            }))
+          : undefined,
       };
       const res = await ClassGroupService.create(payload, token);
       const created = res?.data || res;
@@ -243,7 +303,7 @@ export default function ClassManagementPage() {
         status: created.isDeleted ? 0 : 1,
       };
       setClasses(prev => [...prev, uiItem]);
-      setNewClass({ name: "", grade: "", description: "", academicYearId: null })
+      setNewClass({ name: "", grade: "", description: "", academicYearId: null, schedules: [] })
       setFormErrors({})
       setIsModalOpen(false)
       toast.success("Tạo lớp học thành công!")
@@ -257,12 +317,30 @@ export default function ClassManagementPage() {
     if (!selectedClass) return;
     try {
       const token = localStorage.getItem('token');
+      // Format time từ "HH:mm" thành "HH:mm:ss" cho TimeSpan
+      const formatTimeForBackend = (timeStr) => {
+        if (!timeStr) return "00:00:00";
+        // Nếu đã có format HH:mm:ss thì giữ nguyên
+        if (timeStr.split(':').length === 3) return timeStr;
+        // Nếu là HH:mm thì thêm :00
+        return timeStr + ":00";
+      };
+
       const payload = {
         id: selectedClass.id,
         name: newClass.name || undefined,
         description: newClass.description || undefined,
         grade: Number(newClass.grade),
         academicYearId: newClass.academicYearId,
+        schedules: newClass.schedules && newClass.schedules.length > 0 
+          ? newClass.schedules.map(s => ({
+              dayOfWeek: s.dayOfWeek,
+              period: s.period,
+              startTime: formatTimeForBackend(s.startTime),
+              endTime: formatTimeForBackend(s.endTime),
+              subject: s.subject || undefined,
+            }))
+          : undefined,
       };
       const res = await ClassGroupService.update(selectedClass.id, payload, token);
       const updated = res?.data || res;
@@ -587,7 +665,7 @@ export default function ClassManagementPage() {
 
       {/* Create Class Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-white">
+        <DialogContent className="sm:max-w-[900px] bg-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Thêm lớp học mới</DialogTitle>
             <DialogDescription>Tạo lớp học mới. Điền thông tin bắt buộc bên dưới.</DialogDescription>
@@ -626,7 +704,13 @@ export default function ClassManagementPage() {
                 />
               </div>
             </div>
-            {/* GVCN field removed: backend DTO không hỗ trợ teacherId trong Create/Update */}
+            {/* Lịch học - Dùng Simple Editor */}
+            <div className="col-span-4">
+              <SimpleClassScheduleEditor
+                schedules={newClass.schedules || []}
+                onChange={(schedules) => setNewClass({ ...newClass, schedules })}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
@@ -641,7 +725,7 @@ export default function ClassManagementPage() {
 
       {/* Edit Class Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-white">
+        <DialogContent className="sm:max-w-[900px] bg-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa lớp học</DialogTitle>
             <DialogDescription>Cập nhật thông tin lớp học. Điền thông tin bắt buộc bên dưới.</DialogDescription>
@@ -690,6 +774,13 @@ export default function ClassManagementPage() {
                   placeholder="Nhập mô tả lớp học"
                 />
               </div>
+            </div>
+            {/* Lịch học Editor - Dùng Simple Editor */}
+            <div className="col-span-4">
+              <SimpleClassScheduleEditor
+                schedules={newClass.schedules || []}
+                onChange={(schedules) => setNewClass({ ...newClass, schedules })}
+              />
             </div>
           </div>
           <DialogFooter>

@@ -443,13 +443,15 @@ export default function ActivityManagement() {
           <p className="text-gray-600 mt-1">Tổng hợp và quản lý tất cả các hoạt động ngoại khóa</p>
         </div>
         <div className="flex gap-3">
-          <Dialog open={showAIModal} onOpenChange={setShowAIModal}>
-            <DialogTrigger asChild>
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-                <Sparkles className="w-4 h-4 mr-2" />
-                AI Tạo lịch
-              </Button>
-            </DialogTrigger>
+          {/* Chỉ hiển thị nút AI nếu có ít nhất 1 hội thao trong danh sách */}
+          {filteredActivities.some(a => a.subType === "SportsFestival" || (a.sports && a.sports.length > 0)) && (
+            <Dialog open={showAIModal} onOpenChange={setShowAIModal}>
+              <DialogTrigger asChild>
+                <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  AI Tạo lịch
+                </Button>
+              </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
@@ -640,6 +642,7 @@ export default function ActivityManagement() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+          )}
 
             <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
               <Link to={ROUTES.ADMIN.CREATE_ACTIVITY}>
@@ -903,11 +906,14 @@ export default function ActivityManagement() {
                             <Edit className="w-4 h-4" />
                           </Link>
                         </Button>
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link to={ROUTES.ADMIN.AI_SCHEDULE.replace(':id', String(activity.id))}>
-                            <Sparkles className="w-4 h-4 text-purple-500" />
-                          </Link>
-                        </Button>
+                        {/* Chỉ hiển thị nút AI cho hội thao */}
+                        {(activity.subType === "SportsFestival" || (activity.sports && activity.sports.length > 0)) && (
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link to={ROUTES.ADMIN.AI_SCHEDULE.replace(':id', String(activity.id))}>
+                              <Sparkles className="w-4 h-4 text-purple-500" />
+                            </Link>
+                          </Button>
+                        )}
                       <Button
                         variant="ghost"
                         size="icon"

@@ -236,6 +236,8 @@ export const API_CONFIG = {
     GET_BY_ID: '/activity/{id}',
     CREATE: '/activity',
     UPDATE: '/activity',
+    GENERATE_TOURNAMENT_SCHEDULE: '/activity/{id}/generate-schedule',
+    TRAIN_SCHEDULE_MODEL: '/activity/train-schedule-model',
   },
 
   // Activity Participant endpoints

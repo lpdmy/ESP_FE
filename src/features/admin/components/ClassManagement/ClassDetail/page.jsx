@@ -22,6 +22,7 @@
       } from "lucide-react";
       import { toast } from "react-toastify";
       import { ClassGroupService } from "@/services/classgroup.service";
+      import SimpleClassScheduleView from "../SimpleClassScheduleView";
 
 export default function ClassDetailPage() {
   const { id } = useParams();
@@ -115,9 +116,12 @@ export default function ClassDetailPage() {
              // Fetch class detail
              const classResponse = await ClassGroupService.getDetail(id, token);
              console.log('Class response:', classResponse);
+             console.log('Class response.data:', classResponse?.data);
+             console.log('Schedules in response:', classResponse?.data?.schedules);
              
              if (classResponse && classResponse.data) {
                 setClassData(classResponse.data);
+                console.log('Set classData with schedules:', classResponse.data.schedules);
              } else {
                 console.log('No class data found, trying basic getById...');
                 // Fallback to basic getById if detail endpoint fails
@@ -468,6 +472,9 @@ export default function ClassDetailPage() {
                </p>
             </CardContent>
             </Card>
+
+      {/* Thời khóa biểu */}
+      <SimpleClassScheduleView schedules={classData?.schedules ?? []} />
 
       {/* Students List Table */}
       <Card className="!bg-white !border-gray-200 !shadow-sm !rounded-xl">
