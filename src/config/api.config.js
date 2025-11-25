@@ -115,6 +115,10 @@ export const API_CONFIG = {
     GET_ALL_POSTS: '/post',
   },
   ACTIVITY: {
+    GET_ALL: '/activity',
+    GET_BY_ID: '/activity/{id}',
+    CREATE: '/activity',
+    UPDATE: '/activity',
     LIST: '/activity',
     DETAIL: '/activity/{id}',
   },
@@ -126,6 +130,8 @@ export const API_CONFIG = {
   },
   ACTIVITY_PARTICIPANT: {
     BASE: '/activityparticipant',
+    ADD: '/activityparticipant',
+    REMOVE: '/activityparticipant',
   },
   COLLECTION: {
     CREATE_COLLECTION: '/collection',
@@ -242,7 +248,10 @@ export const API_CONFIG = {
     // Current Class endpoints
     GET_CURRENT_CLASS: '/classgroup/current-class'
 
-  }
+  },
+
+  // Activity endpoints
+
 };
 
 // HTTP Headers

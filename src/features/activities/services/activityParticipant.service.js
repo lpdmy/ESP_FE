@@ -1,9 +1,31 @@
 import { ApiService } from '@/services/api.service';
 import { API_CONFIG } from '@/config/api.config';
 
-class ActivityParticipantService extends ApiService {
+export class ActivityParticipantService extends ApiService {
+  /**
+   * Register for an activity
+   * @param {Object} participantData - Participant data { activityId, reason? }
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with participant data
+   */
+  async registerForActivity(participantData, token) {
+    return this.post(API_CONFIG.ACTIVITY_PARTICIPANT.ADD, participantData, token);
+  }
   async register(payload, token) {
     return this.post(API_CONFIG.ACTIVITY_PARTICIPANT.BASE, payload, token);
+  }
+
+  /**
+   * Cancel registration for an activity
+   * @param {number} participationId - Participation ID
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response
+   */
+  async cancelRegistration(participationId, token) {
+    return this.delete(
+      `${API_CONFIG.ACTIVITY_PARTICIPANT.REMOVE}?participationId=${participationId}`,
+      token
+    );
   }
 }
 

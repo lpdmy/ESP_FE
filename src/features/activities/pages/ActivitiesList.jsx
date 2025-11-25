@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Calendar, Users, Trophy, TrendingUp, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { useSelector } from "react-redux";
+import { Calendar, Users, Trophy, TrendingUp, Search, ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
 import {
@@ -44,6 +45,20 @@ const deriveStatus = (activity) => {
   return "Sắp diễn ra";
 };
 
+const getStatusBadgeClass = (status) => {
+  switch (status) {
+    case "Đã kết thúc":
+      return "bg-red-100 text-red-700 border-red-200";
+    case "Đang diễn ra":
+      return "bg-green-100 text-green-700 border-green-200";
+    case "Sắp diễn ra":
+    case "Đang đăng ký":
+      return "bg-blue-100 text-blue-700 border-blue-200";
+    default:
+      return "bg-gray-100 text-gray-700 border-gray-200";
+  }
+};
+
 const mapActivityDto = (dto) => {
   const status = deriveStatus(dto);
   return {
@@ -65,6 +80,7 @@ const mapActivityDto = (dto) => {
 };
 
 export default function ActivitiesList() {
+  const user = useSelector((state) => state.user?.user);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,6 +88,11 @@ export default function ActivitiesList() {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [registeredActivityIds, setRegisteredActivityIds] = useState(new Set());
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const carouselIntervalRef = useRef(null);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
   const {
     register: registerActivity,
     registeringId,
@@ -85,6 +106,21 @@ export default function ActivitiesList() {
     location: "",
   });
 
+  // Load registered activity IDs from localStorage on mount
+  useEffect(() => {
+    if (user?.id) {
+      const stored = localStorage.getItem(`registeredActivities_${user.id}`);
+      if (stored) {
+        try {
+          const ids = JSON.parse(stored);
+          setRegisteredActivityIds(new Set(ids));
+        } catch (err) {
+          console.error("Failed to parse stored registered activities", err);
+        }
+      }
+    }
+  }, [user?.id]);
+
   const fetchActivities = useCallback(async () => {
     const token = localStorage.getItem("token");
     try {
@@ -96,6 +132,9 @@ export default function ActivitiesList() {
 
       const payload = response?.data?.data ?? [];
       setActivities(payload.map(mapActivityDto));
+      
+      // Note: We don't fetch individual activity details here due to API circular reference issues
+      // Registration status is stored in localStorage and updated when user registers successfully
     } catch (fetchError) {
       console.error("Failed to fetch activities", fetchError);
     }
@@ -108,18 +147,47 @@ export default function ActivitiesList() {
           activityId: activityItem.id,
           activitySubType: activityItem.subType || activityItem.raw?.subType,
         });
+        // Update registered activity IDs immediately
+        setRegisteredActivityIds(prev => {
+          const newSet = new Set([...prev, activityItem.id]);
+          // Save to localStorage
+          if (user?.id) {
+            localStorage.setItem(`registeredActivities_${user.id}`, JSON.stringify([...newSet]));
+          }
+          return newSet;
+        });
         fetchActivities();
       } catch (registerError) {
         // Error đã được toast trong hook, chỉ cần log để debug
         console.error("Register activity failed", registerError);
       }
     },
-    [fetchActivities, registerActivity]
+    [fetchActivities, registerActivity, user?.id]
   );
 
   useEffect(() => {
     fetchActivities();
   }, [fetchActivities]);
+
+  const upcomingActivities = useMemo(
+    () => activities.filter((activity) => ["Đang đăng ký", "Sắp diễn ra"].includes(activity.status)),
+    [activities]
+  );
+
+  // Auto-play carousel
+  useEffect(() => {
+    if (upcomingActivities.length <= 1) return;
+
+    carouselIntervalRef.current = setInterval(() => {
+      setCarouselIndex((prev) => (prev + 1) % upcomingActivities.length);
+    }, 4000); // 4 seconds
+
+    return () => {
+      if (carouselIntervalRef.current) {
+        clearInterval(carouselIntervalRef.current);
+      }
+    };
+  }, [upcomingActivities.length]);
 
   const listFiltered = useMemo(() => {
     return activities.filter((activity) => {
@@ -156,19 +224,6 @@ export default function ActivitiesList() {
   const totalPages = Math.ceil(tabFiltered.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedActivities = tabFiltered.slice(startIndex, startIndex + itemsPerPage);
-  const upcomingActivities = useMemo(
-    () => activities.filter((activity) => ["Đang đăng ký", "Sắp diễn ra"].includes(activity.status)),
-    [activities]
-  );
-
-  const featuredActivity = useMemo(() => {
-    if (!activities.length) return null;
-    return (
-      activities.find((activity) => activity.status === "Đang đăng ký") ||
-      activities.find((activity) => activity.status === "Sắp diễn ra") ||
-      activities[0]
-    );
-  }, [activities]);
 
   const statsCardData = useMemo(() => {
     const uniqueOrganizers = new Set(activities.map((activity) => activity.organizer).filter(Boolean));
@@ -240,58 +295,150 @@ export default function ActivitiesList() {
             </Card>
 
             <LoadingCard isLoading={loading} text="Đang tải hoạt động...">
-              {featuredActivity ? (
-                <Card className="overflow-hidden shadow-md border-2 border-orange-200">
-                  <div className="grid md:grid-cols-2 gap-0">
-                    <div className="relative h-64 md:h-80">
-                      <img
-                        src={featuredActivity.thumbnail || "/placeholder.svg"}
-                        alt={featuredActivity.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <span className="absolute top-4 left-4 px-3 py-1 rounded-md bg-gradient-to-r from-orange-500 to-yellow-500 text-white text-sm font-semibold">
-                        Nổi bật
-                      </span>
+              {upcomingActivities.length > 0 ? (
+                <div className="relative w-full">
+                  <div
+                    className="relative overflow-hidden rounded-xl"
+                    onTouchStart={(e) => {
+                      touchStartX.current = e.touches[0].clientX;
+                    }}
+                    onTouchMove={(e) => {
+                      touchEndX.current = e.touches[0].clientX;
+                    }}
+                    onTouchEnd={() => {
+                      if (!touchStartX.current || !touchEndX.current) return;
+                      const distance = touchStartX.current - touchEndX.current;
+                      if (distance > 50) {
+                        setCarouselIndex((prev) => (prev + 1) % upcomingActivities.length);
+                      } else if (distance < -50) {
+                        setCarouselIndex((prev) => (prev - 1 + upcomingActivities.length) % upcomingActivities.length);
+                      }
+                      touchStartX.current = 0;
+                      touchEndX.current = 0;
+                    }}
+                  >
+                    <div
+                      className="flex transition-transform duration-500 ease-in-out"
+                      style={{
+                        transform: `translateX(-${carouselIndex * 100}%)`,
+                      }}
+                    >
+                      {upcomingActivities.map((activity) => (
+                        <div key={activity.id} className="w-full flex-shrink-0">
+                          <Card className="overflow-hidden shadow-lg border-2 border-orange-200">
+                            <div className="grid md:grid-cols-2 gap-0">
+                              <div className="relative h-64 md:h-80">
+                                <img
+                                  src={activity.thumbnail || "/placeholder.svg"}
+                                  alt={activity.title}
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute top-4 left-4">
+                                  <Badge variant="outline" className={getStatusBadgeClass(activity.status)}>
+                                    {activity.status}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="p-6 md:p-8 flex flex-col justify-center gap-4 bg-white">
+                                <div className="space-y-3">
+                                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
+                                    {activity.title}
+                                  </h2>
+                                  <p className="text-base text-gray-600 leading-relaxed line-clamp-3">
+                                    {activity.description}
+                                  </p>
+                                </div>
+                                <div className="space-y-2 text-sm text-gray-600">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4 text-orange-500" />
+                                    {activity.startDate} - {activity.endDate}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Users className="h-4 w-4 text-orange-500" />
+                                    {activity.currentParticipants}/{activity.maxParticipants} người tham gia
+                                  </div>
+                                </div>
+                                <div className="flex gap-3 pt-2">
+                                  {activity.status === "Đã kết thúc" ? (
+                                    <Button variant="outline" size="lg" disabled className="text-gray-500 cursor-not-allowed">
+                                      Đã kết thúc
+                                    </Button>
+                                  ) : registeredActivityIds.has(activity.id) ? (
+                                    <Button 
+                                      className="bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-2" 
+                                      size="lg" 
+                                      disabled
+                                    >
+                                      <CheckCircle className="w-5 h-5" />
+                                      Đã đăng ký
+                                    </Button>
+                                  ) : (
+                                    <Button 
+                                      variant="orange" 
+                                      size="lg" 
+                                      onClick={() => handleRegister(activity)}
+                                      disabled={registeringId === activity.id || !canRegisterActivity(activity.raw)}
+                                    >
+                                      {registeringId === activity.id ? "Đang đăng ký..." : "Đăng ký ngay"}
+                                    </Button>
+                                  )}
+                                  <Link
+                                    to={`/activities/${activity.id}`}
+                                    className="text-sm text-orange-600 hover:text-orange-700 hover:underline self-center"
+                                  >
+                                    Xem chi tiết →
+                                  </Link>
+                                </div>
+                              </div>
+                            </div>
+                          </Card>
+                        </div>
+                      ))}
                     </div>
-                    <div className="p-6 md:p-8 flex flex-col justify-center gap-4 bg-white">
-                      <div className="space-y-3">
-                        <Badge variant="secondary" className="w-fit">
-                          {featuredActivity.status}
-                        </Badge>
-                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
-                          {featuredActivity.title}
-                        </h2>
-                        <p className="text-base text-gray-600 leading-relaxed">
-                          {featuredActivity.description}
-                        </p>
-                      </div>
-                      <div className="space-y-2 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-orange-500" />
-                          {featuredActivity.startDate} - {featuredActivity.endDate}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-orange-500" />
-                          {featuredActivity.currentParticipants}/{featuredActivity.maxParticipants} người tham gia
-                        </div>
-                      </div>
-                      <div className="flex gap-3 pt-2">
-                        <Button variant="orange" size="lg" asChild>
-                          <Link to={`/activities/${featuredActivity.id}`}>Đăng ký ngay</Link>
-                        </Button>
-                        <Link
-                          to={`/activities/${featuredActivity.id}`}
-                          className="text-sm text-orange-600 hover:text-orange-700 hover:underline self-center"
+
+                    {/* Navigation Buttons */}
+                    {upcomingActivities.length > 1 && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-lg z-10"
+                          onClick={() => setCarouselIndex((prev) => (prev - 1 + upcomingActivities.length) % upcomingActivities.length)}
                         >
-                          Xem chi tiết →
-                        </Link>
+                          <ChevronLeft className="h-6 w-6" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-lg z-10"
+                          onClick={() => setCarouselIndex((prev) => (prev + 1) % upcomingActivities.length)}
+                        >
+                          <ChevronRight className="h-6 w-6" />
+                        </Button>
+                      </>
+                    )}
+
+                    {/* Dots Indicator */}
+                    {upcomingActivities.length > 1 && (
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                        {upcomingActivities.map((_, index) => (
+                          <button
+                            key={index}
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              index === carouselIndex
+                                ? "w-8 bg-orange-500"
+                                : "w-2 bg-white/50 hover:bg-white/75"
+                            }`}
+                            onClick={() => setCarouselIndex(index)}
+                          />
+                        ))}
                       </div>
-                    </div>
+                    )}
                   </div>
-                </Card>
+                </div>
               ) : (
                 <Card className="py-16 text-center text-gray-500">
-                  {error ? "Không thể tải dữ liệu hoạt động" : "Chưa có hoạt động nào"}
+                  {error ? "Không thể tải dữ liệu hoạt động" : "Chưa có hoạt động sắp diễn ra"}
                 </Card>
               )}
             </LoadingCard>
@@ -337,6 +484,8 @@ export default function ActivitiesList() {
                     paginatedActivities.map((activity) => {
                       const isSportsFestival =
                         (activity.raw?.subType ?? activity.subType ?? "").toLowerCase() === "sportsfestival";
+                      // Check if user is already registered from state
+                      const isRegistered = registeredActivityIds.has(activity.id);
                       return (
                         <ActivityListItem
                           key={activity.id}
@@ -345,6 +494,7 @@ export default function ActivitiesList() {
                           isRegistering={registeringId === activity.id}
                           canRegister={canRegisterActivity(activity.raw)}
                           showTeacherNote={isSportsFestival && !isTeacher}
+                          isRegistered={isRegistered}
                         />
                       );
                     })

@@ -87,11 +87,20 @@ export const useActivityRegistration = () => {
       }
 
       const token = localStorage.getItem("token");
+      // Ensure all IDs are integers, not floats
       const payload = {
-        ActivityId: activityId,
-        UserId: user.id,
-        ClassGroupId: resolvedClassGroupId,
+        ActivityId: Number.isInteger(activityId) ? activityId : parseInt(activityId, 10),
+        UserId: Number.isInteger(user.id) ? user.id : parseInt(user.id, 10),
+        ClassGroupId: resolvedClassGroupId 
+          ? (Number.isInteger(resolvedClassGroupId) ? resolvedClassGroupId : parseInt(resolvedClassGroupId, 10))
+          : null,
       };
+      
+      // Validate that all required fields are valid integers
+      if (isNaN(payload.ActivityId) || isNaN(payload.UserId)) {
+        toast.showError("Dữ liệu không hợp lệ");
+        throw new Error("INVALID_DATA");
+      }
 
       try {
         setRegisteringId(activityId);

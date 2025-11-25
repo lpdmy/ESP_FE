@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Calendar, MapPin, Users } from "lucide-react";
+import { Calendar, MapPin, Users, CheckCircle } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
 import { Badge } from "@/common/components/ui/badge";
 
@@ -10,12 +10,30 @@ export default function ActivityListItem({
   isRegistering,
   canRegister = true,
   showTeacherNote = false,
+  isRegistered = false,
 }) {
   const handleRegister = () => {
     if (onRegister) {
       onRegister(activity);
     }
   };
+
+  // Get badge color based on status
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case "Đã kết thúc":
+        return "bg-red-100 text-red-700 border-red-200";
+      case "Đang diễn ra":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "Sắp diễn ra":
+      case "Đang đăng ký":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      default:
+        return "bg-gray-100 text-gray-700 border-gray-200";
+    }
+  };
+
+  const isEnded = activity.status === "Đã kết thúc";
 
   return (
     <div className="flex items-start gap-4 p-4 border-b border-gray-100 hover:bg-orange-50/50 transition-colors">
@@ -34,7 +52,7 @@ export default function ActivityListItem({
               <Badge variant="secondary" className="text-xs">
                 {activity.category}
               </Badge>
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className={`text-xs ${getStatusBadgeClass(activity.status)}`}>
                 {activity.status}
               </Badge>
             </div>
@@ -61,7 +79,25 @@ export default function ActivityListItem({
           </div>
           
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            {canRegister ? (
+            {isEnded ? (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled
+                className="text-gray-500 cursor-not-allowed"
+              >
+                Đã kết thúc
+              </Button>
+            ) : isRegistered ? (
+              <Button 
+                className="bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-2" 
+                size="sm" 
+                disabled
+              >
+                <CheckCircle className="w-4 h-4" />
+                Đã đăng ký
+              </Button>
+            ) : canRegister ? (
               <Button variant="orange" size="sm" onClick={handleRegister} disabled={isRegistering}>
                 {isRegistering ? "Đang đăng ký..." : "Đăng ký"}
               </Button>
