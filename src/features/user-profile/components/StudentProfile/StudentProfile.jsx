@@ -118,7 +118,7 @@ export default function StudentProfile() {
       try {
         let response;
 
-        if (id) {
+        if (!!id) {
           // Nếu có id trên URL thì lấy profile theo id
           response = await getStudentProfileRef(id);
         } else {

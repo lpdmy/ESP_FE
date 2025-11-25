@@ -1,10 +1,22 @@
-import { useState, useEffect, useCallback } from "react"
-import { Link } from "react-router-dom"
-import { Button } from "@/common/components/ui/button"
-import { Input } from "@/common/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
-import { Badge } from "@/common/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/common/components/ui/table"
+import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/common/components/ui/button";
+import { Input } from "@/common/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/common/components/ui/card";
+import { Badge } from "@/common/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/common/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -13,11 +25,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/common/components/ui/dialog"
-import { SimpleSelect } from "@/common/components/ui/select"
-import { Label } from "@/common/components/ui/label"
-import { Checkbox } from "@/common/components/ui/checkbox"
-import { toast } from "react-toastify"
+} from "@/common/components/ui/dialog";
+import { SimpleSelect } from "@/common/components/ui/select";
+import { Label } from "@/common/components/ui/label";
+import { Checkbox } from "@/common/components/ui/checkbox";
+import { toast } from "react-toastify";
 import {
   Search,
   Plus,
@@ -39,44 +51,44 @@ import {
   Maximize2,
   ChevronLeft,
   ChevronRight,
-} from "lucide-react"
-import { ROUTES } from "@/common/constants/routes"
-import { executeApiCall } from "@/common/utils/executeApiCall"
-import { activityService } from "@/features/activities/services/activity.service"
-import { LoadingCard } from "@/common/components/ui/loading"
+} from "lucide-react";
+import { ROUTES } from "@/common/constants/routes";
+import { executeApiCall } from "@/common/utils/executeApiCall";
+import { activityService } from "@/features/activities/services/activity.service";
+import { LoadingCard } from "@/common/components/ui/loading";
 
 export default function ActivityManagement() {
   // Data state
-  const [activities, setActivities] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   // Pagination state
-  const [pageNumber, setPageNumber] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-  const [totalCount, setTotalCount] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
-  
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
   // Search and filters
-  const [searchQuery, setSearchQuery] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("")
-  const [statusFilter, setStatusFilter] = useState("")
-  const [selectedActivities, setSelectedActivities] = useState([])
-  const [showAIModal, setShowAIModal] = useState(false)
-  const [aiGenerating, setAiGenerating] = useState(false)
-  const [aiSchedule, setAiSchedule] = useState([])
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [selectedActivities, setSelectedActivities] = useState([]);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiSchedule, setAiSchedule] = useState([]);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
   // Advanced filters
-  const [subTypeFilter, setSubTypeFilter] = useState("")
-  const [dateFromFilter, setDateFromFilter] = useState("")
-  const [dateToFilter, setDateToFilter] = useState("")
-  const [minParticipantsFilter, setMinParticipantsFilter] = useState("")
-  const [maxParticipantsFilter, setMaxParticipantsFilter] = useState("")
-  const [organizerFilter, setOrganizerFilter] = useState("")
-  
+  const [subTypeFilter, setSubTypeFilter] = useState("");
+  const [dateFromFilter, setDateFromFilter] = useState("");
+  const [dateToFilter, setDateToFilter] = useState("");
+  const [minParticipantsFilter, setMinParticipantsFilter] = useState("");
+  const [maxParticipantsFilter, setMaxParticipantsFilter] = useState("");
+  const [organizerFilter, setOrganizerFilter] = useState("");
+
   // Debounce search
-  const [searchDebounce, setSearchDebounce] = useState("")
+  const [searchDebounce, setSearchDebounce] = useState("");
 
   // AI Form State
   const [aiForm, setAiForm] = useState({
@@ -88,7 +100,7 @@ export default function ActivityManagement() {
       avoidLunch: true,
       maxSessionsPerDay: 3,
     },
-  })
+  });
 
   // Stats data (calculated from activities)
   const [stats, setStats] = useState([
@@ -124,60 +136,68 @@ export default function ActivityManagement() {
       bgColor: "bg-purple-50",
       trend: "Tính từ dữ liệu",
     },
-  ])
-  
+  ]);
+
   // Calculate activity status based on dates
   const getActivityStatus = (activity) => {
-    const now = new Date()
-    const startDate = activity.startDate ? new Date(activity.startDate) : null
-    const endDate = activity.endDate ? new Date(activity.endDate) : null
-    
+    const now = new Date();
+    const startDate = activity.startDate ? new Date(activity.startDate) : null;
+    const endDate = activity.endDate ? new Date(activity.endDate) : null;
+
     // If missing dates, consider as Upcoming (not Pending)
-    if (!startDate || !endDate) return "Upcoming"
-    
+    if (!startDate || !endDate) return "Upcoming";
+
     // Check current status based on dates
     if (now >= startDate && now <= endDate) {
-      return "Active" // Đang diễn ra
+      return "Active"; // Đang diễn ra
     }
-    
+
     if (now > endDate) {
-      return "Ended" // Đã kết thúc
+      return "Ended"; // Đã kết thúc
     }
-    
+
     // If now < startDate, it's upcoming
-    return "Upcoming" // Sắp tới
-  }
-  
+    return "Upcoming"; // Sắp tới
+  };
+
   // Fetch activities from BE
   const fetchActivities = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    
+    setLoading(true);
+    setError(null);
+
     try {
-      const token = localStorage.getItem("token")
-      const search = searchDebounce.trim() || null
-      
+      const token = localStorage.getItem("token");
+      const search = searchDebounce.trim() || null;
+
       const response = await executeApiCall(
         activityService.getAllActivities.bind(activityService),
         [pageNumber, pageSize, search, token],
         { setLoading, setError }
-      )
-      
+      );
+
       if (response?.data) {
-        const paginationData = response.data
-        const activitiesData = paginationData.data || []
-        
+        const paginationData = response.data;
+        const activitiesData = paginationData.data || [];
+
         // Map BE data to FE format
-        const mappedActivities = activitiesData.map(activity => ({
+        const mappedActivities = activitiesData.map((activity) => ({
           id: activity.id,
           thumbnail: activity.thumbnailUrl || "",
           title: activity.title || "",
           category: activity.category === 1 ? "Activity" : "Event",
           subType: activity.subType || "",
-          startDate: activity.startDate ? new Date(activity.startDate).toISOString().split("T")[0] : "",
-          endDate: activity.endDate ? new Date(activity.endDate).toISOString().split("T")[0] : "",
-          registerDate: activity.registerDate ? new Date(activity.registerDate).toISOString().split("T")[0] : "",
-          endRegisterDate: activity.endRegisterDate ? new Date(activity.endRegisterDate).toISOString().split("T")[0] : "",
+          startDate: activity.startDate
+            ? new Date(activity.startDate).toISOString().split("T")[0]
+            : "",
+          endDate: activity.endDate
+            ? new Date(activity.endDate).toISOString().split("T")[0]
+            : "",
+          registerDate: activity.registerDate
+            ? new Date(activity.registerDate).toISOString().split("T")[0]
+            : "",
+          endRegisterDate: activity.endRegisterDate
+            ? new Date(activity.endRegisterDate).toISOString().split("T")[0]
+            : "",
           status: getActivityStatus(activity),
           participants: activity.numberOfParticipants || 0,
           maxParticipants: activity.maxParticipants || 0,
@@ -186,32 +206,35 @@ export default function ActivityManagement() {
           description: activity.description || "",
           onlyTeacherCanRegister: activity.onlyTeacherCanRegister || false,
           gradingSettings: activity.gradingSettings || null,
-        }))
-        
-        setActivities(mappedActivities)
-        setTotalCount(paginationData.totalCount || 0)
-        setTotalPages(Math.ceil((paginationData.totalCount || 0) / pageSize))
-        
+        }));
+
+        setActivities(mappedActivities);
+        setTotalCount(paginationData.totalCount || 0);
+        setTotalPages(Math.ceil((paginationData.totalCount || 0) / pageSize));
+
         // Calculate stats
-        const now = new Date()
-        const activeCount = mappedActivities.filter(a => {
-          const start = a.startDate ? new Date(a.startDate) : null
-          const end = a.endDate ? new Date(a.endDate) : null
-          return start && end && now >= start && now <= end
-        }).length
-        
-        const upcomingCount = mappedActivities.filter(a => {
-          const start = a.startDate ? new Date(a.startDate) : null
-          return start && now < start
-        }).length
-        
-        const endedCount = mappedActivities.filter(a => {
-          const end = a.endDate ? new Date(a.endDate) : null
-          return end && now > end
-        }).length
-        
-        const totalParticipants = mappedActivities.reduce((sum, a) => sum + a.participants, 0)
-        
+        const now = new Date();
+        const activeCount = mappedActivities.filter((a) => {
+          const start = a.startDate ? new Date(a.startDate) : null;
+          const end = a.endDate ? new Date(a.endDate) : null;
+          return start && end && now >= start && now <= end;
+        }).length;
+
+        const upcomingCount = mappedActivities.filter((a) => {
+          const start = a.startDate ? new Date(a.startDate) : null;
+          return start && now < start;
+        }).length;
+
+        const endedCount = mappedActivities.filter((a) => {
+          const end = a.endDate ? new Date(a.endDate) : null;
+          return end && now > end;
+        }).length;
+
+        const totalParticipants = mappedActivities.reduce(
+          (sum, a) => sum + a.participants,
+          0
+        );
+
         setStats([
           {
             title: "Đang diễn ra",
@@ -245,96 +268,106 @@ export default function ActivityManagement() {
             bgColor: "bg-purple-50",
             trend: "Tính từ dữ liệu",
           },
-        ])
+        ]);
       }
     } catch (err) {
-      console.error("Error fetching activities:", err)
-      toast.error(err?.message || "Không thể tải danh sách hoạt động")
+      console.error("Error fetching activities:", err);
+      toast.error(err?.message || "Không thể tải danh sách hoạt động");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [pageNumber, pageSize, searchDebounce])
-  
+  }, [pageNumber, pageSize, searchDebounce]);
+
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
-      setSearchDebounce(searchQuery)
-      setPageNumber(1) // Reset to first page when search changes
-    }, 500)
-    
-    return () => clearTimeout(timer)
-  }, [searchQuery])
-  
+      setSearchDebounce(searchQuery);
+      setPageNumber(1); // Reset to first page when search changes
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // Fetch activities when filters change
   useEffect(() => {
-    fetchActivities()
-  }, [fetchActivities])
+    fetchActivities();
+  }, [fetchActivities]);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      Active: { label: "Đang diễn ra", className: "bg-green-100 text-green-700" },
-      Upcoming: { label: "Sắp tới", className: "bg-orange-100 text-orange-700" },
+      Active: {
+        label: "Đang diễn ra",
+        className: "bg-green-100 text-green-700",
+      },
+      Upcoming: {
+        label: "Sắp tới",
+        className: "bg-orange-100 text-orange-700",
+      },
       Ended: { label: "Đã kết thúc", className: "bg-gray-100 text-gray-700" },
-    }
-    const config = statusConfig[status] || statusConfig.Upcoming
-    return <Badge className={config.className}>{config.label}</Badge>
-  }
+    };
+    const config = statusConfig[status] || statusConfig.Upcoming;
+    return <Badge className={config.className}>{config.label}</Badge>;
+  };
 
   const handleSelectActivity = (id) => {
     setSelectedActivities((prev) =>
-      prev.includes(id) ? prev.filter((activityId) => activityId !== id) : [...prev, id],
-    )
-  }
+      prev.includes(id)
+        ? prev.filter((activityId) => activityId !== id)
+        : [...prev, id]
+    );
+  };
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedActivities(filteredActivities.map((a) => a.id))
+      setSelectedActivities(filteredActivities.map((a) => a.id));
     } else {
-      setSelectedActivities([])
+      setSelectedActivities([]);
     }
-  }
+  };
 
   const handleDeleteSelected = () => {
-    toast.success(`Đã xóa ${selectedActivities.length} hoạt động.`)
-    setSelectedActivities([])
-  }
+    toast.success(`Đã xóa ${selectedActivities.length} hoạt động.`);
+    setSelectedActivities([]);
+  };
 
   const handleGenerateSchedule = () => {
-    setAiGenerating(true)
+    setAiGenerating(true);
 
     // TODO: Implement actual AI schedule generation API call
     // For now, show message that feature is not yet implemented
     setTimeout(() => {
-      setAiGenerating(false)
-      toast.info("Tính năng AI tạo lịch thi đấu đang được phát triển. Vui lòng quay lại sau.")
-    }, 1000)
-  }
+      setAiGenerating(false);
+      toast.info(
+        "Tính năng AI tạo lịch thi đấu đang được phát triển. Vui lòng quay lại sau."
+      );
+    }, 1000);
+  };
 
   const handleApproveSchedule = () => {
-    toast.success("Lịch thi đấu đã được lưu vào hệ thống.")
-    setShowAIModal(false)
-    setAiSchedule([])
-  }
+    toast.success("Lịch thi đấu đã được lưu vào hệ thống.");
+    setShowAIModal(false);
+    setAiSchedule([]);
+  };
 
   // Options for filters
   const categoryOptions = [
     { value: "all", label: "Tất cả" },
     { value: "activity", label: "Hoạt động" },
     { value: "event", label: "Sự kiện" },
-  ]
+  ];
 
   const statusOptions = [
     { value: "all", label: "Tất cả" },
     { value: "active", label: "Đang diễn ra" },
     { value: "upcoming", label: "Sắp tới" },
     { value: "ended", label: "Đã kết thúc" },
-  ]
+  ];
 
   const activityTypeOptions = [
     { value: "SportsFestival", label: "Hội thao" },
     { value: "Seminar", label: "Hội thảo" },
     { value: "Contest", label: "Cuộc thi" },
-  ]
+  ];
 
   const subTypeOptions = [
     { value: "all", label: "Tất cả" },
@@ -342,30 +375,30 @@ export default function ActivityManagement() {
     { value: "CreativeContest", label: "Cuộc thi sáng tạo" },
     { value: "SeminarWorkshop", label: "Hội thảo / Workshop" },
     { value: "Other", label: "Khác" },
-  ]
+  ];
 
   // Map SubType to Vietnamese label
   const getSubTypeLabel = (subType) => {
     const subTypeMap = {
-      "SportsFestival": "Hội thao",
-      "CreativeContest": "Cuộc thi sáng tạo",
-      "SeminarWorkshop": "Hội thảo / Workshop",
-      "Other": "Khác",
-    }
-    return subTypeMap[subType] || subType || "-"
-  }
+      SportsFestival: "Hội thao",
+      CreativeContest: "Cuộc thi sáng tạo",
+      SeminarWorkshop: "Hội thảo / Workshop",
+      Other: "Khác",
+    };
+    return subTypeMap[subType] || subType || "-";
+  };
 
   const handleResetFilters = () => {
-    setCategoryFilter("")
-    setStatusFilter("")
-    setSubTypeFilter("")
-    setDateFromFilter("")
-    setDateToFilter("")
-    setMinParticipantsFilter("")
-    setMaxParticipantsFilter("")
-    setOrganizerFilter("")
-    setSearchQuery("")
-  }
+    setCategoryFilter("");
+    setStatusFilter("");
+    setSubTypeFilter("");
+    setDateFromFilter("");
+    setDateToFilter("");
+    setMinParticipantsFilter("");
+    setMaxParticipantsFilter("");
+    setOrganizerFilter("");
+    setSearchQuery("");
+  };
 
   const hasActiveFilters = () => {
     return (
@@ -378,73 +411,101 @@ export default function ActivityManagement() {
       maxParticipantsFilter ||
       organizerFilter ||
       searchQuery
-    )
-  }
-  
+    );
+  };
+
   // Filter activities on client side (since BE only supports search by title)
   // Note: Search is done on BE, but other filters are done on client side
-  const filteredActivities = activities.filter(activity => {
+  const filteredActivities = activities.filter((activity) => {
     // Category filter
     if (categoryFilter && categoryFilter !== "all") {
-      const categoryMatch = categoryFilter === "activity" 
-        ? activity.category === "Activity"
-        : activity.category === "Event"
-      if (!categoryMatch) return false
+      const categoryMatch =
+        categoryFilter === "activity"
+          ? activity.category === "Activity"
+          : activity.category === "Event";
+      if (!categoryMatch) return false;
     }
-    
+
     // Status filter
     if (statusFilter && statusFilter !== "all") {
       const statusMap = {
-        "active": "Active",
-        "upcoming": "Upcoming",
-        "ended": "Ended"
-      }
-      if (activity.status !== statusMap[statusFilter]) return false
+        active: "Active",
+        upcoming: "Upcoming",
+        ended: "Ended",
+      };
+      if (activity.status !== statusMap[statusFilter]) return false;
     }
-    
+
     // SubType filter
     if (subTypeFilter && subTypeFilter !== "all") {
-      if (activity.subType !== subTypeFilter) return false
+      if (activity.subType !== subTypeFilter) return false;
     }
-    
+
     // Date filters
-    if (dateFromFilter && activity.startDate && activity.startDate < dateFromFilter) return false
-    if (dateToFilter && activity.endDate && activity.endDate > dateToFilter) return false
-    
+    if (
+      dateFromFilter &&
+      activity.startDate &&
+      activity.startDate < dateFromFilter
+    )
+      return false;
+    if (dateToFilter && activity.endDate && activity.endDate > dateToFilter)
+      return false;
+
     // Participants filters
-    if (minParticipantsFilter && activity.participants < parseInt(minParticipantsFilter)) return false
-    if (maxParticipantsFilter && activity.participants > parseInt(maxParticipantsFilter)) return false
-    
+    if (
+      minParticipantsFilter &&
+      activity.participants < parseInt(minParticipantsFilter)
+    )
+      return false;
+    if (
+      maxParticipantsFilter &&
+      activity.participants > parseInt(maxParticipantsFilter)
+    )
+      return false;
+
     // Organizer filter (client-side search)
-    if (organizerFilter && activity.organizer && !activity.organizer.toLowerCase().includes(organizerFilter.toLowerCase())) return false
-    
-    return true
-  })
-  
+    if (
+      organizerFilter &&
+      activity.organizer &&
+      !activity.organizer.toLowerCase().includes(organizerFilter.toLowerCase())
+    )
+      return false;
+
+    return true;
+  });
+
   // Handle pagination
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
-      setPageNumber(newPage)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      setPageNumber(newPage);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }
-  
+  };
+
   const handlePageSizeChange = (newSize) => {
-    setPageSize(newSize)
-    setPageNumber(1)
-  }
+    setPageSize(newSize);
+    setPageNumber(1);
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Quản lý Hoạt động</h1>
-          <p className="text-gray-600 mt-1">Tổng hợp và quản lý tất cả các hoạt động ngoại khóa</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Quản lý Hoạt động
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Tổng hợp và quản lý tất cả các hoạt động ngoại khóa
+          </p>
         </div>
         <div className="flex gap-3">
           {/* Chỉ hiển thị nút AI nếu có ít nhất 1 hội thao trong danh sách */}
-          {filteredActivities.some(a => a.subType === "SportsFestival" || (a.sports && a.sports.length > 0)) && (
+          {filteredActivities.some(
+            (a) =>
+              a.subType === "SportsFestival" ||
+              (a.sports && a.sports.length > 0)
+          ) && (
             <Dialog open={showAIModal} onOpenChange={setShowAIModal}>
               <DialogTrigger asChild>
                 <Button className="bg-purple-600 hover:bg-purple-700 text-white">
@@ -459,7 +520,8 @@ export default function ActivityManagement() {
                     AI Schedule Assistant
                   </DialogTitle>
                   <DialogDescription>
-                    Sử dụng AI để tạo lịch thi đấu tối ưu, tránh trùng lịch học và giờ nghỉ
+                    Sử dụng AI để tạo lịch thi đấu tối ưu, tránh trùng lịch học
+                    và giờ nghỉ
                   </DialogDescription>
                 </DialogHeader>
 
@@ -470,7 +532,9 @@ export default function ActivityManagement() {
                         <Label>Loại hoạt động</Label>
                         <SimpleSelect
                           value={aiForm.activityType}
-                          onValueChange={(value) => setAiForm({ ...aiForm, activityType: value })}
+                          onValueChange={(value) =>
+                            setAiForm({ ...aiForm, activityType: value })
+                          }
                           placeholder="Chọn loại hoạt động"
                           options={activityTypeOptions}
                         />
@@ -486,7 +550,9 @@ export default function ActivityManagement() {
                               ...aiForm,
                               constraints: {
                                 ...aiForm.constraints,
-                                maxSessionsPerDay: Number.parseInt(e.target.value),
+                                maxSessionsPerDay: Number.parseInt(
+                                  e.target.value
+                                ),
                               },
                             })
                           }
@@ -503,7 +569,10 @@ export default function ActivityManagement() {
                           onChange={(e) =>
                             setAiForm({
                               ...aiForm,
-                              dateRange: { ...aiForm.dateRange, start: e.target.value },
+                              dateRange: {
+                                ...aiForm.dateRange,
+                                start: e.target.value,
+                              },
                             })
                           }
                         />
@@ -517,7 +586,10 @@ export default function ActivityManagement() {
                           onChange={(e) =>
                             setAiForm({
                               ...aiForm,
-                              dateRange: { ...aiForm.dateRange, end: e.target.value },
+                              dateRange: {
+                                ...aiForm.dateRange,
+                                end: e.target.value,
+                              },
                             })
                           }
                         />
@@ -541,7 +613,10 @@ export default function ActivityManagement() {
                               })
                             }
                           />
-                          <Label htmlFor="avoidClassTime" className="cursor-pointer">
+                          <Label
+                            htmlFor="avoidClassTime"
+                            className="cursor-pointer"
+                          >
                             Tránh giờ học
                           </Label>
                         </div>
@@ -559,7 +634,10 @@ export default function ActivityManagement() {
                               })
                             }
                           />
-                          <Label htmlFor="avoidLunch" className="cursor-pointer">
+                          <Label
+                            htmlFor="avoidLunch"
+                            className="cursor-pointer"
+                          >
                             Tránh giờ nghỉ trưa
                           </Label>
                         </div>
@@ -570,7 +648,8 @@ export default function ActivityManagement() {
                   <div className="py-4">
                     <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                       <p className="text-green-700 font-medium">
-                        ✓ AI đã tạo lịch thi đấu tối ưu với {aiSchedule.length} buổi
+                        ✓ AI đã tạo lịch thi đấu tối ưu với {aiSchedule.length}{" "}
+                        buổi
                       </p>
                     </div>
 
@@ -590,8 +669,12 @@ export default function ActivityManagement() {
                             <TableRow key={index}>
                               <TableCell>{item.date}</TableCell>
                               <TableCell>{item.time}</TableCell>
-                              <TableCell className="font-medium">{item.activity}</TableCell>
-                              <TableCell>{item.participants.join(", ")}</TableCell>
+                              <TableCell className="font-medium">
+                                {item.activity}
+                              </TableCell>
+                              <TableCell>
+                                {item.participants.join(", ")}
+                              </TableCell>
                               <TableCell>{item.location}</TableCell>
                             </TableRow>
                           ))}
@@ -604,7 +687,10 @@ export default function ActivityManagement() {
                 <DialogFooter>
                   {aiSchedule.length === 0 ? (
                     <>
-                      <Button variant="outline" onClick={() => setShowAIModal(false)}>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowAIModal(false)}
+                      >
                         Hủy
                       </Button>
                       <Button
@@ -627,10 +713,16 @@ export default function ActivityManagement() {
                     </>
                   ) : (
                     <>
-                      <Button variant="outline" onClick={() => setAiSchedule([])}>
+                      <Button
+                        variant="outline"
+                        onClick={() => setAiSchedule([])}
+                      >
                         Tạo lại
                       </Button>
-                      <Button onClick={handleApproveSchedule} className="bg-green-600 hover:bg-green-700 text-white">
+                      <Button
+                        onClick={handleApproveSchedule}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
                         Lưu lịch
                       </Button>
                       <Button variant="outline">
@@ -644,31 +736,31 @@ export default function ActivityManagement() {
             </Dialog>
           )}
 
-            <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
-              <Link to={ROUTES.ADMIN.CREATE_ACTIVITY}>
-                <Plus className="w-4 h-4 mr-2" />
-                Tạo hoạt động
-              </Link>
-            </Button>
-          </div>
+          <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Link to={ROUTES.ADMIN.CREATE_ACTIVITY}>
+              <Plus className="w-4 h-4 mr-2" />
+              Tạo hoạt động
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, index) => (
-            <Card key={index} className="hover-lift">
-              <CardContent>
-                <div className="flex items-start justify-between mb-3">
-                  <div className={`${stat.bgColor} p-3 rounded-lg`}>
-                    <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                  </div>
+        {stats.map((stat, index) => (
+          <Card key={index} className="hover-lift">
+            <CardContent>
+              <div className="flex items-start justify-between mb-3">
+                <div className={`${stat.bgColor} p-3 rounded-lg`}>
+                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
                 </div>
-                <div className="text-3xl font-bold mb-1">{stat.value}</div>
-                <div className="text-sm text-gray-600 mb-2">{stat.title}</div>
-                <div className="text-xs text-gray-500">{stat.trend}</div>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+              <div className="text-3xl font-bold mb-1">{stat.value}</div>
+              <div className="text-sm text-gray-600 mb-2">{stat.title}</div>
+              <div className="text-xs text-gray-500">{stat.trend}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Filters & Search */}
@@ -766,7 +858,9 @@ export default function ActivityManagement() {
                 </div>
 
                 <div>
-                  <Label className="mb-2 block">Số người tham gia tối thiểu</Label>
+                  <Label className="mb-2 block">
+                    Số người tham gia tối thiểu
+                  </Label>
                   <Input
                     type="number"
                     placeholder="VD: 10"
@@ -790,12 +884,22 @@ export default function ActivityManagement() {
 
           {selectedActivities.length > 0 && (
             <div className="mt-4 flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
-              <span className="text-sm font-medium">Đã chọn {selectedActivities.length} hoạt động</span>
-              <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
+              <span className="text-sm font-medium">
+                Đã chọn {selectedActivities.length} hoạt động
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteSelected}
+              >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Xóa
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setSelectedActivities([])}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedActivities([])}
+              >
                 Bỏ chọn
               </Button>
             </div>
@@ -811,7 +915,9 @@ export default function ActivityManagement() {
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <span>Tổng: {totalCount} hoạt động</span>
               <span>•</span>
-              <span>Trang {pageNumber}/{totalPages || 1}</span>
+              <span>
+                Trang {pageNumber}/{totalPages || 1}
+              </span>
             </div>
           </div>
         </CardHeader>
@@ -829,7 +935,11 @@ export default function ActivityManagement() {
             <div className="text-center py-8">
               <p className="text-gray-500">Không tìm thấy hoạt động nào</p>
               {hasActiveFilters() && (
-                <Button onClick={handleResetFilters} variant="outline" className="mt-4">
+                <Button
+                  onClick={handleResetFilters}
+                  variant="outline"
+                  className="mt-4"
+                >
                   Xóa bộ lọc
                 </Button>
               )}
@@ -842,12 +952,18 @@ export default function ActivityManagement() {
                     <TableRow>
                       <TableHead className="w-12">
                         <Checkbox
-                          checked={selectedActivities.length === filteredActivities.length && filteredActivities.length > 0}
+                          checked={
+                            selectedActivities.length ===
+                              filteredActivities.length &&
+                            filteredActivities.length > 0
+                          }
                           onChange={(checked) => {
                             if (checked) {
-                              setSelectedActivities(filteredActivities.map(a => a.id))
+                              setSelectedActivities(
+                                filteredActivities.map((a) => a.id)
+                              );
                             } else {
-                              setSelectedActivities([])
+                              setSelectedActivities([]);
                             }
                           }}
                         />
@@ -874,131 +990,164 @@ export default function ActivityManagement() {
                           <div className="line-clamp-2">{activity.title}</div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          <Badge
+                            variant="outline"
+                            className="bg-blue-50 text-blue-700 border-blue-200"
+                          >
                             {getSubTypeLabel(activity.subType)}
                           </Badge>
                         </TableCell>
                         <TableCell>{activity.startDate}</TableCell>
-                    <TableCell>{activity.endDate}</TableCell>
-                    <TableCell>{getStatusBadge(activity.status)}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {activity.participants}/{activity.maxParticipants}
-                      </div>
-                      <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">
-                      <div
-                        className="bg-green-600 h-1.5 rounded-full"
-                        style={{
-                          width: `${(activity.participants / activity.maxParticipants) * 100}%`,
-                        }}
-                      />
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link to={`${ROUTES.ACTIVITY.VIEW_ACTIVITY.replace(':id', String(activity.id))}?isPreview=true`}>
-                            <Eye className="w-4 h-4 text-blue-500" />
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link to={ROUTES.ADMIN.EDIT_ACTIVITY.replace(':id', String(activity.id))}>
-                            <Edit className="w-4 h-4" />
-                          </Link>
-                        </Button>
-                        {/* Chỉ hiển thị nút AI cho hội thao */}
-                        {(activity.subType === "SportsFestival" || (activity.sports && activity.sports.length > 0)) && (
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link to={ROUTES.ADMIN.AI_SCHEDULE.replace(':id', String(activity.id))}>
-                              <Sparkles className="w-4 h-4 text-purple-500" />
-                            </Link>
-                          </Button>
-                        )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          toast.success(`Đã xóa hoạt động "${activity.title}".`)
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
-                      </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm">Hiển thị:</Label>
-                  <SimpleSelect
-                    value={pageSize.toString()}
-                    onValueChange={(value) => handlePageSizeChange(parseInt(value))}
-                    options={[
-                      { value: "10", label: "10" },
-                      { value: "20", label: "20" },
-                      { value: "50", label: "50" },
-                      { value: "100", label: "100" },
-                    ]}
-                    className="w-20"
-                  />
-                  <span className="text-sm text-gray-600">mục mỗi trang</span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(pageNumber - 1)}
-                    disabled={pageNumber === 1}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum
-                      if (totalPages <= 5) {
-                        pageNum = i + 1
-                      } else if (pageNumber <= 3) {
-                        pageNum = i + 1
-                      } else if (pageNumber >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i
-                      } else {
-                        pageNum = pageNumber - 2 + i
-                      }
-                      
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={pageNumber === pageNum ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handlePageChange(pageNum)}
-                          className="min-w-[40px]"
-                        >
-                          {pageNum}
-                        </Button>
-                      )
-                    })}
-                  </div>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(pageNumber + 1)}
-                    disabled={pageNumber === totalPages}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
+                        <TableCell>{activity.endDate}</TableCell>
+                        <TableCell>{getStatusBadge(activity.status)}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {activity.participants}/{activity.maxParticipants}
+                          </div>
+                          <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">
+                            <div
+                              className="bg-green-600 h-1.5 rounded-full"
+                              style={{
+                                width: `${
+                                  (activity.participants /
+                                    activity.maxParticipants) *
+                                  100
+                                }%`,
+                              }}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {/* Chỉ hiển thị nút AI cho hội thao */}
+                            {(activity.subType === "SportsFestival" ||
+                              (activity.sports &&
+                                activity.sports.length > 0)) && (
+                              <Button variant="ghost" size="icon" asChild>
+                                <Link
+                                  to={ROUTES.ADMIN.AI_SCHEDULE.replace(
+                                    ":id",
+                                    String(activity.id)
+                                  )}
+                                >
+                                  <Sparkles className="w-4 h-4 text-purple-500" />
+                                </Link>
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" asChild>
+                              <Link
+                                to={`${ROUTES.ACTIVITY.VIEW_ACTIVITY.replace(
+                                  ":id",
+                                  String(activity.id)
+                                )}?isPreview=true`}
+                              >
+                                <Eye className="w-4 h-4 text-blue-500" />
+                              </Link>
+                            </Button>
+                            <Button variant="ghost" size="icon" asChild>
+                              <Link
+                                to={ROUTES.ADMIN.EDIT_ACTIVITY.replace(
+                                  ":id",
+                                  String(activity.id)
+                                )}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Link>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                toast.success(
+                                  `Đã xóa hoạt động "${activity.title}".`
+                                );
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-            )}
-          </>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">Hiển thị:</Label>
+                    <SimpleSelect
+                      value={pageSize.toString()}
+                      onValueChange={(value) =>
+                        handlePageSizeChange(parseInt(value))
+                      }
+                      options={[
+                        { value: "10", label: "10" },
+                        { value: "20", label: "20" },
+                        { value: "50", label: "50" },
+                        { value: "100", label: "100" },
+                      ]}
+                      className="w-20"
+                    />
+                    <span className="text-sm text-gray-600">mục mỗi trang</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pageNumber - 1)}
+                      disabled={pageNumber === 1}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+
+                    <div className="flex items-center gap-1">
+                      {Array.from(
+                        { length: Math.min(5, totalPages) },
+                        (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (pageNumber <= 3) {
+                            pageNum = i + 1;
+                          } else if (pageNumber >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = pageNumber - 2 + i;
+                          }
+
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={
+                                pageNumber === pageNum ? "default" : "outline"
+                              }
+                              size="sm"
+                              onClick={() => handlePageChange(pageNum)}
+                              className="min-w-[40px]"
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        }
+                      )}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pageNumber + 1)}
+                      disabled={pageNumber === totalPages}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -1054,5 +1203,5 @@ export default function ActivityManagement() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
