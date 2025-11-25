@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { Button } from "@/common/components/ui/button";
 import {
   Card,
@@ -11,93 +11,104 @@ import {
 } from "@/common/components/ui/card";
 import { Label } from "@/common/components/ui/label";
 import { Textarea } from "@/common/components/ui/textarea";
-import { Badge } from "@/common/components/ui/badge";
-import { ArrowLeft, ArrowRight, Save, CheckCircle } from "lucide-react";
-
-export default function Grading(JuryList) {
+import { ArrowLeft, ArrowRight, CheckCircle } from "lucide-react";
+import { useJuryApi } from "../../hooks/useJuryApi";
+import { useToast } from "@/common/hooks/useToast";
+export default function Grading() {
   const params = useParams();
+  const location = useLocation();
+  const toast = useToast();
+  const { gradingSubmission } = useJuryApi();
+  const submissions = location.state?.list || [];
   const [currentSubmission, setCurrentSubmission] = useState(0);
-  const [grades, setGrades] = useState({
-    creativity: 80,
-    technique: 75,
-    composition: 85,
-    relevance: 90,
-    comment: "",
-  });
+  const [criterias, setCriterias] = useState([]);
+  const [grades, setGrades] = useState({});
 
-  const submissions = [
-    {
-      id: 1,
-      title: "Mùa xuân rực rỡ",
-      author: "Nguyễn Văn A",
-      thumbnail: "/drawing-1.jpg",
-    },
-    {
-      id: 2,
-      title: "Hoa đào nở",
-      author: "Trần Thị B",
-      thumbnail: "/drawing-2.jpg",
-    },
-    {
-      id: 3,
-      title: "Sắc xuân",
-      author: "Lê Văn C",
-      thumbnail: "/drawing-3.jpg",
-    },
-  ];
+  // 🟢 Chuyển tiêu chí lấy từ backend thành dạng có key
+  useEffect(() => {
+    if (Array.isArray(submissions) && submissions.length > 0) {
+      const raw = submissions[currentSubmission]?.criteria || [];
+      const mapped = raw.map((label, index) => ({
+        key: `criterion_${index}`,
+        label,
+      }));
 
-  const criteria = [
-    {
-      key: "creativity",
-      label: "Sáng tạo",
-      description: "Tính độc đáo và sáng tạo",
-    },
-    {
-      key: "technique",
-      label: "Kỹ thuật",
-      description: "Kỹ năng vẽ và sử dụng màu sắc",
-    },
-    {
-      key: "composition",
-      label: "Bố cục",
-      description: "Cách sắp xếp và cân đối",
-    },
-    {
-      key: "relevance",
-      label: "Đúng chủ đề",
-      description: "Phù hợp với chủ đề cuộc thi",
-    },
-  ];
+      setCriterias(mapped);
 
-  const handleSubmitGrade = () => {
-    if (currentSubmission < submissions.length - 1) {
-      setCurrentSubmission(currentSubmission + 1);
-    } else {
-      // router.push(`/activities/${params.id}`);
+      // Khởi tạo điểm theo tiêu chí
+      const initial = {};
+      mapped.forEach((c) => (initial[c.key] = 0));
+      initial.comment = "";
+      setGrades(initial);
+    }
+  }, [submissions, currentSubmission]);
+
+  // 🟢 Tính điểm tổng hợp
+  const overallScore = Math.round(
+    criterias.reduce((sum, c) => sum + (grades[c.key] ?? 0), 0) /
+      (criterias.length || 1)
+  );
+
+  // 🟢 Payload đúng chuẩn yêu cầu backend
+  const buildGradePayload = () => {
+    const scores = {};
+    criterias.forEach((c) => {
+      scores[c.label] = grades[c.key] ?? 0;
+    });
+
+    return {
+      id: submissions[currentSubmission]?.id || 0,
+      scores,
+      comment: grades.comment || "",
+      totalScore: overallScore,
+    };
+  };
+
+  const handleSubmitGrade = async () => {
+    const payload = buildGradePayload();
+    console.log("📌 Payload gửi API:", payload);
+    try {
+      await gradingSubmission(payload);
+      toast.showSuccess("chấm điểm Thành công");
+    } catch (error) {
+      if (error.statusCode == 400) {
+        toast.showError(error.message);
+      } else {
+        toast.showError("Chấm điểm không thành công");
+      }
     }
   };
 
-  const overallScore = Math.round(
-    (grades.creativity +
-      grades.technique +
-      grades.composition +
-      grades.relevance) /
-      4
-  );
-
-  const getGrade = (score) => {
-    if (score >= 90) return "A";
-    if (score >= 80) return "B";
-    if (score >= 70) return "C";
-    if (score >= 60) return "D";
-    return "F";
+  const handlePreviousSubmission = () => {
+    if (currentSubmission > 0) {
+      setCurrentSubmission((prev) => prev - 1);
+    }
   };
+  const handleNextSubmission = () => {
+  if (currentSubmission < submissions.length - 1) {
+    setCurrentSubmission((prev) => prev + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+};
 
+
+  if (!submissions.length) {
+    return <p className="text-center text-gray-600 p-6">Không có bài nộp.</p>;
+  }
+  useEffect(() => {
+    if (!criterias.length || !submissions.length) return;
+
+    const payload = buildGradePayload();
+    console.log("📌 Tracking Payload Real-time:", payload);
+  }, [grades, criterias, currentSubmission]);
+  useEffect(() => {
+    console.log(submissions);
+  }, []);
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <Button variant="ghost" asChild className="mb-4">
-          <Link href={`/activities/${params.id}`}>
+        <Button variant="ghost" className="mb-4">
+          <Link to={`/jury/submission/${params}`}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Quay lại
           </Link>
@@ -108,12 +119,12 @@ export default function Grading(JuryList) {
             Chấm điểm bài thi
           </h1>
           <p className="text-gray-600">
-            Bài {currentSubmission + 1}/{submissions.length} - Cuộc thi vẽ tranh
-            "Mùa xuân"
+            Bài {currentSubmission + 1}/{submissions.length}
           </p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
+          {/* Bên trái - Ảnh & thông tin tác giả */}
           <Card>
             <CardHeader>
               <CardTitle>Tác phẩm</CardTitle>
@@ -121,84 +132,73 @@ export default function Grading(JuryList) {
             <CardContent>
               <img
                 src={
-                  submissions[currentSubmission].thumbnail || "/placeholder.svg"
+                  submissions[currentSubmission]?.fileUrl || "/placeholder.svg"
                 }
-                alt={submissions[currentSubmission].title}
+                alt={submissions[currentSubmission]?.submission?.title}
                 className="w-full h-96 object-contain bg-gray-100 rounded-lg mb-4"
               />
-              <div>
-                <h3 className="font-bold text-xl mb-1">
-                  {submissions[currentSubmission].title}
-                </h3>
-                <p className="text-gray-600">
-                  Tác giả: {submissions[currentSubmission].author}
-                </p>
-              </div>
+              <h3 className="font-bold text-xl mb-1">
+                {submissions[currentSubmission]?.submission?.title ||
+                  "Không rõ"}
+              </h3>
+              <p className="text-gray-600">
+                Tác giả:{" "}
+                {submissions[currentSubmission]?.submission?.userFullName ||
+                  "Không rõ"}
+              </p>
             </CardContent>
           </Card>
 
+          {/* Bên phải - chấm điểm + nhận xét */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Tiêu chí chấm điểm</CardTitle>
-                  <Badge className="bg-gradient-orange text-white text-2xl px-4 py-2">
-                    {getGrade(overallScore)}
-                  </Badge>
-                </div>
+                <CardTitle>Tiêu chí chấm điểm</CardTitle>
               </CardHeader>
+
               <CardContent className="space-y-6">
-                {criteria.map((criterion) => (
-                  <div key={criterion.key}>
+                {criterias.map((c) => (
+                  <div key={c.key}>
                     <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <Label className="font-semibold">
-                          {criterion.label}
-                        </Label>
-                        <p className="text-sm text-gray-600">
-                          {criterion.description}
-                        </p>
-                      </div>
+                      <Label className="font-semibold">{c.label}</Label>
                       <span className="text-2xl font-bold text-orange-600">
-                        {grades[criterion.key]}
+                        {grades[c.key]}
                       </span>
                     </div>
+
                     <input
                       type="range"
                       min="0"
                       max="100"
-                      step="5"
-                      value={grades[criterion.key]}
+                      value={grades[c.key] ?? 0}
                       onChange={(e) =>
                         setGrades({
                           ...grades,
-                          [criterion.key]: parseInt(e.target.value, 10),
+                          [c.key]: Number(e.target.value),
                         })
                       }
-                      className="w-full mt-2 accent-orange-600"
+                      className="w-full accent-orange-600"
                     />
                   </div>
                 ))}
-                <div className="pt-4 border-t">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="font-semibold text-lg">
-                      Điểm tổng hợp
-                    </Label>
-                    <span className="text-3xl font-bold text-orange-600">
-                      {overallScore}
-                    </span>
-                  </div>
+
+                <div className="pt-4 border-t flex justify-between">
+                  <Label className="font-semibold text-lg">Điểm tổng hợp</Label>
+                  <span className="text-3xl font-bold text-orange-600">
+                    {overallScore}
+                  </span>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Nhận xét */}
             <Card>
               <CardHeader>
                 <CardTitle>Nhận xét</CardTitle>
               </CardHeader>
               <CardContent>
                 <Textarea
-                  placeholder="Nhập nhận xét chi tiết về tác phẩm..."
+                  placeholder="Nhập nhận xét..."
                   value={grades.comment}
                   onChange={(e) =>
                     setGrades({ ...grades, comment: e.target.value })
@@ -208,27 +208,35 @@ export default function Grading(JuryList) {
               </CardContent>
             </Card>
 
+            {/* Navigation Buttons */}
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1 bg-transparent">
-                <Save className="w-4 h-4 mr-2" />
-                Lưu nháp
+              <Button
+                className="flex-1 bg-gray-200"
+                onClick={handlePreviousSubmission}
+                disabled={currentSubmission === 0}
+              >
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                Bài trước
               </Button>
               <Button
                 onClick={handleSubmitGrade}
                 className="flex-1 bg-gradient-orange text-white"
               >
-                {currentSubmission < submissions.length - 1 ? (
-                  <>
-                    Bài tiếp theo
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Hoàn thành
-                  </>
-                )}
+                Chấm điểm
               </Button>
+              {currentSubmission < submissions.length - 1 ? (
+                <Button
+                  onClick={handleNextSubmission}
+                  className="flex-1 bg-gradient-orange text-white"
+                >
+                  Bài tiếp theo
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              ) : (
+                <Button disabled className="flex-1 bg-green-500 text-white">
+                  <CheckCircle className="w-4 h-4 mr-2" /> Hoàn thành
+                </Button>
+              )}
             </div>
           </div>
         </div>

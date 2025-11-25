@@ -139,6 +139,18 @@ export function LoadingSubmission({ isLoading, className = "" }) {
     </div>
   );
 }
+
+export function LoadingSubmissions({ isLoading, className = "" }) {
+  if (!isLoading) return null;
+
+  return (
+    <div className={`w-full flex justify-center py-8 ${className}`}>
+      <div className="relative w-12 h-12">
+        <div className="absolute inset-0 rounded-full border-4 border-blue-200 border-t-blue-500 animate-spin"></div>
+      </div>
+    </div>
+  );
+}
 export function LoadingCollection({ 
   isLoading, 
   className = "",

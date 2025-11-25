@@ -234,6 +234,7 @@ export const API_CONFIG = {
     GET_BY_ID: '/activity/{id}',
     CREATE: '/activity',
     UPDATE: '/activity',
+    RANK_BY_ID:'/submission/activity/{id}/rank'
   },
   // Activity Participant endpoints
   ACTIVITY_PARTICIPANT: {
@@ -241,6 +242,7 @@ export const API_CONFIG = {
     REMOVE: '/activityparticipant',
   },
    JURY:{
+    JURY_API:"/jury",
     ASSIGN_JURY:"/jury/assign-jury/:id",
     JURY_DASHBOARD:"/jury/dashboard",
     JURY_SUBMISSION:"/jury/submission/:id",
@@ -249,9 +251,14 @@ export const API_CONFIG = {
     DELETE_RANDOM_ASSIGN:"/jury/delete-assign-activity",
     GET_ASSIGN_USER:"/jury/assign/user",
     GET_ASSIGN_USER_NOT_GRADE:"/jury/assign-not-grading/user",
+    GET_ASSIGN_USER_GRADE:"/jury/assign-grading/user",
+    JURY_ACTIVITY: "/jury/activity",
+    JURY_ASSIGN:"/jury/assign",
+    GRADING:"/jury/grade-submission"
   },
    SUBMISSION:{
-    GET_SUBMISSION_ACTIVITY:"/submission/activity"
+    GET_SUBMISSION_ACTIVITY:"/submission/activity",
+    GET_MY_SUBMISSION:"/submission/activity/user"
   }
 };
 

@@ -100,14 +100,14 @@ export default function TeacherSearchDialog({ isOpen, onClose, jury }) {
 
         <div className="flex justify-end mt-4 gap-4">
           <button
-            className="text-sm text-white px-4 py-1 border bg-orange-500 rounded-md hover:bg-orange-600"
+            className="text-sm px-4 py-1 border border-black rounded-md "
             onClick={() => handleAddJury()}
           >
             Thêm
           </button>
           <button
             onClick={onClose}
-            className="text-sm px-4 py-1 border rounded-md hover:bg-gray-100"
+            className="text-sm text-white px-4 py-1 border border-black bg-red-600 rounded-md "
           >
             Đóng
           </button>

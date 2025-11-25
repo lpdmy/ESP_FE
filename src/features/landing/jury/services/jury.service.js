@@ -53,4 +53,19 @@ export class JuryService extends ApiService {
     }
     return this.get(url, token);
   }
+  async getJuryAssignGrade(token,id, Search = "", pageSize, pageNumber) {
+    let url = `${API_CONFIG.JURY.GET_ASSIGN_USER_GRADE}/${id}?PageNumber=${pageNumber}&PageSize=${pageSize}`;
+    if (Search && Search.trim() !== "") {
+      url += `&Search=${encodeURIComponent(Search.trim())}`;
+    }
+    return this.get(url, token);
+  }
+  async gradingSubmission(token, payload) {
+    return this.post(API_CONFIG.JURY.GRADING, payload, token);
+  }
+
+  async RankByActivityId(token,id) {
+    const url = API_CONFIG.ACTIVITY.RANK_BY_ID.replace("{id}", id);
+    return this.get(url, token);
+  }
 }

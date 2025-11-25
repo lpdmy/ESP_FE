@@ -86,6 +86,30 @@ const getJuryAssign = async (id, search, pageSize, pageNumber) => {
       { setLoading: setSaveLoading, setError }
     );
   };
+  const getJuryAssignGrade = async (id, search, pageSize, pageNumber) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      juryService.getJuryAssignGrade.bind(juryService),
+      [token, id, search, pageSize, pageNumber],
+      { setLoading: setSaveLoading, setError }
+    );
+  };
+  const gradingSubmission = useRef(async (payload) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      juryService.gradingSubmission.bind(juryService),
+      [token, payload],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const RankByActivityId = async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      juryService.RankByActivityId.bind(juryService),
+      [token, id],
+      { setLoading: setSaveLoading, setError }
+    );
+  };
 
   return {
     createJury: createJury.current,
@@ -97,6 +121,9 @@ const getJuryAssign = async (id, search, pageSize, pageNumber) => {
     ramdomAssignJury: ramdomAssignJury.current,
     deleteRandomAssign,
     getJuryAssign,
-    getJuryAssignNotGrade
+    getJuryAssignNotGrade,
+    gradingSubmission : gradingSubmission.current,
+    getJuryAssignGrade,
+    RankByActivityId,
   };
 }

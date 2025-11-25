@@ -1,127 +1,138 @@
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
 } from "@/common/components/ui/dialog";
+
 import { Button } from "@/common/components/ui/button";
 import { Badge } from "@/common/components/ui/badge";
-import { Checkbox } from "@/common/components/ui/checkbox";
 import {
   Avatar,
   AvatarImage,
   AvatarFallback,
 } from "@/common/components/ui/avatar";
-import { useState, useMemo, useEffect } from "react";
-import { useJuryApi } from "../../../hooks/useJuryApi";
 import { useToast } from "@/common/hooks/useToast";
+import { useJuryApi } from "../../../hooks/useJuryApi";
+
+import { useState, useMemo, useEffect } from "react";
+
 export default function AssignDialog({
-  title,
-  student,
-  juryList = [],
-  defaultChecked = () => false,
-  onConfirm,
   isOpen,
   onClose,
-  id,
+  juryList = [],
   assignedJuryIds = [],
+  setAssignedJuryIds,
+  submissionId,
+  refreshSubmissionList, // 🔥 từ parent truyền xuống để reload submissions
+  refreshJuryList,       // 🔥 từ parent truyền xuống để reload juries (nếu cần)
 }) {
+  const toast = useToast();
   const { assignJury } = useJuryApi();
-  const toast = useToast()
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectJury, setSelectJury] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Search filter local
   const filteredJury = useMemo(() => {
+    if (!juryList) return [];
     return juryList.filter((jury) =>
       jury.userFullName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [juryList, searchTerm]);
 
-  const handleAssignJury = async () => {
+  // Sync assigned from parent when open dialog
+  useEffect(() => {
+    if (isOpen) setAssignedJuryIds(assignedJuryIds || []);
+  }, [isOpen, assignedJuryIds]);
+
+  // Toggle chọn
+  const toggleSelectJury = (userId) => {
+    setAssignedJuryIds((prev) =>
+      prev.includes(userId)
+        ? prev.filter((x) => x !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  // 🚀 Submit tại đây luôn!
+  const handleAssign = async () => {
+    if (!submissionId) return;
+    if (assignedJuryIds.length === 0) {
+      toast.showError("Vui lòng chọn ít nhất 1 giám khảo!");
+      return;
+    }
+
     try {
-      const payload = { userId: selectJury, submissionId: id };
-      await assignJury(payload);
-      toast.showSuccess("Phân công giám khảo thành công")
-    } catch (error) {
-      if(error.statusCode == 400){
-        toast.showError(error.message)
-      }else{
-      toast.showError("Phân công giám khảo thất bại")
-      console.log(error)
-      }
-    }finally{
-      onClose()
+      setLoading(true);
+
+      await assignJury({
+        submissionId,
+        UserId: assignedJuryIds,
+      });
+
+      toast.showSuccess("Phân công giám khảo thành công!");
+      refreshSubmissionList?.(); // reload submissions
+      // refreshJuryList?.(); // reload juries nếu cần
+
+      onClose();
+    } catch (err) {
+      toast.showError("Phân công thất bại!");
+      console.log(err);
+    } finally {
+      setLoading(false);
     }
   };
-  const toggleSelect = (teacherId) => {
-    setSelectJury((prev) => {
-      const next = prev.includes(teacherId)
-        ? prev.filter((id) => id !== teacherId)
-        : [...prev, teacherId];
-      return next;
-    });
-  };
-  useEffect(() => {
-    console.log(selectJury);
-  }, [selectJury]);
-  useEffect(() => {
-  setSelectJury(assignedJuryIds || []);
-}, [assignedJuryIds, isOpen]);
+  useEffect(()=>{
+    console.log(juryList)
+  },[juryList])
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        if (!open) onClose?.(); // khi dialog đóng lại → gọi onClose
-      }}
-    >
+    <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>Phân công giám khảo</DialogTitle>
-          <DialogDescription>
-            {title} – {student}
-          </DialogDescription>
+          <DialogDescription>Chọn giám khảo để chấm bài</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-3">
-            <div className="mb-3">
-              <input
-                type="text"
-                placeholder="Tìm giám khảo..."
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+        <div className="space-y-4 py-2">
+          <input
+            type="text"
+            placeholder="Tìm giám khảo..."
+            className="w-full px-3 py-2 border rounded-md focus:ring-2"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+
+          {/* Danh sách giám khảo */}
+          <div className="space-y-2 max-h-[450px] overflow-y-auto pr-2">
             {filteredJury.map((jury) => (
               <div
-                key={jury.id}
-                className="flex items-center justify-between p-4 rounded-xl bg-white shadow-sm hover:shadow-md hover:bg-gray-50 transition-all"
+                key={jury.userId}
+                className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 border transition"
               >
                 <div className="flex items-center gap-4">
                   <input
                     type="checkbox"
-                    checked={selectJury.includes(jury.userId)}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      toggleSelect(jury.userId);
-                    }}
                     className="h-4 w-4"
+                    checked={assignedJuryIds.includes(jury.userId)}
+                    onChange={() => toggleSelectJury(jury.userId)}
                   />
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src="/generic-placeholder-graphic.png?height=48&width=48" />
-                    <AvatarFallback className="bg-gradient-to-br from-orange-400 to-yellow-400 text-white font-semibold">
-                      {jury.userFullName.split(" ").pop()?.charAt(0)}
+
+                  <Avatar className="h-11 w-11">
+                    <AvatarImage src={jury.avatar} />
+                    <AvatarFallback className="bg-blue-500">
+                      {jury.userFullName.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="text-sm font-medium text-gray-900">
+
+                  <span className="font-medium text-sm">
                     {jury.userFullName}
-                  </div>
+                  </span>
                 </div>
 
-                <Badge className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full text-xs font-medium">
+                <Badge className="text-xs  text-orange-800">
                   {jury.assigned} bài
                 </Badge>
               </div>
@@ -130,16 +141,15 @@ export default function AssignDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
             Hủy
           </Button>
           <Button
-            onClick={() => {
-              handleAssignJury();
-            }}
-            className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white"
+            onClick={handleAssign}
+            disabled={loading}
+            className="border border-black "
           >
-            Lưu
+            {loading ? "Đang lưu..." : "Lưu phân công"}
           </Button>
         </DialogFooter>
       </DialogContent>
