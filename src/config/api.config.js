@@ -127,6 +127,10 @@ export const API_CONFIG = {
     MATCH_DETAIL: '/activity-match/{id}',
     BY_ROUND: '/activity-match/round/{round}',
     ELIGIBLE_CLASSES: '/activity-match/eligible-classes',
+    CREATE: '/activity-match',
+    DELETE_BRACKET: '/activity-match/bracket',
+    UPDATE_RESULT: '/activity-match/{id}/result',
+    UPDATE_MATCH: '/activity-match/{id}',
   },
   ACTIVITY_PARTICIPANT: {
     BASE: '/activityparticipant',

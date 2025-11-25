@@ -1,19 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 import Sidebar from "@/features/landing/components/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card";
 import { Badge } from "@/common/components/ui/badge";
 import { Button } from "@/common/components/ui/button";
-import { Calendar, MapPin, Users, Clock } from "lucide-react";
+import { Calendar, MapPin, Users, Clock, Play, Edit, Square } from "lucide-react";
 import FootballScoreboard from "../components/live-score/FootballScoreboard";
 import VolleyballScoreboard from "../components/live-score/VolleyballScoreboard";
 import BadmintonScoreboard from "../components/live-score/BadmintonScoreboard";
 import RaceRanking from "../components/live-score/RaceRanking";
+import UpdateScoreModal from "../components/UpdateScoreModal";
 import { LoadingCard } from "@/common/components/ui/loading";
 import { executeApiCall } from "@/common/utils/executeApiCall";
 import { activityService } from "../services/activity.service";
 import { activityMatchService } from "../services/activityMatch.service";
 import { useActivityRegistration } from "../hooks/useActivityRegistration";
+import { ROLE } from "@/common/constants/roles";
 
 const MATCH_STATUS_LABELS = {
   Pending: "Sắp diễn ra",
@@ -135,6 +138,11 @@ const buildScoreboardData = (match, type, context) => {
 
 export default function ActivityDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const user = useSelector((state) => state.user?.user);
+  const isAdmin = user?.role === ROLE.ADMIN || user?.role === ROLE.TEACHER;
+  
   const [activity, setActivity] = useState(null);
   const [selectedSportId, setSelectedSportId] = useState(null);
   const [scoreboardMatch, setScoreboardMatch] = useState(null);
@@ -144,6 +152,7 @@ export default function ActivityDetail() {
   const [bracketLoading, setBracketLoading] = useState(false);
   const [error, setError] = useState(null);
   const [bracketError, setBracketError] = useState(null);
+  const [showUpdateScoreModal, setShowUpdateScoreModal] = useState(false);
   const {
     register: registerActivity,
     registeringId,
@@ -161,7 +170,16 @@ export default function ActivityDetail() {
       );
       const detail = response?.data;
       setActivity(detail);
-      if (detail?.sports?.length) {
+      
+      // Logic: Nếu có 2+ môn và chưa có sportId trong URL, redirect đến sports view
+      if (detail?.sports?.length > 1) {
+        const sportIdFromUrl = searchParams.get("sportId");
+        if (!sportIdFromUrl) {
+          navigate(`/activities/${id}/sports`, { replace: true });
+          return;
+        }
+        setSelectedSportId(parseInt(sportIdFromUrl, 10));
+      } else if (detail?.sports?.length === 1) {
         setSelectedSportId(detail.sports[0].id);
       } else {
         setSelectedSportId(null);
@@ -169,7 +187,7 @@ export default function ActivityDetail() {
     } catch (fetchError) {
       console.error("Failed to fetch activity detail", fetchError);
     }
-  }, [id]);
+  }, [id, navigate, searchParams]);
 
   useEffect(() => {
     if (id) {
@@ -410,6 +428,35 @@ export default function ActivityDetail() {
 
                 {/* Tỉ số / Kết quả - Bọc trong card */}
                 <div className="bg-white rounded-2xl shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-bold text-gray-900">Tỉ số trận đấu</h2>
+                    {isAdmin && scoreboardMatch && (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowUpdateScoreModal(true)}
+                        >
+                          {normalizeStatus(scoreboardMatch.status) === "Pending" ? (
+                            <>
+                              <Play className="h-4 w-4 mr-2" />
+                              Bắt đầu
+                            </>
+                          ) : normalizeStatus(scoreboardMatch.status) === "InProgress" ? (
+                            <>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Cập nhật tỉ số
+                            </>
+                          ) : (
+                            <>
+                              <Square className="h-4 w-4 mr-2" />
+                              Kết thúc
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                   {renderScore()}
                 </div>
 
@@ -484,6 +531,46 @@ export default function ActivityDetail() {
           </div>
         </div>
       </div>
+
+      {/* Update Score Modal */}
+      {scoreboardMatch && (
+        <UpdateScoreModal
+          match={scoreboardMatch}
+          isOpen={showUpdateScoreModal}
+          onClose={() => setShowUpdateScoreModal(false)}
+          onSuccess={() => {
+            // Reload bracket data
+            const token = localStorage.getItem("token");
+            if (activity && selectedSportId) {
+              executeApiCall(
+                activityMatchService.getBracket.bind(activityMatchService),
+                [{ activityId: activity.id, sportId: selectedSportId }, token],
+                { setLoading: setBracketLoading, setError: setBracketError }
+              ).then((response) => {
+                const data = response?.data;
+                const rounds = data?.rounds ?? [];
+                const matches = rounds.flatMap((round) =>
+                  (round.matches ?? []).map((match) => ({
+                    ...match,
+                    roundName: round.roundName,
+                    roundNumber: round.roundNumber,
+                  }))
+                );
+                const prioritizedMatch =
+                  matches.find((match) => normalizeStatus(match.status) === "InProgress") ||
+                  matches.find((match) => normalizeStatus(match.status) === "Pending") ||
+                  matches.find((match) => normalizeStatus(match.status) === "Completed") ||
+                  null;
+                setScoreboardMatch(prioritizedMatch);
+                setUpcomingMatches(
+                  matches.filter((match) => normalizeStatus(match.status) === "Pending").slice(0, 3)
+                );
+              });
+            }
+          }}
+          scoreboardType={scoreboardType}
+        />
+      )}
     </div>
   );
 }

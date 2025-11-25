@@ -679,32 +679,56 @@ export default function ViewActivity() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {participants.map((participant) => (
-                        <div
-                          key={participant.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarImage src={participant.avatar || "/placeholder.svg"} />
-                              <AvatarFallback>{participant.name[0]}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-semibold">{participant.name}</p>
-                              <p className="text-sm text-gray-600">Lớp {participant.class}</p>
-                            </div>
-                          </div>
-                          <Badge
-                            className={
-                              participant.status === "approved"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-yellow-100 text-yellow-700"
-                            }
+                      {participants.map((participant) => {
+                        const participantName =
+                          participant.name ||
+                          participant.fullName ||
+                          participant.userFullName ||
+                          (participant.user
+                            ? `${participant.user.lastName || ""} ${participant.user.firstName || ""}`.trim()
+                            : null) ||
+                          participant.user?.fullName ||
+                          "Người tham gia";
+                        const participantGrade =
+                          participant.grade ??
+                          participant.classGroup?.grade ??
+                          participant.user?.grade ??
+                          null;
+                        const participantClass =
+                          participant.class ||
+                          participant.className ||
+                          participant.classGroupName ||
+                          participant.user?.className ||
+                          "Chưa rõ";
+                        const participantAvatar =
+                          participant.avatar || participant.user?.avatar || "/placeholder.svg";
+                        const status = participant.status || participant.approvalStatus || "pending";
+
+                        return (
+                          <div
+                            key={participant.id || `${participant.userId}-${participant.activityId}`}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                           >
-                            {participant.status === "approved" ? "Đã duyệt" : "Chờ duyệt"}
-                          </Badge>
-                        </div>
-                      ))}
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage src={participantAvatar} />
+                                <AvatarFallback>{participantName?.[0] || "?"}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-semibold">{participantName}</p>
+                                <p className="text-sm text-gray-600">
+                                  {participantGrade
+                                    ? `Khối ${participantGrade} • Lớp ${participantClass}`
+                                    : `Lớp ${participantClass}`}
+                                </p>
+                              </div>
+                            </div>
+                            <Badge className="bg-blue-50 text-blue-700 border border-blue-100">
+                              {status === "approved" ? "Đã đăng ký" : "Đăng ký"}
+                            </Badge>
+                          </div>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>

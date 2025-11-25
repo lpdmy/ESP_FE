@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Link } from "react-router-dom"
+import dayjs from "dayjs"
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
 import { Button } from "@/common/components/ui/button"
 import { Input } from "@/common/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
@@ -39,11 +41,16 @@ import {
   Maximize2,
   ChevronLeft,
   ChevronRight,
+  GitBranchPlus,
+  GitBranch,
+  RefreshCcw,
 } from "lucide-react"
 import { ROUTES } from "@/common/constants/routes"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
+import { activityMatchService } from "@/features/activities/services/activityMatch.service"
 import { LoadingCard } from "@/common/components/ui/loading"
+import UpdateScoreModal from "@/features/activities/components/UpdateScoreModal"
 
 export default function ActivityManagement() {
   // Data state
@@ -66,6 +73,15 @@ export default function ActivityManagement() {
   const [aiGenerating, setAiGenerating] = useState(false)
   const [aiSchedule, setAiSchedule] = useState([])
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [bracketModalOpen, setBracketModalOpen] = useState(false)
+  const [bracketModalData, setBracketModalData] = useState({ activity: null, participants: [], sports: [] })
+  const [bracketModalLoading, setBracketModalLoading] = useState(false)
+  const [bracketSaving, setBracketSaving] = useState(false)
+  const [bracketViewerOpen, setBracketViewerOpen] = useState(false)
+  const [bracketViewerData, setBracketViewerData] = useState({ activity: null, participants: [], sports: [] })
+  const [bracketViewerRefreshKey, setBracketViewerRefreshKey] = useState(0)
+  const [scoreModalMatch, setScoreModalMatch] = useState(null)
+  const [scoreModalOpen, setScoreModalOpen] = useState(false)
   
   // Advanced filters
   const [subTypeFilter, setSubTypeFilter] = useState("")
@@ -316,6 +332,94 @@ export default function ActivityManagement() {
     setAiSchedule([])
   }
 
+  const handleOpenBracketModal = async (activity) => {
+    setBracketModalLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await executeApiCall(
+        activityService.getActivityById.bind(activityService),
+        [activity.id, token],
+        { setError: () => {} },
+      )
+      const detail = response?.data?.data ?? response?.data
+      const participants = mapParticipantsForBracket(detail?.participants ?? [])
+      
+      const sports = detail?.sports ?? []
+      if (!sports.length) {
+        toast.warn("Hoạt động chưa có môn thi đấu, không thể tạo bảng đấu.")
+        return
+      }
+      setBracketModalData({ activity, participants, sports })
+      setBracketModalOpen(true)
+    } catch (err) {
+      console.error(err)
+      toast.error(err?.message || "Không thể tải thông tin hoạt động.")
+    } finally {
+      setBracketModalLoading(false)
+    }
+  }
+
+  const handleBracketSubmit = async ({ sportId, seededParticipants, grade }) => {
+    if (!sportId) {
+      toast.error("Vui lòng chọn môn thi đấu.")
+      return
+    }
+    if (!seededParticipants?.length || seededParticipants.length < 2) {
+      toast.error("Cần ít nhất 2 đội để tạo bảng đấu.")
+      return
+    }
+    if (!bracketModalData.activity) return
+
+    setBracketSaving(true)
+    try {
+      const token = localStorage.getItem("token")
+      await activityMatchService
+        .deleteBracket({ activityId: bracketModalData.activity.id, sportId }, token)
+        .catch(() => Promise.resolve())
+      await createMatchesForBracket({
+        activityId: bracketModalData.activity.id,
+        sportId,
+        participants: seededParticipants,
+        grade,
+        token,
+      })
+      toast.success("Đã tạo bảng đấu thành công.")
+      setBracketModalOpen(false)
+      setBracketViewerRefreshKey((prev) => prev + 1)
+    } catch (err) {
+      console.error(err)
+      toast.error(err?.message || "Không thể tạo bảng đấu.")
+    } finally {
+      setBracketSaving(false)
+    }
+  }
+
+  const handleOpenBracketViewer = async (activity) => {
+    setBracketModalLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await executeApiCall(
+        activityService.getActivityById.bind(activityService),
+        [activity.id, token],
+        { setError: () => {} },
+      )
+      const detail = response?.data?.data ?? response?.data
+      const participants = mapParticipantsForBracket(detail?.participants ?? [])
+      const sports = detail?.sports ?? []
+      if (!sports.length) {
+        toast.warn("Hoạt động chưa có môn thi đấu, không thể xem bracket.")
+        return
+      }
+      setBracketViewerData({ activity, participants, sports })
+      setBracketViewerOpen(true)
+    } catch (err) {
+      console.error(err)
+      toast.error(err?.message || "Không thể tải thông tin hoạt động.")
+    } finally {
+      setBracketModalLoading(false)
+    }
+  }
+
   // Options for filters
   const categoryOptions = [
     { value: "all", label: "Tất cả" },
@@ -435,6 +539,7 @@ export default function ActivityManagement() {
   }
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
@@ -833,10 +938,10 @@ export default function ActivityManagement() {
             </div>
           ) : (
             <>
-              <div className="border rounded-lg overflow-hidden">
+              <div className="rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow noHover>
                       <TableHead className="w-12">
                         <Checkbox
                           checked={selectedActivities.length === filteredActivities.length && filteredActivities.length > 0}
@@ -908,15 +1013,31 @@ export default function ActivityManagement() {
                             <Sparkles className="w-4 h-4 text-purple-500" />
                           </Link>
                         </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          toast.success(`Đã xóa hoạt động "${activity.title}".`)
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenBracketModal(activity)}
+                          disabled={bracketModalLoading}
+                        >
+                          <GitBranchPlus className="w-4 h-4 text-orange-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenBracketViewer(activity)}
+                          disabled={bracketModalLoading}
+                        >
+                          <GitBranch className="w-4 h-4 text-emerald-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            toast.success(`Đã xóa hoạt động "${activity.title}".`)
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
                       </div>
                       </TableCell>
                     </TableRow>
@@ -927,7 +1048,7 @@ export default function ActivityManagement() {
             
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <div className="flex items-center justify-between mt-4 pt-4 ">
                 <div className="flex items-center gap-2">
                   <Label className="text-sm">Hiển thị:</Label>
                   <SimpleSelect
@@ -1048,5 +1169,816 @@ export default function ActivityManagement() {
         </Card>
       </div>
     </div>
+
+      <BracketSetupModal
+        open={bracketModalOpen}
+        onClose={() => setBracketModalOpen(false)}
+        activity={bracketModalData.activity}
+        participants={bracketModalData.participants}
+        sports={bracketModalData.sports}
+        onSubmit={handleBracketSubmit}
+        isSubmitting={bracketSaving}
+      />
+      <BracketViewerModal
+        open={bracketViewerOpen}
+        onClose={() => setBracketViewerOpen(false)}
+        activity={bracketViewerData.activity}
+        participants={bracketViewerData.participants}
+        sports={bracketViewerData.sports}
+        onManageMatch={(match) => {
+          setScoreModalMatch(match)
+          setScoreModalOpen(true)
+        }}
+        refreshKey={bracketViewerRefreshKey}
+        onOpenSetup={() => bracketViewerData.activity && handleOpenBracketModal(bracketViewerData.activity)}
+      />
+      <UpdateScoreModal
+        match={scoreModalMatch}
+        isOpen={scoreModalOpen}
+        onClose={() => setScoreModalOpen(false)}
+        onSuccess={() => {
+          setBracketViewerRefreshKey((prev) => prev + 1)
+          setScoreModalOpen(false)
+        }}
+      />
+    </>
+  )
+}
+
+function mapParticipantsForBracket(participants = []) {
+  const uniqueMap = new Map()
+  participants.forEach((participant) => {
+    const classGroupId = participant?.classGroupId || participant?.classGroup?.id
+    if (!classGroupId || uniqueMap.has(classGroupId)) return
+
+    const grade =
+      participant?.grade ??
+      participant?.classGroup?.grade ??
+      participant?.classGroupGrade ??
+      null
+
+    const className =
+      participant?.classGroup?.name ||
+      participant?.classGroupName ||
+      participant?.class ||
+      participant?.className ||
+      null
+
+    const baseName =
+      className ||
+      participant?.user?.fullName ||
+      participant?.name ||
+      `Đội ${classGroupId}`
+
+    const displayName = grade ? `Khối ${grade} - ${baseName}` : baseName
+
+    uniqueMap.set(classGroupId, {
+      id: participant?.id || classGroupId,
+      classGroupId,
+      name: displayName,
+      grade,
+      rawName: baseName,
+    })
+  })
+  return Array.from(uniqueMap.values())
+}
+
+function getRoundLabelByMatchCount(matchCount) {
+  if (matchCount === 1) return "Chung kết"
+  if (matchCount === 2) return "Bán kết"
+  if (matchCount === 4) return "Tứ kết"
+  return `Vòng ${matchCount}`
+}
+
+function buildBracketStructure(participants) {
+  const seeds = participants.map((participant) => ({ participant }))
+  const totalSlots = Math.max(2, Math.pow(2, Math.ceil(Math.log2(seeds.length || 1))))
+  while (seeds.length < totalSlots) {
+    seeds.push({ participant: null })
+  }
+
+  const rounds = []
+  let slots = seeds
+
+  while (slots.length > 1) {
+    const matches = []
+    for (let i = 0; i < slots.length; i += 2) {
+      matches.push({
+        slot1: slots[i],
+        slot2: slots[i + 1],
+        nextRoundIndex: null,
+        nextMatchIndex: null,
+      })
+    }
+    rounds.push(matches)
+    slots = matches.map((_, idx) => ({ matchRef: { roundIndex: rounds.length - 1, matchIndex: idx } }))
+  }
+
+  for (let i = 0; i < rounds.length - 1; i++) {
+    rounds[i].forEach((match, idx) => {
+      match.nextRoundIndex = i + 1
+      match.nextMatchIndex = Math.floor(idx / 2)
+    })
+  }
+
+  return rounds
+}
+
+async function createMatchesForBracket({ activityId, sportId, participants, grade, token }) {
+  const rounds = buildBracketStructure(participants)
+  if (!rounds.length) {
+    throw new Error("Không thể tạo bảng đấu với dữ liệu hiện có.")
+  }
+
+  const matchIdMap = rounds.map(() => [])
+
+  for (let roundIdx = rounds.length - 1; roundIdx >= 0; roundIdx--) {
+    const roundMatches = rounds[roundIdx]
+    const roundNumber = roundIdx + 1
+    const roundLabel = getRoundLabelByMatchCount(roundMatches.length)
+
+    for (let matchIdx = 0; matchIdx < roundMatches.length; matchIdx++) {
+      const match = roundMatches[matchIdx]
+      const classGroup1Id = match.slot1?.participant?.classGroupId || null
+      const classGroup2Id = match.slot2?.participant?.classGroupId || null
+      const isBye = Boolean(classGroup1Id) !== Boolean(classGroup2Id)
+
+      const payload = {
+        activityId,
+        sportId,
+        classGroup1Id,
+        classGroup2Id,
+        grade,
+        round: roundNumber,
+        roundName: roundLabel,
+        matchNumber: matchIdx + 1,
+        isBye,
+      }
+
+      const nextMatchId =
+        match.nextRoundIndex !== null && match.nextRoundIndex !== undefined
+          ? matchIdMap[match.nextRoundIndex]?.[match.nextMatchIndex]
+          : null
+      if (nextMatchId) {
+        payload.nextMatchId = nextMatchId
+      }
+
+      const response = await activityMatchService.createMatch(payload, token)
+      const createdMatch = response?.data?.data ?? response?.data
+      const createdId = createdMatch?.id
+      matchIdMap[roundIdx][matchIdx] = createdId
+
+      if (isBye && createdId) {
+        const winnerId = classGroup1Id || classGroup2Id
+        if (winnerId) {
+          await activityMatchService.updateMatchResult(
+            createdId,
+            {
+              Score1: classGroup1Id ? 1 : 0,
+              Score2: classGroup2Id ? 1 : 0,
+              WinnerClassGroupId: winnerId,
+            },
+            token,
+          )
+        }
+      }
+    }
+  }
+}
+
+function BracketSetupModal({ open, onClose, activity, participants, sports, onSubmit, isSubmitting }) {
+  const [selectedSportId, setSelectedSportId] = useState(null)
+  const [selectedGrade, setSelectedGrade] = useState(null)
+  const [teamPool, setTeamPool] = useState([])
+  const [slotAssignments, setSlotAssignments] = useState([])
+
+  const normalizedParticipants = useMemo(() => {
+    return (participants ?? [])
+      .map((participant) => {
+        const classGroupId = participant?.classGroupId || participant?.classGroup?.id || participant?.id
+        if (!classGroupId) return null
+        const grade =
+          participant?.grade ??
+          participant?.classGroup?.grade ??
+          participant?.classGroupGrade ??
+          null
+        const className =
+          participant?.classGroup?.name ||
+          participant?.classGroupName ||
+          participant?.name ||
+          participant?.user?.fullName ||
+          `Đội ${classGroupId}`
+        const displayName = grade ? `Khối ${grade} - ${className}` : className
+
+        return {
+          key: String(classGroupId),
+          classGroupId,
+          grade,
+          displayName,
+          rawName: className,
+        }
+      })
+      .filter(Boolean)
+  }, [participants])
+
+  const gradeOptions = useMemo(() => {
+    return Array.from(
+      new Set(
+        normalizedParticipants
+          .map((participant) => participant.grade)
+          .filter((grade) => grade !== null && grade !== undefined),
+      ),
+    ).sort((a, b) => a - b)
+  }, [normalizedParticipants])
+
+  useEffect(() => {
+    if (open) {
+      setSelectedSportId(sports?.[0]?.id ?? null)
+      if (gradeOptions.length > 0) {
+        setSelectedGrade((prev) => (prev !== null && gradeOptions.includes(prev) ? prev : gradeOptions[0]))
+      } else {
+        setSelectedGrade(null)
+      }
+    }
+  }, [open, sports, gradeOptions])
+
+  const filteredTeams = useMemo(() => {
+    return normalizedParticipants.filter((participant) =>
+      selectedGrade === null ? true : participant.grade === selectedGrade,
+    )
+  }, [normalizedParticipants, selectedGrade])
+
+  useEffect(() => {
+    if (!open) return
+    const slotsNeeded = Math.max(2, Math.pow(2, Math.ceil(Math.log2(filteredTeams.length || 1))))
+    const newSlots = Array.from({ length: slotsNeeded }, () => null)
+    const pool = []
+
+    filteredTeams.forEach((team, index) => {
+      if (index < slotsNeeded) {
+        newSlots[index] = team.key
+      } else {
+        pool.push(team.key)
+      }
+    })
+
+    setSlotAssignments(newSlots)
+    setTeamPool(pool)
+  }, [filteredTeams, open])
+
+  const teamMap = useMemo(() => {
+    const map = new Map()
+    filteredTeams.forEach((team) => map.set(team.key, team))
+    return map
+  }, [filteredTeams])
+
+  const bracketPairs = useMemo(() => {
+    const pairs = []
+    for (let i = 0; i < slotAssignments.length; i += 2) {
+      pairs.push([i, i + 1])
+    }
+    return pairs
+  }, [slotAssignments])
+
+  const parseSlotIndex = (droppableId) => {
+    if (!droppableId.startsWith("slot-")) return null
+    return Number(droppableId.replace("slot-", ""))
+  }
+
+  const reorder = (list, startIndex, endIndex) => {
+    const result = Array.from(list)
+    const [removed] = result.splice(startIndex, 1)
+    result.splice(endIndex, 0, removed)
+    return result
+  }
+
+  const handleDragEnd = ({ source, destination, draggableId }) => {
+    if (!destination) return
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return
+
+    const sourceSlot = parseSlotIndex(source.droppableId)
+    const destSlot = parseSlotIndex(destination.droppableId)
+
+    if (source.droppableId === "teamPool" && destination.droppableId === "teamPool") {
+      setTeamPool((prev) => reorder(prev, source.index, destination.index))
+      return
+    }
+
+    if (sourceSlot !== null && destSlot !== null) {
+      setSlotAssignments((prev) => {
+        const next = [...prev]
+        const temp = next[sourceSlot]
+        next[sourceSlot] = next[destSlot]
+        next[destSlot] = temp
+        return next
+      })
+      return
+    }
+
+    if (source.droppableId === "teamPool" && destSlot !== null) {
+      const displacedTeam = slotAssignments[destSlot]
+      setSlotAssignments((prev) => {
+        const next = [...prev]
+        next[destSlot] = draggableId
+        return next
+      })
+      setTeamPool((prev) => {
+        const next = [...prev]
+        next.splice(source.index, 1)
+        if (displacedTeam) {
+          next.splice(destination.index, 0, displacedTeam)
+        }
+        return next
+      })
+      return
+    }
+
+    if (sourceSlot !== null && destination.droppableId === "teamPool") {
+      const movingTeam = slotAssignments[sourceSlot]
+      if (!movingTeam) return
+      setSlotAssignments((prev) => {
+        const next = [...prev]
+        next[sourceSlot] = null
+        return next
+      })
+      setTeamPool((prev) => {
+        const next = [...prev]
+        next.splice(destination.index, 0, movingTeam)
+        return next
+      })
+    }
+  }
+
+  const assignedTeams = slotAssignments
+    .map((teamKey) => (teamKey ? teamMap.get(teamKey) : null))
+    .filter(Boolean)
+
+  const handleSubmit = () => {
+    if (!selectedSportId) {
+      toast.error("Vui lòng chọn môn thi đấu.")
+      return
+    }
+    if (assignedTeams.length < 2) {
+      toast.error("Cần ít nhất 2 đội trong cùng khối để tạo bảng đấu.")
+      return
+    }
+    onSubmit({
+      sportId: selectedSportId,
+      grade: selectedGrade,
+      seededParticipants: assignedTeams.map((team) => ({
+        classGroupId: team.classGroupId,
+        grade: team.grade,
+        name: team.displayName,
+      })),
+    })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>Tạo bảng đấu</DialogTitle>
+          <DialogDescription>
+            Kéo thả để sắp xếp hạt giống cho bracket loại trực tiếp. Chỉ tạo theo từng khối.
+          </DialogDescription>
+        </DialogHeader>
+
+        {activity ? (
+          <div className="space-y-5">
+            <div className="bg-orange-50 rounded-lg p-3 text-sm text-orange-700">
+              <p className="font-medium">{activity.title}</p>
+              <p>{activity.location}</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Môn thi đấu</Label>
+                <SimpleSelect
+                  value={selectedSportId ? selectedSportId.toString() : undefined}
+                  onValueChange={(value) => setSelectedSportId(Number(value))}
+                  options={sports.map((sport) => ({
+                    value: sport.id.toString(),
+                    label: sport.sportName,
+                  }))}
+                  placeholder="Chọn môn thi đấu"
+                />
+              </div>
+              {gradeOptions.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Khối</Label>
+                  <SimpleSelect
+                    value={selectedGrade !== null ? selectedGrade.toString() : undefined}
+                    onValueChange={(value) => setSelectedGrade(value ? Number(value) : null)}
+                    options={gradeOptions.map((grade) => ({
+                      value: grade.toString(),
+                      label: `Khối ${grade}`,
+                    }))}
+                    placeholder="Chọn khối"
+                  />
+                </div>
+              )}
+            </div>
+
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Danh sách đội ({teamPool.length} đội chưa xếp)</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setTeamPool((prev) => {
+                          const shuffled = [...prev]
+                          for (let i = shuffled.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1))
+                            ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+                          }
+                          return shuffled
+                        })
+                      }
+                    >
+                      <RefreshCcw className="w-4 h-4 mr-2" />
+                      Xáo trộn
+                    </Button>
+                  </div>
+                  <Droppable droppableId="teamPool">
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`min-h-[200px] rounded-lg border bg-white p-3 space-y-2 transition ${
+                          snapshot.isDraggingOver ? "border-orange-400 bg-orange-50/60" : "border-gray-200"
+                        }`}
+                      >
+                        {teamPool.length === 0 && (
+                          <p className="text-sm text-gray-500 text-center py-6">Tất cả đội đã được gán vào bracket.</p>
+                        )}
+                        {teamPool.map((teamKey, index) => {
+                          const team = teamMap.get(teamKey)
+                          if (!team) return null
+                          return (
+                            <Draggable draggableId={teamKey} index={index} key={`pool-${teamKey}`}>
+                              {(dragProvided, dragSnapshot) => (
+                                <div
+                                  ref={dragProvided.innerRef}
+                                  {...dragProvided.draggableProps}
+                                  {...dragProvided.dragHandleProps}
+                                  className={`rounded-md border p-3 text-sm bg-white flex items-center justify-between ${
+                                    dragSnapshot.isDragging ? "shadow-lg border-orange-400" : "border-gray-200"
+                                  }`}
+                                >
+                                  <span className="font-semibold">{team.displayName}</span>
+                                  {team.grade && (
+                                    <span className="text-xs text-gray-500">Khối {team.grade}</span>
+                                  )}
+                                </div>
+                              )}
+                            </Draggable>
+                          )
+                        })}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Bracket ({assignedTeams.length}/{slotAssignments.length} slot)</p>
+                    <span className="text-xs text-gray-500">Kéo thả đội vào slot để xếp hạt giống</span>
+                  </div>
+                  <div className="space-y-4">
+                    {bracketPairs.map((pair, matchIndex) => (
+                      <div key={`match-${matchIndex}`} className="rounded-lg border p-4 bg-gray-50">
+                        <p className="text-xs font-semibold text-gray-500 mb-3">Trận {matchIndex + 1}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {pair.map((slotIndex) => {
+                            if (slotIndex >= slotAssignments.length) return null
+                            const teamKey = slotAssignments[slotIndex]
+                            const team = teamKey ? teamMap.get(teamKey) : null
+                            return (
+                              <Droppable droppableId={`slot-${slotIndex}`} key={`slot-${slotIndex}`}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                    className={`h-20 rounded-md border border-dashed flex items-center justify-center text-sm transition ${
+                                      snapshot.isDraggingOver ? "border-orange-500 bg-orange-50" : "border-gray-300 bg-white"
+                                    }`}
+                                  >
+                                    {team ? (
+                                      <Draggable draggableId={teamKey} index={0}>
+                                        {(dragProvided, dragSnapshot) => (
+                                          <div
+                                            ref={dragProvided.innerRef}
+                                            {...dragProvided.draggableProps}
+                                            {...dragProvided.dragHandleProps}
+                                            className={`w-full h-full flex items-center justify-between px-3 rounded-md ${
+                                              dragSnapshot.isDragging ? "bg-orange-100 shadow" : "bg-white"
+                                            }`}
+                                          >
+                                            <span className="font-semibold">{team.displayName}</span>
+                                            {team.grade && (
+                                              <span className="text-xs text-gray-500">Khối {team.grade}</span>
+                                            )}
+                                          </div>
+                                        )}
+                                      </Draggable>
+                                    ) : (
+                                      <span className="text-xs text-gray-400">Kéo đội vào đây</span>
+                                    )}
+                                    {provided.placeholder}
+                                  </div>
+                                )}
+                              </Droppable>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </DragDropContext>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">Đang tải dữ liệu hoạt động...</p>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Hủy
+          </Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting || !activity}>
+            {isSubmitting ? "Đang tạo..." : "Tạo bảng đấu"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function BracketViewerModal({
+  open,
+  onClose,
+  activity,
+  participants,
+  sports,
+  onManageMatch,
+  refreshKey = 0,
+  onOpenSetup,
+}) {
+  const [selectedSportId, setSelectedSportId] = useState(null)
+  const [selectedGrade, setSelectedGrade] = useState(null)
+  const [bracket, setBracket] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [errorInfo, setErrorInfo] = useState(null)
+
+  const gradeOptions = useMemo(() => {
+    return Array.from(
+      new Set(
+        (participants ?? [])
+          .map((participant) => participant?.grade)
+          .filter((grade) => grade !== null && grade !== undefined),
+      ),
+    ).sort((a, b) => a - b)
+  }, [participants])
+
+  useEffect(() => {
+    if (!open) return
+    setSelectedSportId((prev) => {
+      if (prev && sports?.some((sport) => sport.id === prev)) {
+        return prev
+      }
+      return sports?.[0]?.id ?? null
+    })
+    if (gradeOptions.length > 0) {
+      setSelectedGrade((prev) => (prev !== null && gradeOptions.includes(prev) ? prev : gradeOptions[0]))
+    } else {
+      setSelectedGrade(null)
+    }
+  }, [open, sports, gradeOptions])
+
+  useEffect(() => {
+    if (!open || !activity || !selectedSportId) {
+      setBracket(null)
+      return
+    }
+
+    let isMounted = true
+    const fetchBracket = async () => {
+      setLoading(true)
+      setErrorInfo(null)
+      try {
+        const token = localStorage.getItem("token")
+        const response = await activityMatchService.getBracket(
+          {
+            activityId: activity.id,
+            sportId: selectedSportId,
+            grade: selectedGrade ?? undefined,
+          },
+          token,
+        )
+        const payload = response?.data?.data ?? response?.data
+        if (isMounted) {
+          setBracket(payload)
+        }
+      } catch (err) {
+        if (!isMounted) return
+        const statusCode = err?.statusCode ?? err?.StatusCode
+        if (statusCode === 404) {
+          setBracket(null)
+          setErrorInfo({
+            type: "not_found",
+            message: "Chưa tìm thấy bracket cho môn và khối đã chọn.",
+          })
+        } else {
+          setErrorInfo({
+            type: "error",
+            message: err?.message || err?.Message || "Không thể tải bracket.",
+          })
+        }
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+
+    fetchBracket()
+    return () => {
+      isMounted = false
+    }
+  }, [open, activity, selectedSportId, selectedGrade, refreshKey])
+
+  const statusConfigMap = {
+    0: { label: "Chưa bắt đầu", className: "bg-gray-100 text-gray-700" },
+    1: { label: "Đang diễn ra", className: "bg-blue-100 text-blue-700" },
+    2: { label: "Đã kết thúc", className: "bg-green-100 text-green-700" },
+    3: { label: "Đã hủy", className: "bg-red-100 text-red-700" },
+  }
+
+  const statusValueMap = {
+    Pending: 0,
+    InProgress: 1,
+    Completed: 2,
+    Cancelled: 3,
+  }
+
+  const normalizeStatus = (status) => {
+    if (typeof status === "number") return status
+    return statusValueMap[status] ?? 0
+  }
+
+  const rounds = bracket?.rounds ?? []
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-6xl">
+        <DialogHeader>
+          <DialogTitle>Bracket đã tạo</DialogTitle>
+          <DialogDescription>
+            Theo dõi và cập nhật các trận đấu trực tiếp ngay trên giao diện quản trị.
+          </DialogDescription>
+        </DialogHeader>
+
+        {!activity ? (
+          <p className="text-sm text-gray-500">Chọn một hoạt động để xem bracket.</p>
+        ) : (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Môn thi đấu</Label>
+                <SimpleSelect
+                  value={selectedSportId ? selectedSportId.toString() : undefined}
+                  onValueChange={(value) => setSelectedSportId(Number(value))}
+                  options={sports.map((sport) => ({
+                    value: sport.id.toString(),
+                    label: sport.sportName,
+                  }))}
+                  placeholder="Chọn môn"
+                />
+              </div>
+              {gradeOptions.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Khối</Label>
+                  <SimpleSelect
+                    value={selectedGrade !== null ? selectedGrade.toString() : undefined}
+                    onValueChange={(value) => setSelectedGrade(value ? Number(value) : null)}
+                    options={gradeOptions.map((grade) => ({
+                      value: grade.toString(),
+                      label: `Khối ${grade}`,
+                    }))}
+                    placeholder="Chọn khối"
+                  />
+                </div>
+              )}
+            </div>
+
+            {loading ? (
+              <LoadingCard text="Đang tải bracket..." />
+            ) : errorInfo ? (
+              <div className="text-center py-10 space-y-3">
+                <p className="text-gray-600">{errorInfo.message}</p>
+                {errorInfo.type === "not_found" && (
+                  <Button onClick={onOpenSetup} variant="outline">
+                    Tạo bảng đấu ngay
+                  </Button>
+                )}
+              </div>
+            ) : !rounds.length ? (
+              <div className="text-center py-10 text-gray-500">
+                Chưa có dữ liệu bracket cho lựa chọn này.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <div className="flex items-start gap-5 min-h-[320px]">
+                  {rounds.map((round) => (
+                    <div key={`round-${round.roundNumber}`} className="min-w-[220px] space-y-3">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{round.roundName || `Vòng ${round.roundNumber}`}</p>
+                        <p className="text-xs text-gray-500">
+                          {round.matches?.length || 0} trận • Khối {round.matches?.[0]?.grade ?? selectedGrade ?? "-"}
+                        </p>
+                      </div>
+                      <div className="space-y-3">
+                        {round.matches.map((match) => {
+                          const statusValue = normalizeStatus(match.status)
+                          const statusConfig = statusConfigMap[statusValue] || statusConfigMap[0]
+                          const teamRows = [
+                            {
+                              id: match.classGroup1Id,
+                              name: match.classGroup1Name || (match.isBye ? "Đội được quyền đi tiếp" : "Chưa xác định"),
+                              score: match.score1,
+                            },
+                            {
+                              id: match.classGroup2Id,
+                              name: match.classGroup2Name || (match.isBye ? "BYE" : "Chưa xác định"),
+                              score: match.score2,
+                            },
+                          ].filter((team, index) => team.id || index === 0 || !match.isBye)
+
+                          const matchDate = match.matchDate ? dayjs(match.matchDate).format("DD/MM/YYYY") : null
+                          const matchTime =
+                            match.startTime && typeof match.startTime === "string"
+                              ? match.startTime.slice(0, 5)
+                              : null
+
+                          const winnerId = match.winnerClassGroupId
+
+                          return (
+                            <div key={`match-${match.id}`} className="rounded-xl border bg-white shadow-sm space-y-3 p-3">
+                              <div className="flex items-center justify-between">
+                                <Badge className={`${statusConfig.className} text-[11px]`}>{statusConfig.label}</Badge>
+                                <span className="text-xs text-gray-500">Trận {match.matchNumber}</span>
+                              </div>
+                              <div className="space-y-2">
+                                {teamRows.map((team, index) => (
+                                  <div
+                                    key={`${match.id}-team-${index}`}
+                                    className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
+                                      winnerId && team.id === winnerId
+                                        ? "border-emerald-500 bg-emerald-50"
+                                        : "border-gray-200"
+                                    }`}
+                                  >
+                                    <span className="font-medium line-clamp-1">{team.name}</span>
+                                    <span className="font-semibold text-gray-800">{team.score ?? "-"}</span>
+                                  </div>
+                                ))}
+                                {match.isBye && (
+                                  <p className="text-xs text-gray-500 italic">
+                                    Trận bye - {teamRows[0]?.name} tự động vào vòng sau
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between text-xs text-gray-500">
+                                <span>
+                                  {matchDate}
+                                  {matchTime ? ` • ${matchTime}` : ""}
+                                </span>
+                                {match.location && <span>{match.location}</span>}
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => onManageMatch?.(match)}
+                                disabled={match.isBye}
+                              >
+                                {match.isBye ? "Tự động xử lý" : "Cập nhật / Điều hành"}
+                              </Button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }

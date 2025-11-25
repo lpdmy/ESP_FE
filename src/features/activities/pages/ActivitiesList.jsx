@@ -383,7 +383,11 @@ export default function ActivitiesList() {
                                     </Button>
                                   )}
                                   <Link
-                                    to={`/activities/${activity.id}`}
+                                    to={
+                                      activity.raw?.sports?.length > 1
+                                        ? `/activities/${activity.id}/sports`
+                                        : `/activities/${activity.id}`
+                                    }
                                     className="text-sm text-orange-600 hover:text-orange-700 hover:underline self-center"
                                   >
                                     Xem chi tiết →

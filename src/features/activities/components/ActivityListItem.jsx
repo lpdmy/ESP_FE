@@ -109,7 +109,11 @@ export default function ActivityListItem({
               )
             )}
             <Link
-              to={`/activities/${activity.id}`}
+              to={
+                activity.raw?.sports?.length > 1
+                  ? `/activities/${activity.id}/sports`
+                  : `/activities/${activity.id}`
+              }
               className="text-xs text-orange-600 hover:text-orange-700 hover:underline"
             >
               Xem chi tiết →

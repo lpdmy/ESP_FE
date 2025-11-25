@@ -4,7 +4,8 @@ export const ROUTES = {
   },
   ACTIVITIES: {
     LIST: "/activities",
-    DETAIL: "/activities/:id"
+    DETAIL: "/activities/:id",
+    SPORTS: "/activities/:id/sports"
   },
   AUTH: {
     LOGIN: "/auth/login",
