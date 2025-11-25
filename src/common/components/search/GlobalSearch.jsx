@@ -1,23 +1,33 @@
-import { useState, useEffect, useRef } from 'react';
-import { Search, User, FileText, Users, Hash, Calendar, Eye, X, History, TrendingUp } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useSearchApi } from '@/common/hooks/useSearchApi';
-import { SearchHistory } from './SearchHistory';
-import { SearchTrending } from './SearchTrending';
+import { useState, useEffect, useRef } from "react";
+import {
+  Search,
+  User,
+  FileText,
+  Users,
+  Hash,
+  Calendar,
+  Eye,
+  X,
+  History,
+  TrendingUp,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useSearchApi } from "@/common/hooks/useSearchApi";
+import { SearchHistory } from "./SearchHistory";
+import { SearchTrending } from "./SearchTrending";
 
-export const GlobalSearch = ({ 
+export const GlobalSearch = ({
   placeholder = "Tìm kiếm bạn bè, bài viết, hoạt động...",
   variant = "default", // "default" | "compact" | "expanded"
   onResultClick = () => {},
-  className = ""
+  className = "",
 }) => {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [results, setResults] = useState({});
   const searchRef = useRef();
   const navigate = useNavigate();
   const { globalSearch, loading } = useSearchApi();
-
 
   // Debounced search with adaptive delay
   useEffect(() => {
@@ -34,13 +44,13 @@ export const GlobalSearch = ({
       try {
         const searchResults = await globalSearch({
           query,
-          category: 'all', // Always search all categories
-          pageSize: 5 // Limit for dropdown
+          category: "all", // Always search all categories
+          pageSize: 5, // Limit for dropdown
         });
         setResults(searchResults.data?.results || {});
         setIsOpen(true);
       } catch (error) {
-        console.error('Search error:', error);
+        console.error("Search error:", error);
       }
     }, delay);
 
@@ -48,23 +58,27 @@ export const GlobalSearch = ({
   }, [query]);
 
   // Handle result click
-  const handleResultClick = (result, type) => {
-    setQuery('');
+  const handleResultClick = (result, type, isStudent = false) => {
+    setQuery("");
     setIsOpen(false);
     onResultClick(result, type);
-    
+
     // Navigate based on result type
-    switch(type) {
-      case 'users':
-        navigate(`/profile/${result.id}`);
+    switch (type) {
+      case "users":
+        if (isStudent) {
+          navigate(`/student-profile/${result.id}`);
+        } else {
+          navigate(`/teacher-profile/${result.id}`);
+        }
         break;
-      case 'posts':
+      case "posts":
         navigate(`/posts/${result.id}`);
         break;
-      case 'activities':
+      case "activities":
         navigate(`/activities/${result.id}`);
         break;
-      case 'clubs':
+      case "clubs":
         navigate(`/clubs/${result.id}`);
         break;
       default:
@@ -84,7 +98,6 @@ export const GlobalSearch = ({
     setIsOpen(true);
   };
 
-
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -93,54 +106,57 @@ export const GlobalSearch = ({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const clearSearch = () => {
-    setQuery('');
+    setQuery("");
     setResults({});
     setIsOpen(false);
   };
 
   return (
     <div className={`relative ${className}`} ref={searchRef}>
-        {/* Main Search Input */}
-        <div className="relative group">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 group-focus-within:text-orange-500 transition-colors" />
-          <input
-            type="text"
-            placeholder={placeholder}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className={`w-full pl-12 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none
-              ${variant === 'compact' ? 'py-2 text-sm pr-4' : 'py-3 text-base pr-12'}
-              ${variant === 'expanded' ? 'py-4 text-lg pr-12' : ''}
+      {/* Main Search Input */}
+      <div className="relative group">
+        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 group-focus-within:text-orange-500 transition-colors" />
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className={`w-full pl-12 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none
+              ${
+                variant === "compact"
+                  ? "py-2 text-sm pr-4"
+                  : "py-3 text-base pr-12"
+              }
+              ${variant === "expanded" ? "py-4 text-lg pr-12" : ""}
               shadow-sm hover:shadow-md transition-all duration-200
             `}
-            onFocus={() => {
-              if (query.length >= 1) setIsOpen(true);
-            }}
-          />
-          
-          {/* Loading spinner */}
-          {loading && (
-            <div className="absolute right-10 top-1/2 transform -translate-y-1/2">
-              <div className="animate-spin h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full"></div>
-            </div>
-          )}
-          
-          {/* Clear button */}
-          {query && (
-            <button
-              onClick={clearSearch}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <X className="h-4 w-4 text-gray-400" />
-            </button>
-          )}
-        </div>
+          onFocus={() => {
+            if (query.length >= 1) setIsOpen(true);
+          }}
+        />
 
+        {/* Loading spinner */}
+        {loading && (
+          <div className="absolute right-10 top-1/2 transform -translate-y-1/2">
+            <div className="animate-spin h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full"></div>
+          </div>
+        )}
+
+        {/* Clear button */}
+        {query && (
+          <button
+            onClick={clearSearch}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <X className="h-4 w-4 text-gray-400" />
+          </button>
+        )}
+      </div>
 
       {/* Search Results */}
       {isOpen && (
@@ -148,17 +164,15 @@ export const GlobalSearch = ({
           {/* Content based on query length */}
           {query.length < 1 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SearchHistory 
+              <SearchHistory
                 onSearchClick={handleSuggestionClick}
                 onClearHistory={() => {}}
               />
-              <SearchTrending 
-                onTrendingClick={handleTrendingClick}
-              />
+              <SearchTrending onTrendingClick={handleTrendingClick} />
             </div>
           ) : (
-            <SearchResultsDropdown 
-              results={results} 
+            <SearchResultsDropdown
+              results={results}
               query={query}
               loading={loading}
               onResultClick={handleResultClick}
@@ -172,17 +186,23 @@ export const GlobalSearch = ({
 };
 
 // Search Results Dropdown Component
-const SearchResultsDropdown = ({ results, query, loading, onResultClick, onClose }) => {
+const SearchResultsDropdown = ({
+  results,
+  query,
+  loading,
+  onResultClick,
+  onClose,
+}) => {
   const navigate = useNavigate();
   const resultTypes = [
-    { key: 'users', icon: User, label: 'Người dùng', color: 'green' },
-    { key: 'posts', icon: FileText, label: 'Bài viết', color: 'purple' },
-    { key: 'activities', icon: Calendar, label: 'Hoạt động', color: 'orange' },
-    { key: 'clubs', icon: Users, label: 'Câu lạc bộ', color: 'teal' },
-    { key: 'hashtags', icon: Hash, label: 'Hashtags', color: 'pink' }
+    { key: "users", icon: User, label: "Người dùng", color: "green" },
+    { key: "posts", icon: FileText, label: "Bài viết", color: "purple" },
+    { key: "activities", icon: Calendar, label: "Hoạt động", color: "orange" },
+    { key: "clubs", icon: Users, label: "Câu lạc bộ", color: "teal" },
+    { key: "hashtags", icon: Hash, label: "Hashtags", color: "pink" },
   ];
 
-  const hasResults = Object.values(results).some(arr => arr?.length > 0);
+  const hasResults = Object.values(results).some((arr) => arr?.length > 0);
 
   if (loading) {
     return (
@@ -201,7 +221,9 @@ const SearchResultsDropdown = ({ results, query, loading, onResultClick, onClose
         <div className="text-center text-gray-500">
           <Search className="h-8 w-8 mx-auto mb-2 text-gray-300" />
           <p>Không tìm thấy kết quả cho "{query}"</p>
-          <p className="text-sm mt-1">Thử từ khóa khác hoặc kiểm tra chính tả</p>
+          <p className="text-sm mt-1">
+            Thử từ khóa khác hoặc kiểm tra chính tả
+          </p>
         </div>
       </div>
     );
@@ -223,7 +245,7 @@ const SearchResultsDropdown = ({ results, query, loading, onResultClick, onClose
                 </span>
               </div>
             </div>
-            
+
             {items.map((item) => (
               <SearchResultCard
                 key={`${key}-${item.id}`}
@@ -231,16 +253,19 @@ const SearchResultsDropdown = ({ results, query, loading, onResultClick, onClose
                 type={key}
                 color={color}
                 query={query}
-                onClick={() => onResultClick(item, key)}
+                onClick={() => {
+                  const isStudent = key === "users" && item.role === 4;
+                  onResultClick(item, key, isStudent);
+                }}
               />
             ))}
           </div>
         );
       })}
-      
+
       {/* View All Results */}
       <div className="px-4 py-3 bg-gray-50">
-        <button 
+        <button
           onClick={() => navigate(`/search?q=${encodeURIComponent(query)}`)}
           className="w-full text-center text-blue-600 hover:text-blue-800 font-medium"
         >
@@ -255,46 +280,48 @@ const SearchResultsDropdown = ({ results, query, loading, onResultClick, onClose
 // Individual Search Result Card
 const SearchResultCard = ({ result, type, color, query, onClick }) => {
   const getResultContent = () => {
-    switch(type) {
-      case 'users':
+    switch (type) {
+      case "users":
         return {
           title: `${result.firstName} ${result.lastName}`,
           subtitle: `${getRoleText(result.role)} • ${result.email}`,
           avatar: result.avatarUrl,
-          extra: result.role === 4 ? result.studentNumber : result.teacherCode
+          extra: result.role === 4 ? result.studentNumber : result.teacherCode,
         };
-      
-      case 'posts':
+
+      case "posts":
         return {
           title: result.title,
           subtitle: `${result.authorName} • ${formatDate(result.createdAt)}`,
-          content: result.body?.substring(0, 100) + '...',
-          extra: `${result.likesCount || 0} likes • ${result.commentsCount || 0} comments`
+          content: result.body?.substring(0, 100) + "...",
+          extra: `${result.likesCount || 0} likes • ${
+            result.commentsCount || 0
+          } comments`,
         };
-      
-      case 'activities':
+
+      case "activities":
         return {
           title: result.title,
           subtitle: `${formatDate(result.startDate)} • ${result.location}`,
-          content: result.description?.substring(0, 100) + '...',
-          extra: `${result.participantsCount}/${result.maxParticipants} tham gia`
+          content: result.description?.substring(0, 100) + "...",
+          extra: `${result.participantsCount}/${result.maxParticipants} tham gia`,
         };
-        
-      case 'clubs':
+
+      case "clubs":
         return {
           title: result.name,
           subtitle: `${result.membersCount} thành viên`,
-          content: result.description?.substring(0, 100) + '...',
-          avatar: result.avatarUrl
+          content: result.description?.substring(0, 100) + "...",
+          avatar: result.avatarUrl,
         };
-        
-      case 'hashtags':
+
+      case "hashtags":
         return {
           title: `#${result.name}`,
           subtitle: `${result.postsCount} bài viết`,
-          trending: result.trending
+          trending: result.trending,
         };
-        
+
       default:
         return { title: result.title || result.name };
     }
@@ -303,22 +330,28 @@ const SearchResultCard = ({ result, type, color, query, onClick }) => {
   const content = getResultContent();
 
   return (
-    <div 
+    <div
       onClick={onClick}
       className="px-4 py-3 hover:bg-gray-50 cursor-pointer last:border-b-0"
     >
       <div className="flex items-start gap-3">
         {/* Avatar/Icon */}
-        <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-${color}-100 flex items-center justify-center`}>
+        <div
+          className={`flex-shrink-0 w-10 h-10 rounded-lg bg-${color}-100 flex items-center justify-center`}
+        >
           {content.avatar ? (
-            <img src={content.avatar} alt="" className="w-8 h-8 rounded-lg object-cover" />
+            <img
+              src={content.avatar}
+              alt=""
+              className="w-8 h-8 rounded-lg object-cover"
+            />
           ) : (
             <div className={`w-6 h-6 text-${color}-600`}>
-              {type === 'users' && <User className="w-full h-full" />}
-              {type === 'posts' && <FileText className="w-full h-full" />}
-              {type === 'activities' && <Calendar className="w-full h-full" />}
-              {type === 'clubs' && <Users className="w-full h-full" />}
-              {type === 'hashtags' && <Hash className="w-full h-full" />}
+              {type === "users" && <User className="w-full h-full" />}
+              {type === "posts" && <FileText className="w-full h-full" />}
+              {type === "activities" && <Calendar className="w-full h-full" />}
+              {type === "clubs" && <Users className="w-full h-full" />}
+              {type === "hashtags" && <Hash className="w-full h-full" />}
             </div>
           )}
         </div>
@@ -335,15 +368,15 @@ const SearchResultCard = ({ result, type, color, query, onClick }) => {
               </span>
             )}
           </div>
-          
+
           <p className="text-sm text-gray-600 mt-1">{content.subtitle}</p>
-          
+
           {content.content && (
             <p className="text-sm text-gray-500 mt-1 line-clamp-2">
               <HighlightText text={content.content} highlight={query} />
             </p>
           )}
-          
+
           {content.extra && (
             <p className="text-xs text-gray-400 mt-2">{content.extra}</p>
           )}
@@ -356,30 +389,32 @@ const SearchResultCard = ({ result, type, color, query, onClick }) => {
 // Utility component để highlight search terms
 const HighlightText = ({ text, highlight }) => {
   if (!highlight.trim()) return text;
-  
-  const regex = new RegExp(`(${highlight})`, 'gi');
+
+  const regex = new RegExp(`(${highlight})`, "gi");
   const parts = text.split(regex);
-  
-  return parts.map((part, i) => 
+
+  return parts.map((part, i) =>
     regex.test(part) ? (
       <mark key={i} className="bg-yellow-200 text-yellow-800 px-1 rounded">
         {part}
       </mark>
-    ) : part
+    ) : (
+      part
+    )
   );
 };
 
 // Utility functions
 const getRoleText = (role) => {
-  const roles = { 0: 'Admin', 2: 'Giáo viên', 4: 'Học sinh' };
-  return roles[role] || 'User';
+  const roles = { 0: "Admin", 2: "Giáo viên", 4: "Học sinh" };
+  return roles[role] || "User";
 };
 
 const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
+  return new Date(date).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
 };
 

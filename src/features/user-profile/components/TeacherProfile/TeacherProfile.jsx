@@ -50,9 +50,9 @@ import {
   Video,
   Smile,
   Plus,
-  MessageCircle 
+  MessageCircle,
 } from "lucide-react";
-import { Link, useParams,useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { ROUTES } from "@/common/constants/routes";
 import { useState, useEffect } from "react";
 import {
@@ -68,8 +68,8 @@ import { useSelector } from "react-redux";
 
 export default function TeacherProfile() {
   const [profile, setProfile] = useState(null);
-  const {createRoom} = useChatApi()
-  const navigate = useNavigate()
+  const { createRoom } = useChatApi();
+  const navigate = useNavigate();
   const [extraData, setExtraData] = useState({});
   const [sortBy, setSortBy] = useState("newest");
   const [postContent, setPostContent] = useState("");
@@ -95,9 +95,10 @@ export default function TeacherProfile() {
 
   useEffect(() => {
     const loadProfile = async () => {
+      console.log(id);
       try {
         let response;
-        if (id) {
+        if (!!id) {
           response = await getTeacherProfileRef(id);
         } else {
           response = await getMyTeacherProfile();
@@ -140,7 +141,7 @@ export default function TeacherProfile() {
 
     loadProfile();
   }, []);
-const createChatRoom = async (participantIds) => {
+  const createChatRoom = async (participantIds) => {
     setCreatingRoom(true);
     try {
       const token = localStorage.getItem("token");

@@ -98,7 +98,7 @@ export default function ClubClassManagement() {
     category: "",
     meetingTime: "",
   });
-  const { getListClub, getClubCategory,deleteClub } = useClubApi();
+  const { getListClub, getClubCategory, deleteClub } = useClubApi();
   const handleSort = (field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -107,7 +107,7 @@ export default function ClubClassManagement() {
       setSortDirection("asc");
     }
   };
-  
+
   useEffect(() => {
     let result = clubsClasses;
 
@@ -144,20 +144,20 @@ export default function ClubClassManagement() {
     handleListClub();
   }, [pageNumber]);
   const getStatusBadge = (isDeleted) => {
-  const colorClass = isDeleted
-    ? "bg-gray-200 text-gray-700 border border-gray-400"
-    : "bg-green-100 text-green-700 border border-green-400";
+    const colorClass = isDeleted
+      ? "bg-gray-200 text-gray-700 border border-gray-400"
+      : "bg-green-100 text-green-700 border border-green-400";
 
-  const label = isDeleted ? "Đã kết thúc" : "Đang hoạt động";
+    const label = isDeleted ? "Đã kết thúc" : "Đang hoạt động";
 
-  return (
-    <span
-      className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${colorClass}`}
-    >
-      {label}
-    </span>
-  );
-};
+    return (
+      <span
+        className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${colorClass}`}
+      >
+        {label}
+      </span>
+    );
+  };
 
   const handleListCategory = async () => {
     try {
@@ -222,15 +222,15 @@ export default function ClubClassManagement() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async(id) => {
-    try{
-      console.log(id)
-      await deleteClub(id)
-      toast.deleteClubSuccess()
-      handleListClub()
-    }catch(err){
-     console.log(err)
-      toast.deleteClubFail()
+  const handleDelete = async (id) => {
+    try {
+      console.log(id);
+      await deleteClub(id);
+      toast.deleteClubSuccess();
+      handleListClub();
+    } catch (err) {
+      console.log(err);
+      toast.deleteClubFail();
     }
   };
 
