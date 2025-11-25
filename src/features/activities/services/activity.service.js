@@ -50,6 +50,27 @@ export class ActivityService extends ApiService {
   async updateActivity(activityData, token) {
     return this.put(API_CONFIG.ACTIVITY.UPDATE, activityData, token);
   }
+
+  /**
+   * Generate tournament schedule using AI
+   * @param {number|string} activityId - Activity ID
+   * @param {Object} scheduleRequest - Schedule request data (GenerateTournamentScheduleRequestDto)
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with generated schedule
+   */
+  async generateTournamentSchedule(activityId, scheduleRequest, token) {
+    const endpoint = API_CONFIG.ACTIVITY.GENERATE_TOURNAMENT_SCHEDULE.replace('{id}', activityId);
+    return this.post(endpoint, scheduleRequest, token);
+  }
+
+  /**
+   * Train schedule ML model
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response
+   */
+  async trainScheduleModel(token) {
+    return this.post(API_CONFIG.ACTIVITY.TRAIN_SCHEDULE_MODEL, {}, token);
+  }
 }
 
 export const activityService = new ActivityService();

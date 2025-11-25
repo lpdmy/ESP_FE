@@ -21,6 +21,7 @@ import { ClassGroupService } from "@/services/classgroup.service"
 import { useToast } from "@/common/hooks/useToast"
 import TeacherPosts from "./TeacherPosts"
 import ClassStats from "./ClassStats"
+import SimpleClassScheduleView from "@/features/admin/components/ClassManagement/SimpleClassScheduleView"
 
 // Loading state component
 const LoadingSpinner = () => (
@@ -55,6 +56,8 @@ export default function ClassDetail() {
         
         // Luôn lấy lớp học hiện tại của user trong niên khóa này
         const currentClass = await ClassGroupService.getCurrentClass(token)
+        console.log('Current class response:', currentClass)
+        console.log('Schedules in current class:', currentClass?.schedules)
         
         // Lưu user role từ response
         if (currentClass?.userRole) {
@@ -63,6 +66,7 @@ export default function ClassDetail() {
         
         // Set class data
         setClassData(currentClass)
+        console.log('Set classData with schedules:', currentClass?.schedules)
         
         // Load students if we have class data
         if (currentClass?.id) {
@@ -220,6 +224,9 @@ export default function ClassDetail() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Thời khóa biểu */}
+            <SimpleClassScheduleView schedules={classData?.schedules ?? []} />
 
             {/* Quick Stats */}
             <ClassStats posts={posts} />
