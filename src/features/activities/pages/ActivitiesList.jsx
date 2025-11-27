@@ -326,39 +326,39 @@ export default function ActivitiesList() {
                       {upcomingActivities.map((activity) => (
                         <div key={activity.id} className="w-full flex-shrink-0">
                           <Card className="overflow-hidden shadow-lg border-2 border-orange-200">
-                            <div className="grid md:grid-cols-2 gap-0">
-                              <div className="relative h-64 md:h-80">
-                                <img
+                  <div className="grid md:grid-cols-2 gap-0">
+                    <div className="relative h-64 md:h-80">
+                      <img
                                   src={activity.thumbnail || "/placeholder.svg"}
                                   alt={activity.title}
-                                  className="w-full h-full object-cover"
-                                />
+                        className="w-full h-full object-cover"
+                      />
                                 <div className="absolute top-4 left-4">
                                   <Badge variant="outline" className={getStatusBadgeClass(activity.status)}>
                                     {activity.status}
                                   </Badge>
                                 </div>
-                              </div>
-                              <div className="p-6 md:p-8 flex flex-col justify-center gap-4 bg-white">
-                                <div className="space-y-3">
-                                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
+                    </div>
+                    <div className="p-6 md:p-8 flex flex-col justify-center gap-4 bg-white">
+                      <div className="space-y-3">
+                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
                                     {activity.title}
-                                  </h2>
+                        </h2>
                                   <p className="text-base text-gray-600 leading-relaxed line-clamp-3">
                                     {activity.description}
-                                  </p>
-                                </div>
-                                <div className="space-y-2 text-sm text-gray-600">
-                                  <div className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4 text-orange-500" />
+                        </p>
+                      </div>
+                      <div className="space-y-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-orange-500" />
                                     {activity.startDate} - {activity.endDate}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Users className="h-4 w-4 text-orange-500" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-orange-500" />
                                     {activity.currentParticipants}/{activity.maxParticipants} người tham gia
-                                  </div>
-                                </div>
-                                <div className="flex gap-3 pt-2">
+                        </div>
+                      </div>
+                      <div className="flex gap-3 pt-2">
                                   {activity.status === "Đã kết thúc" ? (
                                     <Button variant="outline" size="lg" disabled className="text-gray-500 cursor-not-allowed">
                                       Đã kết thúc
@@ -380,22 +380,22 @@ export default function ActivitiesList() {
                                       disabled={registeringId === activity.id || !canRegisterActivity(activity.raw)}
                                     >
                                       {registeringId === activity.id ? "Đang đăng ký..." : "Đăng ký ngay"}
-                                    </Button>
+                        </Button>
                                   )}
-                                  <Link
+                        <Link
                                     to={
                                       activity.raw?.sports?.length > 1
                                         ? `/activities/${activity.id}/sports`
                                         : `/activities/${activity.id}`
                                     }
-                                    className="text-sm text-orange-600 hover:text-orange-700 hover:underline self-center"
-                                  >
-                                    Xem chi tiết →
-                                  </Link>
-                                </div>
-                              </div>
-                            </div>
-                          </Card>
+                          className="text-sm text-orange-600 hover:text-orange-700 hover:underline self-center"
+                        >
+                          Xem chi tiết →
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
                         </div>
                       ))}
                     </div>

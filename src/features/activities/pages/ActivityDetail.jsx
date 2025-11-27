@@ -147,6 +147,8 @@ export default function ActivityDetail() {
   const [selectedSportId, setSelectedSportId] = useState(null);
   const [scoreboardMatch, setScoreboardMatch] = useState(null);
   const [upcomingMatches, setUpcomingMatches] = useState([]);
+  const [liveMatches, setLiveMatches] = useState([]);
+  const [completedMatches, setCompletedMatches] = useState([]);
   const [participatingClasses, setParticipatingClasses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [bracketLoading, setBracketLoading] = useState(false);
@@ -159,6 +161,36 @@ export default function ActivityDetail() {
     canRegisterActivity,
     isTeacher,
   } = useActivityRegistration();
+
+  const processBracketRounds = useCallback((rounds = []) => {
+    const matches = rounds.flatMap((round) =>
+      (round.matches ?? []).map((match) => ({
+        ...match,
+        roundName: round.roundName,
+        roundNumber: round.roundNumber,
+      })),
+    );
+
+    const uniqueClasses = new Set();
+    matches.forEach((match) => {
+      if (match.classGroup1Name) uniqueClasses.add(match.classGroup1Name);
+      if (match.classGroup2Name) uniqueClasses.add(match.classGroup2Name);
+    });
+    setParticipatingClasses(Array.from(uniqueClasses));
+
+    const prioritizedMatch =
+      matches.find((match) => normalizeStatus(match.status) === "InProgress") ||
+      matches.find((match) => normalizeStatus(match.status) === "Pending") ||
+      matches.find((match) => normalizeStatus(match.status) === "Completed") ||
+      null;
+    setScoreboardMatch(prioritizedMatch);
+
+    setUpcomingMatches(matches.filter((match) => normalizeStatus(match.status) === "Pending").slice(0, 3));
+    setLiveMatches(matches.filter((match) => normalizeStatus(match.status) === "InProgress"));
+    setCompletedMatches(matches.filter((match) => normalizeStatus(match.status) === "Completed"));
+
+    return matches;
+  }, []);
 
   const loadActivity = useCallback(async () => {
     const token = localStorage.getItem("token");
@@ -200,51 +232,39 @@ export default function ActivityDetail() {
       setScoreboardMatch(null);
       setUpcomingMatches([]);
       setParticipatingClasses([]);
+      setLiveMatches([]);
+      setCompletedMatches([]);
       return;
     }
 
     const token = localStorage.getItem("token");
+    let intervalId;
+    let isMounted = true;
 
-    const loadBracket = async () => {
+    const loadBracket = async (showSpinner = false) => {
       try {
         const response = await executeApiCall(
           activityMatchService.getBracket.bind(activityMatchService),
           [{ activityId: activity.id, sportId: selectedSportId }, token],
-          { setLoading: setBracketLoading, setError: setBracketError }
+          showSpinner ? { setLoading: setBracketLoading, setError: setBracketError } : { setError: setBracketError }
         );
-        const data = response?.data;
+        if (!isMounted) return;
+        const data = response?.data?.data ?? response?.data;
         const rounds = data?.rounds ?? [];
-        const matches = rounds.flatMap((round) =>
-          (round.matches ?? []).map((match) => ({
-            ...match,
-            roundName: round.roundName,
-            roundNumber: round.roundNumber,
-          }))
-        );
-
-        const uniqueClasses = new Set();
-        matches.forEach((match) => {
-          if (match.classGroup1Name) uniqueClasses.add(match.classGroup1Name);
-          if (match.classGroup2Name) uniqueClasses.add(match.classGroup2Name);
-        });
-        setParticipatingClasses(Array.from(uniqueClasses));
-
-        const prioritizedMatch =
-          matches.find((match) => normalizeStatus(match.status) === "InProgress") ||
-          matches.find((match) => normalizeStatus(match.status) === "Pending") ||
-          matches.find((match) => normalizeStatus(match.status) === "Completed") ||
-          null;
-        setScoreboardMatch(prioritizedMatch);
-        setUpcomingMatches(
-          matches.filter((match) => normalizeStatus(match.status) === "Pending").slice(0, 3)
-        );
+        processBracketRounds(rounds);
       } catch (fetchError) {
         console.error("Failed to fetch bracket", fetchError);
       }
     };
 
-    loadBracket();
-  }, [activity, selectedSportId]);
+    loadBracket(true);
+    intervalId = setInterval(() => loadBracket(false), 10000);
+
+    return () => {
+      isMounted = false;
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [activity, selectedSportId, processBracketRounds]);
 
   const selectedSport = useMemo(() => {
     if (!activity?.sports?.length || !selectedSportId) return null;
@@ -252,6 +272,7 @@ export default function ActivityDetail() {
   }, [activity, selectedSportId]);
 
   const scoreboardType = detectScoreboardType(selectedSport?.sportName ?? activity?.subType ?? "");
+  const scoreboardTimer = useMatchTimer(scoreboardMatch);
   const scoreboardData = useMemo(
     () => buildScoreboardData(scoreboardMatch, scoreboardType, activity),
     [activity, scoreboardMatch, scoreboardType]
@@ -457,8 +478,44 @@ export default function ActivityDetail() {
                       </div>
                     )}
                   </div>
+                  {scoreboardMatch && normalizeStatus(scoreboardMatch.status) === "InProgress" && (
+                    <div className="flex items-center justify-between mb-6 rounded-2xl border border-blue-100 bg-blue-50/60 px-4 py-3">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 uppercase tracking-wide">
+                        <Badge className="bg-white text-blue-700 border-blue-200">{scoreboardTimer.phase}</Badge>
+                        <span>Trận đang diễn ra</span>
+                      </div>
+                      <span className="font-mono text-3xl font-bold text-blue-600">{scoreboardTimer.clock}</span>
+                    </div>
+                  )}
                   {renderScore()}
                 </div>
+
+                {/* Live Matches */}
+                {liveMatches.length > 0 && (
+                  <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold text-gray-900">Trực tiếp</h2>
+                      <Badge className="bg-blue-100 text-blue-600 border-blue-200">LIVE</Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {liveMatches.map((match) => (
+                        <LiveMatchWidget key={match.id} match={match} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Completed Matches */}
+                {completedMatches.length > 0 && (
+                  <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+                    <h2 className="text-2xl font-bold text-gray-900">Kết quả trận đấu</h2>
+                    <div className="space-y-4">
+                      {completedMatches.slice(0, 4).map((match) => (
+                        <CompletedMatchWidget key={`result-${match.id}`} match={match} />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Lịch thi đấu */}
                 <div className="bg-white rounded-2xl shadow-sm p-6 space-y-6">
@@ -547,24 +604,9 @@ export default function ActivityDetail() {
                 [{ activityId: activity.id, sportId: selectedSportId }, token],
                 { setLoading: setBracketLoading, setError: setBracketError }
               ).then((response) => {
-                const data = response?.data;
+                const data = response?.data?.data ?? response?.data;
                 const rounds = data?.rounds ?? [];
-                const matches = rounds.flatMap((round) =>
-                  (round.matches ?? []).map((match) => ({
-                    ...match,
-                    roundName: round.roundName,
-                    roundNumber: round.roundNumber,
-                  }))
-                );
-                const prioritizedMatch =
-                  matches.find((match) => normalizeStatus(match.status) === "InProgress") ||
-                  matches.find((match) => normalizeStatus(match.status) === "Pending") ||
-                  matches.find((match) => normalizeStatus(match.status) === "Completed") ||
-                  null;
-                setScoreboardMatch(prioritizedMatch);
-                setUpcomingMatches(
-                  matches.filter((match) => normalizeStatus(match.status) === "Pending").slice(0, 3)
-                );
+                processBracketRounds(rounds);
               });
             }
           }}
@@ -574,3 +616,140 @@ export default function ActivityDetail() {
     </div>
   );
 }
+
+const HALFTIME_SECONDS = 45 * 60;
+const BREAK_SECONDS = 5 * 60;
+const FULL_TIME_SECONDS = 90 * 60;
+
+function formatClock(seconds) {
+  const mins = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const secs = Math.floor(seconds % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${mins}:${secs}`;
+}
+
+function getMatchStartTimestamp(match) {
+  if (!match) return null;
+  return match.actualStartTime || match.updatedAt || match.matchDate || match.createdAt || null;
+}
+
+function calculateMatchClock(match, now) {
+  const status = normalizeStatus(match?.status);
+  if (!match) {
+    return { phase: "Đang cập nhật", clock: "--:--" };
+  }
+  if (status !== "InProgress") {
+    return {
+      phase: MATCH_STATUS_LABELS[status] || "Đang cập nhật",
+      clock: status === "Completed" ? "90:00" : "--:--",
+    };
+  }
+  const start = getMatchStartTimestamp(match);
+  if (!start) {
+    return { phase: "Đang diễn ra", clock: "--:--" };
+  }
+  const startTime = new Date(start).getTime();
+  const elapsed = Math.max(0, Math.floor((now - startTime) / 1000));
+
+  if (elapsed < HALFTIME_SECONDS) {
+    return { phase: "Hiệp 1", clock: formatClock(elapsed) };
+  }
+  if (elapsed < HALFTIME_SECONDS + BREAK_SECONDS) {
+    return { phase: "Nghỉ giữa hiệp", clock: "45:00" };
+  }
+
+  const secondHalfElapsed = elapsed - (HALFTIME_SECONDS + BREAK_SECONDS);
+  if (elapsed < FULL_TIME_SECONDS) {
+    const adjustedSeconds =
+      secondHalfElapsed === 0
+        ? HALFTIME_SECONDS + 1
+        : Math.min(HALFTIME_SECONDS + secondHalfElapsed, FULL_TIME_SECONDS);
+    return { phase: "Hiệp 2", clock: formatClock(adjustedSeconds) };
+  }
+
+  const addedMinutes = Math.min(15, Math.floor((elapsed - FULL_TIME_SECONDS) / 60));
+  return { phase: "Bù giờ", clock: `90+${addedMinutes}` };
+}
+
+function useMatchTimer(match) {
+  const [now, setNow] = useState(Date.now());
+  const status = normalizeStatus(match?.status);
+
+  useEffect(() => {
+    if (!match || status !== "InProgress") return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [match?.id, status]);
+
+  return calculateMatchClock(match, now);
+}
+
+function LiveMatchWidget({ match }) {
+  const timer = useMatchTimer(match);
+  const homeName = match.classGroup1Name || "Đội 1";
+  const awayName = match.classGroup2Name || "Đội 2";
+
+  return (
+    <div className="rounded-2xl border border-blue-100 bg-white shadow-sm p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <Badge className="bg-blue-50 text-blue-700 border-blue-100">{timer.phase}</Badge>
+        <span className="font-mono text-2xl font-semibold text-blue-600">{timer.clock}</span>
+      </div>
+      <div className="space-y-2 text-gray-900">
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-semibold line-clamp-1">{homeName}</p>
+          <span className="text-xl font-bold text-gray-900">{match.score1 ?? 0}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-semibold line-clamp-1">{awayName}</p>
+          <span className="text-xl font-bold text-gray-900">{match.score2 ?? 0}</span>
+        </div>
+      </div>
+      <div className="text-xs text-gray-500 flex items-center justify-between">
+        <span>{match.roundName || `Vòng ${match.roundNumber}`}</span>
+        <span>{formatDate(match.matchDate, true)}</span>
+      </div>
+      <p className="text-xs text-gray-500">{match.location || "Địa điểm đang cập nhật"}</p>
+    </div>
+  );
+}
+
+function CompletedMatchWidget({ match }) {
+  const homeName = match.classGroup1Name || "Đội 1";
+  const awayName = match.classGroup2Name || "Đội 2";
+  const winnerId = match.winnerClassGroupId || null;
+  const homeWin = winnerId && winnerId === match.classGroup1Id;
+  const awayWin = winnerId && winnerId === match.classGroup2Id;
+
+  return (
+    <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50 space-y-3">
+      <div className="flex items-center justify-between text-xs text-gray-500">
+        <span>{match.roundName || `Vòng ${match.roundNumber}`}</span>
+        <span>{formatDate(match.matchDate, true)}</span>
+      </div>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1 space-y-2">
+          <p className={`font-semibold ${homeWin ? "text-green-600" : "text-gray-900"}`}>{homeName}</p>
+          <p className={`font-semibold ${awayWin ? "text-green-600" : "text-gray-900"}`}>{awayName}</p>
+        </div>
+        <div className="text-3xl font-bold text-gray-900">
+          {match.score1 ?? 0}
+          <span className="mx-2 text-gray-400">-</span>
+          {match.score2 ?? 0}
+        </div>
+      </div>
+      {winnerId && (
+        <p className="text-sm text-gray-600">
+          Kết quả:{" "}
+          <span className="font-semibold text-gray-900">
+            {homeWin ? homeName : awayWin ? awayName : "Hoà"}
+          </span>
+        </p>
+      )}
+    </div>
+  );
+}
+

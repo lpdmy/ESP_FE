@@ -133,6 +133,10 @@ export const useToast = () => {
     showWarning,
     dismiss,
     dismissAll,
+    success: showSuccess,
+    error: showError,
+    info: showInfo,
+    warning: showWarning,
     
     // Predefined message methods
     profileUpdated,

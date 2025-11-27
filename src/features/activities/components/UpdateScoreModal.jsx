@@ -23,6 +23,7 @@ const MATCH_STATUS = {
 
 export default function UpdateScoreModal({ match, isOpen, onClose, onSuccess, scoreboardType }) {
   const toast = useToast();
+  const timer = useSimpleTimer(match);
   const [loading, setLoading] = useState(false);
   const [score1, setScore1] = useState(0);
   const [score2, setScore2] = useState(0);
@@ -60,18 +61,13 @@ export default function UpdateScoreModal({ match, isOpen, onClose, onSuccess, sc
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(err?.message || "Không thể bắt đầu trận đấu");
+      toast.showError(err?.message || "Không thể bắt đầu trận đấu");
     } finally {
       setLoading(false);
     }
   };
 
   const handleUpdateScore = async () => {
-    if (!winnerId) {
-      toast.error("Vui lòng chọn đội thắng");
-      return;
-    }
-
     const token = localStorage.getItem("token");
     setLoading(true);
     try {
@@ -82,7 +78,7 @@ export default function UpdateScoreModal({ match, isOpen, onClose, onSuccess, sc
           {
             Score1: parseInt(score1, 10),
             Score2: parseInt(score2, 10),
-            WinnerClassGroupId: parseInt(winnerId, 10),
+            MarkAsCompleted: false,
           },
           token,
         ],
@@ -92,7 +88,7 @@ export default function UpdateScoreModal({ match, isOpen, onClose, onSuccess, sc
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(err?.message || "Không thể cập nhật tỉ số");
+      toast.showError(err?.message || "Không thể cập nhật tỉ số");
     } finally {
       setLoading(false);
     }
@@ -100,7 +96,7 @@ export default function UpdateScoreModal({ match, isOpen, onClose, onSuccess, sc
 
   const handleEndMatch = async () => {
     if (!winnerId) {
-      toast.error("Vui lòng chọn đội thắng trước khi kết thúc trận đấu");
+      toast.showError("Vui lòng chọn đội thắng trước khi kết thúc trận đấu");
       return;
     }
 
@@ -116,6 +112,7 @@ export default function UpdateScoreModal({ match, isOpen, onClose, onSuccess, sc
             Score1: parseInt(score1, 10),
             Score2: parseInt(score2, 10),
             WinnerClassGroupId: parseInt(winnerId, 10),
+            MarkAsCompleted: true,
           },
           token,
         ],
@@ -125,7 +122,7 @@ export default function UpdateScoreModal({ match, isOpen, onClose, onSuccess, sc
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(err?.message || "Không thể kết thúc trận đấu");
+      toast.showError(err?.message || "Không thể kết thúc trận đấu");
     } finally {
       setLoading(false);
     }
@@ -175,6 +172,12 @@ export default function UpdateScoreModal({ match, isOpen, onClose, onSuccess, sc
               <p className="font-semibold text-gray-900">{team2Name}</p>
             </div>
           </div>
+          {timer && (
+            <div className="rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-2 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">{timer.phase}</span>
+              <span className="font-mono text-2xl font-bold text-blue-700">{timer.clock}</span>
+            </div>
+          )}
 
           {/* Nhập tỉ số */}
           {(action === "update" || action === "end") && (
@@ -204,36 +207,37 @@ export default function UpdateScoreModal({ match, isOpen, onClose, onSuccess, sc
                 </div>
               </div>
 
-              {/* Chọn đội thắng */}
-              <div className="space-y-2">
-                <Label>Đội thắng *</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setWinnerId(team1Id)}
-                    disabled={loading || !team1Id}
-                    className={`p-3 rounded-lg border-2 transition ${
-                      winnerId === team1Id
-                        ? "border-orange-500 bg-orange-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    } ${!team1Id ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    <p className="font-semibold text-sm">{team1Name}</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setWinnerId(team2Id)}
-                    disabled={loading || !team2Id}
-                    className={`p-3 rounded-lg border-2 transition ${
-                      winnerId === team2Id
-                        ? "border-orange-500 bg-orange-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    } ${!team2Id ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    <p className="font-semibold text-sm">{team2Name}</p>
-                  </button>
+              {action === "end" && (
+                <div className="space-y-2">
+                  <Label>Đội thắng *</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setWinnerId(team1Id)}
+                      disabled={loading || !team1Id}
+                      className={`p-3 rounded-lg border-2 transition ${
+                        winnerId === team1Id
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      } ${!team1Id ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      <p className="font-semibold text-sm">{team1Name}</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWinnerId(team2Id)}
+                      disabled={loading || !team2Id}
+                      className={`p-3 rounded-lg border-2 transition ${
+                        winnerId === team2Id
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      } ${!team2Id ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      <p className="font-semibold text-sm">{team2Name}</p>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </div>
@@ -255,5 +259,27 @@ export default function UpdateScoreModal({ match, isOpen, onClose, onSuccess, sc
       </DialogContent>
     </Dialog>
   );
+}
+
+function useSimpleTimer(match) {
+  const [now, setNow] = useState(Date.now())
+  const status = typeof match?.status === "number" ? match?.status : match?.status
+  useEffect(() => {
+    if (!match || status !== MATCH_STATUS.InProgress) return
+    const interval = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(interval)
+  }, [match?.id, status])
+  if (!match || status !== MATCH_STATUS.InProgress) return null
+  const start = match.actualStartTime || match.updatedAt || match.matchDate || match.createdAt
+  if (!start) return null
+  const elapsed = Math.max(0, Math.floor((now - new Date(start).getTime()) / 1000))
+  const clamped = Math.min(elapsed, 90 * 60)
+  const mins = Math.floor(elapsed / 60)
+    .toString()
+    .padStart(2, "0")
+  const secs = Math.floor(elapsed % 60)
+    .toString()
+    .padStart(2, "0")
+  return `${mins}:${secs}`
 }
 

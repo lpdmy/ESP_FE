@@ -1029,15 +1029,15 @@ export default function ActivityManagement() {
                         >
                           <GitBranch className="w-4 h-4 text-emerald-600" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            toast.success(`Đã xóa hoạt động "${activity.title}".`)
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          toast.success(`Đã xóa hoạt động "${activity.title}".`)
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
                       </div>
                       </TableCell>
                     </TableRow>
@@ -1830,155 +1830,243 @@ function BracketViewerModal({
   }
 
   const rounds = bracket?.rounds ?? []
+  const selectedSport = sports.find((sport) => sport.id === selectedSportId)
+  const useSimpleTimer = (match) => {
+    const status = normalizeStatus(match?.status)
+    const [now, setNow] = useState(Date.now())
+    useEffect(() => {
+      if (!match || status !== 1) return
+      const interval = setInterval(() => setNow(Date.now()), 1000)
+      return () => clearInterval(interval)
+    }, [match?.id, status])
+    if (!match || status !== 1) return null
+    const start = match.actualStartTime || match.updatedAt || match.matchDate || match.createdAt
+    if (!start) return null
+    const elapsed = Math.max(0, Math.floor((now - new Date(start).getTime()) / 1000))
+    const clamped = Math.min(elapsed, 90 * 60)
+    const mins = Math.floor(elapsed / 60)
+      .toString()
+      .padStart(2, "0")
+    const secs = Math.floor(elapsed % 60)
+      .toString()
+      .padStart(2, "0")
+    return `${mins}:${secs}`
+  }
+  const MATCH_CARD_HEIGHT = 92
+  const MATCH_VERTICAL_GAP = 28
+  const SLICE_HEIGHT = MATCH_CARD_HEIGHT + MATCH_VERTICAL_GAP
+  const getColumnOffset = (roundIdx) => (roundIdx === 0 ? 0 : (SLICE_HEIGHT * (Math.pow(2, roundIdx) - 1)) / 2)
+  const getMatchSpacing = (roundIdx) => SLICE_HEIGHT * Math.pow(2, roundIdx)
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl">
-        <DialogHeader>
-          <DialogTitle>Bracket đã tạo</DialogTitle>
-          <DialogDescription>
-            Theo dõi và cập nhật các trận đấu trực tiếp ngay trên giao diện quản trị.
-          </DialogDescription>
-        </DialogHeader>
-
-        {!activity ? (
-          <p className="text-sm text-gray-500">Chọn một hoạt động để xem bracket.</p>
-        ) : (
-          <div className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Môn thi đấu</Label>
-                <SimpleSelect
-                  value={selectedSportId ? selectedSportId.toString() : undefined}
-                  onValueChange={(value) => setSelectedSportId(Number(value))}
-                  options={sports.map((sport) => ({
-                    value: sport.id.toString(),
-                    label: sport.sportName,
-                  }))}
-                  placeholder="Chọn môn"
-                />
-              </div>
-              {gradeOptions.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Khối</Label>
-                  <SimpleSelect
-                    value={selectedGrade !== null ? selectedGrade.toString() : undefined}
-                    onValueChange={(value) => setSelectedGrade(value ? Number(value) : null)}
-                    options={gradeOptions.map((grade) => ({
-                      value: grade.toString(),
-                      label: `Khối ${grade}`,
-                    }))}
-                    placeholder="Chọn khối"
-                  />
-                </div>
-              )}
+      <DialogContent showCloseButton={false} className="w-full max-w-[1200px] sm:max-w-[1200px] rounded-2xl border border-slate-100 shadow-2xl p-0 bg-white overflow-hidden max-h-[90vh]">
+        <div>
+          <div className="flex items-center justify-between border-b border-slate-100 px-8 py-5">
+            <div>
+              <DialogTitle className="text-2xl font-semibold text-slate-900">Sơ đồ bảng đấu</DialogTitle>
+              <DialogDescription className="text-sm text-slate-500 mt-1">
+                Dạng kim tự tháp giúp admin theo dõi tiến trình giải đấu một cách trực quan.
+              </DialogDescription>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50 transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-            {loading ? (
-              <LoadingCard text="Đang tải bracket..." />
-            ) : errorInfo ? (
-              <div className="text-center py-10 space-y-3">
-                <p className="text-gray-600">{errorInfo.message}</p>
-                {errorInfo.type === "not_found" && (
-                  <Button onClick={onOpenSetup} variant="outline">
-                    Tạo bảng đấu ngay
-                  </Button>
-                )}
-              </div>
-            ) : !rounds.length ? (
-              <div className="text-center py-10 text-gray-500">
-                Chưa có dữ liệu bracket cho lựa chọn này.
-              </div>
+          <div className="max-h-[calc(90vh-80px)] overflow-y-auto">
+            {!activity ? (
+              <div className="px-8 py-10 text-center text-sm text-slate-500">Chọn một hoạt động để xem bracket.</div>
             ) : (
-              <div className="overflow-x-auto">
-                <div className="flex items-start gap-5 min-h-[320px]">
-                  {rounds.map((round) => (
-                    <div key={`round-${round.roundNumber}`} className="min-w-[220px] space-y-3">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-800">{round.roundName || `Vòng ${round.roundNumber}`}</p>
-                        <p className="text-xs text-gray-500">
-                          {round.matches?.length || 0} trận • Khối {round.matches?.[0]?.grade ?? selectedGrade ?? "-"}
-                        </p>
-                      </div>
-                      <div className="space-y-3">
-                        {round.matches.map((match) => {
-                          const statusValue = normalizeStatus(match.status)
-                          const statusConfig = statusConfigMap[statusValue] || statusConfigMap[0]
-                          const teamRows = [
-                            {
-                              id: match.classGroup1Id,
-                              name: match.classGroup1Name || (match.isBye ? "Đội được quyền đi tiếp" : "Chưa xác định"),
-                              score: match.score1,
-                            },
-                            {
-                              id: match.classGroup2Id,
-                              name: match.classGroup2Name || (match.isBye ? "BYE" : "Chưa xác định"),
-                              score: match.score2,
-                            },
-                          ].filter((team, index) => team.id || index === 0 || !match.isBye)
-
-                          const matchDate = match.matchDate ? dayjs(match.matchDate).format("DD/MM/YYYY") : null
-                          const matchTime =
-                            match.startTime && typeof match.startTime === "string"
-                              ? match.startTime.slice(0, 5)
-                              : null
-
-                          const winnerId = match.winnerClassGroupId
-
-                          return (
-                            <div key={`match-${match.id}`} className="rounded-xl border bg-white shadow-sm space-y-3 p-3">
-                              <div className="flex items-center justify-between">
-                                <Badge className={`${statusConfig.className} text-[11px]`}>{statusConfig.label}</Badge>
-                                <span className="text-xs text-gray-500">Trận {match.matchNumber}</span>
-                              </div>
-                              <div className="space-y-2">
-                                {teamRows.map((team, index) => (
-                                  <div
-                                    key={`${match.id}-team-${index}`}
-                                    className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
-                                      winnerId && team.id === winnerId
-                                        ? "border-emerald-500 bg-emerald-50"
-                                        : "border-gray-200"
-                                    }`}
-                                  >
-                                    <span className="font-medium line-clamp-1">{team.name}</span>
-                                    <span className="font-semibold text-gray-800">{team.score ?? "-"}</span>
-                                  </div>
-                                ))}
-                                {match.isBye && (
-                                  <p className="text-xs text-gray-500 italic">
-                                    Trận bye - {teamRows[0]?.name} tự động vào vòng sau
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex items-center justify-between text-xs text-gray-500">
-                                <span>
-                                  {matchDate}
-                                  {matchTime ? ` • ${matchTime}` : ""}
-                                </span>
-                                {match.location && <span>{match.location}</span>}
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full"
-                                onClick={() => onManageMatch?.(match)}
-                                disabled={match.isBye}
-                              >
-                                {match.isBye ? "Tự động xử lý" : "Cập nhật / Điều hành"}
-                              </Button>
-                            </div>
-                          )
-                        })}
-                      </div>
+              <div className="px-8 py-8 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-slate-700">Môn thi đấu</Label>
+                    <SimpleSelect
+                      value={selectedSportId ? selectedSportId.toString() : undefined}
+                      onValueChange={(value) => setSelectedSportId(Number(value))}
+                      options={sports.map((sport) => ({
+                        value: sport.id.toString(),
+                        label: sport.sportName,
+                      }))}
+                      placeholder="Chọn môn"
+                    />
+                  </div>
+                  {gradeOptions.length > 0 && (
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium text-slate-700">Khối</Label>
+                      <SimpleSelect
+                        value={selectedGrade !== null ? selectedGrade.toString() : undefined}
+                        onValueChange={(value) => setSelectedGrade(value ? Number(value) : null)}
+                        options={gradeOptions.map((grade) => ({
+                          value: grade.toString(),
+                          label: `Khối ${grade}`,
+                        }))}
+                        placeholder="Chọn khối"
+                      />
                     </div>
-                  ))}
+                  )}
                 </div>
+
+                {loading ? (
+                  <LoadingCard text="Đang tải bracket..." />
+                ) : errorInfo ? (
+                  <div className="text-center py-10 space-y-3">
+                    <p className="text-gray-600">{errorInfo.message}</p>
+                    {errorInfo.type === "not_found" && (
+                      <Button onClick={onOpenSetup} variant="outline">
+                        Tạo bảng đấu ngay
+                      </Button>
+                    )}
+                  </div>
+                ) : !rounds.length ? (
+                  <div className="text-center py-10 text-slate-500">Chưa có dữ liệu bracket cho lựa chọn này.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <div className="flex items-start justify-center gap-10 min-h-[360px] pb-6">
+                      {rounds.map((round, roundIndex) => {
+                        const columnOffset = getColumnOffset(roundIndex)
+                        const matchSpacing = getMatchSpacing(roundIndex)
+                        const verticalGap = Math.max(matchSpacing - MATCH_CARD_HEIGHT, MATCH_VERTICAL_GAP)
+                        return (
+                          <div
+                            key={`round-${round.roundNumber}`}
+                            className="flex flex-col gap-4 min-w-[260px]"
+                            style={{ paddingTop: columnOffset }}
+                          >
+                            <div className="text-center space-y-1">
+                              <p className="text-base font-semibold text-slate-800">{round.roundName || `Vòng ${round.roundNumber}`}</p>
+                              <p className="text-xs text-slate-500">
+                                {round.matches?.length || 0} trận ·{" "}
+                                {round.matches?.[0]?.grade
+                                  ? `Khối ${round.matches[0].grade}`
+                                  : selectedGrade
+                                  ? `Khối ${selectedGrade}`
+                                  : "Chưa rõ khối"}
+                              </p>
+                              <p className="text-xs text-slate-400">
+                                {selectedSport ? selectedSport.sportName : "Môn chưa chọn"}
+                              </p>
+                            </div>
+                            {round.matches.map((match, matchIndex) => {
+                              const statusValue = normalizeStatus(match.status)
+                              const statusConfig = statusConfigMap[statusValue] || statusConfigMap[0]
+                              const isLastMatch = matchIndex === round.matches.length - 1
+                              const gapToApply = isLastMatch ? 0 : verticalGap
+                              const connectorVertical = Math.max(gapToApply / 2, 12)
+                              const isEvenNode = matchIndex % 2 === 0
+                              const team1Name = match.classGroup1Name || "Chưa xác định"
+                              const team2Name = match.classGroup2Name || (match.isBye ? "BYE" : "Chưa xác định")
+                              const team1Label = match.grade ? `Khối ${match.grade} • ${team1Name}` : team1Name
+                              const team2Label = match.grade ? `Khối ${match.grade} • ${team2Name}` : team2Name
+
+                              return (
+                                <div
+                                  key={`match-${match.id}`}
+                                  className="relative flex flex-col items-stretch"
+                                  style={{ marginBottom: gapToApply }}
+                                >
+                              <div
+                                className={`relative rounded-xl border bg-white/90 shadow-md shadow-blue-50 p-4 min-h-[120px] transition ${
+                                  match.isBye
+                                    ? "border-blue-100 cursor-default"
+                                    : "border-blue-200 hover:border-blue-400 cursor-pointer"
+                                }`}
+                                onClick={() => {
+                                  if (!match.isBye) {
+                                    onManageMatch?.(match)
+                                  }
+                                }}
+                                role="button"
+                                tabIndex={match.isBye ? -1 : 0}
+                              >
+                                    <div className="flex items-center justify-between text-xs uppercase tracking-wide text-blue-400">
+                                      <span>{statusConfig.label}</span>
+                                      <span>Trận {match.matchNumber}</span>
+                                    </div>
+                                    {normalizeStatus(match.status) === 1 && <AdminTimerBadge match={match} />}
+                                    <div className="mt-3 space-y-2 text-sm text-slate-900 font-medium">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="line-clamp-1">{team1Label}</span>
+                                        <span className="text-xs font-semibold text-blue-500">{match.score1 ?? "-"}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="line-clamp-1">{team2Label}</span>
+                                        <span className="text-xs font-semibold text-blue-500">{match.score2 ?? "-"}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {roundIndex < rounds.length - 1 && (
+                                    <>
+                                      <div className="absolute right-[-48px] top-1/2 w-12 border-t border-blue-200" />
+                                      <div
+                                        className={`absolute right-[-48px] ${
+                                          isEvenNode ? "top-1/2" : "bottom-1/2"
+                                        } border-r border-blue-200`}
+                                        style={{
+                                          height: connectorVertical,
+                                          transform: isEvenNode ? "translateY(0)" : "translateY(0)",
+                                        }}
+                                      />
+                                    </>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
+        </div>
       </DialogContent>
     </Dialog>
   )
+}
+
+function AdminTimerBadge({ match }) {
+  const timer = useSimpleTimer(match)
+  if (!timer) return null
+  return (
+    <div className="flex items-center justify-between mt-3 rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-1.5 text-xs font-semibold text-blue-600">
+      <span>Thời gian</span>
+      <span className="font-mono text-lg text-blue-700">{timer}</span>
+    </div>
+  )
+}
+
+function useSimpleTimer(match) {
+  const [now, setNow] = useState(Date.now())
+  const statusMap = (value) => {
+    if (typeof value === "number") return value
+    return value === "InProgress" ? 1 : value === "Completed" ? 2 : value === "Pending" ? 0 : 3
+  }
+  const status = statusMap(match?.status)
+
+  useEffect(() => {
+    if (!match || status !== 1) return
+    const interval = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(interval)
+  }, [match?.id, status])
+
+  if (!match || status !== 1) return null
+  const start = match.actualStartTime || match.updatedAt || match.matchDate || match.createdAt
+  if (!start) return null
+  const elapsed = Math.max(0, Math.floor((now - new Date(start).getTime()) / 1000))
+  const mins = Math.floor(elapsed / 60)
+    .toString()
+    .padStart(2, "0")
+  const secs = Math.floor(elapsed % 60)
+    .toString()
+    .padStart(2, "0")
+  return `${mins}:${secs}`
 }
