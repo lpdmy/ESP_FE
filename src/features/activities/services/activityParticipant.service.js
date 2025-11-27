@@ -24,6 +24,14 @@ export class ActivityParticipantService extends ApiService {
       token
     );
   }
+
+  async registerGroup(payload, token) {
+    return this.post(API_CONFIG.ACTIVITY_PARTICIPANT.GROUP, payload, token);
+  }
+
+  async registerSport(payload, token) {
+    return this.post(API_CONFIG.ACTIVITY_PARTICIPANT.SPORT, payload, token);
+  }
 }
 
 export const activityParticipantService = new ActivityParticipantService();

@@ -16,14 +16,14 @@ export const ROUTES = {
     CLUB: "/admin/clubs",
     SYSTEM_NEWS_AND_NOTICES: "/admin/system-news-and-notices",
     SYSTEM_NEWS_AND_NOTICES_DETAIL: "/admin/system-news-and-notices/:id",
-    CLUB:"/admin/clubs",
-    STAFF:"/admin/staff",
-    ACTIVITIES:"/admin/activities",
-    CREATE_ACTIVITY:"/admin/activities/create",
-    EDIT_ACTIVITY:"/admin/activities/:id/edit",
-    AI_SCHEDULE:"/admin/activities/:id/ai-schedule",
+    CLUB: "/admin/clubs",
+    STAFF: "/admin/staff",
+    ACTIVITIES: "/admin/activities",
+    CREATE_ACTIVITY: "/admin/activities/create",
+    EDIT_ACTIVITY: "/admin/activities/:id/edit",
+    AI_SCHEDULE: "/admin/activities/:id/ai-schedule",
     CLASSES: 'admin/classes',
-    CLASS_DETAIL:'/admin/classes/:id'
+    CLASS_DETAIL: '/admin/classes/:id'
 
   },
   USER_PROFILE: {
@@ -57,18 +57,21 @@ export const ROUTES = {
     LIST: "/system-news-and-notices",
     DETAIL: "/system-news-and-notices/:id"
   },
-  SEARCH:{
-    STUDENT:"/Search/students",
-    TEACHER:"/Search/teachers"
+  SEARCH: {
+    STUDENT: "/Search/students",
+    TEACHER: "/Search/teachers"
   },
   CHAT: {
     CHAT_PAGE: "/chat/:roomId",
     INBOX: "/chat",
   },
   ACTIVITY: {
+    LIST: "/activities",
     VIEW_ACTIVITY: "/activities/:id",
+    REGISTER_ACTIVITY: "/activities/:id/register",
   },
   NOTIFICATION: {
     LIST_NOTIFICATION: "/notifications",
   }
 };
+

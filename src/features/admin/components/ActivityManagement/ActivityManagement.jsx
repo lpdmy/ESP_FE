@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Link } from "react-router-dom"
 import { Button } from "@/common/components/ui/button"
 import { Input } from "@/common/components/ui/input"
@@ -45,6 +45,19 @@ import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
 import { LoadingCard } from "@/common/components/ui/loading"
 
+const parseRegistrationSettings = (settings) => {
+  if (!settings) return null
+  if (typeof settings === "string") {
+    try {
+      return JSON.parse(settings)
+    } catch (error) {
+      console.warn("Không thể parse registration settings:", error)
+      return null
+    }
+  }
+  return settings
+}
+
 export default function ActivityManagement() {
   // Data state
   const [activities, setActivities] = useState([])
@@ -89,6 +102,17 @@ export default function ActivityManagement() {
       maxSessionsPerDay: 3,
     },
   })
+  const [selectedActivity, setSelectedActivity] = useState(null)
+  const [participantsDrawerOpen, setParticipantsDrawerOpen] = useState(false)
+  const selectedGroupRegistrations = useMemo(
+    () => (selectedActivity ? getGroupRegistrations(selectedActivity) : []),
+    [selectedActivity]
+  )
+  const selectedSportRosters = useMemo(
+    () => (selectedActivity ? getSportRosters(selectedActivity) : []),
+    [selectedActivity]
+  )
+  const selectedParticipants = selectedActivity?.participantDetails || []
 
   // Stats data (calculated from activities)
   const [stats, setStats] = useState([
@@ -186,6 +210,9 @@ export default function ActivityManagement() {
           description: activity.description || "",
           onlyTeacherCanRegister: activity.onlyTeacherCanRegister || false,
           gradingSettings: activity.gradingSettings || null,
+          registrationSettings: parseRegistrationSettings(activity.registrationSettings),
+          sports: activity.sports || [],
+          participantDetails: activity.participants || [],
         }))
         
         setActivities(mappedActivities)
@@ -420,6 +447,56 @@ export default function ActivityManagement() {
     
     return true
   })
+
+  const getGroupRegistrations = (activity) => {
+    if (!activity || !activity.participantDetails) return []
+    const map = new Map()
+    activity.participantDetails
+      .filter((p) => p.groupCode)
+      .forEach((p) => {
+        if (!map.has(p.groupCode)) {
+          map.set(p.groupCode, {
+            code: p.groupCode,
+            name: p.registrationMetadata || "",
+            members: [],
+          })
+        }
+        map.get(p.groupCode).members.push(p)
+      })
+    return Array.from(map.values())
+  }
+
+  const getSportRosters = (activity) => {
+    if (!activity || !activity.participantDetails) return []
+    const sportMap = new Map()
+    activity.participantDetails
+      .filter((p) => p.sportId)
+      .forEach((p) => {
+        if (!sportMap.has(p.sportId)) {
+          const sportMeta = activity.sports?.find((sport) => sport.id === p.sportId)
+          sportMap.set(p.sportId, {
+            sportId: p.sportId,
+            sportName: p.sportName || sportMeta?.sportName || "Môn thi đấu",
+            classes: new Map(),
+          })
+        }
+        const entry = sportMap.get(p.sportId)
+        const className = p.classGroupName || "Chưa rõ lớp"
+        if (!entry.classes.has(className)) {
+          entry.classes.set(className, [])
+        }
+        entry.classes.get(className).push(p)
+      })
+
+    return Array.from(sportMap.values()).map((sport) => ({
+      sportId: sport.sportId,
+      sportName: sport.sportName,
+      rosters: Array.from(sport.classes.entries()).map(([className, members]) => ({
+        className,
+        members,
+      })),
+    }))
+  }
   
   // Handle pagination
   const handlePageChange = (newPage) => {
@@ -843,13 +920,14 @@ export default function ActivityManagement() {
                       <TableHead className="w-12">
                         <Checkbox
                           checked={selectedActivities.length === filteredActivities.length && filteredActivities.length > 0}
-                          onChange={(checked) => {
+                          onCheckedChange={(checked) => {
                             if (checked) {
                               setSelectedActivities(filteredActivities.map(a => a.id))
                             } else {
                               setSelectedActivities([])
                             }
                           }}
+                          onClick={(e) => e.stopPropagation()}
                         />
                       </TableHead>
                       <TableHead>Tiêu đề</TableHead>
@@ -863,11 +941,19 @@ export default function ActivityManagement() {
                   </TableHeader>
                   <TableBody>
                     {filteredActivities.map((activity) => (
-                      <TableRow key={activity.id}>
-                        <TableCell>
+                      <TableRow
+                        key={activity.id}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => {
+                          setSelectedActivity(activity)
+                          setParticipantsDrawerOpen(true)
+                        }}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedActivities.includes(activity.id)}
-                            onChange={() => handleSelectActivity(activity.id)}
+                            onCheckedChange={() => handleSelectActivity(activity.id)}
+                            onClick={(e) => e.stopPropagation()}
                           />
                         </TableCell>
                         <TableCell className="font-medium max-w-xs">
@@ -879,57 +965,87 @@ export default function ActivityManagement() {
                           </Badge>
                         </TableCell>
                         <TableCell>{activity.startDate}</TableCell>
-                    <TableCell>{activity.endDate}</TableCell>
-                    <TableCell>{getStatusBadge(activity.status)}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {activity.participants}/{activity.maxParticipants}
-                      </div>
-                      <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">
-                      <div
-                        className="bg-green-600 h-1.5 rounded-full"
-                        style={{
-                          width: `${(activity.participants / activity.maxParticipants) * 100}%`,
-                        }}
-                      />
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link to={`${ROUTES.ACTIVITY.VIEW_ACTIVITY.replace(':id', String(activity.id))}?isPreview=true`}>
-                            <Eye className="w-4 h-4 text-blue-500" />
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link to={ROUTES.ADMIN.EDIT_ACTIVITY.replace(':id', String(activity.id))}>
-                            <Edit className="w-4 h-4" />
-                          </Link>
-                        </Button>
-                        {/* Chỉ hiển thị nút AI cho hội thao */}
-                        {(activity.subType === "SportsFestival" || (activity.sports && activity.sports.length > 0)) && (
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link to={ROUTES.ADMIN.AI_SCHEDULE.replace(':id', String(activity.id))}>
-                              <Sparkles className="w-4 h-4 text-purple-500" />
-                            </Link>
-                          </Button>
-                        )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          toast.success(`Đã xóa hoạt động "${activity.title}".`)
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
-                      </div>
-                      </TableCell>
-                    </TableRow>
+                        <TableCell>{activity.endDate}</TableCell>
+                        <TableCell>{getStatusBadge(activity.status)}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {activity.participants}/{activity.maxParticipants}
+                          </div>
+                          <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">
+                            <div
+                              className="bg-green-600 h-1.5 rounded-full"
+                              style={{
+                                width: `${
+                                  activity.maxParticipants
+                                    ? Math.min((activity.participants / activity.maxParticipants) * 100, 100)
+                                    : 0
+                                }%`,
+                              }}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              asChild
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Link to={`${ROUTES.ACTIVITY.VIEW_ACTIVITY.replace(':id', String(activity.id))}?isPreview=true`}>
+                                <Eye className="w-4 h-4 text-blue-500" />
+                              </Link>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              asChild
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Link to={ROUTES.ADMIN.EDIT_ACTIVITY.replace(':id', String(activity.id))}>
+                                <Edit className="w-4 h-4" />
+                              </Link>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedActivity(activity)
+                                setParticipantsDrawerOpen(true)
+                              }}
+                            >
+                              <Users className="w-4 h-4 text-green-600" />
+                            </Button>
+                            {(activity.subType === "SportsFestival" || (activity.sports && activity.sports.length > 0)) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                asChild
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Link to={ROUTES.ADMIN.AI_SCHEDULE.replace(':id', String(activity.id))}>
+                                  <Sparkles className="w-4 h-4 text-purple-500" />
+                                </Link>
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toast.success(`Đã xóa hoạt động "${activity.title}".`)
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableBody>
+                </Table>
+              </div>
             
             {/* Pagination */}
             {totalPages > 1 && (
@@ -1002,6 +1118,207 @@ export default function ActivityManagement() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={participantsDrawerOpen}
+        onOpenChange={(open) => {
+          setParticipantsDrawerOpen(open)
+          if (!open) {
+            setSelectedActivity(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Chi tiết đăng ký</DialogTitle>
+            <DialogDescription>
+              {selectedActivity ? selectedActivity.title : "Chọn một hoạt động để xem chi tiết"}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedActivity ? (
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-3 gap-4">
+                <Card className="bg-orange-50 border-orange-100">
+                  <CardContent className="p-4">
+                    <p className="text-sm text-gray-500">Loại hoạt động</p>
+                    <p className="text-lg font-semibold">
+                      {getSubTypeLabel(selectedActivity.subType)}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-blue-50 border-blue-100">
+                  <CardContent className="p-4">
+                    <p className="text-sm text-gray-500">Số người tham gia</p>
+                    <p className="text-lg font-semibold">
+                      {selectedParticipants.length}/{selectedActivity.maxParticipants}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-green-50 border-green-100">
+                  <CardContent className="p-4">
+                    <p className="text-sm text-gray-500">Đăng ký mở đến</p>
+                    <p className="text-lg font-semibold">
+                      {selectedActivity.endRegisterDate || "-"}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {selectedActivity.registrationSettings?.groupRegistration && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Cài đặt đăng ký theo nhóm</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500">Số thành viên tối thiểu</p>
+                      <p className="font-semibold">
+                        {selectedActivity.registrationSettings.groupRegistration.minMembers || 1}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Số thành viên tối đa</p>
+                      <p className="font-semibold">
+                        {selectedActivity.registrationSettings.groupRegistration.maxMembers
+                          ? selectedActivity.registrationSettings.groupRegistration.maxMembers
+                          : "Không giới hạn"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Yêu cầu nhóm trưởng</p>
+                      <p className="font-semibold">
+                        {selectedActivity.registrationSettings.groupRegistration.requireLeader ? "Có" : "Không"}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {selectedGroupRegistrations.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Nhóm tham gia ({selectedGroupRegistrations.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {selectedGroupRegistrations.map((group, index) => (
+                      <div key={group.code || index} className="border rounded-lg p-4 space-y-2">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div>
+                            <p className="font-semibold text-base">{group.name || `Nhóm ${index + 1}`}</p>
+                            <p className="text-sm text-gray-500">{group.members.length} thành viên</p>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          {group.members.map((member) => (
+                            <div key={member.id} className="flex items-center justify-between text-sm">
+                              <span className="font-medium">{member.userFullName || member.fullName}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500">
+                                  {member.classGroupName || "Chưa rõ lớp"}
+                                </span>
+                                {member.isLeader && (
+                                  <Badge className="bg-blue-50 text-blue-700">Nhóm trưởng</Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {selectedSportRosters.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Đội hình hội thao</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {selectedSportRosters.map((sport) => (
+                      <div key={sport.sportId} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <p className="font-semibold text-base">{sport.sportName}</p>
+                          {selectedActivity.sports
+                            ?.find((item) => item.id === sport.sportId)
+                            ?.maxMembers && (
+                            <span className="text-xs text-gray-500">
+                              Giới hạn{" "}
+                              {selectedActivity.sports.find((item) => item.id === sport.sportId).maxMembers} người
+                            </span>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          {sport.rosters.map((roster, rosterIndex) => (
+                            <div key={`${sport.sportId}-${rosterIndex}`} className="bg-gray-50 rounded-lg p-3">
+                              <p className="font-medium text-sm mb-2">Lớp {roster.className}</p>
+                              <div className="flex flex-wrap gap-2">
+                                {roster.members.map((member) => (
+                                  <Badge key={member.id} variant="outline" className="bg-white">
+                                    {member.userFullName || member.fullName}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tất cả người tham gia ({selectedParticipants.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {selectedParticipants.length === 0 ? (
+                    <p className="text-sm text-gray-500">Chưa có thành viên nào đăng ký.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                      {selectedParticipants.map((participant) => (
+                        <div
+                          key={participant.id}
+                          className="flex items-center justify-between py-2 border-b last:border-b-0"
+                        >
+                          <div>
+                            <p className="font-medium">{participant.userFullName || participant.fullName}</p>
+                            <p className="text-sm text-gray-500">
+                              {participant.classGroupName || "Chưa rõ lớp"}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {participant.groupCode && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                                Nhóm
+                              </Badge>
+                            )}
+                            {participant.sportName && (
+                              <Badge variant="outline" className="bg-green-50 text-green-700">
+                                {participant.sportName}
+                              </Badge>
+                            )}
+                            <Badge
+                              className={
+                                participant.status?.toLowerCase() === "approved" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                              }
+                            >
+                              {participant.status === "approved" ? "Đã duyệt" : "Chờ duyệt"}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">Chưa chọn hoạt động nào.</p>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Quick Actions */}
       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

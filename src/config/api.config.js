@@ -244,6 +244,8 @@ export const API_CONFIG = {
   ACTIVITY_PARTICIPANT: {
     ADD: '/activityparticipant',
     REMOVE: '/activityparticipant',
+    GROUP: '/activityparticipant/group',
+    SPORT: '/activityparticipant/sport',
   }
 };
 

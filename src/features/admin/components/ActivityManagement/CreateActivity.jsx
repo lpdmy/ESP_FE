@@ -57,6 +57,7 @@ export default function CreateActivity() {
     endRegisterDate: "",
     maxParticipants: "",
     sportsCategories: [],
+    sportsConfigurations: [],
     competitionType: "",
     theme: "",
     // CreativeContest fields (gộp DrawingContest và CreativeWriting)
@@ -76,6 +77,13 @@ export default function CreateActivity() {
         // { name: "Giải Nhất", points: "" },
         // { name: "Giải Nhì", points: "" },
       ],
+    },
+    registrationSettings: {
+      groupRegistration: {
+        minMembers: 3,
+        maxMembers: 6,
+        requireLeader: true,
+      },
     },
   })
 
@@ -144,10 +152,25 @@ export default function CreateActivity() {
   }
 
   const handleSportToggle = (sport) => {
-    const newSports = formData.sportsCategories.includes(sport)
-      ? formData.sportsCategories.filter((s) => s !== sport)
-      : [...formData.sportsCategories, sport]
-    setFormData({ ...formData, sportsCategories: newSports })
+    setFormData((prev) => {
+      const isSelected = prev.sportsCategories.includes(sport)
+      const newSports = isSelected
+        ? prev.sportsCategories.filter((s) => s !== sport)
+        : [...prev.sportsCategories, sport]
+
+      let newConfigs = prev.sportsConfigurations
+      if (isSelected) {
+        newConfigs = prev.sportsConfigurations.filter((cfg) => cfg.sportName !== sport)
+      } else if (!prev.sportsConfigurations.some((cfg) => cfg.sportName === sport)) {
+        newConfigs = [...prev.sportsConfigurations, { sportName: sport, maxMembers: "" }]
+      }
+
+      return {
+        ...prev,
+        sportsCategories: newSports,
+        sportsConfigurations: newConfigs,
+      }
+    })
   }
 
   const handleAddCustomSport = () => {
@@ -164,18 +187,39 @@ export default function CreateActivity() {
       toast.error("Môn thể thao này đã có trong danh sách")
       return
     }
-    setFormData({
-      ...formData,
-      sportsCategories: [...formData.sportsCategories, sportName],
-    })
+    setFormData((prev) => ({
+      ...prev,
+      sportsCategories: [...prev.sportsCategories, sportName],
+      sportsConfigurations: prev.sportsConfigurations.some((cfg) => cfg.sportName === sportName)
+        ? prev.sportsConfigurations
+        : [...prev.sportsConfigurations, { sportName, maxMembers: "" }],
+    }))
     setCustomSportInput("")
     toast.success("Đã thêm môn thể thao")
   }
 
   const handleRemoveCustomSport = (sport) => {
-    const newSports = formData.sportsCategories.filter((s) => s !== sport)
-    setFormData({ ...formData, sportsCategories: newSports })
+    setFormData((prev) => ({
+      ...prev,
+      sportsCategories: prev.sportsCategories.filter((s) => s !== sport),
+      sportsConfigurations: prev.sportsConfigurations.filter((cfg) => cfg.sportName !== sport),
+    }))
     toast.success("Đã xóa môn thể thao")
+  }
+
+  const handleSportMaxMembersChange = (sportName, value) => {
+    const sanitizedValue = value === "" ? "" : Math.max(1, parseInt(value, 10) || 0)
+    setFormData((prev) => ({
+      ...prev,
+      sportsConfigurations: prev.sportsConfigurations.map((cfg) =>
+        cfg.sportName === sportName ? { ...cfg, maxMembers: sanitizedValue } : cfg
+      ),
+    }))
+  }
+
+  const getSportMaxMembers = (sportName) => {
+    const cfg = formData.sportsConfigurations.find((item) => item.sportName === sportName)
+    return cfg?.maxMembers ?? ""
   }
 
   const handleAddAward = () => {
@@ -321,11 +365,32 @@ export default function CreateActivity() {
       toast.error("Vui lòng nhập ít nhất một quy định")
       return
     }
+    if (formData.subType === "SportsFestival" && formData.sportsCategories.length === 0) {
+      toast.error("Hội thao cần có ít nhất một môn thi đấu")
+      return
+    }
     
     // Validate grading settings if enabled
     if (gradingEnabled) {
       if (!gradingCriteria || gradingCriteria.length === 0) {
         toast.error("Vui lòng chọn hoặc thêm ít nhất 1 tiêu chí chấm điểm")
+        return
+      }
+    }
+
+    if (formData.subType === "CreativeContest") {
+      const minMembers = parseInt(formData.registrationSettings?.groupRegistration?.minMembers, 10) || 1
+      const maxMembersRaw = formData.registrationSettings?.groupRegistration?.maxMembers
+      const maxMembers =
+        maxMembersRaw === "" || maxMembersRaw === null || maxMembersRaw === undefined
+          ? null
+          : parseInt(maxMembersRaw, 10)
+      if (minMembers < 1) {
+        toast.error("Số thành viên tối thiểu phải lớn hơn 0")
+        return
+      }
+      if (maxMembers && maxMembers < minMembers) {
+        toast.error("Số thành viên tối đa phải lớn hơn hoặc bằng tối thiểu")
         return
       }
     }
@@ -378,6 +443,37 @@ export default function CreateActivity() {
       };
       const categoryValue = categoryMap[formData.category] || 1; // Default to Activity (1)
       
+      const sportsConfigurationsPayload =
+        formData.subType === "SportsFestival"
+          ? formData.sportsCategories.map((sport) => {
+              const cfg = formData.sportsConfigurations.find((item) => item.sportName === sport)
+              const maxMembersValue = cfg?.maxMembers
+              return {
+                sportName: sport,
+                maxMembers:
+                  maxMembersValue === "" || maxMembersValue === undefined || maxMembersValue === null
+                    ? null
+                    : parseInt(maxMembersValue, 10),
+              }
+            })
+          : []
+
+      const registrationSettingsPayload =
+        formData.subType === "CreativeContest"
+          ? {
+              groupRegistration: {
+                minMembers: parseInt(formData.registrationSettings?.groupRegistration?.minMembers, 10) || 1,
+                maxMembers:
+                  formData.registrationSettings?.groupRegistration?.maxMembers === "" ||
+                  formData.registrationSettings?.groupRegistration?.maxMembers === null ||
+                  formData.registrationSettings?.groupRegistration?.maxMembers === undefined
+                    ? null
+                    : parseInt(formData.registrationSettings?.groupRegistration?.maxMembers, 10),
+                requireLeader: !!formData.registrationSettings?.groupRegistration?.requireLeader,
+              },
+            }
+          : null
+
       const activityData = {
         title: formData.title,
         description: formData.description,
@@ -394,6 +490,7 @@ export default function CreateActivity() {
         rules: formData.rules.filter(r => r.trim()),
         // SportsFestival fields
         sportsCategories: formData.subType === "SportsFestival" ? formData.sportsCategories : [],
+        sportsConfigurations: formData.subType === "SportsFestival" ? sportsConfigurationsPayload : [],
         competitionType: formData.subType === "SportsFestival" ? formData.competitionType : null,
         // CreativeContest fields
         theme: formData.subType === "CreativeContest" ? formData.theme : null,
@@ -422,11 +519,15 @@ export default function CreateActivity() {
           awards: formData.starPointRewards.awards || []
         },
         // Grading Settings (only criteria, enabled is stored in IsGrade column)
-        gradingSettings: gradingEnabled && gradingCriteria && gradingCriteria.length > 0 ? {
-          criteria: gradingCriteria
-        } : null,
+        gradingSettings:
+          gradingEnabled && gradingCriteria && gradingCriteria.length > 0
+            ? {
+                criteria: gradingCriteria,
+              }
+            : null,
         // Registration Settings
-        onlyTeacherCanRegister: onlyTeacherCanRegister
+        onlyTeacherCanRegister: onlyTeacherCanRegister,
+        registrationSettings: registrationSettingsPayload,
       }
 
       const response = await executeApiCall(
@@ -826,7 +927,16 @@ export default function CreateActivity() {
                             {sport}
                           </Label>
                           </div>
-                          <div className="w-10"></div>
+                          {formData.sportsCategories.includes(sport) && (
+                            <Input
+                              type="number"
+                              min={1}
+                              className="w-24"
+                              placeholder="Tối đa"
+                              value={getSportMaxMembers(sport)}
+                              onChange={(e) => handleSportMaxMembersChange(sport, e.target.value)}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>
@@ -876,9 +986,21 @@ export default function CreateActivity() {
                                   {sport}
                                 </Label>
                               </div>
-                              <Button variant="outline" size="icon" onClick={() => handleRemoveCustomSport(sport)}>
-                                <Trash2 className="w-4 h-4 text-red-500" />
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                {formData.sportsCategories.includes(sport) && (
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    className="w-20"
+                                    placeholder="Tối đa"
+                                    value={getSportMaxMembers(sport)}
+                                    onChange={(e) => handleSportMaxMembersChange(sport, e.target.value)}
+                                  />
+                                )}
+                                <Button variant="outline" size="icon" onClick={() => handleRemoveCustomSport(sport)}>
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </Button>
+                              </div>
                             </div>
                           ))}
                       </div>
@@ -954,6 +1076,78 @@ export default function CreateActivity() {
                         value={formData.submissionFormat}
                         onChange={(e) => setFormData({ ...formData, submissionFormat: e.target.value })}
                       />
+                  </div>
+
+                  <div className="border rounded-lg p-4 space-y-4">
+                    <div>
+                      <Label className="text-base font-semibold">Cài đặt đăng ký theo nhóm</Label>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Quy định số lượng thành viên và yêu cầu nhóm trưởng cho cuộc thi có nộp bài.
+                      </p>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <InputField
+                        label="Số thành viên tối thiểu"
+                        type="number"
+                        min={1}
+                        value={formData.registrationSettings?.groupRegistration?.minMembers}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            registrationSettings: {
+                              ...prev.registrationSettings,
+                              groupRegistration: {
+                                ...prev.registrationSettings?.groupRegistration,
+                                minMembers: e.target.value,
+                              },
+                            },
+                          }))
+                        }
+                        required
+                      />
+                      <InputField
+                        label="Số thành viên tối đa"
+                        type="number"
+                        min={1}
+                        placeholder="Không giới hạn nếu để trống"
+                        value={formData.registrationSettings?.groupRegistration?.maxMembers ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            registrationSettings: {
+                              ...prev.registrationSettings,
+                              groupRegistration: {
+                                ...prev.registrationSettings?.groupRegistration,
+                                maxMembers: e.target.value,
+                              },
+                            },
+                          }))
+                        }
+                      />
+                      <div className="flex items-center gap-3 border rounded-lg px-4 py-3">
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium">Yêu cầu nhóm trưởng</Label>
+                          <p className="text-xs text-gray-500">
+                            Người tạo nhóm sẽ được chọn làm nhóm trưởng mặc định.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={!!formData.registrationSettings?.groupRegistration?.requireLeader}
+                          onCheckedChange={(checked) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              registrationSettings: {
+                                ...prev.registrationSettings,
+                                groupRegistration: {
+                                  ...prev.registrationSettings?.groupRegistration,
+                                  requireLeader: checked,
+                                },
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1495,6 +1689,57 @@ export default function CreateActivity() {
                   </div>
                 </CardContent>
               </Card>
+
+              {formData.subType === "SportsFestival" && formData.sportsCategories.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Môn thi đấu</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {formData.sportsCategories.map((sport) => (
+                      <div key={sport} className="flex items-center justify-between">
+                        <span className="font-medium">{sport}</span>
+                        <span className="text-sm text-gray-600">
+                          Giới hạn{" "}
+                          {getSportMaxMembers(sport) && getSportMaxMembers(sport) !== ""
+                            ? `${getSportMaxMembers(sport)} người`
+                            : "không giới hạn"}
+                        </span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {formData.subType === "CreativeContest" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Cài đặt đăng ký theo nhóm</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div>
+                      <p className="text-sm text-gray-600">Số thành viên tối thiểu</p>
+                      <p className="font-semibold">
+                        {formData.registrationSettings?.groupRegistration?.minMembers || 1} người
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Số thành viên tối đa</p>
+                      <p className="font-semibold">
+                        {formData.registrationSettings?.groupRegistration?.maxMembers
+                          ? `${formData.registrationSettings.groupRegistration.maxMembers} người`
+                          : "Không giới hạn"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Yêu cầu nhóm trưởng</p>
+                      <p className="font-semibold">
+                        {formData.registrationSettings?.groupRegistration?.requireLeader ? "Có" : "Không"}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Grading Settings */}
               {gradingEnabled && gradingCriteria && gradingCriteria.length > 0 && (
