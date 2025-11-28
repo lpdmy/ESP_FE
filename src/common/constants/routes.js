@@ -71,4 +71,14 @@ export const ROUTES = {
   NOTIFICATION: {
     LIST_NOTIFICATION: "/notifications",
   },
+  JURY:{
+    ASSIGN_JURY:"/jury/assign-jury/:id",
+    JURY_DASHBOARD:"/jury/dashboard",
+    JURY_SUBMISSION:"/jury/submission/:id",
+    JURY_GRADE :"/jury/grade/:id"
+  },
+  SUBMISSION:{
+    MY_SUBMISSION : "/submission/my-submission",
+    MY_SUBMISSION_DETAIL : "/submission/my-submission/detail/:id",
+  }
 };

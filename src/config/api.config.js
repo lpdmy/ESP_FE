@@ -228,24 +228,41 @@ export const API_CONFIG = {
     // Current Class endpoints
     GET_CURRENT_CLASS: "/classgroup/current-class",
   },
-
-  // Activity endpoints
   ACTIVITY: {
-    GET_ALL: "/activity",
-    GET_BY_ID: "/activity/{id}",
-    CREATE: "/activity",
-    UPDATE: "/activity",
-    GENERATE_TOURNAMENT_SCHEDULE: "/activity/{id}/generate-schedule",
-    TRAIN_SCHEDULE_MODEL: "/activity/train-schedule-model",
+    GET_ALL: '/activity',
+    GET_BY_ID: '/activity/{id}',
+    CREATE: '/activity',
+    UPDATE: '/activity',
+    RANK_BY_ID:'/submission/activity/{id}/rank',
+    GENERATE_TOURNAMENT_SCHEDULE: '/activity/{id}/generate-schedule',
+    TRAIN_SCHEDULE_MODEL: '/activity/train-schedule-model',
   },
-
   // Activity Participant endpoints
   ACTIVITY_PARTICIPANT: {
-    ADD: "/activityparticipant",
-    REMOVE: "/activityparticipant",
+    ADD: '/activityparticipant',
+    REMOVE: '/activityparticipant',
   },
+   JURY:{
+    JURY_API:"/jury",
+    ASSIGN_JURY:"/jury/assign-jury/:id",
+    JURY_DASHBOARD:"/jury/dashboard",
+    JURY_SUBMISSION:"/jury/submission/:id",
+    JURY_GRADE :"/jury/grade",
+    RANDOM_ASSIGN:"/jury/random-assign",
+    DELETE_RANDOM_ASSIGN:"/jury/delete-assign-activity",
+    GET_ASSIGN_USER:"/jury/assign/user",
+    GET_ASSIGN_USER_NOT_GRADE:"/jury/assign-not-grading/user",
+    GET_ASSIGN_USER_GRADE:"/jury/assign-grading/user",
+    JURY_ACTIVITY: "/jury/activity",
+    JURY_ASSIGN:"/jury/assign",
+    GRADING:"/jury/grade-submission"
+  },
+   SUBMISSION:{
+    GET_SUBMISSION_ACTIVITY:"/submission/activity",
+    GET_MY_SUBMISSION:"/submission/activity/user",
+    GET_SUBMISSION_DETAIL:"/submission",
+  }
 };
-
 // HTTP Headers
 export const getAuthHeaders = (token) => ({
   "Content-Type": "application/json",
