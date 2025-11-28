@@ -23,16 +23,18 @@ export default function Sidebar() {
     user?.firstName && user?.lastName
       ? `${user.firstName} ${user.lastName}`
       : user?.username || "Người dùng";
-
   const userAvatar =
     user?.firstName && user?.lastName
       ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
       : user?.username
       ? user.username[0].toUpperCase()
       : "U";
-
-  const menuItems = SIDEBAR_NAVIGATION;
-
+  const menuItems = SIDEBAR_NAVIGATION.filter(item => {
+  if (item.label === "Giám Khảo") {
+    return user?.role === 2;
+  }
+  return true;
+});
   const handleNavigation = (item) => {
     // Special handling for "Lớp học của tôi" - redirect to user's specific class
     if (item.key === "my-class" && user?.classGroupId) {
