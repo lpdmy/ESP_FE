@@ -101,7 +101,9 @@ export default function CreateEmployeeModal({ permissions, onClose, open }) {
           <div>
             <Label>Email *</Label>
             <Input id="email" type="email" {...register("email")} />
-            {errors.email && <p className="text-red-600 text-sm">{errors.email.message}</p>}
+            {errors.email && (
+              <p className="text-red-600 text-sm">{errors.email.message}</p>
+            )}
           </div>
 
           {/* Họ */}
@@ -112,7 +114,7 @@ export default function CreateEmployeeModal({ permissions, onClose, open }) {
               <p className="text-red-600 text-sm">{errors.lastName.message}</p>
             )}
           </div>
-           {/* Tên */}
+          {/* Tên */}
           <div>
             <Label>Tên *</Label>
             <Input id="firstName" {...register("firstName")} />
@@ -125,7 +127,9 @@ export default function CreateEmployeeModal({ permissions, onClose, open }) {
             <Label>Số điện thoại</Label>
             <Input id="phoneNumber" {...register("phoneNumber")} />
             {errors.phoneNumber && (
-              <p className="text-red-600 text-sm">{errors.phoneNumber.message}</p>
+              <p className="text-red-600 text-sm">
+                {errors.phoneNumber.message}
+              </p>
             )}
           </div>
 
@@ -152,7 +156,10 @@ export default function CreateEmployeeModal({ permissions, onClose, open }) {
                     }
                   />
                   <div className="grid gap-1.5 leading-none">
-                    <label htmlFor={permission.id} className="text-sm font-medium">
+                    <label
+                      htmlFor={permission.id}
+                      className="text-sm font-medium"
+                    >
                       {permission.name}
                     </label>
                     <p className="text-xs text-muted-foreground">
@@ -169,7 +176,10 @@ export default function CreateEmployeeModal({ permissions, onClose, open }) {
             <Button variant="outline" type="button" onClick={onClose}>
               Hủy
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" type="submit">
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              type="submit"
+            >
               Tạo
             </Button>
           </DialogFooter>
@@ -178,4 +188,3 @@ export default function CreateEmployeeModal({ permissions, onClose, open }) {
     </Dialog>
   );
 }
-
