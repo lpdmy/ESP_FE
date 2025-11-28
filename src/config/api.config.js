@@ -6,7 +6,7 @@ export const API_CONFIG = {
 
     // Development environment
     if (hostname.includes("edusphere-dev")) {
-      return "http://ec2-3-104-123-173.ap-southeast-2.compute.amazonaws.com/api";
+      return "https://ec2-3-104-123-173.ap-southeast-2.compute.amazonaws.com/api";
     }
 
     // Local development
@@ -23,7 +23,7 @@ export const API_CONFIG = {
 
     // Development environment
     if (hostname.includes("edusphere-dev")) {
-      return "http://ec2-3-104-123-173.ap-southeast-2.compute.amazonaws.com";
+      return "https://ec2-3-104-123-173.ap-southeast-2.compute.amazonaws.com";
     }
 
     // Local development
