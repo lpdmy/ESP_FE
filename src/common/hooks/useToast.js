@@ -5,7 +5,6 @@ import { COLLECTION_MESSAGES } from '../constants/messages/collection'
 import { CLUB_MESSAGES } from '../constants/messages/club'
 import { COMMENT_MESSAGE } from '../constants/messages/comment'
 import { STAFF_MESSAGE } from '../constants/messages/staff'
-import { JURY_MESSAGE } from '../constants/messages/jury'
 
 export const useToast = () => {
   const showSuccess = (message, options = {}) => {
@@ -124,13 +123,6 @@ export const useToast = () => {
   const recoveryStaffFail =()=>showSuccess(STAFF_MESSAGE.ERROR.RECOVERY)
   const approveInvitationSuccess =()=>showSuccess(CLUB_MESSAGES.SUCCESS.APPROVE_INVITAION)
   const approveInvitationFail =()=>showError(CLUB_MESSAGES.ERROR.APPROVE_INVITAION)
-  const addJurySuccess = () =>showSuccess(JURY_MESSAGE.SUCCESS.ADD)
-  const addJuryFail = () =>showError(JURY_MESSAGE.ERROR.ADD)
-  const deleteJuryFail = () =>showError(JURY_MESSAGE.ERROR.DELETE)
-  const deleteJurySuccess = () =>showSuccess(JURY_MESSAGE.SUCCESS.DELETE)
-  const loadJuryListFail = () =>showError(JURY_MESSAGE.ERROR.LIST)
-  const assignJuryFail = () =>showError(JURY_MESSAGE.ERROR.ASSIGN)
-  const assignJurySuccess = () =>showSuccess(JURY_MESSAGE.SUCCESS.ASSIGN)
 
 
   return {
@@ -202,14 +194,7 @@ export const useToast = () => {
     recoveryStaffFail,
     approveInvitationSuccess,
     approveInvitationFail,
-    addJurySuccess,
-    addJuryFail,
-    deleteJuryFail,
-    deleteJurySuccess,
-    loadJuryListFail,
-    assignJuryFail,
-    assignJurySuccess,
-
+    
     // Direct access to messages
     PROFILE_MESSAGES,
     AUTH_MESSAGES,

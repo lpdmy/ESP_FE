@@ -9,10 +9,10 @@ import {
   MessageSquare,
   Settings,
   User,
-  Bell,
-  Star
+  Bell
 } from "lucide-react";
 import { ROUTES } from "@/common/constants/routes";
+
 export const SIDEBAR_NAVIGATION = [
   {
     label: "Trang chủ",
@@ -20,9 +20,9 @@ export const SIDEBAR_NAVIGATION = [
     paths: [ROUTES.LANDING.HOME],
   },
   {
-    label: "Giám Khảo",
-    icon: Star,
-    paths: [ROUTES.JURY.JURY_DASHBOARD],
+    label: "Bạn bè",
+    icon: Users,
+    paths: ["/friends"],
     count: 24,
   },
   {

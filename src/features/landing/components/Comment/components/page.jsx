@@ -193,28 +193,17 @@ export function CommentSection({ postId }) {
     }
   };
 
- const handleSendComment = async () => {
-  if (!newComment.trim()) return;
-
-  try {
-    const payload = { postId, parentCommentId: null, content: newComment };
-    const res = await createComment(payload);
-
-    setComments((prev) => [res.data, ...prev]);
-    setNewComment("");
-  } catch (error) {
-    const status = error?.response?.status;
-    const message = error?.response?.data?.message || "Đã xảy ra lỗi";
-
-    if (status === 400) {
-      toast.showError(message);
-      console.log(message);
-    } else {
+  const handleSendComment = async () => {
+    if (!newComment.trim()) return;
+    try {
+      const payload = { postId, parentCommentId: null, content: newComment };
+      const res = await createComment(payload);
+      setComments((prev) => [res.data, ...prev]);
+      setNewComment("");
+    } catch (error) {
       console.error("Lỗi khi gửi bình luận:", error);
-      toast.showError(error.message);
     }
-  }
-};
+  };
 
   // ✅ Gửi phản hồi (reply)
   const handleSendReply = async (parentId) => {

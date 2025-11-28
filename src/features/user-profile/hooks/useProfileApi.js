@@ -75,4 +75,3 @@ export function useProfileApi() {
     clearError: () => setError(null),
   };
 }
-  

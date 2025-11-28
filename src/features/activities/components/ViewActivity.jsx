@@ -1,24 +1,10 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
-import { Button } from "@/common/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/common/components/ui/card";
-import { Badge } from "@/common/components/ui/badge";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/common/components/ui/tabs";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/common/components/ui/avatar";
+import { useState, useEffect } from "react"
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom"
+import { Button } from "@/common/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
+import { Badge } from "@/common/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/common/components/ui/tabs"
+import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar"
 import {
   Dialog,
   DialogContent,
@@ -27,21 +13,21 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/common/components/ui/dialog";
+} from "@/common/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   useDropdownMenu,
-} from "@/common/components/ui/dropdown-menu";
-import { Label } from "@/common/components/ui/label";
-import { Textarea } from "@/common/components/ui/textarea";
-import { useToast } from "@/common/hooks/useToast";
-import { executeApiCall } from "@/common/utils/executeApiCall";
-import { activityService } from "@/features/activities/services/activity.service";
-import { activityParticipantService } from "@/features/activities/services/activityParticipant.service";
-import { LoadingCard } from "@/common/components/ui/loading";
+} from "@/common/components/ui/dropdown-menu"
+import { Label } from "@/common/components/ui/label"
+import { Textarea } from "@/common/components/ui/textarea"
+import { useToast } from "@/common/hooks/useToast"
+import { executeApiCall } from "@/common/utils/executeApiCall"
+import { activityService } from "@/features/activities/services/activity.service"
+import { activityParticipantService } from "@/features/activities/services/activityParticipant.service"
+import { LoadingCard } from "@/common/components/ui/loading"
 import {
   ArrowLeft,
   Calendar,
@@ -56,85 +42,75 @@ import {
   Trophy,
   MoreHorizontal,
   Info,
-} from "lucide-react";
-import { useJuryApi } from "@/features/landing/jury/hooks/useJuryApi";
+} from "lucide-react"
+
 export default function ViewActivity() {
-  const params = useParams();
-  const navigate = useNavigate();
-  const toast = useToast();
-  const { RankByActivityId } = useJuryApi();
-  const [activity, setActivity] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isRegistered, setIsRegistered] = useState(false);
-  const [registrationReason, setRegistrationReason] = useState("");
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
-  const { isOpen, toggleMenu, closeMenu } = useDropdownMenu();
-  const location = useLocation();
-  const [rank, setRank] = useState([]);
-  const queryParams = new URLSearchParams(location.search);
-  const isPreview = queryParams.get("isPreview") === "true";
+  const params = useParams()
+  const navigate = useNavigate()
+  const toast = useToast()
+  const [activity, setActivity] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [isRegistered, setIsRegistered] = useState(false)
+  const [registrationReason, setRegistrationReason] = useState("")
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
+  const { isOpen, toggleMenu, closeMenu } = useDropdownMenu()
+  const location = useLocation()
+  const queryParams = new URLSearchParams(location.search)
+  const isPreview = queryParams.get("isPreview") === "true"
 
   // Fetch activity data
   useEffect(() => {
     const fetchActivity = async () => {
       if (!params.id) {
-        setLoading(false);
-        return;
+        setLoading(false)
+        return
       }
 
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token")
       try {
         const response = await executeApiCall(
           activityService.getActivityById.bind(activityService),
           [params.id, token],
           { setLoading, setError }
-        );
+        )
 
         if (response?.data) {
           // Handle nested data structure: response.data.data or response.data
-          const activityData = response.data?.data || response.data;
+          const activityData = response.data?.data || response.data
           if (!activityData) {
-            setError("Không tìm thấy dữ liệu hoạt động");
-            setLoading(false);
-            return;
+            setError("Không tìm thấy dữ liệu hoạt động")
+            setLoading(false)
+            return
           }
-
-          const now = new Date();
-
+          
+          const now = new Date()
+          
           // Calculate status based on dates
-          const startDate = activityData.startDate
-            ? new Date(activityData.startDate)
-            : null;
-          const endDate = activityData.endDate
-            ? new Date(activityData.endDate)
-            : null;
-          const registerDate = activityData.registerDate
-            ? new Date(activityData.registerDate)
-            : null;
-          const endRegisterDate = activityData.endRegisterDate
-            ? new Date(activityData.endRegisterDate)
-            : null;
-
-          let status = "Đang đăng ký";
+          const startDate = activityData.startDate ? new Date(activityData.startDate) : null
+          const endDate = activityData.endDate ? new Date(activityData.endDate) : null
+          const registerDate = activityData.registerDate ? new Date(activityData.registerDate) : null
+          const endRegisterDate = activityData.endRegisterDate ? new Date(activityData.endRegisterDate) : null
+          
+          let status = "Đang đăng ký"
           if (startDate && endDate) {
             if (now >= startDate && now <= endDate) {
-              status = "Đang diễn ra";
+              status = "Đang diễn ra"
             } else if (now > endDate) {
-              status = "Đã kết thúc";
+              status = "Đã kết thúc"
             } else if (now >= registerDate && now < startDate) {
-              status = "Sắp tới";
+              status = "Sắp tới"
             }
           }
-
+          
           // Calculate timeline status
           const getTimelineStatus = (date) => {
-            if (!date) return "upcoming";
-            const dateObj = new Date(date);
-            return now >= dateObj ? "completed" : "upcoming";
-          };
-
+            if (!date) return "upcoming"
+            const dateObj = new Date(date)
+            return now >= dateObj ? "completed" : "upcoming"
+          }
+          
           // Map API response to component state with null checks
           setActivity({
             id: activityData?.id || 0,
@@ -143,212 +119,161 @@ export default function ViewActivity() {
             category: activityData?.category === 1 ? "Activity" : "Event",
             subType: activityData?.subType || "",
             thumbnail: activityData?.thumbnailUrl || "",
-            startDate: activityData?.startDate
-              ? new Date(activityData.startDate).toISOString().split("T")[0]
-              : "",
-            endDate: activityData?.endDate
-              ? new Date(activityData.endDate).toISOString().split("T")[0]
-              : "",
-            registerDate: activityData?.registerDate
-              ? new Date(activityData.registerDate).toISOString().split("T")[0]
-              : "",
-            endRegisterDate: activityData?.endRegisterDate
-              ? new Date(activityData.endRegisterDate)
-                  .toISOString()
-                  .split("T")[0]
-              : "",
+            startDate: activityData?.startDate ? new Date(activityData.startDate).toISOString().split("T")[0] : "",
+            endDate: activityData?.endDate ? new Date(activityData.endDate).toISOString().split("T")[0] : "",
+            registerDate: activityData?.registerDate ? new Date(activityData.registerDate).toISOString().split("T")[0] : "",
+            endRegisterDate: activityData?.endRegisterDate ? new Date(activityData.endRegisterDate).toISOString().split("T")[0] : "",
             location: activityData?.location || "",
             organizer: activityData?.organizer || "",
             maxParticipants: activityData?.maxParticipants || 0,
             currentParticipants: activityData?.numberOfParticipants || 0,
             status: status,
-            sportsCategories:
-              activityData?.sports?.map((s) => s?.sportName).filter(Boolean) ||
-              [],
-            competitionType:
-              activityData?.activityDetail?.competitionType || "",
+            sportsCategories: activityData?.sports?.map(s => s?.sportName).filter(Boolean) || [],
+            competitionType: activityData?.activityDetail?.competitionType || "",
             rules: activityData?.rules || [],
             timeline: [
-              {
-                date: activityData?.registerDate
-                  ? new Date(activityData.registerDate)
-                      .toISOString()
-                      .split("T")[0]
-                  : "",
-                title: "Mở đăng ký",
-                status: getTimelineStatus(activityData?.registerDate),
+              { 
+                date: activityData?.registerDate ? new Date(activityData.registerDate).toISOString().split("T")[0] : "", 
+                title: "Mở đăng ký", 
+                status: getTimelineStatus(activityData?.registerDate) 
               },
-              {
-                date: activityData?.endRegisterDate
-                  ? new Date(activityData.endRegisterDate)
-                      .toISOString()
-                      .split("T")[0]
-                  : "",
-                title: "Đóng đăng ký",
-                status: getTimelineStatus(activityData?.endRegisterDate),
+              { 
+                date: activityData?.endRegisterDate ? new Date(activityData.endRegisterDate).toISOString().split("T")[0] : "", 
+                title: "Đóng đăng ký", 
+                status: getTimelineStatus(activityData?.endRegisterDate) 
               },
-              {
-                date: activityData?.startDate
-                  ? new Date(activityData.startDate).toISOString().split("T")[0]
-                  : "",
-                title: "Khai mạc",
-                status: getTimelineStatus(activityData?.startDate),
+              { 
+                date: activityData?.startDate ? new Date(activityData.startDate).toISOString().split("T")[0] : "", 
+                title: "Khai mạc", 
+                status: getTimelineStatus(activityData?.startDate) 
               },
-              {
-                date: activityData?.endDate
-                  ? new Date(activityData.endDate).toISOString().split("T")[0]
-                  : "",
-                title: "Bế mạc & Trao giải",
-                status: getTimelineStatus(activityData?.endDate),
+              { 
+                date: activityData?.endDate ? new Date(activityData.endDate).toISOString().split("T")[0] : "", 
+                title: "Bế mạc & Trao giải", 
+                status: getTimelineStatus(activityData?.endDate) 
               },
             ],
-            awards:
-              activityData?.awards
-                ?.map((a) => ({
-                  rank: a?.name || a?.rank || "",
-                  prize: `${a?.starPoints || a?.points || 0} điểm`,
-                }))
-                .filter(Boolean) || [],
+            awards: activityData?.awards?.map(a => ({
+              rank: a?.name || a?.rank || "",
+              prize: `${a?.starPoints || a?.points || 0} điểm`
+            })).filter(Boolean) || [],
             speakers: activityData?.speakers || [],
             programs: activityData?.programs || [],
             participants: activityData?.participants || [],
-            onlyTeacherCanRegister:
-              activityData?.onlyTeacherCanRegister || false,
+            onlyTeacherCanRegister: activityData?.onlyTeacherCanRegister || false,
             gradingSettings: activityData?.gradingSettings || null,
             registrationReward: activityData?.registrationReward || null,
-          });
-
+          })
+          
           // Check if user is already registered
           // TODO: Check from participants list or separate API call
         }
       } catch (err) {
-        console.error("Error fetching activity:", err);
-        toast.error(err?.message || "Không thể tải thông tin hoạt động");
+        console.error("Error fetching activity:", err)
+        toast.error(err?.message || "Không thể tải thông tin hoạt động")
         if (err?.statusCode === 404) {
-          navigate("/activities");
+          navigate("/activities")
         }
       }
-    };
+    }
 
-    fetchActivity();
+    fetchActivity()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id, isPreview]);
+  }, [params.id, isPreview])
 
   const handleAction = (action) => {
     if (isPreview) {
-      toast.showWarning(
-        "Bạn đang ở chế độ xem trước, không thể thực hiện hành động này."
-      );
-      return;
+      toast.showWarning("Bạn đang ở chế độ xem trước, không thể thực hiện hành động này.")
+      return
     }
-    action();
-  };
+    action()
+  }
 
   const handleRegister = async () => {
     handleAction(async () => {
       if (!registrationReason.trim()) {
-        toast.error("Vui lòng nhập lý do tham gia");
-        return;
+        toast.error("Vui lòng nhập lý do tham gia")
+        return
       }
 
-      const token = localStorage.getItem("token");
-      setIsRegistering(true);
+      const token = localStorage.getItem("token")
+      setIsRegistering(true)
       try {
         const response = await executeApiCall(
-          activityParticipantService.registerForActivity.bind(
-            activityParticipantService
-          ),
-          [
-            { activityId: parseInt(params.id), reason: registrationReason },
-            token,
-          ],
+          activityParticipantService.registerForActivity.bind(activityParticipantService),
+          [{ activityId: parseInt(params.id), reason: registrationReason }, token],
           { setError }
-        );
+        )
 
         if (response?.data) {
-          setIsRegistered(true);
-          setRegistrationReason("");
-          toast.showSuccess(
-            "Đăng ký thành công! Yêu cầu đăng ký của bạn đang chờ phê duyệt."
-          );
+          setIsRegistered(true)
+          setRegistrationReason("")
+          toast.showSuccess("Đăng ký thành công! Yêu cầu đăng ký của bạn đang chờ phê duyệt.")
           // Refresh activity data to update participant count
           // TODO: Refresh activity data
         }
       } catch (err) {
-        console.error("Error registering for activity:", err);
-        toast.error(err?.message || "Có lỗi xảy ra khi đăng ký");
+        console.error("Error registering for activity:", err)
+        toast.error(err?.message || "Có lỗi xảy ra khi đăng ký")
       } finally {
-        setIsRegistering(false);
+        setIsRegistering(false)
       }
-    });
-  };
+    })
+  }
 
   const handleCancelRegister = async () => {
     handleAction(async () => {
       // TODO: Get participationId from current user's participation
-      const participationId = null; // Need to get from participants list
+      const participationId = null // Need to get from participants list
       if (!participationId) {
-        toast.error("Không tìm thấy thông tin đăng ký");
-        return;
+        toast.error("Không tìm thấy thông tin đăng ký")
+        return
       }
 
-      const token = localStorage.getItem("token");
-      setIsCancelling(true);
+      const token = localStorage.getItem("token")
+      setIsCancelling(true)
       try {
         await executeApiCall(
-          activityParticipantService.cancelRegistration.bind(
-            activityParticipantService
-          ),
+          activityParticipantService.cancelRegistration.bind(activityParticipantService),
           [participationId, token],
           { setError }
-        );
+        )
 
-        setIsRegistered(false);
-        toast.showSuccess("Đã hủy đăng ký tham gia hoạt động.");
+        setIsRegistered(false)
+        toast.showSuccess("Đã hủy đăng ký tham gia hoạt động.")
         // Refresh activity data
         // TODO: Refresh activity data
       } catch (err) {
-        console.error("Error cancelling registration:", err);
-        toast.error(err?.message || "Có lỗi xảy ra khi hủy đăng ký");
+        console.error("Error cancelling registration:", err)
+        toast.error(err?.message || "Có lỗi xảy ra khi hủy đăng ký")
       } finally {
-        setIsCancelling(false);
+        setIsCancelling(false)
       }
-    });
-  };
+    })
+  }
 
   const handleShare = () => {
     handleAction(() => {
-      navigator.clipboard.writeText(window.location.href);
-      toast.showSuccess("Đã sao chép link hoạt động vào clipboard.");
-    });
-  };
+      navigator.clipboard.writeText(window.location.href)
+      toast.showSuccess("Đã sao chép link hoạt động vào clipboard.")
+    })
+  }
 
   const handleMessage = () => {
     handleAction(() => {
-      toast.showInfo("Tính năng gửi tin nhắn sẽ được mở sớm.");
-    });
-  };
-  const handleLoadRank = async () => {
-    try {
-      const response = await RankByActivityId(params.id);
-      setRank(response.data);
-      console.log(response);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  useEffect(() => {
-    handleLoadRank();
-  }, []);
+      toast.showInfo("Tính năng gửi tin nhắn sẽ được mở sớm.")
+    })
+  }
+
   // Use participants from activity data or empty array
-  const participants = activity?.participants || [];
+  const participants = activity?.participants || []
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white flex items-center justify-center">
         <LoadingCard text="Đang tải thông tin hoạt động..." />
       </div>
-    );
+    )
   }
 
   if (error || !activity) {
@@ -356,9 +281,7 @@ export default function ViewActivity() {
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white flex items-center justify-center">
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-red-600 mb-4">
-              {error || "Không tìm thấy hoạt động"}
-            </p>
+            <p className="text-red-600 mb-4">{error || "Không tìm thấy hoạt động"}</p>
             <Button onClick={() => navigate("/activities")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Quay lại danh sách
@@ -366,7 +289,7 @@ export default function ViewActivity() {
           </CardContent>
         </Card>
       </div>
-    );
+    )
   }
 
   return (
@@ -376,8 +299,7 @@ export default function ViewActivity() {
           <div className="max-w-7xl mx-auto flex items-center gap-2 text-yellow-800">
             <Info className="w-4 h-4" />
             <span className="text-sm font-medium">
-              Bạn đang ở chế độ xem trước. Các hành động sẽ không được thực
-              hiện.
+              Bạn đang ở chế độ xem trước. Các hành động sẽ không được thực hiện.
             </span>
           </div>
         </div>
@@ -394,17 +316,11 @@ export default function ViewActivity() {
           <div className="absolute bottom-6 left-6 text-white">
             <div className="flex items-center gap-3 mb-2">
               <Badge className="bg-orange-500">{activity.category}</Badge>
-              <Badge
-                variant="outline"
-                className="bg-white/20 text-white border-white/30"
-              >
+              <Badge variant="outline" className="bg-white/20 text-white border-white/30">
                 {activity.subType}
               </Badge>
               {activity.onlyTeacherCanRegister && (
-                <Badge
-                  variant="outline"
-                  className="bg-blue-500/20 text-white border-white/30"
-                >
+                <Badge variant="outline" className="bg-blue-500/20 text-white border-white/30">
                   Chỉ giáo viên
                 </Badge>
               )}
@@ -445,17 +361,15 @@ export default function ViewActivity() {
               >
                 <DropdownMenuItem
                   onClick={(e) => {
-                    e.preventDefault();
+                    e.preventDefault()
                     handleAction(() => {
-                      toast.showInfo("Tính năng báo cáo sẽ được mở sớm.");
-                    });
+                      toast.showInfo("Tính năng báo cáo sẽ được mở sớm.")
+                    })
                   }}
                 >
                   Báo cáo
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleShare}>
-                  Chia sẻ
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleShare}>Chia sẻ</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -491,9 +405,7 @@ export default function ViewActivity() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Địa điểm</p>
-                        <p className="font-semibold text-sm">
-                          {activity.location}
-                        </p>
+                        <p className="font-semibold text-sm">{activity.location}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -503,8 +415,7 @@ export default function ViewActivity() {
                       <div>
                         <p className="text-sm text-gray-600">Người tham gia</p>
                         <p className="font-semibold text-sm">
-                          {activity.currentParticipants}/
-                          {activity.maxParticipants}
+                          {activity.currentParticipants}/{activity.maxParticipants}
                         </p>
                       </div>
                     </div>
@@ -514,19 +425,13 @@ export default function ViewActivity() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Đăng ký đến</p>
-                        <p className="font-semibold text-sm">
-                          {activity.endRegisterDate}
-                        </p>
+                        <p className="font-semibold text-sm">{activity.endRegisterDate}</p>
                       </div>
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm text-gray-700 mb-2">
-                      Phân loại
-                    </h4>
-                    <Badge className="bg-orange-100 text-orange-800">
-                      {activity.category}
-                    </Badge>
+                    <h4 className="font-semibold text-sm text-gray-700 mb-2">Phân loại</h4>
+                    <Badge className="bg-orange-100 text-orange-800">{activity.category}</Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -543,11 +448,7 @@ export default function ViewActivity() {
                       <div
                         className="bg-orange-500 h-2 rounded-full"
                         style={{
-                          width: `${
-                            (activity.currentParticipants /
-                              activity.maxParticipants) *
-                            100
-                          }%`,
+                          width: `${(activity.currentParticipants / activity.maxParticipants) * 100}%`,
                         }}
                       />
                     </div>
@@ -556,10 +457,7 @@ export default function ViewActivity() {
                   {!isRegistered ? (
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button
-                          className="w-full btn-primary"
-                          disabled={isPreview}
-                        >
+                        <Button className="w-full btn-primary" disabled={isPreview}>
                           Đăng ký tham gia
                         </Button>
                       </DialogTrigger>
@@ -567,8 +465,7 @@ export default function ViewActivity() {
                         <DialogHeader>
                           <DialogTitle>Đăng ký tham gia hoạt động</DialogTitle>
                           <DialogDescription>
-                            Vui lòng cho biết lý do bạn muốn tham gia hoạt động
-                            này
+                            Vui lòng cho biết lý do bạn muốn tham gia hoạt động này
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
@@ -578,26 +475,16 @@ export default function ViewActivity() {
                               id="reason"
                               placeholder="Ví dụ: Tôi muốn rèn luyện sức khỏe và giao lưu với bạn bè..."
                               value={registrationReason}
-                              onChange={(e) =>
-                                setRegistrationReason(e.target.value)
-                              }
+                              onChange={(e) => setRegistrationReason(e.target.value)}
                               rows={4}
                               disabled={isPreview}
                             />
                           </div>
                         </div>
                         <DialogFooter>
-                          <Button variant="outline" disabled={isRegistering}>
-                            Hủy
-                          </Button>
-                          <Button
-                            onClick={handleRegister}
-                            className="btn-primary"
-                            disabled={isPreview || isRegistering}
-                          >
-                            {isRegistering
-                              ? "Đang đăng ký..."
-                              : "Xác nhận đăng ký"}
+                          <Button variant="outline" disabled={isRegistering}>Hủy</Button>
+                          <Button onClick={handleRegister} className="btn-primary" disabled={isPreview || isRegistering}>
+                            {isRegistering ? "Đang đăng ký..." : "Xác nhận đăng ký"}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -634,8 +521,8 @@ export default function ViewActivity() {
                       size="icon"
                       onClick={() => {
                         handleAction(() => {
-                          toast.showInfo("Tính năng yêu thích sẽ được mở sớm.");
-                        });
+                          toast.showInfo("Tính năng yêu thích sẽ được mở sớm.")
+                        })
                       }}
                       disabled={isPreview}
                     >
@@ -650,12 +537,11 @@ export default function ViewActivity() {
           {/* Center Content - Tabs */}
           <div className="lg:col-span-6">
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-5 mb-2">
+              <TabsList className="grid w-full grid-cols-4 mb-2">
                 <TabsTrigger value="overview">Tổng quan</TabsTrigger>
                 <TabsTrigger value="participants">Người tham gia</TabsTrigger>
                 <TabsTrigger value="timeline">Lịch trình</TabsTrigger>
                 <TabsTrigger value="awards">Giải thưởng</TabsTrigger>
-                <TabsTrigger value="ranking">Xếp hạng</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-4">
@@ -664,9 +550,7 @@ export default function ViewActivity() {
                     <CardTitle>Giới thiệu</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-700 leading-relaxed">
-                      {activity.description}
-                    </p>
+                    <p className="text-gray-700 leading-relaxed">{activity.description}</p>
                   </CardContent>
                 </Card>
 
@@ -677,10 +561,7 @@ export default function ViewActivity() {
                   <CardContent>
                     <div className="grid md:grid-cols-3 gap-3">
                       {activity.sportsCategories.map((sport, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg"
-                        >
+                        <div key={index} className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
                           <Trophy className="w-4 h-4 text-orange-600" />
                           <span className="font-medium">{sport}</span>
                         </div>
@@ -706,38 +587,27 @@ export default function ViewActivity() {
                 </Card>
 
                 {/* Grading Settings */}
-                {activity.gradingSettings &&
-                  activity.gradingSettings.criteria &&
-                  activity.gradingSettings.criteria.length > 0 && (
-                    <Card className="glass hover-lift">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <CheckCircle className="w-5 h-5 text-blue-500" />
-                          Cài đặt chấm điểm
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <p className="text-sm text-gray-600 mb-2">
-                            Tiêu chí chấm điểm:
-                          </p>
-                          {activity.gradingSettings.criteria.map(
-                            (criterion, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg"
-                              >
-                                <span className="text-blue-600">•</span>
-                                <span className="text-sm text-gray-700">
-                                  {criterion}
-                                </span>
-                              </div>
-                            )
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                {activity.gradingSettings && activity.gradingSettings.criteria && activity.gradingSettings.criteria.length > 0 && (
+                  <Card className="glass hover-lift">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-blue-500" />
+                        Cài đặt chấm điểm
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-600 mb-2">Tiêu chí chấm điểm:</p>
+                        {activity.gradingSettings.criteria.map((criterion, index) => (
+                          <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                            <span className="text-blue-600">•</span>
+                            <span className="text-sm text-gray-700">{criterion}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Registration Settings */}
                 {activity.onlyTeacherCanRegister && (
@@ -763,9 +633,7 @@ export default function ViewActivity() {
               <TabsContent value="participants" className="space-y-4">
                 <Card className="glass hover-lift">
                   <CardHeader>
-                    <CardTitle>
-                      Danh sách người tham gia ({participants.length})
-                    </CardTitle>
+                    <CardTitle>Danh sách người tham gia ({participants.length})</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -776,20 +644,12 @@ export default function ViewActivity() {
                         >
                           <div className="flex items-center gap-3">
                             <Avatar>
-                              <AvatarImage
-                                src={participant.avatar || "/placeholder.svg"}
-                              />
-                              <AvatarFallback>
-                                {participant.name[0]}
-                              </AvatarFallback>
+                              <AvatarImage src={participant.avatar || "/placeholder.svg"} />
+                              <AvatarFallback>{participant.name[0]}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-semibold">
-                                {participant.name}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Lớp {participant.class}
-                              </p>
+                              <p className="font-semibold">{participant.name}</p>
+                              <p className="text-sm text-gray-600">Lớp {participant.class}</p>
                             </div>
                           </div>
                           <Badge
@@ -799,9 +659,7 @@ export default function ViewActivity() {
                                 : "bg-yellow-100 text-yellow-700"
                             }
                           >
-                            {participant.status === "approved"
-                              ? "Đã duyệt"
-                              : "Chờ duyệt"}
+                            {participant.status === "approved" ? "Đã duyệt" : "Chờ duyệt"}
                           </Badge>
                         </div>
                       ))}
@@ -821,9 +679,7 @@ export default function ViewActivity() {
                         <div key={index} className="flex items-start gap-4">
                           <div
                             className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              milestone.status === "completed"
-                                ? "bg-green-100"
-                                : "bg-gray-100"
+                              milestone.status === "completed" ? "bg-green-100" : "bg-gray-100"
                             }`}
                           >
                             {milestone.status === "completed" ? (
@@ -834,9 +690,7 @@ export default function ViewActivity() {
                           </div>
                           <div className="flex-1">
                             <p className="font-semibold">{milestone.title}</p>
-                            <p className="text-sm text-gray-600">
-                              {milestone.date}
-                            </p>
+                            <p className="text-sm text-gray-600">{milestone.date}</p>
                           </div>
                         </div>
                       ))}
@@ -867,55 +721,6 @@ export default function ViewActivity() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
-              <TabsContent value="ranking" className="space-y-4">
-                <Tabs defaultValue="individual" className="space-y-4">
-                  <TabsContent value="individual">
-                    <Card>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {rank.map((participant, index) => (
-                            <div
-                              key={participant.id}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-                            >
-                              <div className="flex items-center gap-4 flex-1">
-                                <div
-                                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${
-                                    index === 0
-                                      ? "bg-yellow-500"
-                                      : index === 1
-                                      ? "bg-gray-400"
-                                      : index === 2
-                                      ? "bg-orange-600"
-                                      : "bg-gray-300"
-                                  }`}
-                                >
-                                  {index + 1}
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-semibold">
-                                    {participant.userFullName}
-                                  </p>
-                                  <p className="text-xs text-gray-600">
-                                    Lớp{" "}
-                                    {participant.class?.class ||
-                                      participant.class?.name}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold text-orange-600">
-                                  {participant.score}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
               </TabsContent>
             </Tabs>
           </div>
@@ -967,5 +772,6 @@ export default function ViewActivity() {
         </div>
       </div>
     </div>
-  );
+  )
 }
+
