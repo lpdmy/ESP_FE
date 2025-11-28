@@ -1,104 +1,101 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useParams } from "react-router-dom"
-import { Link } from "react-router-dom"
-import { ArrowLeft, Heart, MessageCircle, Eye, Download, Star, FileText } from "lucide-react"
-import { Button } from "@/common/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
-import { Badge } from "@/common/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/common/components/ui/tabs"
-
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
+import {
+  ArrowLeft,
+  Heart,
+  MessageCircle,
+  Eye,
+  Download,
+  Star,
+  FileText,
+} from "lucide-react";
+import { Button } from "@/common/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/common/components/ui/card";
+import { Badge } from "@/common/components/ui/badge";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/common/components/ui/avatar";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/common/components/ui/tabs";
+import { useSubmissionApi } from "../../hooks/useSubmissionApi";
 export default function SubmissionDetail() {
-  const params = useParams()
-  const [isLiked, setIsLiked] = useState(false)
+  const { getSubmissionDetail } = useSubmissionApi();
+  const params = useParams();
+  const [isLiked, setIsLiked] = useState(false);
+  const [submission, setSubmission] = useState({});
+  const [juryAssignment, setJuryAssignment] = useState([]);
 
-  const submission = {
-    id: 1,
-    title: "Website quản lý thư viện",
-    student: "Nguyễn Văn A",
-    studentClass: "11A3",
-    studentAvatar: "/student1.png",
-    thumbnail: "/website-library-management.jpg",
-    description:
-      "Hệ thống quản lý thư viện trường học với đầy đủ tính năng mượn trả sách, quản lý độc giả, thống kê...",
-    submittedAt: "2024-01-15 14:30",
-    likes: 45,
-    comments: 12,
-    views: 234,
-    files: ["source-code.zip", "documentation.pdf", "demo-video.mp4"],
+  useEffect(() => {
+    handleLoadSubmission();
+  }, []);
+
+  const handleLoadSubmission = async () => {
+    try {
+      const response = await getSubmissionDetail(params.id);
+      const rawAssignments = response.data.juryAssignments;
+
+      const processedAssignments = rawAssignments.map((jury) => {
+        let scores = {};
+        try {
+          scores = JSON.parse(jury.scoreTemp);
+        } catch (error) {
+          console.error("Lỗi parse scoreTemp:", error);
+        }
+
+        return {
+          ...jury,
+          scores,
+          juryName: jury.juryName, // Nếu có tên thật thì dùng thay
+          avatar: "/generic-placeholder-icon.png", // Cập nhật avatar nếu có
+          comment: jury.comment ?? "", // nếu bạn có trường comment
+          averageScore: jury.totalScore,
+        };
+      });
+
+      setSubmission(response.data);
+      setJuryAssignment(processedAssignments);
+
+      console.log(processedAssignments);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  function formatVietnamDate(date) {
+    return new Date(date).toLocaleDateString("vi-VN", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
   }
-
-  const juryScores = [
-    {
-      id: 1,
-      juryName: "TS. Nguyễn Văn X",
-      expertise: "Web Development",
-      avatar: "/generic-placeholder-icon.png",
-      scores: {
-        creativity: 85,
-        technique: 90,
-        composition: 88,
-        relevance: 92,
-      },
-      comment: "Tác phẩm có ý tưởng sáng tạo, kỹ thuật thực hiện tốt, phù hợp với yêu cầu đề bài.",
-      averageScore: 89,
-      grade: "A",
-    },
-    {
-      id: 2,
-      juryName: "ThS. Trần Thị Y",
-      expertise: "UI/UX Design",
-      avatar: "/generic-placeholder-graphic.png",
-      scores: {
-        creativity: 88,
-        technique: 85,
-        composition: 90,
-        relevance: 87,
-      },
-      comment: "Giao diện đẹp, trải nghiệm người dùng tốt. Thiết kế theo chuẩn modern web.",
-      averageScore: 88,
-      grade: "A",
-    },
-    {
-      id: 3,
-      juryName: "TS. Lê Văn Z",
-      expertise: "Database",
-      avatar: "/generic-placeholder-icon.png",
-      scores: {
-        creativity: 80,
-        technique: 88,
-        composition: 85,
-        relevance: 90,
-      },
-      comment: "Cơ sở dữ liệu được thiết kế tốt, truy vấn hiệu quả. Đáp ứng tốt các yêu cầu chức năng.",
-      averageScore: 86,
-      grade: "B+",
-    },
-  ]
-
-  const criteria = [
-    { key: "creativity", label: "Sáng tạo", description: "Tính độc đáo và sáng tạo" },
-    { key: "technique", label: "Kỹ thuật", description: "Kỹ năng thực hiện" },
-    { key: "composition", label: "Bố cục", description: "Cách tổ chức và cấu trúc" },
-    { key: "relevance", label: "Đúng chủ đề", description: "Phù hợp với yêu cầu" },
-  ]
-
-  const overallAverageScore = Math.round(
-    juryScores.reduce((sum, item) => sum + item.averageScore, 0) / juryScores.length
-  )
+  const overallAverageScore = juryAssignment.length
+    ? Math.round(
+        juryAssignment.reduce((sum, jury) => sum + jury.averageScore, 0) /
+          juryAssignment.length
+      )
+    : 0;
+  useEffect(() => {
+    handleLoadSubmission();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-50">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-8">
-          <Link href={`/activities/${params.id}/gallery`}>
-            <Button variant="ghost" className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Quay lại gallery
-            </Button>
-          </Link>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent mb-2">
             {submission.title}
           </h1>
@@ -122,76 +119,91 @@ export default function SubmissionDetail() {
                   <div className="flex items-center gap-3">
                     <Avatar>
                       <AvatarImage src={submission.studentAvatar} />
-                      <AvatarFallback>{submission.student.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>
+                        {submission?.firstName?.charAt(0) ?? "?"}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="font-semibold">{submission.student}</p>
-                      <p className="text-sm text-muted-foreground">Lớp {submission.studentClass}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Lớp {submission.studentClass}
+                      </p>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">{submission.submittedAt}</p>
-                </div>
-
-                <div className="flex gap-4 text-sm text-muted-foreground">
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    <Heart className="h-4 w-4" />
-                    {submission.likes}
-                  </Button>
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    <MessageCircle className="h-4 w-4" />
-                    {submission.comments}
-                  </Button>
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    <Eye className="h-4 w-4" />
-                    {submission.views}
-                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    {formatVietnamDate(submission.createdAt)}
+                  </p>
                 </div>
               </CardContent>
             </Card>
 
-            <Tabs defaultValue="overview" className="space-y-6">
+            <Tabs defaultValue="scores" className="space-y-6">
               <TabsContent value="scores" className="space-y-4">
-                {juryScores.map((jury) => (
+                {juryAssignment.map((jury) => (
                   <Card key={jury.id}>
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <Avatar>
                             <AvatarImage src={jury.avatar} />
-                            <AvatarFallback>{jury.juryName.charAt(0)}</AvatarFallback>
+                            <AvatarFallback>
+                              {jury.juryName.charAt(0)}
+                            </AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="font-semibold">{jury.juryName}</p>
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-orange-600">{jury.averageScore}</div>
-                            <div className="text-xs text-muted-foreground">/100</div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-orange-600">
+                            {jury.averageScore}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            /100
                           </div>
                         </div>
                       </div>
                     </CardHeader>
-
                     <CardContent className="space-y-6">
                       <div>
                         <h4 className="font-semibold mb-3">Chi tiết điểm</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {criteria.map((c) => (
-                            <div key={c.key} className="bg-orange-50 p-3 rounded-lg">
-                              <p className="text-xs text-muted-foreground">{c.label}</p>
-                              <p className="text-2xl font-bold text-orange-600">
-                                {jury.scores[c.key]}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
+
+                        {jury?.scores && Object.keys(jury.scores).length > 0 ? (
+                          <div
+                            className={`grid gap-4 grid-cols-${
+                              Object.keys(jury.scores).length
+                            }`}
+                          >
+                            {Object.entries(jury.scores).map(
+                              ([label, value]) => (
+                                <div
+                                  key={label}
+                                  className="bg-orange-50 p-3 rounded-lg"
+                                >
+                                  <p className="text-xs text-muted-foreground">
+                                    {label}
+                                  </p>
+                                  <p className="text-2xl font-bold text-orange-600">
+                                    {value}
+                                  </p>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic">
+                            Chưa chấm bài
+                          </p>
+                        )}
                       </div>
 
-                      <div className="pt-4 border-t">
+                      <div className="pt-4 border-t border-gray-300">
                         <h4 className="font-semibold mb-2">Nhận xét</h4>
-                        <p className="text-muted-foreground italic">"{jury.comment}"</p>
+                        <p className="text-muted-foreground italic">
+                          {jury.comment?.trim()
+                            ? `"${jury.comment}"`
+                            : "Không có"}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -211,16 +223,6 @@ export default function SubmissionDetail() {
                   {overallAverageScore}
                 </div>
                 <p className="text-muted-foreground">/100</p>
-
-                <p className="text-2xl font-bold text-orange-600 border-t pt-4">
-                  {overallAverageScore >= 90
-                    ? "A"
-                    : overallAverageScore >= 80
-                    ? "B+"
-                    : overallAverageScore >= 70
-                    ? "B"
-                    : "C"}
-                </p>
               </CardContent>
             </Card>
 
@@ -229,7 +231,9 @@ export default function SubmissionDetail() {
                 <CardTitle className="text-sm">Giám khảo chấm</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{juryScores.length}</div>
+                <div className="text-3xl font-bold">
+                  {juryAssignment.length}
+                </div>
                 <p className="text-xs text-muted-foreground">người chấm</p>
               </CardContent>
             </Card>
@@ -239,16 +243,25 @@ export default function SubmissionDetail() {
                 <CardTitle className="text-sm">Danh sách giám khảo</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {juryScores.map((jury) => (
-                  <div key={jury.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                {juryAssignment.map((jury) => (
+                  <div
+                    key={jury.id}
+                    className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                  >
                     <div className="flex items-center gap-2 min-w-0">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={jury.avatar} />
-                        <AvatarFallback>{jury.juryName.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>
+                          {jury.juryName.charAt(0)}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <p className="text-xs font-medium truncate">{jury.juryName}</p>
-                        <p className="text-xs text-muted-foreground">{jury.averageScore}/100</p>
+                        <p className="text-xs font-medium truncate">
+                          {jury.juryName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {jury.averageScore}/100
+                        </p>
                       </div>
                     </div>
                     <Star className="h-4 w-4 text-yellow-500 flex-shrink-0" />
@@ -260,5 +273,5 @@ export default function SubmissionDetail() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { Button } from "@/common/components/ui/button";
@@ -18,13 +16,25 @@ export default function Grading() {
   const params = useParams();
   const location = useLocation();
   const toast = useToast();
-  const { gradingSubmission } = useJuryApi();
-  const submissions = location.state?.list || [];
+  const { gradingSubmission,getJuryAssignNotGrade } = useJuryApi();
   const [currentSubmission, setCurrentSubmission] = useState(0);
   const [criterias, setCriterias] = useState([]);
   const [grades, setGrades] = useState({});
+  const [submissions,setSubmissions] =useState([])
 
-  // 🟢 Chuyển tiêu chí lấy từ backend thành dạng có key
+  const hanldeLoadJurySubmissionNotGrade = async() => {
+      try {
+        const response = await getJuryAssignNotGrade(params.id,"",100000,1)
+        setSubmissions(response.data.data)
+        console.log(response.data.data)
+      } catch (error) {
+        console.log(error)
+      }
+  }
+useEffect(()=>{
+hanldeLoadJurySubmissionNotGrade()  
+},[])
+  //  Chuyển tiêu chí lấy từ backend thành dạng có key
   useEffect(() => {
     if (Array.isArray(submissions) && submissions.length > 0) {
       const raw = submissions[currentSubmission]?.criteria || [];
@@ -90,20 +100,17 @@ export default function Grading() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 };
-
-
-  if (!submissions.length) {
-    return <p className="text-center text-gray-600 p-6">Không có bài nộp.</p>;
-  }
   useEffect(() => {
     if (!criterias.length || !submissions.length) return;
 
     const payload = buildGradePayload();
     console.log("📌 Tracking Payload Real-time:", payload);
   }, [grades, criterias, currentSubmission]);
-  useEffect(() => {
-    console.log(submissions);
-  }, []);
+
+  if (!submissions.length) {
+    return <p className="text-center text-gray-600 p-6">Không có bài nộp.</p>;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
       <div className="max-w-6xl mx-auto px-4 py-6">

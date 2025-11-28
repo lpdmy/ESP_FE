@@ -260,7 +260,8 @@ export const API_CONFIG = {
   },
    SUBMISSION:{
     GET_SUBMISSION_ACTIVITY:"/submission/activity",
-    GET_MY_SUBMISSION:"/submission/activity/user"
+    GET_MY_SUBMISSION:"/submission/activity/user",
+    GET_SUBMISSION_DETAIL:"/submission",
   }
 };
 

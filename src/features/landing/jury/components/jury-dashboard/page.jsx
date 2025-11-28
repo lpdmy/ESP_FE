@@ -13,28 +13,20 @@ import {
 } from "@/common/components/ui/tabs";
 import { Input } from "@/common/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/common/components/ui/select";
-import {
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  Eye,
-  Star,
   Search,
   Calendar,
+  CheckCircle2,
+  Clock,
+  Eye,
 } from "lucide-react";
 import { useJuryApi } from "../../hooks/useJuryApi";
 
 export default function JuryDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [pageSize] = useState(10);
-  const [pageNumber, setPageNumber] = useState(1);
+  const [pageNumber] = useState(1);
   const [juryActivity, setJuryActivity] = useState([]);
+  const [activeTab, setActiveTab] = useState("all");
 
   const { getJuryAcitivty } = useJuryApi();
 
@@ -110,19 +102,17 @@ export default function JuryDashboard() {
     [juryActivity]
   );
 
-  const countCompleted = activitiesWithStatus.filter(
-    (x) => x.status === "completed"
-  ).length;
-  const countInProgress = activitiesWithStatus.filter(
-    (x) => x.status === "in-progress"
-  ).length;
-  const countPending = activitiesWithStatus.filter(
-    (x) => x.status === "pending"
-  ).length;
+  const countCompleted = activitiesWithStatus.filter((x) => x.status === "completed").length;
+  const countInProgress = activitiesWithStatus.filter((x) => x.status === "in-progress").length;
+  const countPending = activitiesWithStatus.filter((x) => x.status === "pending").length;
 
   useEffect(() => {
     handleLoadActivity();
   }, [pageNumber, searchQuery]);
+
+  const filteredActivities = activitiesWithStatus.filter(
+    (a) => activeTab === "all" || a.status === activeTab
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
@@ -153,163 +143,157 @@ export default function JuryDashboard() {
         </Card>
 
         {/* Activities list */}
-        <Tabs defaultValue="all" className="space-y-6">
+        <Tabs defaultValue="all" onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="all">Tất cả ({activitiesWithStatus.length})</TabsTrigger>
-            <TabsTrigger value="pending">
-              Chưa bắt đầu ({countPending})
-            </TabsTrigger>
-            <TabsTrigger value="in-progress">
-              Đang chấm ({countInProgress})
-            </TabsTrigger>
-            <TabsTrigger value="completed">
-              Hoàn thành ({countCompleted})
-            </TabsTrigger>
+            <TabsTrigger value="pending">Chưa bắt đầu ({countPending})</TabsTrigger>
+            <TabsTrigger value="in-progress">Đang chấm ({countInProgress})</TabsTrigger>
+            <TabsTrigger value="completed">Hoàn thành ({countCompleted})</TabsTrigger>
           </TabsList>
 
-          {["all", "pending", "in-progress", "completed"].map((tab) => (
-            <TabsContent value={tab} className="space-y-4" key={tab}>
-              {activitiesWithStatus
-                .filter((a) => tab === "all" || a.status === tab)
-                .map((assignment) => (
-                  <Card
-                    key={assignment.id}
-                    className="hover:shadow-lg transition-shadow"
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex flex-col lg:flex-row gap-6">
-                        {/* Left */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-4 mb-4">
-                            <div>
-                              <h3 className="text-xl font-bold mb-2">
-                                {assignment.activity.title}
-                              </h3>
+          <TabsContent value={activeTab} className="space-y-4">
+            {filteredActivities.length === 0 ? (
+              <p className="text-gray-500 italic mt-4">
+                Không có hoạt động nào trong mục này.
+              </p>
+            ) : (
+              filteredActivities.map((assignment) => (
+                <Card
+                  key={assignment.id}
+                  className="hover:shadow-lg transition-shadow"
+                >
+                  <CardContent className="p-6">
+                    <div className="flex flex-col lg:flex-row gap-6">
+                      {/* Left */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-4 mb-4">
+                          <div>
+                            <h3 className="text-xl font-bold mb-2">
+                              {assignment.activity.title}
+                            </h3>
 
-                              <div className="flex items-center gap-3 mb-3">
-                                <Badge
-                                  className="bg-orange-50 border-orange-200 text-orange-700"
-                                >
-                                  {assignment.activity.subType}
-                                </Badge>
-                                {getStatusBadge(assignment.status)}
-                                <Badge className="bg-blue-50 text-blue-700">
-                                  {assignment.role}
-                                </Badge>
-                              </div>
+                            <div className="flex items-center gap-3 mb-3">
+                              <Badge className="bg-orange-50 border-orange-200 text-orange-700">
+                                {assignment.activity.subType}
+                              </Badge>
+                              {getStatusBadge(assignment.status)}
+                              <Badge className="bg-blue-50 text-blue-700">
+                                {assignment.role}
+                              </Badge>
                             </div>
                           </div>
+                        </div>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-                            <div>
-                              <p className="text-sm text-gray-600">Tổng bài nộp</p>
-                              <p className="text-2xl font-bold">
-                                {assignment.activity.numberOfSubmission}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-600 flex gap-1 items-center">
-                                <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                Đã chấm
-                              </p>
-                              <p className="text-2xl font-bold text-green-600">
-                                {assignment.activity.numberOfCompletedSubmission}
-                              </p>
-                            </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                          <div>
+                            <p className="text-sm text-gray-600">Tổng bài nộp</p>
+                            <p className="text-2xl font-bold">
+                              {assignment.activity.numberOfSubmission}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600 flex gap-1 items-center">
+                              <CheckCircle2 className="w-4 h-4 text-green-500" />
+                              Đã chấm
+                            </p>
+                            <p className="text-2xl font-bold text-green-600">
+                              {assignment.activity.numberOfCompletedSubmission}
+                            </p>
+                          </div>
 
-                            <div>
-                              <p className="text-sm text-gray-600 flex gap-1 items-center">
-                                <Clock className="w-4 h-4 text-orange-500" />
-                                Chưa chấm
-                              </p>
-                              <p className="text-2xl font-bold text-orange-600">
-                                {assignment.activity.numberOfPendingSubmission}
-                              </p>
-                            </div>
+                          <div>
+                            <p className="text-sm text-gray-600 flex gap-1 items-center">
+                              <Clock className="w-4 h-4 text-orange-500" />
+                              Chưa chấm
+                            </p>
+                            <p className="text-2xl font-bold text-orange-600">
+                              {assignment.activity.numberOfPendingSubmission}
+                            </p>
+                          </div>
 
-                            <div>
-                              <p className="text-sm text-gray-600">Tiến độ</p>
-                              <p className="text-2xl font-bold">
-                                {Math.round(
+                          <div>
+                            <p className="text-sm text-gray-600">Tiến độ</p>
+                            <p className="text-2xl font-bold">
+                              {Math.round(
+                                (assignment.activity.numberOfCompletedSubmission /
+                                  assignment.activity.numberOfSubmission) *
+                                  100
+                              )}
+                              %
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Tiến độ chấm</span>
+                            <span className="font-medium">
+                              {
+                                assignment.activity.numberOfCompletedSubmission
+                              }/
+                              {assignment.activity.numberOfSubmission}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-3">
+                            <div
+                              className={`h-full ${getProgressColor(
+                                assignment.activity.numberOfCompletedSubmission,
+                                assignment.activity.numberOfSubmission
+                              )} rounded-full`}
+                              style={{
+                                width: `${
                                   (assignment.activity.numberOfCompletedSubmission /
                                     assignment.activity.numberOfSubmission) *
-                                    100
+                                  100
+                                }%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right */}
+                      <div className="lg:w-64 flex-shrink-0">
+                        <div className="bg-gray-50 rounded-lg p-4 mb-4 text-sm space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <div>
+                              <p className="text-gray-600">Bắt đầu</p>
+                              <p className="font-medium">
+                                {formatVietnamDate(
+                                  assignment.activity.startDate
                                 )}
-                                %
                               </p>
                             </div>
                           </div>
 
-                          {/* Progress */}
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600">Tiến độ chấm</span>
-                              <span className="font-medium">
-                                {
-                                  assignment.activity.numberOfCompletedSubmission
-                                }/
-                                {assignment.activity.numberOfSubmission}
-                              </span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-3">
-                              <div
-                                className={`h-full ${getProgressColor(
-                                  assignment.activity.numberOfCompletedSubmission,
-                                  assignment.activity.numberOfSubmission
-                                )} rounded-full`}
-                                style={{
-                                  width: `${
-                                    (assignment.activity.numberOfCompletedSubmission /
-                                      assignment.activity.numberOfSubmission) *
-                                    100
-                                  }%`,
-                                }}
-                              />
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <div>
+                              <p className="text-gray-600">Kết thúc</p>
+                              <p className="font-medium">
+                                {formatVietnamDate(
+                                  assignment.activity.endDate
+                                )}
+                              </p>
                             </div>
                           </div>
                         </div>
 
-                        {/* Right */}
-                        <div className="lg:w-64 flex-shrink-0">
-                          <div className="bg-gray-50 rounded-lg p-4 mb-4 text-sm space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-gray-500" />
-                              <div>
-                                <p className="text-gray-600">Bắt đầu</p>
-                                <p className="font-medium">
-                                  {formatVietnamDate(
-                                    assignment.activity.startDate
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-gray-500" />
-                              <div>
-                                <p className="text-gray-600">Kết thúc</p>
-                                <p className="font-medium">
-                                  {formatVietnamDate(
-                                    assignment.activity.endDate
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <a href={`/jury/submission/${assignment.activityId}`}>
-                            <button className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white gap-2 flex items-center px-4 py-2 rounded">
-                              <Eye className="h-4 w-4" />
-                              Xem bài nộp
-                            </button>
-                          </a>
-                        </div>
+                        <a href={`/jury/submission/${assignment.activityId}`}>
+                          <button className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white gap-2 flex items-center px-4 py-2 rounded">
+                            <Eye className="h-4 w-4" />
+                            Xem bài nộp
+                          </button>
+                        </a>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-            </TabsContent>
-          ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </TabsContent>
         </Tabs>
       </div>
     </div>

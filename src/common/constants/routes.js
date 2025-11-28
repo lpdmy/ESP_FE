@@ -75,7 +75,7 @@ export const ROUTES = {
     ASSIGN_JURY:"/jury/assign-jury/:id",
     JURY_DASHBOARD:"/jury/dashboard",
     JURY_SUBMISSION:"/jury/submission/:id",
-    JURY_GRADE :"/jury/grade"
+    JURY_GRADE :"/jury/grade/:id"
   },
   SUBMISSION:{
     MY_SUBMISSION : "/submission/my-submission",
