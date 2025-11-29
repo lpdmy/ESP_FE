@@ -5,6 +5,7 @@ import { Input } from "@/common/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
 import { Badge } from "@/common/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/common/components/ui/table"
+import { Tooltip } from "@/common/components/ui/tooltip"
 import {
   Dialog,
   DialogContent,
@@ -213,6 +214,7 @@ export default function ActivityManagement() {
           registrationSettings: parseRegistrationSettings(activity.registrationSettings),
           sports: activity.sports || [],
           participantDetails: activity.participants || [],
+          isDeleted: activity.isDeleted || false,
         }))
         
         setActivities(mappedActivities)
@@ -411,6 +413,10 @@ export default function ActivityManagement() {
   // Filter activities on client side (since BE only supports search by title)
   // Note: Search is done on BE, but other filters are done on client side
   const filteredActivities = activities.filter(activity => {
+    // Soft delete filter - only show activities that are not deleted
+    // Hide activities where isDeleted is explicitly true
+    if (activity.isDeleted === true || activity.isDeleted === "true") return false
+    
     // Category filter
     if (categoryFilter && categoryFilter !== "all") {
       const categoryMatch = categoryFilter === "activity" 
@@ -645,13 +651,13 @@ export default function ActivityManagement() {
                   </div>
                 ) : (
                   <div className="py-4">
-                    <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="mb-4 p-4 bg-green-50  border-green-200 rounded-lg">
                       <p className="text-green-700 font-medium">
                         ✓ AI đã tạo lịch thi đấu tối ưu với {aiSchedule.length} buổi
                       </p>
                     </div>
 
-                    <div className="border rounded-lg overflow-hidden">
+                    <div className=" rounded-lg overflow-hidden">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -803,7 +809,7 @@ export default function ActivityManagement() {
 
           {/* Advanced Filters Panel */}
           {showAdvancedFilters && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4  border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <Label className="mb-2 block">Phân loại</Label>
@@ -865,18 +871,6 @@ export default function ActivityManagement() {
             </div>
           )}
 
-          {selectedActivities.length > 0 && (
-            <div className="mt-4 flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
-              <span className="text-sm font-medium">Đã chọn {selectedActivities.length} hoạt động</span>
-              <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Xóa
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setSelectedActivities([])}>
-                Bỏ chọn
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -913,23 +907,10 @@ export default function ActivityManagement() {
             </div>
           ) : (
             <>
-              <div className="border rounded-lg overflow-hidden">
+              <div className=" rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox
-                          checked={selectedActivities.length === filteredActivities.length && filteredActivities.length > 0}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedActivities(filteredActivities.map(a => a.id))
-                            } else {
-                              setSelectedActivities([])
-                            }
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </TableHead>
                       <TableHead>Tiêu đề</TableHead>
                       <TableHead>Phân loại</TableHead>
                       <TableHead>Ngày bắt đầu</TableHead>
@@ -943,19 +924,8 @@ export default function ActivityManagement() {
                     {filteredActivities.map((activity) => (
                       <TableRow
                         key={activity.id}
-                        className="cursor-pointer hover:bg-gray-50"
-                        onClick={() => {
-                          setSelectedActivity(activity)
-                          setParticipantsDrawerOpen(true)
-                        }}
+                        className="hover:bg-gray-50"
                       >
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedActivities.includes(activity.id)}
-                            onCheckedChange={() => handleSelectActivity(activity.id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </TableCell>
                         <TableCell className="font-medium max-w-xs">
                           <div className="line-clamp-2">{activity.title}</div>
                         </TableCell>
@@ -986,59 +956,95 @@ export default function ActivityManagement() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              asChild
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Link to={`${ROUTES.ACTIVITY.VIEW_ACTIVITY.replace(':id', String(activity.id))}?isPreview=true`}>
-                                <Eye className="w-4 h-4 text-blue-500" />
-                              </Link>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              asChild
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Link to={ROUTES.ADMIN.EDIT_ACTIVITY.replace(':id', String(activity.id))}>
-                                <Edit className="w-4 h-4" />
-                              </Link>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedActivity(activity)
-                                setParticipantsDrawerOpen(true)
-                              }}
-                            >
-                              <Users className="w-4 h-4 text-green-600" />
-                            </Button>
-                            {(activity.subType === "SportsFestival" || (activity.sports && activity.sports.length > 0)) && (
+                            <Tooltip content="Xem trước trang">
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 asChild
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <Link to={ROUTES.ADMIN.AI_SCHEDULE.replace(':id', String(activity.id))}>
-                                  <Sparkles className="w-4 h-4 text-purple-500" />
+                                <Link to={`${ROUTES.ACTIVITY.VIEW_ACTIVITY.replace(':id', String(activity.id))}?isPreview=true`}>
+                                  <Eye className="w-4 h-4 text-blue-500" />
                                 </Link>
                               </Button>
+                            </Tooltip>
+                            <Tooltip content="Chỉnh sửa">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                asChild
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Link to={ROUTES.ADMIN.EDIT_ACTIVITY.replace(':id', String(activity.id))}>
+                                  <Edit className="w-4 h-4" />
+                                </Link>
+                              </Button>
+                            </Tooltip>
+                            <Tooltip content="Giám khảo">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedActivity(activity)
+                                  setParticipantsDrawerOpen(true)
+                                }}
+                              >
+                                <Users className="w-4 h-4 text-green-600" />
+                              </Button>
+                            </Tooltip>
+                            {(activity.subType === "SportsFestival" || (activity.sports && activity.sports.length > 0)) && (
+                              <Tooltip content="AI Tạo lịch">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  asChild
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Link to={ROUTES.ADMIN.AI_SCHEDULE.replace(':id', String(activity.id))}>
+                                    <Sparkles className="w-4 h-4 text-purple-500" />
+                                  </Link>
+                                </Button>
+                              </Tooltip>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                toast.success(`Đã xóa hoạt động "${activity.title}".`)
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
+                            <Tooltip content="Xóa sự kiện">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={async (e) => {
+                                  e.stopPropagation()
+                                  try {
+                                    const token = localStorage.getItem("token")
+                                    // Soft delete: Update activity with isDeleted = true
+                                    await executeApiCall(
+                                      activityService.updateActivity.bind(activityService),
+                                      [
+                                        {
+                                          id: activity.id,
+                                          isDeleted: true,
+                                        },
+                                        token
+                                      ],
+                                      { setLoading: () => {}, setError: () => {} }
+                                    )
+                                    // Update local state immediately for instant UI feedback
+                                    setActivities(prevActivities =>
+                                      prevActivities.map(a =>
+                                        a.id === activity.id ? { ...a, isDeleted: true } : a
+                                      )
+                                    )
+                                    toast.success(`Đã xóa hoạt động "${activity.title}".`)
+                                    // Also refresh from server to ensure consistency
+                                    fetchActivities()
+                                  } catch (err) {
+                                    console.error("Delete failed:", err)
+                                    toast.error(err?.message || "Không thể xóa hoạt động.")
+                                  }
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
+                            </Tooltip>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1049,7 +1055,7 @@ export default function ActivityManagement() {
             
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <div className="flex items-center justify-between mt-4 pt-4 ">
                 <div className="flex items-center gap-2">
                   <Label className="text-sm">Hiển thị:</Label>
                   <SimpleSelect
@@ -1201,7 +1207,7 @@ export default function ActivityManagement() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {selectedGroupRegistrations.map((group, index) => (
-                      <div key={group.code || index} className="border rounded-lg p-4 space-y-2">
+                      <div key={group.code || index} className=" rounded-lg p-4 space-y-2">
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <div>
                             <p className="font-semibold text-base">{group.name || `Nhóm ${index + 1}`}</p>
@@ -1236,7 +1242,7 @@ export default function ActivityManagement() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {selectedSportRosters.map((sport) => (
-                      <div key={sport.sportId} className="border rounded-lg p-4 space-y-3">
+                      <div key={sport.sportId} className=" rounded-lg p-4 space-y-3">
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <p className="font-semibold text-base">{sport.sportName}</p>
                           {selectedActivity.sports
@@ -1276,11 +1282,11 @@ export default function ActivityManagement() {
                   {selectedParticipants.length === 0 ? (
                     <p className="text-sm text-gray-500">Chưa có thành viên nào đăng ký.</p>
                   ) : (
-                    <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                    <div className="space-y-2 pr-2">
                       {selectedParticipants.map((participant) => (
                         <div
                           key={participant.id}
-                          className="flex items-center justify-between py-2 border-b last:border-b-0"
+                          className="flex items-center justify-between py-2  last:"
                         >
                           <div>
                             <p className="font-medium">{participant.userFullName || participant.fullName}</p>

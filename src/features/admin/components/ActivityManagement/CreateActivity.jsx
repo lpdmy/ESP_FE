@@ -24,6 +24,7 @@ import { uploadImage } from "@/common/utils/upload"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
 import { GradingCriteriaSection } from "./GradingCriteriaSection"
+import { vnTimeToUTC } from "@/common/utils/dateUtils"
 
 export default function CreateActivity() {
   const navigate = useNavigate()
@@ -482,10 +483,11 @@ export default function CreateActivity() {
         location: formData.location,
         organizer: formData.organizer,
         thumbnailUrl: thumbnailUrl,
-        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
-        registerDate: formData.registerDate ? new Date(formData.registerDate).toISOString() : null,
-        endRegisterDate: formData.endRegisterDate ? new Date(formData.endRegisterDate).toISOString() : null,
+        // Convert VN time (UTC+7) to UTC before sending to BE
+        startDate: formData.startDate ? vnTimeToUTC(formData.startDate) : null,
+        endDate: formData.endDate ? vnTimeToUTC(formData.endDate) : null,
+        registerDate: formData.registerDate ? vnTimeToUTC(formData.registerDate) : null,
+        endRegisterDate: formData.endRegisterDate ? vnTimeToUTC(formData.endRegisterDate) : null,
         maxParticipants: parseInt(formData.maxParticipants) || 0,
         rules: formData.rules.filter(r => r.trim()),
         // SportsFestival fields

@@ -44,7 +44,22 @@ export const useSearchApi = () => {
          return response;
       } catch (err) {
          setError(err);
-         toast.error('Không thể tìm kiếm người dùng');
+         console.error('Không thể tìm kiếm người dùng:', err);
+         throw err;
+      } finally {
+         setLoading(false);
+      }
+   };
+
+   const searchUserByEmail = async (email) => {
+      setLoading(true);
+      setError(null);
+
+      try {
+         const response = await searchService.searchUserByEmail(email);
+         return response;
+      } catch (err) {
+         setError(err);
          throw err;
       } finally {
          setLoading(false);
@@ -145,6 +160,7 @@ export const useSearchApi = () => {
       // Main search functions
       globalSearch,
       searchUsers,
+      searchUserByEmail,
       searchPosts,
       advancedSearch,
 

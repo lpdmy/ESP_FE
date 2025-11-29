@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogOverlay,
 } from "@/common/components/ui/dialog"
 import {
   DropdownMenu,
@@ -34,6 +35,12 @@ import { ROUTES } from "@/common/constants/routes"
 import { LoadingCard } from "@/common/components/ui/loading"
 import { ClassGroupService } from "@/services/classgroup.service"
 import { jwtDecode } from "jwt-decode"
+import { useSearchApi } from "@/common/hooks/useSearchApi"
+
+// Placeholder image as data URI to avoid 404 errors
+const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23e5e7eb' width='400' height='300'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='18' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3EẢnh hoạt động%3C/text%3E%3C/svg%3E"
+const PLACEHOLDER_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23e5e7eb' width='100' height='100'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='40' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3E?%3C/text%3E%3C/svg%3E"
+
 import {
   ArrowLeft,
   Calendar,
@@ -48,6 +55,9 @@ import {
   Trophy,
   MoreHorizontal,
   Info,
+  GripVertical,
+  Search,
+  X,
 } from "lucide-react"
 
 export default function ViewActivity() {
@@ -76,6 +86,12 @@ export default function ViewActivity() {
   const [selectedSportId, setSelectedSportId] = useState(null)
   const [selectedSportMembers, setSelectedSportMembers] = useState([])
   const [sportSubmitting, setSportSubmitting] = useState(false)
+  const [draggedStudent, setDraggedStudent] = useState(null) // { id, name }
+  const [dragOverGroup, setDragOverGroup] = useState(false)
+  const [groupSearchQuery, setGroupSearchQuery] = useState("")
+  const [searchedUsers, setSearchedUsers] = useState([]) // Kết quả tìm kiếm user trong hệ thống
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false)
+  const { searchUsers } = useSearchApi()
   const { isOpen, toggleMenu, closeMenu } = useDropdownMenu()
   const location = useLocation()
   const queryParams = new URLSearchParams(location.search)
@@ -121,13 +137,41 @@ export default function ViewActivity() {
     return settings
   }
 
+  // Helper function to get group settings with defaults
+  const getGroupSettings = (registrationSettings) => {
+    const parsed = parseRegistrationSettings(registrationSettings)
+    const groupReg = parsed?.groupRegistration
+    if (!groupReg) return null
+    return {
+      minMembers: groupReg.minMembers ?? 1,
+      maxMembers: groupReg.maxMembers ?? null,
+      requireLeader: groupReg.requireLeader ?? false,
+    }
+  }
+
   const normalizeParticipants = (list) => {
     if (!Array.isArray(list)) return []
-    return list.map((participant) => ({
+    return list.map((participant) => {
+      // Format className: Grade + className (ví dụ: "10A1")
+      // Kiểm tra xem className đã có Grade ở đầu chưa (tránh duplicate như "1010A1")
+      const grade = participant?.grade || participant?.Grade
+      const className = participant?.classGroupName || "Chưa rõ lớp"
+      
+      let formattedClassName = className
+      if (grade && className !== "Chưa rõ lớp") {
+        // Kiểm tra xem className đã bắt đầu bằng Grade chưa
+        const gradeStr = String(grade)
+        if (!className.startsWith(gradeStr)) {
+          formattedClassName = `${grade}${className}`
+        }
+      }
+      
+      return {
       id: participant?.id,
       userId: participant?.userId,
       fullName: participant?.userFullName || participant?.userName || "Người tham gia",
-      className: participant?.classGroupName || "Chưa rõ lớp",
+        className: formattedClassName,
+        grade: grade,
       status: participant?.status || "pending",
       groupCode: participant?.groupCode || null,
       isLeader: participant?.isLeader || false,
@@ -135,7 +179,8 @@ export default function ViewActivity() {
       sportName: participant?.sportName || null,
       registrationMetadata: participant?.registrationMetadata || "",
       avatar: participant?.userAvatarUrl,
-    }))
+      }
+    })
   }
 
   useEffect(() => {
@@ -150,11 +195,12 @@ export default function ViewActivity() {
       }
 
       const token = localStorage.getItem("token")
+      setLoading(true)
       try {
         const response = await executeApiCall(
           activityService.getActivityById.bind(activityService),
           [params.id, token],
-          { setLoading, setError }
+          { setLoading: () => {}, setError }
         )
 
       if (!response?.data) {
@@ -199,6 +245,16 @@ export default function ViewActivity() {
         name: sport?.sportName,
         maxMembers: sport?.maxMembers,
       }))
+
+          // Check if activity is soft-deleted
+          if (activityData?.isDeleted === true || activityData?.isDeleted === "true") {
+            toastRef.current.showError("Hoạt động này đã bị xóa và không còn khả dụng. Bạn sẽ được chuyển về trang danh sách.")
+            setTimeout(() => {
+              navigate(ROUTES.ACTIVITY.LIST)
+            }, 2000)
+            setLoading(false)
+            return
+          }
 
           const activityDetail = activityData?.activityDetail || {}
           
@@ -269,7 +325,7 @@ export default function ViewActivity() {
       setLoading(false)
       } catch (err) {
         console.error("Error fetching activity:", err)
-      toastRef.current.error(err?.message || "Không thể tải thông tin hoạt động")
+      toastRef.current.showError(err?.message || "Không thể tải thông tin hoạt động")
         if (err?.statusCode === 404) {
         navigate(ROUTES.ACTIVITY.LIST)
       }
@@ -324,39 +380,86 @@ export default function ViewActivity() {
     }
   }, [classStudents.length, currentClass, isClassLoading, toast])
 
-  const handleOpenGroupDialog = async () => {
+  const handleOpenGroupDialog = () => {
     if (!currentUser?.id) {
       toast.error("Vui lòng đăng nhập để đăng ký.")
       return
     }
-    await ensureClassData()
-    setGroupForm({
-      groupName: "",
-      memberIds: currentUser?.id ? [currentUser.id] : [],
-      leaderId: currentUser?.id || null,
-    })
-    setIsGroupDialogOpen(true)
+    if (!params.id) {
+      toast.error("Không tìm thấy thông tin hoạt động.")
+      return
+    }
+    // Chuyển qua trang đăng ký
+    navigate(ROUTES.ACTIVITY.REGISTER_ACTIVITY.replace(":id", params.id))
   }
+
+  // Tìm kiếm user trong hệ thống
+  useEffect(() => {
+    const searchUsersInSystem = async () => {
+      if (!groupSearchQuery || groupSearchQuery.trim().length < 2) {
+        setSearchedUsers([])
+        return
+      }
+
+      setIsSearchingUsers(true)
+      try {
+        const response = await searchUsers(groupSearchQuery, 1, 20)
+        const users = response?.data?.data || response?.data || []
+        // Normalize user data
+        const normalizedUsers = users.map((user) => ({
+          id: user.id || user.userId,
+          fullName: user.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.name,
+          studentCode: user.studentCode || user.studentNumber,
+          email: user.email,
+          role: user.role,
+          className: user.className || user.classGroupName,
+          avatarUrl: user.avatarUrl,
+        }))
+        setSearchedUsers(normalizedUsers)
+      } catch (err) {
+        console.error("Error searching users:", err)
+        setSearchedUsers([])
+      } finally {
+        setIsSearchingUsers(false)
+      }
+    }
+
+    const debounceTimer = setTimeout(() => {
+      searchUsersInSystem()
+    }, 500) // Debounce 500ms
+
+    return () => clearTimeout(debounceTimer)
+  }, [groupSearchQuery, searchUsers])
 
   const handleToggleGroupMember = (studentId) => {
     setGroupForm((prev) => {
       const alreadySelected = prev.memberIds.includes(studentId)
+      
+      // Không cho phép xóa người đăng ký (currentUser) khỏi nhóm
+      if (alreadySelected && studentId === currentUser?.id) {
+        toast.error("Bạn không thể xóa chính mình khỏi nhóm. Bạn phải là thành viên của nhóm.")
+        return prev
+      }
+
       let updatedMembers = alreadySelected
         ? prev.memberIds.filter((id) => id !== studentId)
         : [...prev.memberIds, studentId]
 
-      const groupSettings = activity?.registrationSettings?.groupRegistration
       const maxMembers = groupSettings?.maxMembers
       if (!alreadySelected && maxMembers && updatedMembers.length > maxMembers) {
         toast.error(`Nhóm chỉ được phép tối đa ${maxMembers} thành viên.`)
         return prev
       }
 
-      if (!updatedMembers.length && currentUser?.id) {
-        updatedMembers = [currentUser.id]
+      // Đảm bảo currentUser luôn là thành viên
+      if (!updatedMembers.includes(currentUser?.id) && currentUser?.id) {
+        updatedMembers = [currentUser.id, ...updatedMembers.filter(id => id !== currentUser.id)]
       }
 
-      const nextLeader = updatedMembers.includes(prev.leaderId) ? prev.leaderId : updatedMembers[0] || null
+      // Nếu leader bị xóa hoặc không có leader, đặt currentUser làm leader mặc định
+      const nextLeader = updatedMembers.includes(prev.leaderId) 
+        ? prev.leaderId 
+        : (currentUser?.id && updatedMembers.includes(currentUser.id) ? currentUser.id : updatedMembers[0] || null)
 
       return {
         ...prev,
@@ -373,13 +476,47 @@ export default function ViewActivity() {
     }))
   }
 
+  // Drag and Drop handlers for group registration
+  const handleDragStart = (e, student) => {
+    setDraggedStudent({ id: student.id, name: student.fullName })
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("text/plain", student.id.toString())
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+    setDragOverGroup(true)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverGroup(false)
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setDragOverGroup(false)
+
+    if (!draggedStudent) return
+
+    const studentId = draggedStudent.id
+    if (!groupForm.memberIds.includes(studentId)) {
+      handleToggleGroupMember(studentId)
+    }
+    setDraggedStudent(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedStudent(null)
+    setDragOverGroup(false)
+  }
+
   const handleSubmitGroupRegistration = async () => {
     if (!currentUser?.id) {
       toast.error("Vui lòng đăng nhập để tiếp tục.")
       return
     }
-    const groupSettings = activity?.registrationSettings?.groupRegistration
-    const minMembers = groupSettings?.minMembers || 1
+    const minMembers = groupSettings?.minMembers ?? 1
     if (groupForm.memberIds.length < minMembers) {
       toast.error(`Nhóm cần ít nhất ${minMembers} thành viên.`)
       return
@@ -494,13 +631,29 @@ export default function ViewActivity() {
     if (!activity?.participants || !currentUser?.id) return null
     return activity.participants.find(
       (participant) =>
-        participant.userId === currentUser.id && !participant.groupCode && !participant.sportId
+        participant.userId === currentUser.id && !participant.groupCode && !participant.sportId && !participant.isDeleted
+    )
+  }, [activity?.participants, currentUser?.id])
+
+  const userGroupParticipation = useMemo(() => {
+    if (!activity?.participants || !currentUser?.id) return null
+    return activity.participants.find(
+      (participant) =>
+        participant.userId === currentUser.id && participant.groupCode && !participant.sportId && !participant.isDeleted
+    )
+  }, [activity?.participants, currentUser?.id])
+
+  const userSportParticipation = useMemo(() => {
+    if (!activity?.participants || !currentUser?.id) return []
+    return activity.participants.filter(
+      (participant) =>
+        participant.userId === currentUser.id && participant.sportId && !participant.isDeleted
     )
   }, [activity?.participants, currentUser?.id])
 
   useEffect(() => {
-    setIsRegistered(Boolean(userSimpleParticipation))
-  }, [userSimpleParticipation])
+    setIsRegistered(Boolean(userSimpleParticipation || userGroupParticipation || userSportParticipation.length > 0))
+  }, [userSimpleParticipation, userGroupParticipation, userSportParticipation])
 
   const handleAction = (action) => {
     if (isPreview) {
@@ -512,9 +665,9 @@ export default function ViewActivity() {
 
   const handleRegister = async () => {
     handleAction(async () => {
+      // Không yêu cầu lý do cho đăng ký đơn
       if (!registrationReason.trim()) {
-        toast.error("Vui lòng nhập lý do tham gia")
-        return
+        setRegistrationReason("Tham gia hoạt động")
       }
 
       const token = localStorage.getItem("token")
@@ -525,9 +678,13 @@ export default function ViewActivity() {
 
       setIsRegistering(true)
       try {
+        if (!currentUser?.id) {
+          toast.error("Không thể xác định thông tin người dùng. Vui lòng đăng nhập lại.")
+          return
+        }
         const response = await executeApiCall(
           activityParticipantService.registerForActivity.bind(activityParticipantService),
-          [{ activityId: parseInt(params.id), reason: registrationReason }, token],
+          [{ activityId: parseInt(params.id), userId: currentUser.id }, token],
           { setError }
         )
 
@@ -548,9 +705,8 @@ export default function ViewActivity() {
 
   const handleCancelRegister = async () => {
     handleAction(async () => {
-      const participationId = userSimpleParticipation?.id
-      if (!participationId) {
-        toast.error("Không tìm thấy thông tin đăng ký")
+      if (!activity?.id) {
+        toast.error("Không tìm thấy thông tin hoạt động")
         return
       }
 
@@ -564,7 +720,7 @@ export default function ViewActivity() {
       try {
         await executeApiCall(
           activityParticipantService.cancelRegistration.bind(activityParticipantService),
-          [participationId, token],
+          [activity.id, token],
           { setError }
         )
 
@@ -580,6 +736,26 @@ export default function ViewActivity() {
     })
   }
 
+  // Kiểm tra có thể hủy đăng ký không (trước thời hạn đăng ký)
+  const canCancelRegistration = useMemo(() => {
+    if (!activity?.endRegisterDate || !isRegistered) {
+      console.log("🔵 canCancelRegistration: false", { 
+        hasEndDate: !!activity?.endRegisterDate, 
+        isRegistered,
+        endDate: activity?.endRegisterDate 
+      })
+      return false
+    }
+    const now = new Date()
+    const endRegisterDate = new Date(activity.endRegisterDate)
+    const canCancel = now <= endRegisterDate
+    console.log("🔵 canCancelRegistration:", canCancel, { 
+      now: now.toISOString(), 
+      endDate: endRegisterDate.toISOString() 
+    })
+    return canCancel
+  }, [activity?.endRegisterDate, isRegistered])
+
   const handleShare = () => {
     handleAction(() => {
       navigator.clipboard.writeText(window.location.href)
@@ -593,7 +769,34 @@ export default function ViewActivity() {
     })
   }
 
-  const renderSimpleRegistration = () => (
+  const renderSimpleRegistration = () => {
+    if (isRegistered) {
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-700">
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-medium">Đã đăng ký tham gia</span>
+          </div>
+          {canCancelRegistration && (
+            <Button
+              variant="outline"
+              className="w-full border-red-300 text-red-600 hover:bg-red-50"
+              disabled={isPreview || isCancelling}
+              onClick={handleCancelRegister}
+            >
+              {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
+            </Button>
+          )}
+          {!canCancelRegistration && (
+            <p className="text-sm text-gray-500 text-center">
+              Đã hết thời hạn hủy đăng ký
+            </p>
+          )}
+        </div>
+      )
+    }
+
+    return (
     <div className="space-y-3">
       {!canRegister && (
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -640,10 +843,37 @@ export default function ViewActivity() {
     </Dialog>
     </div>
   )
+  }
 
   const renderGroupRegistration = () => {
-    const minMembers = groupSettings?.minMembers || 1
+    const minMembers = groupSettings?.minMembers ?? 1
     const maxMembers = groupSettings?.maxMembers
+
+    if (userGroupParticipation) {
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-700">
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-medium">Đã đăng ký tham gia theo nhóm</span>
+          </div>
+          {canCancelRegistration && (
+            <Button
+              variant="outline"
+              className="w-full border-red-300 text-red-600 hover:bg-red-50"
+              disabled={isPreview || isCancelling}
+              onClick={handleCancelRegister}
+            >
+              {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
+            </Button>
+          )}
+          {!canCancelRegistration && (
+            <p className="text-sm text-gray-500 text-center">
+              Đã hết thời hạn hủy đăng ký
+            </p>
+          )}
+        </div>
+      )
+    }
 
     return (
       <div className="space-y-3">
@@ -663,100 +893,123 @@ export default function ViewActivity() {
           Nhóm tối thiểu {minMembers}
           {maxMembers ? ` - tối đa ${maxMembers}` : ""} thành viên, cần chỉ định nhóm trưởng.
         </p>
-        <Dialog open={isGroupDialogOpen} onOpenChange={(open) => setIsGroupDialogOpen(open)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Tạo nhóm tham gia</DialogTitle>
-              <DialogDescription>
-                Chọn học sinh trong lớp để tạo nhóm dự thi. Nhóm trưởng sẽ đại diện nhận thông báo.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="groupName">Tên nhóm (tuỳ chọn)</Label>
-                <Input
-                  id="groupName"
-                  placeholder="Nhập tên nhóm"
-                  value={groupForm.groupName}
-                  onChange={(e) =>
-                    setGroupForm((prev) => ({
-                      ...prev,
-                      groupName: e.target.value,
-                    }))
-                  }
-                  disabled={groupSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Thành viên</Label>
-                <div className="border rounded-lg p-3 max-h-64 overflow-y-auto space-y-2">
-                  {isClassLoading ? (
-                    <p className="text-sm text-gray-500">Đang tải danh sách lớp...</p>
-                  ) : classStudents.length ? (
-                    classStudents.map((student) => (
-                      <label key={student.id} className="flex items-center gap-2 text-sm">
-                        <Checkbox
-                          checked={groupForm.memberIds.includes(student.id)}
-                          onCheckedChange={() => handleToggleGroupMember(student.id)}
-                          disabled={groupSubmitting}
-                        />
-                        <span className="font-medium">{student.fullName}</span>
-                        {student.studentCode && (
-                          <span className="text-gray-500">({student.studentCode})</span>
-                        )}
-                      </label>
-                    ))
-                  ) : (
-                    <div className="text-sm text-gray-500">
-                      Chưa có danh sách lớp.{" "}
-                      <button className="text-orange-600 underline" onClick={ensureClassData}>
-                        Tải lại
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              {groupForm.memberIds.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Nhóm trưởng</Label>
-                  <Select
-                    value={groupForm.leaderId ? String(groupForm.leaderId) : ""}
-                    onValueChange={handleGroupLeaderChange}
-                    disabled={groupSubmitting}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn nhóm trưởng" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {groupForm.memberIds.map((memberId) => {
-                        const student = classStudents.find((s) => s.id === memberId)
-                        return (
-                          <SelectItem key={memberId} value={String(memberId)}>
-                            {student?.fullName || `Thành viên #${memberId}`}
-                          </SelectItem>
-                        )
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-            <DialogFooter className="justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsGroupDialogOpen(false)} disabled={groupSubmitting}>
-                Hủy
-              </Button>
-              <Button className="btn-primary" onClick={handleSubmitGroupRegistration} disabled={groupSubmitting || !canRegister}>
-                {groupSubmitting ? "Đang gửi..." : "Xác nhận đăng ký"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      </div>
+    )
+  }
+
+  const renderCreativeContestRegistration = () => {
+    const minMembers = groupSettings?.minMembers ?? 1
+    const maxMembers = groupSettings?.maxMembers
+
+    if (userGroupParticipation || (minMembers === 1 && userSimpleParticipation)) {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-700">
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-medium">Đã đăng ký tham gia</span>
+          </div>
+          {canCancelRegistration && (
+            <Button
+              variant="outline"
+              className="w-full border-red-300 text-red-600 hover:bg-red-50"
+              disabled={isPreview || isCancelling}
+              onClick={handleCancelRegister}
+            >
+              {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
+            </Button>
+          )}
+          {!canCancelRegistration && (
+            <p className="text-sm text-gray-500 text-center">
+              Đã hết thời hạn hủy đăng ký
+            </p>
+          )}
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-4">
+        {!canRegister && (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800">
+              {currentUser?.role?.toLowerCase() === "teacher" || currentUser?.role?.toLowerCase() === "admin"
+                ? "Giáo viên chỉ được đăng ký tham gia hội thao."
+                : "Học sinh không thể đăng ký tham gia hội thao."}
+            </p>
+          </div>
+        )}
+        
+        {/* Thông báo về số thành viên tối thiểu */}
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800 font-medium">
+            Sự kiện này yêu cầu tối thiểu {minMembers} thành viên
+            {maxMembers ? ` và tối đa ${maxMembers} thành viên` : ""} mỗi nhóm.
+          </p>
+        </div>
+
+        {/* Option 1: Đăng ký đơn (chỉ khi minMembers = 1) */}
+        {minMembers === 1 && (
+          <div className="space-y-2">
+            <Button 
+              className="w-full btn-primary" 
+              disabled={isPreview || !canRegister || isRegistered || isRegistering}
+              onClick={handleRegister}
+            >
+              {isRegistering ? "Đang đăng ký..." : "Đăng ký cá nhân"}
+            </Button>
+            <p className="text-xs text-gray-500 text-center">Đăng ký cho bản thân</p>
+          </div>
+        )}
+
+        {/* Option 2: Đăng ký nhóm */}
+        <div className="space-y-2">
+          <Button 
+            className="w-full btn-primary border-2 border-orange-500 bg-white text-orange-600 hover:bg-orange-50" 
+            disabled={isPreview || !canRegister}
+            onClick={handleOpenGroupDialog}
+          >
+            Đăng ký theo nhóm
+          </Button>
+          <p className="text-xs text-gray-500 text-center">
+            {minMembers === 1 
+              ? `Tạo nhóm từ ${minMembers}${maxMembers ? ` đến ${maxMembers}` : "+"} thành viên`
+              : `Nhóm tối thiểu ${minMembers}${maxMembers ? ` - tối đa ${maxMembers}` : ""} thành viên`}
+          </p>
+        </div>
+
       </div>
     )
   }
 
   const renderSportRegistration = () => {
     const currentSport = activity?.sports?.find((sport) => sport.id === Number(selectedSportId))
+    const hasSportRegistration = userSportParticipation.length > 0
+
+    if (hasSportRegistration) {
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-700">
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-medium">Đã đăng ký tham gia hội thao</span>
+          </div>
+          {canCancelRegistration && (
+            <Button
+              variant="outline"
+              className="w-full border-red-300 text-red-600 hover:bg-red-50"
+              disabled={isPreview || isCancelling}
+              onClick={handleCancelRegister}
+            >
+              {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
+            </Button>
+          )}
+          {!canCancelRegistration && (
+            <p className="text-sm text-gray-500 text-center">
+              Đã hết thời hạn hủy đăng ký
+            </p>
+          )}
+        </div>
+      )
+    }
 
     return (
       <div className="space-y-3">
@@ -836,25 +1089,37 @@ export default function ViewActivity() {
     <div className="space-y-3">
       <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-700">
         <CheckCircle className="w-5 h-5" />
-        <span className="font-medium">Đã đăng ký</span>
+        <span className="font-medium">Đã đăng ký tham gia</span>
       </div>
+      {canCancelRegistration && (
       <Button
         variant="outline"
-        className="w-full bg-transparent"
+          className="w-full border-red-300 text-red-600 hover:bg-red-50"
         onClick={handleCancelRegister}
         disabled={isPreview || isCancelling}
       >
         {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
       </Button>
+      )}
+      {!canCancelRegistration && (
+        <p className="text-sm text-gray-500 text-center">
+          Đã hết thời hạn hủy đăng ký
+        </p>
+      )}
     </div>
   )
 
   const renderRegistrationActions = () => {
-    const isSimpleRegistration = !isSportsFestival && !isCreativeContest
     if (isSportsFestival) {
       return renderSportRegistration()
     }
     if (isCreativeContest) {
+      const minMembers = groupSettings?.minMembers ?? 1
+      // Nếu minMembers = 1, hiển thị cả 2 option (đơn và nhóm)
+      if (minMembers === 1) {
+        return renderCreativeContestRegistration()
+      }
+      // Nếu minMembers > 1, chỉ hiển thị đăng ký nhóm
       return renderGroupRegistration()
     }
     return isRegistered ? renderRegisteredStatus() : renderSimpleRegistration()
@@ -864,7 +1129,7 @@ export default function ViewActivity() {
   const participants = activity?.participants || []
   const isCreativeContest = activity?.subType === "CreativeContest"
   const isSportsFestival = activity?.subType === "SportsFestival"
-  const groupSettings = activity?.registrationSettings?.groupRegistration
+  const groupSettings = getGroupSettings(activity?.registrationSettings)
   const participantProgress =
     activity && activity.maxParticipants
       ? Math.min((activity.currentParticipants / activity.maxParticipants) * 100, 100)
@@ -896,13 +1161,32 @@ export default function ViewActivity() {
       .forEach((participant) => {
         const key = participant.groupCode
         if (!map.has(key)) {
+          // Sử dụng registrationMetadata (tên nhóm) thay vì groupCode
+          const groupName = participant.registrationMetadata || `Nhóm ${map.size + 1}`
           map.set(key, {
             code: key,
-            name: participant.registrationMetadata || "",
+            name: groupName,
             members: [],
           })
         }
-        map.get(key).members.push(participant)
+        // Format className với Grade cho member
+        // Kiểm tra xem className đã có Grade ở đầu chưa (tránh duplicate như "1010A1")
+        const grade = participant.grade || participant.Grade
+        const className = participant.classGroupName || participant.className || "Chưa rõ lớp"
+        
+        let formattedClassName = className
+        if (grade && className !== "Chưa rõ lớp") {
+          // Kiểm tra xem className đã bắt đầu bằng Grade chưa
+          const gradeStr = String(grade)
+          if (!className.startsWith(gradeStr)) {
+            formattedClassName = `${grade}${className}`
+          }
+        }
+        
+        map.get(key).members.push({
+          ...participant,
+          className: formattedClassName,
+        })
       })
 
     return Array.from(map.values()).map((group, index) => ({
@@ -947,7 +1231,7 @@ export default function ViewActivity() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white flex items-center justify-center">
-        <LoadingCard text="Đang tải thông tin hoạt động..." />
+        <LoadingCard isLoading={true} text="Đang tải thông tin hoạt động..." />
       </div>
     )
   }
@@ -984,9 +1268,14 @@ export default function ViewActivity() {
         {/* Cover Image */}
         <div className="relative mb-10 rounded-xl overflow-hidden">
           <img
-            src={activity.thumbnail || "/placeholder.svg"}
+            src={activity.thumbnail || PLACEHOLDER_IMAGE}
             alt={activity.title}
             className="w-full h-64 object-cover"
+            onError={(e) => {
+              if (e.target.src !== PLACEHOLDER_IMAGE) {
+                e.target.src = PLACEHOLDER_IMAGE
+              }
+            }}
           />
           <div className="absolute inset-0 bg-black/40"></div>
           <div className="absolute bottom-8 left-8 text-white">
@@ -1132,6 +1421,300 @@ export default function ViewActivity() {
 
                   {renderRegistrationActions()}
 
+                  {/* Dialog đăng ký nhóm - dùng chung cho cả renderGroupRegistration và renderCreativeContestRegistration */}
+                  <Dialog open={isGroupDialogOpen} onOpenChange={(open) => setIsGroupDialogOpen(open)}>
+                    <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                        <DialogTitle>Tạo nhóm tham gia</DialogTitle>
+                          <DialogDescription>
+                          Kéo thả hoặc click để thêm thành viên vào nhóm. Có thể tìm kiếm trong lớp hoặc toàn hệ thống. Nhóm trưởng sẽ đại diện nhận thông báo.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                          <Label htmlFor="groupName">Tên nhóm (tuỳ chọn)</Label>
+                          <Input
+                            id="groupName"
+                            placeholder="Nhập tên nhóm"
+                            value={groupForm.groupName}
+                            onChange={(e) =>
+                              setGroupForm((prev) => ({
+                                ...prev,
+                                groupName: e.target.value,
+                              }))
+                            }
+                            disabled={groupSubmitting}
+                            />
+                          </div>
+
+                        {/* Layout 2 cột: Nhóm bên trái, Danh sách lớp bên phải */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Cột trái: Thành viên đã chọn */}
+                          <div className="space-y-2">
+                            <Label>
+                              Thành viên nhóm ({groupForm.memberIds.length}
+                              {groupSettings?.maxMembers ? `/${groupSettings.maxMembers}` : ""})
+                            </Label>
+                            <div
+                              className={`border-2 rounded-lg p-3 min-h-[400px] max-h-[500px] overflow-y-auto transition-colors ${
+                                dragOverGroup ? "border-orange-400 bg-orange-50" : "border-gray-200"
+                              }`}
+                              onDragOver={canRegister ? handleDragOver : undefined}
+                              onDragLeave={canRegister ? handleDragLeave : undefined}
+                              onDrop={canRegister ? handleDrop : undefined}
+                            >
+                              {groupForm.memberIds.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center text-gray-400">
+                                  <Users className="w-12 h-12 mb-2 opacity-50" />
+                                  <p className="text-sm">Kéo thả học sinh vào đây để thêm vào nhóm</p>
+                        </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {groupForm.memberIds.map((memberId) => {
+                                    // Tìm trong classStudents trước, nếu không có thì tìm trong searchedUsers
+                                    let member = classStudents.find((s) => s.id === memberId)
+                                    if (!member) {
+                                      member = searchedUsers.find((s) => s.id === memberId)
+                                    }
+                                    const isLeader = groupForm.leaderId === memberId
+                                    return (
+                                      <div
+                                        key={memberId}
+                                        className="flex items-center gap-2 p-2 bg-white border border-gray-200 rounded-lg hover:border-orange-300 transition-colors"
+                                      >
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-medium text-sm text-gray-900 truncate">
+                                              {member?.fullName || `Thành viên #${memberId}`}
+                                            </span>
+                                            {isLeader && (
+                                              <Badge variant="secondary" className="text-xs">
+                                                Trưởng nhóm
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            {member?.studentCode && (
+                                              <span className="text-xs text-gray-500">Mã: {member.studentCode}</span>
+                                            )}
+                                            {member?.className && (
+                                              <span className="text-xs text-gray-500">• Lớp: {member.className}</span>
+                                            )}
+                                            {member?.email && (
+                                              <span className="text-xs text-gray-500">• {member.email}</span>
+                                            )}
+                                          </div>
+                      </div>
+                      <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 w-7 p-0 text-gray-400 hover:text-red-500"
+                                          onClick={() => handleToggleGroupMember(memberId)}
+                                          disabled={groupSubmitting || memberId === currentUser?.id}
+                                          title={memberId === currentUser?.id ? "Bạn không thể xóa chính mình khỏi nhóm" : "Xóa khỏi nhóm"}
+                                        >
+                                          <X className="w-4 h-4" />
+                      </Button>
+                                      </div>
+                                    )
+                                  })}
+                    </div>
+                  )}
+                            </div>
+                            {groupForm.memberIds.length > 0 && (
+                              <div className="space-y-2">
+                                <Label>Nhóm trưởng</Label>
+                                <Select
+                                  value={groupForm.leaderId ? String(groupForm.leaderId) : ""}
+                                  onValueChange={handleGroupLeaderChange}
+                                  disabled={groupSubmitting}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Chọn nhóm trưởng" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {groupForm.memberIds.map((memberId) => {
+                                      // Tìm trong classStudents trước, nếu không có thì tìm trong searchedUsers
+                                      let member = classStudents.find((s) => s.id === memberId)
+                                      if (!member) {
+                                        member = searchedUsers.find((s) => s.id === memberId)
+                                      }
+                                      return (
+                                        <SelectItem key={memberId} value={String(memberId)}>
+                                          {member?.fullName || `Thành viên #${memberId}`}
+                                        </SelectItem>
+                                      )
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Cột phải: Danh sách lớp / Tìm kiếm user */}
+                          <div className="space-y-2">
+                            <Label>
+                              {groupSearchQuery && groupSearchQuery.trim().length >= 2
+                                ? "Tìm kiếm trong hệ thống"
+                                : "Danh sách lớp"}
+                            </Label>
+                            <div className="relative mb-2">
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                              <Input
+                                placeholder="Tìm kiếm học sinh trong lớp hoặc hệ thống..."
+                                value={groupSearchQuery}
+                                onChange={(e) => setGroupSearchQuery(e.target.value)}
+                                className="pl-9"
+                                disabled={groupSubmitting}
+                              />
+                              {groupSearchQuery && (
+                                <button
+                                  onClick={() => {
+                                    setGroupSearchQuery("")
+                                    setSearchedUsers([])
+                                  }}
+                                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                            <div className="border rounded-lg p-3 max-h-[500px] overflow-y-auto">
+                              {/* Hiển thị kết quả tìm kiếm trong hệ thống nếu có query >= 2 ký tự */}
+                              {groupSearchQuery && groupSearchQuery.trim().length >= 2 ? (
+                                isSearchingUsers ? (
+                                  <div className="text-center py-8">
+                                    <p className="text-sm text-gray-500">Đang tìm kiếm...</p>
+                                  </div>
+                                ) : searchedUsers.length === 0 ? (
+                                  <div className="text-center py-8">
+                                    <p className="text-sm text-gray-500">Không tìm thấy người dùng nào.</p>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {searchedUsers
+                                      .filter((user) => !groupForm.memberIds.includes(user.id))
+                                      .map((user) => (
+                                        <div
+                                          key={user.id}
+                                          draggable={canRegister && !groupSubmitting}
+                                          onDragStart={
+                                            canRegister && !groupSubmitting ? (e) => handleDragStart(e, user) : undefined
+                                          }
+                                          onDragEnd={canRegister ? handleDragEnd : undefined}
+                                          onClick={
+                                            canRegister && !groupSubmitting
+                                              ? () => handleToggleGroupMember(user.id)
+                                              : undefined
+                                          }
+                                          className={`flex items-center gap-3 p-3 transition-colors rounded-lg border ${
+                                            canRegister && !groupSubmitting
+                                              ? "hover:bg-orange-50 hover:border-orange-200 cursor-move bg-white"
+                                              : "opacity-60 cursor-not-allowed bg-gray-50"
+                                          }`}
+                                        >
+                                          <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-900 truncate">{user.fullName}</p>
+                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                              {user.studentCode && (
+                                                <span className="text-xs text-gray-500">Mã: {user.studentCode}</span>
+                                              )}
+                                              {user.className && (
+                                                <span className="text-xs text-gray-500">• Lớp: {user.className}</span>
+                                              )}
+                                              {user.email && (
+                                                <span className="text-xs text-gray-500">• {user.email}</span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                  </div>
+                                )
+                              ) : (
+                                /* Hiển thị danh sách lớp khi không có query hoặc query < 2 ký tự */
+                                isClassLoading ? (
+                                  <div className="text-center py-8">
+                                    <p className="text-sm text-gray-500">Đang tải danh sách lớp...</p>
+                                  </div>
+                                ) : classStudents.length === 0 ? (
+                                  <div className="text-center py-8">
+                                    <p className="text-sm text-gray-500">Chưa có danh sách lớp.</p>
+                                    <Button variant="link" size="sm" onClick={ensureClassData} className="mt-2">
+                                      Tải lại
+                                    </Button>
+                                  </div>
+                                ) : (() => {
+                                  const filteredStudents = classStudents.filter(
+                                    (student) =>
+                                      !groupSearchQuery ||
+                                      student.fullName?.toLowerCase().includes(groupSearchQuery.toLowerCase()) ||
+                                      student.studentCode?.toLowerCase().includes(groupSearchQuery.toLowerCase())
+                                  )
+                                  const availableStudents = filteredStudents.filter((s) => !groupForm.memberIds.includes(s.id))
+
+                                  if (availableStudents.length === 0) {
+                                    return (
+                                      <div className="text-center py-8">
+                                        <p className="text-sm text-gray-500">
+                                          {groupSearchQuery
+                                            ? "Không tìm thấy học sinh phù hợp trong lớp."
+                                            : "Tất cả học sinh đã được thêm vào nhóm."}
+                                        </p>
+                                      </div>
+                                    )
+                                  }
+
+                                  return (
+                                    <div className="space-y-2">
+                                      {availableStudents.map((student) => (
+                                        <div
+                                          key={student.id}
+                                          draggable={canRegister && !groupSubmitting}
+                                          onDragStart={
+                                            canRegister && !groupSubmitting ? (e) => handleDragStart(e, student) : undefined
+                                          }
+                                          onDragEnd={canRegister ? handleDragEnd : undefined}
+                                          onClick={
+                                            canRegister && !groupSubmitting
+                                              ? () => handleToggleGroupMember(student.id)
+                                              : undefined
+                                          }
+                                          className={`flex items-center gap-3 p-3 transition-colors rounded-lg border ${
+                                            canRegister && !groupSubmitting
+                                              ? "hover:bg-orange-50 hover:border-orange-200 cursor-move bg-white"
+                                              : "opacity-60 cursor-not-allowed bg-gray-50"
+                                          }`}
+                                        >
+                                          <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-900 truncate">{student.fullName}</p>
+                                            {student.studentCode && (
+                                              <p className="text-xs text-gray-500">Mã: {student.studentCode}</p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )
+                                })()
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter className="justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsGroupDialogOpen(false)} disabled={groupSubmitting}>
+                          Hủy
+                        </Button>
+                        <Button className="btn-primary" onClick={handleSubmitGroupRegistration} disabled={groupSubmitting || !canRegister}>
+                          {groupSubmitting ? "Đang gửi..." : "Xác nhận đăng ký"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -1182,10 +1765,10 @@ export default function ViewActivity() {
 
                 {/* SportsFestival: Môn thi đấu */}
                 {isSportsFestival && activity.sportsCategories.length > 0 && (
-                  <Card className="glass hover-lift">
+                <Card className="glass hover-lift">
                     <CardHeader className="pb-4">
                       <CardTitle className="text-xl">Môn thi đấu</CardTitle>
-                    </CardHeader>
+                  </CardHeader>
                     <CardContent className="pt-0 space-y-4">
                       <div className="grid md:grid-cols-3 gap-4">
                         {activity.sportsCategories.map((sport, index) => {
@@ -1272,7 +1855,7 @@ export default function ViewActivity() {
                       {activity.registrationSettings?.groupRegistration && (
                         <div className="pt-4 border-t border-gray-100">
                           <p className="text-sm font-semibold text-gray-700 mb-3">Cài đặt đăng ký theo nhóm</p>
-                          <div className="grid md:grid-cols-3 gap-3">
+                    <div className="grid md:grid-cols-3 gap-3">
                             <div className="p-3 bg-orange-50 rounded-lg">
                               <p className="text-xs text-gray-500 mb-1">Số thành viên tối thiểu</p>
                               <p className="font-semibold text-orange-700">
@@ -1340,22 +1923,22 @@ export default function ViewActivity() {
                                 <p className="text-sm text-gray-500 mt-2 leading-relaxed line-clamp-2">{speaker.bio}</p>
                               )}
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
                 )}
 
                 {/* SeminarWorkshop: Chương trình */}
                 {(activity.subType === "SeminarWorkshop" || activity.subType === "Seminar") && activity.programs && activity.programs.length > 0 && (
-                  <Card className="glass hover-lift">
+                <Card className="glass hover-lift">
                     <CardHeader className="pb-4">
                       <CardTitle className="text-xl flex items-center gap-2">
                         <Clock className="w-5 h-5 text-purple-500" />
                         Chương trình
                       </CardTitle>
-                    </CardHeader>
+                  </CardHeader>
                     <CardContent className="pt-0">
                       <div className="space-y-3">
                         {activity.programs
@@ -1522,7 +2105,7 @@ export default function ViewActivity() {
                         >
                           <div className="flex items-center gap-3">
                             <Avatar>
-                              <AvatarImage src={participant.avatar || "/placeholder.svg"} />
+                              <AvatarImage src={participant.avatar || PLACEHOLDER_AVATAR} />
                               <AvatarFallback>
                                 {participant.fullName ? participant.fullName.charAt(0).toUpperCase() : "?"}
                               </AvatarFallback>
@@ -1530,11 +2113,11 @@ export default function ViewActivity() {
                             <div>
                               <p className="font-semibold">{participant.fullName}</p>
                               <p className="text-sm text-gray-600">
-                                Lớp {participant.className || "Chưa rõ"}
+                                {participant.className || "Chưa rõ lớp"}
                               </p>
                               {participant.groupCode && (
                                 <p className="text-xs text-orange-600">
-                                  Nhóm: {participant.registrationMetadata || participant.groupCode}
+                                  Nhóm: {participant.registrationMetadata || "Nhóm chưa đặt tên"}
                                 </p>
                               )}
                               {participant.sportName && (

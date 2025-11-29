@@ -13,14 +13,14 @@ export class ActivityParticipantService extends ApiService {
   }
 
   /**
-   * Cancel registration for an activity
-   * @param {number} participationId - Participation ID
+   * Cancel registration for an activity (user cancels their own registration)
+   * @param {number} activityId - Activity ID
    * @param {string} token - Authentication token
    * @returns {Promise} Response
    */
-  async cancelRegistration(participationId, token) {
+  async cancelRegistration(activityId, token) {
     return this.delete(
-      `${API_CONFIG.ACTIVITY_PARTICIPANT.REMOVE}?participationId=${participationId}`,
+      API_CONFIG.ACTIVITY_PARTICIPANT.CANCEL_REGISTRATION.replace('{activityId}', activityId),
       token
     );
   }

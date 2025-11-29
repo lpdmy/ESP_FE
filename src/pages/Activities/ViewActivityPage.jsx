@@ -1,17 +1,13 @@
-import LandingLayout from "@/common/components/layout/LandingLayout";
-import ViewActivity from "@/features/activities/components/ViewActivity";
+import LandingLayout from "@/common/components/layout/LandingLayout"
+import ContentLayout from "@/common/components/layout/ContentLayout"
+import ViewActivity from "@/features/activities/components/ViewActivity"
+
 export default function ViewActivityPage() {
   return (
     <LandingLayout>
-      <div className="w-full py-6 pl-6">
-        <div className="w-full px-4">
-          <div className="flex gap-7 justify-center">
-            <section className="flex-1 min-w-0 lg:max-w-8xl xl:max-w-8xl">
-              <ViewActivity />
-            </section>
-          </div>
-        </div>
-      </div>
+      <ContentLayout contentMaxWidth="80rem">
+        <ViewActivity />
+      </ContentLayout>
     </LandingLayout>
-  );
+  )
 }
