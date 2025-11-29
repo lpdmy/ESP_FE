@@ -4,14 +4,14 @@ export const API_CONFIG = {
   BASE_URL: (() => {
     const hostname = window.location.hostname;
 
-    // Development environment
-    //if (hostname.includes("edusphere-dev")) {
-    return "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net/api";
-    //}
-
-    // Local development
+    // Local development - check first
     if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
       return "https://localhost:7084/api";
+    }
+
+    // Development environment
+    if (hostname.includes("edusphere-dev")) {
+      return "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net/api";
     }
 
     // Production environment
@@ -235,6 +235,7 @@ export const API_CONFIG = {
     GET_BY_ID: "/activity/{id}",
     CREATE: "/activity",
     UPDATE: "/activity",
+    MY_ACTIVITIES: "/my-activities",
     GENERATE_TOURNAMENT_SCHEDULE: "/activity/{id}/generate-schedule",
     TRAIN_SCHEDULE_MODEL: "/activity/train-schedule-model",
   },
@@ -243,6 +244,17 @@ export const API_CONFIG = {
   ACTIVITY_PARTICIPANT: {
     ADD: "/activityparticipant",
     REMOVE: "/activityparticipant",
+  },
+
+  // Submission endpoints
+  SUBMISSION: {
+    GET_ALL_BY_ACTIVITY_ID: "/submission/activity/{Id}",
+    CREATE: "/submission",
+    GET_BY_ID: "/submission/{id}",
+    GET_MY_SUBMISSIONS: "/submission/my-submissions",
+    GET_MY_SUBMISSION_BY_ACTIVITY_ID: "/submission/activity/{activityId}/my-submission",
+    UPDATE: "/submission/{id}",
+    DELETE: "/submission/{id}",
   },
 };
 

@@ -67,6 +67,7 @@ export const ROUTES = {
   },
   ACTIVITY: {
     VIEW_ACTIVITY: "/activities/:id",
+    MY_ACTIVITY: "/activities/my-activity",
   },
   NOTIFICATION: {
     LIST_NOTIFICATION: "/notifications",
