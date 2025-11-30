@@ -251,6 +251,13 @@ export const API_CONFIG = {
     REMOVE: '/activityparticipant',
     GROUP: '/activityparticipant/group',
     SPORT: '/activityparticipant/sport',
+  },
+
+  // Timetable endpoints
+  TIMETABLE: {
+    IMPORT: '/timetable/import',
+    GET_BY_CLASS_GROUP: '/timetable/classgroup/{classGroupId}',
+    DELETE_BY_CLASS_GROUP: '/timetable/classgroup/{classGroupId}',
   }
 };
 

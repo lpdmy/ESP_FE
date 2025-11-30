@@ -7,12 +7,14 @@ import { Label } from "@/common/components/ui/label"
 import { Textarea } from "@/common/components/ui/textarea"
 import { Badge } from "@/common/components/ui/badge"
 import { Checkbox } from "@/common/components/ui/checkbox"
-import { ArrowLeft, Sparkles, Calendar, Clock, MapPin, Wand2, Download, Share2 } from "lucide-react"
+import { ArrowLeft, Sparkles, Calendar, Clock, MapPin, Wand2, Download, Share2, Upload, FileText, X, List, GitBranch, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "react-toastify"
 import { ROUTES } from "@/common/constants/routes"
 import { activityService } from "@/features/activities/services/activity.service"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { ClassGroupService } from "@/services/classgroup.service"
+import { timetableService } from "@/services/timetable.service"
+import { AcademicYearService } from "@/services/academicyear.service"
 
 export default function AISchedule() {
   const params = useParams()
@@ -23,6 +25,8 @@ export default function AISchedule() {
   const [loading, setLoading] = useState(false)
   const [classGroups, setClassGroups] = useState([])
   const [loadingClasses, setLoadingClasses] = useState(false)
+  const [viewMode, setViewMode] = useState("list") // "list" or "bracket"
+  const [isFormCollapsed, setIsFormCollapsed] = useState(false) // Collapse form when schedule is generated
 
   const [formData, setFormData] = useState({
     sportId: null,
@@ -38,6 +42,12 @@ export default function AISchedule() {
     tournamentFormat: "SingleElimination",
     userNotes: "", // Ghi chú cho AI
   })
+
+  // Timetable upload state
+  const [timetableFile, setTimetableFile] = useState(null)
+  const [isUploadingTimetable, setIsUploadingTimetable] = useState(false)
+  const [currentAcademicYear, setCurrentAcademicYear] = useState(null)
+  const [timetableUploaded, setTimetableUploaded] = useState(false)
 
   // Load activity data
   useEffect(() => {
@@ -86,19 +96,60 @@ export default function AISchedule() {
     loadActivity()
   }, [params.id])
 
-  // Load class groups
+  // Load current academic year
+  useEffect(() => {
+    const loadAcademicYear = async () => {
+      try {
+        const token = localStorage.getItem("token")
+        const academicYear = await AcademicYearService.getCurrent(token)
+        setCurrentAcademicYear(academicYear)
+      } catch (error) {
+        console.error("Error loading academic year:", error)
+      }
+    }
+    
+    loadAcademicYear()
+  }, [])
+
+  // Load class groups - chỉ lấy các lớp đã đăng ký tham gia activity
   useEffect(() => {
     const loadClassGroups = async () => {
+      if (!activity || !activity.participants || activity.participants.length === 0) {
+        setClassGroups([])
+        setLoadingClasses(false)
+        return
+      }
+
       setLoadingClasses(true)
       try {
         const token = localStorage.getItem("token")
-        const response = await ClassGroupService.list({ pageNumber: 1, pageSize: 100 }, token)
         
-        const data = response?.data?.data || response?.data || []
-        const filtered = data.filter(c => !c.isDeleted)
+        // Lấy danh sách ClassGroupId duy nhất từ participants
+        const registeredClassGroupIds = new Set()
+        activity.participants.forEach(participant => {
+          if (participant.classGroupId && !participant.isDeleted) {
+            registeredClassGroupIds.add(participant.classGroupId)
+          }
+        })
+
+        if (registeredClassGroupIds.size === 0) {
+          setClassGroups([])
+          setLoadingClasses(false)
+          return
+        }
+
+        // Lấy thông tin đầy đủ của các lớp đã đăng ký
+        const allClassesResponse = await ClassGroupService.list({ pageNumber: 1, pageSize: 100 }, token)
+        const allClasses = allClassesResponse?.data?.data || allClassesResponse?.data || []
+        
+        // Lọc chỉ các lớp đã đăng ký
+        const registeredClasses = allClasses.filter(c => 
+          !c.isDeleted && 
+          registeredClassGroupIds.has(typeof c.id === 'number' ? c.id : parseInt(c.id))
+        )
         
         // Sort by grade first, then by name alphabetically
-        const sorted = filtered.sort((a, b) => {
+        const sorted = registeredClasses.sort((a, b) => {
           // Sort by grade (null/undefined grades go last)
           const gradeA = a.grade ?? 999
           const gradeB = b.grade ?? 999
@@ -114,14 +165,92 @@ export default function AISchedule() {
         setClassGroups(sorted)
       } catch (error) {
         console.error("Error loading class groups:", error)
-        toast.error("Không thể tải danh sách lớp")
+        toast.error("Không thể tải danh sách lớp đã đăng ký")
+        setClassGroups([])
       } finally {
         setLoadingClasses(false)
       }
     }
     
-    loadClassGroups()
-  }, [])
+    // Chỉ load khi đã có activity data
+    if (activity) {
+      loadClassGroups()
+    }
+  }, [activity])
+
+  // Handle timetable file upload
+  const handleTimetableFileChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedExtensions = ['.csv', '.xlsx', '.xls']
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase()
+    if (!allowedExtensions.includes(fileExtension)) {
+      toast.error("Chỉ chấp nhận file CSV hoặc Excel (.csv, .xlsx, .xls)")
+      e.target.value = ''
+      return
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File không được vượt quá 10MB")
+      e.target.value = ''
+      return
+    }
+
+    setTimetableFile(file)
+    setTimetableUploaded(false)
+  }
+
+  // Upload timetable file
+  const handleUploadTimetable = async () => {
+    if (!timetableFile) {
+      toast.error("Vui lòng chọn file thời khóa biểu")
+      return
+    }
+
+    if (!currentAcademicYear?.id) {
+      toast.error("Không tìm thấy niên khóa hiện tại")
+      return
+    }
+
+    setIsUploadingTimetable(true)
+    try {
+      const token = localStorage.getItem("token")
+      
+      // Upload file - import cho tất cả lớp trong niên khóa (classGroupId = null)
+      const response = await executeApiCall(
+        timetableService.importTimetable.bind(timetableService),
+        [timetableFile, currentAcademicYear.id, null, true, token],
+        { setLoading: setIsUploadingTimetable }
+      )
+
+      if (response?.data) {
+        const result = response.data.data || response.data
+        if (result.importedCount > 0) {
+          toast.success(`Đã import thành công ${result.importedCount} bản ghi thời khóa biểu`)
+          setTimetableUploaded(true)
+          setTimetableFile(null) // Clear file after successful upload
+        } else {
+          toast.warning(result.message || "Không có dữ liệu nào được import")
+        }
+        if (result.failedCount > 0) {
+          toast.warning(`${result.failedCount} bản ghi lỗi. Vui lòng kiểm tra lại file.`)
+        }
+      }
+    } catch (error) {
+      console.error("Error uploading timetable:", error)
+      toast.error(error?.message || "Có lỗi xảy ra khi upload file thời khóa biểu")
+    } finally {
+      setIsUploadingTimetable(false)
+    }
+  }
+
+  const handleRemoveTimetableFile = () => {
+    setTimetableFile(null)
+    setTimetableUploaded(false)
+  }
 
   const handleGenerate = async () => {
     if (!formData.sportId || formData.classGroupIds.length < 2) {
@@ -137,6 +266,34 @@ export default function AISchedule() {
     setIsGenerating(true)
     try {
       const token = localStorage.getItem("token")
+      
+      // Upload timetable file nếu có (trước khi generate schedule)
+      if (timetableFile && !timetableUploaded) {
+        if (!currentAcademicYear?.id) {
+          toast.error("Không tìm thấy niên khóa hiện tại")
+          setIsGenerating(false)
+          return
+        }
+
+        try {
+          const uploadResponse = await executeApiCall(
+            timetableService.importTimetable.bind(timetableService),
+            [timetableFile, currentAcademicYear.id, null, true, token],
+            { setLoading: () => {} }
+          )
+
+          if (uploadResponse?.data) {
+            const result = uploadResponse.data.data || uploadResponse.data
+            if (result.importedCount > 0) {
+              toast.success(`Đã import ${result.importedCount} bản ghi thời khóa biểu trước khi tạo lịch`)
+              setTimetableUploaded(true)
+            }
+          }
+        } catch (uploadError) {
+          console.error("Error uploading timetable before generate:", uploadError)
+          toast.warning("Có lỗi khi upload thời khóa biểu, nhưng vẫn tiếp tục tạo lịch...")
+        }
+      }
       
       // Parse time strings to TimeSpan format
       const parseTime = (timeStr) => {
@@ -170,6 +327,7 @@ export default function AISchedule() {
         // Format response for display
         const formattedSchedule = formatScheduleForDisplay(response.data)
         setGeneratedSchedule(formattedSchedule)
+        setIsFormCollapsed(true) // Collapse form when schedule is generated successfully
         toast.success("AI đã tạo lịch thi đấu tối ưu cho bạn")
       } else {
         toast.error(response?.data?.explanation || "Không thể tạo lịch thi đấu")
@@ -193,6 +351,20 @@ export default function AISchedule() {
       return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`
     }
     return time
+  }
+
+  // Helper function to format date as dd/mm/yyyy
+  const formatDateDDMMYYYY = (dateStr) => {
+    if (!dateStr) return ""
+    try {
+      const date = new Date(dateStr)
+      const day = String(date.getDate()).padStart(2, "0")
+      const month = String(date.getMonth() + 1).padStart(2, "0")
+      const year = date.getFullYear()
+      return `${day}/${month}/${year}`
+    } catch (error) {
+      return dateStr
+    }
   }
 
   // Format API response to display format
@@ -246,6 +418,7 @@ export default function AISchedule() {
             // Find previous matches that lead to this match
             const previousMatches = findPreviousMatches(match.matchNumber)
             
+            // QUAN TRỌNG: Thay Nhóm A, Nhóm B thành "Thắng trận X vs Thắng trận Y"
             if (match.classGroup1Id && match.classGroup2Id) {
               const class1Name = getClassName(match.classGroup1Id)
               const class2Name = getClassName(match.classGroup2Id)
@@ -254,6 +427,13 @@ export default function AISchedule() {
               teamsText = `${getClassName(match.classGroup1Id)} vs Chờ kết quả vòng trước`
             } else if (match.classGroup2Id) {
               teamsText = `Chờ kết quả vòng trước vs ${getClassName(match.classGroup2Id)}`
+            } else if (previousMatches.length > 0) {
+              // Nếu không có classGroupId, hiển thị "Thắng trận X vs Thắng trận Y"
+              if (previousMatches.length >= 2) {
+                teamsText = `Thắng trận #${previousMatches[0].matchNumber} vs Thắng trận #${previousMatches[1].matchNumber}`
+              } else if (previousMatches.length === 1) {
+                teamsText = `Thắng trận #${previousMatches[0].matchNumber} vs Chờ đối thủ`
+              }
             }
             
             // Build previous matches info
@@ -261,7 +441,7 @@ export default function AISchedule() {
               matchInfo.previousMatches = previousMatches.map(prevMatch => {
                 const prevDate = prevMatch.matchDate ? prevMatch.matchDate.split("T")[0] : null
                 const prevTime = formatTimeForDisplay(prevMatch.startTime)
-                const prevRound = prevMatch.roundName || `Vòng ${prevMatch.round}`
+                const prevRound = (prevMatch.roundName || `Vòng ${prevMatch.round}`).replace("Chung kết nhánh", "Bán kết")
                 const prevTeams = prevMatch.classGroup1Id && prevMatch.classGroup2Id
                   ? `${getClassName(prevMatch.classGroup1Id)} vs ${getClassName(prevMatch.classGroup2Id)}`
                   : `Trận #${prevMatch.matchNumber}`
@@ -283,7 +463,7 @@ export default function AISchedule() {
               if (nextMatch) {
                 const nextDate = nextMatch.matchDate ? nextMatch.matchDate.split("T")[0] : null
                 const nextTime = formatTimeForDisplay(nextMatch.startTime)
-                const nextRound = nextMatch.roundName || `Vòng ${nextMatch.round}`
+                const nextRound = (nextMatch.roundName || `Vòng ${nextMatch.round}`).replace("Chung kết nhánh", "Bán kết")
                 matchInfo.nextMatch = {
                   matchNumber: nextMatchId,
                   round: nextRound,
@@ -295,7 +475,7 @@ export default function AISchedule() {
             
             return {
               time: formatTimeForDisplay(match.startTime),
-              sport: match.roundName || `Round ${match.round}`,
+              sport: (match.roundName || `Round ${match.round}`).replace("Chung kết nhánh", "Bán kết"),
               venue: match.location || "N/A",
               teams: teamsText,
               matchNumber: match.matchNumber,
@@ -343,6 +523,214 @@ export default function AISchedule() {
     return grade && name ? `${grade}${name}` : name || `Lớp ${classGroupId}`
   }
 
+  // Build bracket hierarchy from matches
+  const buildBracketHierarchy = (matches) => {
+    if (!matches || matches.length === 0) return null
+
+    // Group matches by round
+    const matchesByRound = {}
+    matches.forEach(match => {
+      const round = match.round || 1
+      if (!matchesByRound[round]) {
+        matchesByRound[round] = []
+      }
+      matchesByRound[round].push(match)
+    })
+
+    // Sort rounds
+    const sortedRounds = Object.keys(matchesByRound)
+      .map(Number)
+      .sort((a, b) => a - b)
+
+    // Build hierarchy structure
+    const rounds = sortedRounds.map(roundNum => {
+      const roundMatches = matchesByRound[roundNum]
+        .sort((a, b) => (a.matchNumber || 0) - (b.matchNumber || 0))
+
+      return {
+        round: roundNum,
+        roundName: (roundMatches[0]?.roundName || `Vòng ${roundNum}`).replace("Chung kết nhánh", "Bán kết"),
+        matches: roundMatches.map(match => {
+          // Find previous matches that lead to this match
+          const prevMatches = matches.filter(m => {
+            const nextId = m.nextMatchId || m.NextMatchId
+            return nextId === match.matchNumber
+          })
+          
+          // Determine team names: Use class names if available, otherwise use "Thắng trận X"
+          let team1 = null
+          let team2 = null
+          
+          if (match.classGroup1Id) {
+            team1 = getClassName(match.classGroup1Id)
+          } else if (prevMatches.length > 0) {
+            team1 = `Thắng trận #${prevMatches[0].matchNumber}`
+          }
+          
+          if (match.classGroup2Id) {
+            team2 = getClassName(match.classGroup2Id)
+          } else if (prevMatches.length > 1) {
+            team2 = `Thắng trận #${prevMatches[1].matchNumber}`
+          } else if (prevMatches.length === 1 && !match.classGroup1Id) {
+            // If only one previous match and no classGroup1Id, team2 is the winner
+            team2 = `Thắng trận #${prevMatches[0].matchNumber}`
+          }
+          
+          return {
+            matchNumber: match.matchNumber,
+            team1: team1,
+            team2: team2,
+            team1Id: match.classGroup1Id,
+            team2Id: match.classGroup2Id,
+            nextMatchId: match.nextMatchId || match.NextMatchId,
+            previousMatches: prevMatches.map(m => m.matchNumber),
+            date: match.matchDate ? match.matchDate.split("T")[0] : null,
+            time: formatTimeForDisplay(match.startTime),
+            location: match.location,
+            notes: (match.notes || "").replace(/Nhóm A/g, prevMatches.length > 0 ? `Thắng trận #${prevMatches[0].matchNumber}` : "Nhóm A")
+                                      .replace(/Nhóm B/g, prevMatches.length > 1 ? `Thắng trận #${prevMatches[1].matchNumber}` : "Nhóm B"),
+            isBye: match.isBye,
+          }
+        })
+      }
+    })
+
+    return rounds
+  }
+
+  // Render bracket view
+  const renderBracketView = () => {
+    if (!generatedSchedule?.rawData?.generatedMatches) return null
+
+    const bracketRounds = buildBracketHierarchy(generatedSchedule.rawData.generatedMatches)
+    if (!bracketRounds || bracketRounds.length === 0) return null
+
+    // Calculate max matches in a round to determine spacing
+    const maxMatches = Math.max(...bracketRounds.map(r => r.matches.length))
+
+    return (
+      <div className="overflow-x-auto pb-6 -mx-4 px-4">
+        <div className="inline-flex gap-6 min-w-full py-4" style={{ minWidth: `${bracketRounds.length * 300}px` }}>
+          {bracketRounds.map((round, roundIdx) => {
+            const isLastRound = roundIdx === bracketRounds.length - 1
+            const isFirstRound = roundIdx === 0
+            
+            return (
+              <div key={roundIdx} className="flex-shrink-0 flex flex-col" style={{ width: '280px' }}>
+                {/* Round Header */}
+                <div className="sticky top-0 bg-gradient-to-b from-blue-50 to-white z-10 pb-3 mb-4 border-b-2 border-blue-600 shadow-sm">
+                  <h3 className="font-bold text-lg text-center text-blue-700 mb-1">{round.roundName}</h3>
+                  <p className="text-xs text-center text-gray-500">{round.matches.length} trận đấu</p>
+                </div>
+                
+                {/* Matches Container */}
+                <div className="flex-1 flex flex-col justify-center space-y-6" style={{ minHeight: `${maxMatches * 180}px` }}>
+                  {round.matches.map((match, matchIdx) => {
+                    const hasNextMatch = match.nextMatchId
+                    const nextRound = bracketRounds[roundIdx + 1]
+                    const nextMatch = nextRound?.matches.find(m => m.matchNumber === match.nextMatchId)
+                    
+                    return (
+                      <div key={matchIdx} className="relative flex items-center">
+                        {/* Match Card */}
+                        <div className={`relative bg-white border-2 rounded-lg p-4 shadow-lg transition-all hover:shadow-xl ${
+                          isLastRound 
+                            ? 'border-yellow-400 bg-gradient-to-br from-yellow-50 to-yellow-100' 
+                            : hasNextMatch 
+                              ? 'border-blue-400 hover:border-blue-600' 
+                              : 'border-gray-300 bg-gray-50'
+                        }`} style={{ width: '260px' }}>
+                          {/* Match Number Badge */}
+                          <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
+                            #{match.matchNumber}
+                          </div>
+                          
+                          {/* Team 1 */}
+                          <div className={`mb-2 p-3 rounded-lg transition-colors ${
+                            match.team1 
+                              ? 'bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300' 
+                              : match.isBye
+                                ? 'bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-300'
+                                : 'bg-gray-100 border-2 border-gray-300'
+                          }`}>
+                            <div className="font-bold text-sm text-gray-800">
+                              {match.team1 || (match.isBye ? '⚡ Đặc cách' : '⏳ Chờ kết quả')}
+                            </div>
+                          </div>
+                          
+                          {/* VS Divider */}
+                          <div className="text-center my-2">
+                            <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded">VS</span>
+                          </div>
+                          
+                          {/* Team 2 */}
+                          <div className={`p-3 rounded-lg transition-colors ${
+                            match.team2 
+                              ? 'bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300' 
+                              : match.isBye
+                                ? 'bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-300'
+                                : 'bg-gray-100 border-2 border-gray-300'
+                          }`}>
+                            <div className="font-bold text-sm text-gray-800">
+                              {match.team2 || (match.isBye ? '⚡ Đặc cách' : '⏳ Chờ kết quả')}
+                            </div>
+                          </div>
+                          
+                          {/* Match Info */}
+                          {match.date && match.time && (
+                            <div className="mt-3 pt-3 border-t-2 border-gray-200 space-y-1">
+                              <div className="flex items-center gap-2 text-xs text-gray-700">
+                                <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                                <span className="font-medium">{formatDateDDMMYYYY(match.date)}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-gray-700">
+                                <Clock className="w-3.5 h-3.5 text-blue-600" />
+                                <span className="font-medium">{match.time}</span>
+                              </div>
+                              {match.location && (
+                                <div className="flex items-center gap-2 text-xs text-gray-700">
+                                  <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                                  <span className="font-medium truncate">{match.location}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Notes */}
+                          {match.notes && (
+                            <div className="mt-2 pt-2 border-t border-gray-200">
+                              <p className="text-xs text-gray-600 italic bg-gray-50 p-2 rounded">{match.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Connection line to next match (horizontal) */}
+                        {hasNextMatch && !isLastRound && (
+                          <div className="absolute left-full top-1/2 -translate-y-1/2 w-6 h-1 bg-blue-400 z-0"></div>
+                        )}
+                        
+                        {/* Connection line to next match (vertical) - only for first match in pair */}
+                        {hasNextMatch && !isLastRound && matchIdx % 2 === 0 && round.matches[matchIdx + 1] && (
+                          <div 
+                            className="absolute left-full top-1/2 w-1 bg-blue-400 z-0" 
+                            style={{ 
+                              height: `${180}px`,
+                              transform: 'translateY(-50%)'
+                            }}
+                          ></div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -367,11 +755,28 @@ export default function AISchedule() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-blue-600" />
-                Thông tin sự kiện
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  Thông tin sự kiện
+                </CardTitle>
+                {generatedSchedule && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsFormCollapsed(!isFormCollapsed)}
+                    className="h-8 w-8 p-0"
+                  >
+                    {isFormCollapsed ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronUp className="w-4 h-4" />
+                    )}
+                  </Button>
+                )}
+              </div>
             </CardHeader>
+            {!isFormCollapsed && (
             <CardContent className="space-y-4">
               {activity && (
                 <div>
@@ -440,102 +845,196 @@ export default function AISchedule() {
               </div>
 
               <div>
-                <Label className="mb-3 block">Danh sách lớp tham gia</Label>
+                <Label className="mb-3 block">
+                  Danh sách lớp tham gia
+                  <span className="ml-2 text-xs font-normal text-gray-500">
+                    (Chỉ hiển thị các lớp đã đăng ký)
+                  </span>
+                </Label>
                 {loadingClasses ? (
                   <p className="text-sm text-gray-500">Đang tải danh sách lớp...</p>
+                ) : classGroups.length === 0 ? (
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-sm text-yellow-800">
+                      Chưa có lớp nào đăng ký tham gia hoạt động này. 
+                      Vui lòng đợi các lớp đăng ký trước khi tạo lịch thi đấu.
+                    </p>
+                  </div>
                 ) : (
                   <div className="space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-md p-3">
-                    {classGroups.length > 0 ? (
-                      <>
-                        {/* Select All Checkbox */}
-                        <div className="flex items-center gap-2 pb-2 mb-2 border-b border-gray-200">
-                          <Checkbox
-                            id="select-all-classes"
-                            checked={formData.classGroupIds.length === classGroups.length && classGroups.length > 0}
-                            onChange={(checked) => {
-                              if (checked) {
-                                const allIds = classGroups.map(cg => 
-                                  typeof cg.id === 'number' ? cg.id : parseInt(cg.id)
-                                )
-                                setFormData(prev => ({
-                                  ...prev,
-                                  classGroupIds: allIds
-                                }))
-                              } else {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  classGroupIds: []
-                                }))
-                              }
-                            }}
-                          />
-                          <Label htmlFor="select-all-classes" className="cursor-pointer font-semibold">
-                            Chọn tất cả ({classGroups.length} lớp)
-                          </Label>
+                    {/* Select All Checkbox */}
+                    <div className="flex items-center gap-2 pb-2 mb-2 border-b border-gray-200">
+                      <Checkbox
+                        id="select-all-classes"
+                        checked={formData.classGroupIds.length === classGroups.length && classGroups.length > 0}
+                        onChange={(checked) => {
+                          if (checked) {
+                            const allIds = classGroups.map(cg => 
+                              typeof cg.id === 'number' ? cg.id : parseInt(cg.id)
+                            )
+                            setFormData(prev => ({
+                              ...prev,
+                              classGroupIds: allIds
+                            }))
+                          } else {
+                            setFormData(prev => ({
+                              ...prev,
+                              classGroupIds: []
+                            }))
+                          }
+                        }}
+                      />
+                      <Label htmlFor="select-all-classes" className="cursor-pointer font-semibold">
+                        Chọn tất cả ({classGroups.length} lớp)
+                      </Label>
+                    </div>
+                    
+                    {/* Group by grade */}
+                    {Object.entries(
+                      classGroups.reduce((acc, classGroup) => {
+                        const grade = classGroup.grade ?? 'Không xác định'
+                        if (!acc[grade]) {
+                          acc[grade] = []
+                        }
+                        acc[grade].push(classGroup)
+                        return acc
+                      }, {})
+                    )
+                      .sort(([gradeA], [gradeB]) => {
+                        if (gradeA === 'Không xác định') return 1
+                        if (gradeB === 'Không xác định') return -1
+                        return parseInt(gradeA) - parseInt(gradeB)
+                      })
+                      .map(([grade, classes]) => (
+                        <div key={grade} className="mb-3">
+                          <div className="text-xs font-semibold text-gray-600 mb-1 px-1">
+                            Khối {grade}
+                          </div>
+                          <div className="space-y-1 pl-2">
+                            {classes.map((classGroup) => {
+                              const classId = typeof classGroup.id === 'number' ? classGroup.id : parseInt(classGroup.id)
+                              const isSelected = formData.classGroupIds.includes(classId)
+                              return (
+                                <div key={classGroup.id} className="flex items-center gap-2">
+                                  <Checkbox
+                                    id={`class-${classGroup.id}`}
+                                    checked={isSelected}
+                                    onChange={(checked) => {
+                                      if (checked) {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          classGroupIds: [...prev.classGroupIds, classId]
+                                        }))
+                                      } else {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          classGroupIds: prev.classGroupIds.filter(id => id !== classId)
+                                        }))
+                                      }
+                                    }}
+                                  />
+                                  <Label htmlFor={`class-${classGroup.id}`} className="cursor-pointer flex-1 text-sm">
+                                    {classGroup.grade ? `${classGroup.grade}${classGroup.name}` : classGroup.name}
+                                  </Label>
+                                </div>
+                              )
+                            })}
+                          </div>
                         </div>
-                        
-                        {/* Group by grade */}
-                        {Object.entries(
-                          classGroups.reduce((acc, classGroup) => {
-                            const grade = classGroup.grade ?? 'Không xác định'
-                            if (!acc[grade]) {
-                              acc[grade] = []
-                            }
-                            acc[grade].push(classGroup)
-                            return acc
-                          }, {})
-                        )
-                          .sort(([gradeA], [gradeB]) => {
-                            if (gradeA === 'Không xác định') return 1
-                            if (gradeB === 'Không xác định') return -1
-                            return parseInt(gradeA) - parseInt(gradeB)
-                          })
-                          .map(([grade, classes]) => (
-                            <div key={grade} className="mb-3">
-                              <div className="text-xs font-semibold text-gray-600 mb-1 px-1">
-                                Khối {grade}
-                              </div>
-                              <div className="space-y-1 pl-2">
-                                {classes.map((classGroup) => {
-                                  const classId = typeof classGroup.id === 'number' ? classGroup.id : parseInt(classGroup.id)
-                                  const isSelected = formData.classGroupIds.includes(classId)
-                                  return (
-                                    <div key={classGroup.id} className="flex items-center gap-2">
-                                      <Checkbox
-                                        id={`class-${classGroup.id}`}
-                                        checked={isSelected}
-                                        onChange={(checked) => {
-                                          if (checked) {
-                                            setFormData(prev => ({
-                                              ...prev,
-                                              classGroupIds: [...prev.classGroupIds, classId]
-                                            }))
-                                          } else {
-                                            setFormData(prev => ({
-                                              ...prev,
-                                              classGroupIds: prev.classGroupIds.filter(id => id !== classId)
-                                            }))
-                                          }
-                                        }}
-                                      />
-                                      <Label htmlFor={`class-${classGroup.id}`} className="cursor-pointer flex-1 text-sm">
-                                        {classGroup.grade ? `${classGroup.grade}${classGroup.name}` : classGroup.name}
-                                      </Label>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                      </>
-                    ) : (
-                      <p className="text-sm text-gray-500">Không có lớp nào</p>
-                    )}
+                      ))}
                   </div>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
                   Đã chọn: {formData.classGroupIds.length} lớp. Cần ít nhất 2 lớp để tạo lịch thi đấu.
                 </p>
+              </div>
+
+              {/* Timetable Upload Section */}
+              <div className="space-y-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <Label className="text-base font-semibold text-blue-900">
+                    Thời khóa biểu (Tùy chọn)
+                  </Label>
+                </div>
+                <p className="text-sm text-blue-700">
+                  Upload file thời khóa biểu để AI tránh xếp lịch thi đấu trùng với giờ học. 
+                  Hỗ trợ file CSV, Excel (.csv, .xlsx, .xls)
+                </p>
+                
+                {timetableFile ? (
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-md border border-blue-300">
+                    <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{timetableFile.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {(timetableFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                    {timetableUploaded && (
+                      <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">
+                        Đã upload
+                      </Badge>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveTimetableFile}
+                      className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="timetable-file" className="cursor-pointer">
+                      <div className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-blue-300 rounded-lg bg-white hover:bg-blue-50 transition-colors">
+                        <Upload className="w-5 h-5 text-blue-600" />
+                        <span className="text-sm font-medium text-blue-700">
+                          Chọn file thời khóa biểu
+                        </span>
+                      </div>
+                    </Label>
+                    <Input
+                      id="timetable-file"
+                      type="file"
+                      accept=".csv,.xlsx,.xls"
+                      onChange={handleTimetableFileChange}
+                      className="hidden"
+                    />
+                  </div>
+                )}
+                
+                {timetableFile && !timetableUploaded && (
+                  <Button
+                    type="button"
+                    onClick={handleUploadTimetable}
+                    disabled={isUploadingTimetable}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {isUploadingTimetable ? (
+                      <>
+                        <Wand2 className="w-4 h-4 mr-2 animate-spin" />
+                        Đang upload...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload thời khóa biểu
+                      </>
+                    )}
+                  </Button>
+                )}
+                
+                {timetableUploaded && (
+                  <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <p className="text-xs text-green-700">
+                      Thời khóa biểu đã được upload. AI sẽ sử dụng để tránh xung đột khi tạo lịch.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -646,6 +1145,7 @@ export default function AISchedule() {
                 )}
               </Button>
             </CardContent>
+            )}
           </Card>
         </div>
 
@@ -685,6 +1185,27 @@ export default function AISchedule() {
                   <div className="flex items-center justify-between">
                     <CardTitle>Lịch thi đấu đã tạo</CardTitle>
                     <div className="flex gap-2">
+                      {/* View Mode Toggle */}
+                      <div className="flex items-center gap-1 border rounded-md p-1 bg-gray-50">
+                        <Button
+                          size="sm"
+                          variant={viewMode === "list" ? "default" : "ghost"}
+                          onClick={() => setViewMode("list")}
+                          className="h-7 px-3"
+                        >
+                          <List className="w-4 h-4 mr-1" />
+                          Danh sách
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={viewMode === "bracket" ? "default" : "ghost"}
+                          onClick={() => setViewMode("bracket")}
+                          className="h-7 px-3"
+                        >
+                          <GitBranch className="w-4 h-4 mr-1" />
+                          Sơ đồ
+                        </Button>
+                      </div>
                       <Button size="sm" variant="outline">
                         <Download className="w-4 h-4 mr-2" />
                         Tải xuống
@@ -697,19 +1218,25 @@ export default function AISchedule() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {viewMode === "bracket" ? (
+                    // Bracket View
+                    <div className="py-4">
+                      {renderBracketView()}
+                    </div>
+                  ) : (
+                    // List View (existing code)
+                    <>
                   {generatedSchedule.days.map((day, dayIdx) => (
                     <div key={dayIdx}>
                       <div className="flex items-center gap-2 mb-3">
                         <Badge className="bg-blue-600 text-white">Ngày {dayIdx + 1}</Badge>
-                        <span className="font-semibold">{day.date}</span>
+                        <span className="font-semibold">{formatDateDDMMYYYY(day.date)}</span>
                       </div>
                       <div className="space-y-2">
                         {day.events.map((event, eventIdx) => {
-                          // Format date for display
+                          // Format date for display (dd/mm/yyyy)
                           const formatDate = (dateStr) => {
-                            if (!dateStr) return ""
-                            const date = new Date(dateStr)
-                            return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })
+                            return formatDateDDMMYYYY(dateStr)
                           }
                           
                           return (
@@ -779,6 +1306,8 @@ export default function AISchedule() {
                       </div>
                     </div>
                   ))}
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
