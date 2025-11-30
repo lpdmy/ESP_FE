@@ -31,6 +31,7 @@ import { useToast } from "@/common/hooks/useToast"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
 import { activityParticipantService } from "@/features/activities/services/activityParticipant.service"
+import { submissionService } from "@/features/activities/services/submission.service"
 import { ROUTES } from "@/common/constants/routes"
 import { LoadingCard } from "@/common/components/ui/loading"
 import { ClassGroupService } from "@/services/classgroup.service"
@@ -43,6 +44,7 @@ const PLACEHOLDER_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2
 
 import {
   ArrowLeft,
+  ArrowRight,
   Calendar,
   MapPin,
   Users,
@@ -58,6 +60,8 @@ import {
   GripVertical,
   Search,
   X,
+  Upload,
+  File,
 } from "lucide-react"
 
 export default function ViewActivity() {
@@ -96,6 +100,13 @@ export default function ViewActivity() {
   const location = useLocation()
   const queryParams = new URLSearchParams(location.search)
   const isPreview = queryParams.get("isPreview") === "true"
+  
+  // Submission states
+  const [submissionStatus, setSubmissionStatus] = useState(null)
+  const [isCheckingSubmission, setIsCheckingSubmission] = useState(false)
+  const [isSubmissionDialogOpen, setIsSubmissionDialogOpen] = useState(false)
+  const [submissionFile, setSubmissionFile] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -284,6 +295,11 @@ export default function ViewActivity() {
             drawingMedium: activityDetail?.drawingMedium || "",
             timeLimit: activityDetail?.timeLimit || "",
             submissionFormat: activityDetail?.submissionFormat || "",
+            // Problem/Submission fields
+            problemText: activityData?.problemText || null,
+            problemFileUrl: activityData?.problemFileUrl || null,
+            submissionDeadline: activityData?.submissionDeadline || null,
+            isProblemVisible: activityData?.isProblemVisible ?? false,
             rules: activityData?.rules || [],
             timeline: [
               { 
@@ -301,6 +317,12 @@ export default function ViewActivity() {
                 title: "Khai mạc", 
             status: getTimelineStatus(activityData?.startDate),
               },
+              // Thêm hạn cuối nộp bài nếu có (chỉ cho CreativeContest)
+              ...(activityData?.submissionDeadline ? [{
+                date: activityData.submissionDeadline ? new Date(activityData.submissionDeadline).toISOString().split("T")[0] : "",
+                title: "Hạn cuối nộp bài",
+                status: getTimelineStatus(activityData.submissionDeadline),
+              }] : []),
               { 
                 date: activityData?.endDate ? new Date(activityData.endDate).toISOString().split("T")[0] : "", 
                 title: "Bế mạc & Trao giải", 
@@ -336,6 +358,40 @@ export default function ViewActivity() {
   useEffect(() => {
     fetchActivity()
   }, [fetchActivity])
+
+  // Check submission status when activity is loaded
+  useEffect(() => {
+    const checkSubmissionStatus = async () => {
+      if (!activity?.id || !currentUser?.id || isPreview) return
+      
+      // Chỉ check cho CreativeContest có SubmissionDeadline
+      if (activity.subType !== "CreativeContest" || !activity.submissionDeadline) return
+      
+      const token = localStorage.getItem("token")
+      if (!token) return
+
+      setIsCheckingSubmission(true)
+      try {
+        const response = await executeApiCall(
+          submissionService.getSubmissionStatus.bind(submissionService),
+          [activity.id, token],
+          { setError: () => {} }
+        )
+        
+        const statusData = response?.data?.data || response?.data
+        if (statusData) {
+          setSubmissionStatus(statusData)
+        }
+      } catch (err) {
+        console.error("Error checking submission status:", err)
+        // Không hiển thị error nếu không có quyền hoặc chưa đăng ký
+      } finally {
+        setIsCheckingSubmission(false)
+      }
+    }
+
+    checkSubmissionStatus()
+  }, [activity?.id, activity?.subType, activity?.submissionDeadline, currentUser?.id, isPreview])
 
   const ensureClassData = useCallback(async () => {
     if (isClassLoading) return
@@ -1085,12 +1141,172 @@ export default function ViewActivity() {
     )
   }
 
+  // Check if can submit (for CreativeContest with submission)
+  const canSubmit = useMemo(() => {
+    if (!activity || !submissionStatus) return false
+    if (activity.subType !== "CreativeContest") return false
+    if (!activity.submissionDeadline) return false
+    
+    const now = new Date()
+    const startDate = activity.startDate ? new Date(activity.startDate) : null
+    const deadline = activity.submissionDeadline ? new Date(activity.submissionDeadline) : null
+    
+    if (!startDate || !deadline) return false
+    if (now < startDate) return false
+    if (now > deadline) return false
+    
+    return submissionStatus.canSubmit === true
+  }, [activity, submissionStatus])
+
+  const handleOpenSubmissionDialog = () => {
+    if (isPreview) {
+      toast.showWarning("Bạn đang ở chế độ xem trước, không thể thực hiện hành động này.")
+      return
+    }
+    setIsSubmissionDialogOpen(true)
+  }
+
+  const handleSubmitSubmission = async () => {
+    if (!submissionFile) {
+      toast.error("Vui lòng chọn file để nộp bài")
+      return
+    }
+
+    const token = localStorage.getItem("token")
+    if (!token) {
+      toast.error("Vui lòng đăng nhập để tiếp tục.")
+      return
+    }
+
+    if (!activity?.id) {
+      toast.error("Không tìm thấy thông tin hoạt động")
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      // Upload file first
+      const { uploadFile } = await import("@/common/utils/upload")
+      const fileUrl = await uploadFile(submissionFile)
+      
+      if (!fileUrl) {
+        toast.error("Upload file thất bại. Vui lòng thử lại.")
+        return
+      }
+
+      // Create submission
+      const response = await executeApiCall(
+        submissionService.createSubmission.bind(submissionService),
+        [activity.id, { fileUrl, title: submissionFile.name }, token],
+        { setError }
+      )
+
+      if (response?.data?.data || response?.data) {
+        toast.showSuccess("Nộp bài thành công!")
+        setIsSubmissionDialogOpen(false)
+        setSubmissionFile(null)
+        // Refresh submission status
+        const statusResponse = await executeApiCall(
+          submissionService.getSubmissionStatus.bind(submissionService),
+          [activity.id, token],
+          { setError: () => {} }
+        )
+        const statusData = statusResponse?.data?.data || statusResponse?.data
+        if (statusData) {
+          setSubmissionStatus(statusData)
+        }
+      }
+    } catch (err) {
+      console.error("Error submitting:", err)
+      toast.error(err?.message || "Có lỗi xảy ra khi nộp bài")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const renderSubmitButton = () => {
+    if (!isCreativeContest || !activity.submissionDeadline) return null
+    if (!isRegistered) return null // Chỉ hiển thị nếu đã đăng ký
+
+    const now = new Date()
+    const startDate = activity.startDate ? new Date(activity.startDate) : null
+    const deadline = activity.submissionDeadline ? new Date(activity.submissionDeadline) : null
+
+    // Chưa đến thời gian mở đề
+    if (startDate && now < startDate) return null
+
+    // Đã quá hạn
+    if (deadline && now > deadline) {
+      if (submissionStatus?.hasSubmission) {
+        return (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              Đã nộp bài vào {submissionStatus.submissionDate 
+                ? new Date(submissionStatus.submissionDate).toLocaleDateString("vi-VN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  })
+                : "thời điểm trước đó"}
+            </p>
+          </div>
+        )
+      }
+      return (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-800">Đã quá hạn nộp bài</p>
+        </div>
+      )
+    }
+
+    // Có thể nộp bài
+    if (canSubmit) {
+      return (
+        <Button
+          className="w-full btn-primary"
+          onClick={handleOpenSubmissionDialog}
+          disabled={isPreview || isCheckingSubmission}
+        >
+          <Upload className="w-4 h-4 mr-2" />
+          Nộp bài
+        </Button>
+      )
+    }
+
+    // Đã nộp bài rồi
+    if (submissionStatus?.hasSubmission) {
+      return (
+        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm text-green-800 font-medium">
+            Đã nộp bài vào {submissionStatus.submissionDate 
+              ? new Date(submissionStatus.submissionDate).toLocaleDateString("vi-VN", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                })
+              : "thời điểm trước đó"}
+          </p>
+        </div>
+      )
+    }
+
+    return null
+  }
+
   const renderRegisteredStatus = () => (
     <div className="space-y-3">
       <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-700">
         <CheckCircle className="w-5 h-5" />
         <span className="font-medium">Đã đăng ký tham gia</span>
       </div>
+      
+      {/* Nút Nộp bài (nếu có) */}
+      {renderSubmitButton()}
+      
       {canCancelRegistration && (
       <Button
         variant="outline"
@@ -1715,6 +1931,106 @@ export default function ViewActivity() {
                     </DialogContent>
                   </Dialog>
 
+                  {/* Dialog Nộp bài */}
+                  <Dialog open={isSubmissionDialogOpen} onOpenChange={setIsSubmissionDialogOpen}>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Nộp bài</DialogTitle>
+                        <DialogDescription>
+                          Chọn file bài nộp của bạn. File sẽ được lưu và gửi đến ban giám khảo.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>File bài nộp <span className="text-red-500">*</span></Label>
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                            <input
+                              type="file"
+                              id="submission-file"
+                              className="hidden"
+                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip,.rar"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (file) {
+                                  // Validate file size (10MB max)
+                                  const maxSize = 10 * 1024 * 1024
+                                  if (file.size > maxSize) {
+                                    toast.error("File không được vượt quá 10MB")
+                                    return
+                                  }
+                                  setSubmissionFile(file)
+                                }
+                              }}
+                            />
+                            <label
+                              htmlFor="submission-file"
+                              className="cursor-pointer flex flex-col items-center gap-2"
+                            >
+                              <Upload className="w-8 h-8 text-gray-400" />
+                              <span className="text-sm text-gray-600">
+                                {submissionFile ? submissionFile.name : "Chọn file để nộp bài"}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                Hỗ trợ: PDF, DOC, DOCX, JPG, PNG, ZIP, RAR (tối đa 10MB)
+                              </span>
+                            </label>
+                          </div>
+                          {submissionFile && (
+                            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <File className="w-5 h-5 text-blue-600" />
+                                <span className="text-sm font-medium">{submissionFile.name}</span>
+                                <span className="text-xs text-gray-500">
+                                  ({(submissionFile.size / 1024 / 1024).toFixed(2)} MB)
+                                </span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSubmissionFile(null)}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        {activity.submissionDeadline && (
+                          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p className="text-sm text-yellow-800">
+                              <Clock className="w-4 h-4 inline mr-1" />
+                              Hạn cuối nộp bài: {new Date(activity.submissionDeadline).toLocaleDateString("vi-VN", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsSubmissionDialogOpen(false)
+                            setSubmissionFile(null)
+                          }}
+                          disabled={isSubmitting}
+                        >
+                          Hủy
+                        </Button>
+                        <Button
+                          className="btn-primary"
+                          onClick={handleSubmitSubmission}
+                          disabled={isSubmitting || !submissionFile}
+                        >
+                          {isSubmitting ? "Đang nộp..." : "Xác nhận nộp bài"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -1878,6 +2194,101 @@ export default function ViewActivity() {
                             </div>
                           </div>
                         </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* CreativeContest: Đề bài - Chỉ hiển thị sau StartDate */}
+                {isCreativeContest && (
+                  <Card className="glass hover-lift">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-xl flex items-center gap-2">
+                        <Info className="w-5 h-5 text-blue-500" />
+                        Đề bài
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-4">
+                      {!activity.isProblemVisible ? (
+                        // Chưa đến thời gian mở đề
+                        <div className="p-6 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+                          <Clock className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
+                          <p className="text-base font-semibold text-yellow-800 mb-2">
+                            Chưa tới thời gian mở đề
+                          </p>
+                          <p className="text-sm text-yellow-700">
+                            Đề thi sẽ được mở vào{" "}
+                            <span className="font-semibold">
+                              {activity.startDate
+                                ? new Date(activity.startDate).toLocaleDateString("vi-VN", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                : "thời điểm bắt đầu hoạt động"}
+                            </span>
+                            . Bạn vui lòng quay lại sau.
+                          </p>
+                        </div>
+                      ) : (
+                        // Đã đến thời gian mở đề - hiển thị đầy đủ
+                        <>
+                          {activity.problemText && (
+                            <div className="p-4 bg-white border border-gray-200 rounded-lg">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Info className="w-5 h-5 text-blue-600" />
+                                <span className="text-sm font-semibold text-gray-700">Nội dung đề bài</span>
+                              </div>
+                              <div className="prose max-w-none">
+                                <p className="text-gray-900 whitespace-pre-wrap">{activity.problemText}</p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {activity.problemFileUrl && (
+                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Upload className="w-5 h-5 text-blue-600" />
+                                <span className="text-sm font-semibold text-gray-700">File đề bài</span>
+                              </div>
+                              <a
+                                href={activity.problemFileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 underline"
+                              >
+                                <span>Tải file đề bài</span>
+                                <ArrowRight className="w-4 h-4" />
+                              </a>
+                            </div>
+                          )}
+                          
+                          {activity.submissionDeadline && (
+                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Clock className="w-5 h-5 text-red-600" />
+                                <span className="text-sm font-semibold text-red-800">Hạn cuối nộp bài</span>
+                              </div>
+                              <p className="text-base font-semibold text-red-900">
+                                {new Date(activity.submissionDeadline).toLocaleDateString("vi-VN", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {!activity.problemText && !activity.problemFileUrl && (
+                            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-500">
+                              Chưa có đề bài cho cuộc thi này.
+                            </div>
+                          )}
+                        </>
                       )}
                     </CardContent>
                   </Card>

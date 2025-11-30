@@ -69,6 +69,10 @@ export default function CreateActivity() {
     genre: "",
     wordLimit: "",
     writingFormat: "",
+    // Problem/Submission fields - chỉ áp dụng cho CreativeContest
+    problemText: "",
+    problemFileUrl: "",
+    submissionDeadline: "",
     rules: [""],
     speakers: [], // [{ name: "", title: "", bio: "", image: "" }]
     programItems: [], // [{ title: "", time: "", description: "" }]
@@ -501,6 +505,12 @@ export default function CreateActivity() {
         drawingMedium: formData.subType === "CreativeContest" ? formData.drawingMedium : null,
         timeLimit: formData.subType === "CreativeContest" ? formData.timeLimit : null,
         submissionFormat: formData.subType === "CreativeContest" ? formData.submissionFormat : null,
+        // Problem/Submission fields - chỉ áp dụng cho CreativeContest
+        problemText: formData.subType === "CreativeContest" ? formData.problemText : null,
+        problemFileUrl: formData.subType === "CreativeContest" ? formData.problemFileUrl : null,
+        submissionDeadline: formData.subType === "CreativeContest" && formData.submissionDeadline 
+          ? vnTimeToUTC(formData.submissionDeadline) 
+          : null,
         // SeminarWorkshop fields
         speakers: formData.subType === "SeminarWorkshop" ? formData.speakers.map((s, index) => ({
           name: s.name,
@@ -1078,6 +1088,138 @@ export default function CreateActivity() {
                         value={formData.submissionFormat}
                         onChange={(e) => setFormData({ ...formData, submissionFormat: e.target.value })}
                       />
+                  </div>
+
+                  {/* Problem/Submission Section - Chỉ hiển thị cho CreativeContest */}
+                  <div className="border rounded-lg p-4 space-y-4 bg-blue-50">
+                    <div>
+                      <Label className="text-base font-semibold">Đề bài và hạn nộp bài</Label>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Đề bài sẽ được mở vào thời điểm bắt đầu hoạt động (StartDate). Hạn cuối nộp bài phải sau StartDate và trước EndDate.
+                      </p>
+                    </div>
+                    
+                    <div className="grid gap-4">
+                      <div className="grid gap-2">
+                        <Label>Đề bài (Text) <span className="text-red-500">*</span></Label>
+                        <Textarea
+                          placeholder="Nhập đề bài chi tiết cho cuộc thi..."
+                          value={formData.problemText}
+                          onChange={(e) => setFormData({ ...formData, problemText: e.target.value })}
+                          rows={6}
+                          className="resize-none"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Đề bài sẽ được hiển thị sau khi đến thời điểm bắt đầu hoạt động.
+                        </p>
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <Label>File đề bài (Tùy chọn)</Label>
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              placeholder="URL hoặc path đến file đề bài (PDF, DOCX, etc.)"
+                              value={formData.problemFileUrl}
+                              onChange={(e) => setFormData({ ...formData, problemFileUrl: e.target.value })}
+                              readOnly={!!formData.problemFileUrl}
+                            />
+                            <input
+                              type="file"
+                              id="problem-file-upload"
+                              className="hidden"
+                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0]
+                                if (!file) return
+                                
+                                // Validate file size (10MB max)
+                                const maxSize = 10 * 1024 * 1024
+                                if (file.size > maxSize) {
+                                  toast.error("File không được vượt quá 10MB")
+                                  return
+                                }
+                                
+                                // Validate file type
+                                const allowedTypes = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"]
+                                const fileExtension = "." + file.name.split(".").pop().toLowerCase()
+                                if (!allowedTypes.includes(fileExtension)) {
+                                  toast.error("Chỉ chấp nhận file PDF, DOC, DOCX, JPG, PNG")
+                                  return
+                                }
+                                
+                                setIsUploadingThumbnail(true)
+                                try {
+                                  const { uploadFile } = await import("@/common/utils/upload")
+                                  const fileUrl = await uploadFile(file)
+                                  if (fileUrl) {
+                                    setFormData({ ...formData, problemFileUrl: fileUrl })
+                                    toast.success("Upload file đề bài thành công!")
+                                  } else {
+                                    toast.error("Upload file thất bại. Vui lòng thử lại.")
+                                  }
+                                } catch (err) {
+                                  console.error("Upload error:", err)
+                                  toast.error("Upload file thất bại: " + (err?.message || "Lỗi không xác định"))
+                                } finally {
+                                  setIsUploadingThumbnail(false)
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                if (formData.problemFileUrl) {
+                                  // Clear file URL
+                                  setFormData({ ...formData, problemFileUrl: "" })
+                                  toast.info("Đã xóa file đề bài")
+                                } else {
+                                  // Trigger file input
+                                  document.getElementById("problem-file-upload")?.click()
+                                }
+                              }}
+                              disabled={isUploadingThumbnail}
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              {formData.problemFileUrl ? "Xóa" : isUploadingThumbnail ? "Đang upload..." : "Upload"}
+                            </Button>
+                          </div>
+                          {formData.problemFileUrl && (
+                            <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                              <span className="text-sm text-green-800">Đã upload file đề bài</span>
+                              <a
+                                href={formData.problemFileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-600 hover:underline ml-auto"
+                              >
+                                Xem file
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Có thể upload file PDF, DOCX, JPG, PNG (tối đa 10MB). File sẽ được hiển thị sau khi đến thời điểm bắt đầu hoạt động.
+                        </p>
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <Label>Hạn cuối nộp bài <span className="text-red-500">*</span></Label>
+                        <Input
+                          type="datetime-local"
+                          value={formData.submissionDeadline}
+                          onChange={(e) => setFormData({ ...formData, submissionDeadline: e.target.value })}
+                          min={formData.startDate || ""}
+                          max={formData.endDate || ""}
+                        />
+                        <p className="text-xs text-gray-500">
+                          Hạn cuối nộp bài phải sau thời điểm bắt đầu (StartDate) và trước thời điểm kết thúc (EndDate).
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="border rounded-lg p-4 space-y-4">
