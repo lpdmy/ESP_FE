@@ -115,6 +115,18 @@ export class ActivityService extends ApiService {
   }
 
   /**
+   * Apply tournament schedule after manual adjustments
+   * @param {number|string} activityId - Activity ID
+   * @param {Object} applyRequest - ApplyTournamentScheduleRequestDto
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with apply result
+   */
+  async applyTournamentSchedule(activityId, applyRequest, token) {
+    const endpoint = API_CONFIG.ACTIVITY.APPLY_TOURNAMENT_SCHEDULE.replace('{id}', activityId);
+    return this.post(endpoint, applyRequest, token);
+  }
+
+  /**
    * Train schedule ML model
    * @param {string} token - Authentication token
    * @returns {Promise} Response

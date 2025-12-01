@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react"
-import { useParams, useNavigate, Link } from "react-router-dom"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { useParams, Link } from "react-router-dom"
 import { Button } from "@/common/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
 import { Input } from "@/common/components/ui/input"
@@ -7,18 +7,20 @@ import { Label } from "@/common/components/ui/label"
 import { Textarea } from "@/common/components/ui/textarea"
 import { Badge } from "@/common/components/ui/badge"
 import { Checkbox } from "@/common/components/ui/checkbox"
-import { ArrowLeft, Sparkles, Calendar, Clock, MapPin, Wand2, Download, Share2, Upload, FileText, X, List, GitBranch, ChevronDown, ChevronUp } from "lucide-react"
+import { ArrowLeft, Sparkles, Calendar, Clock, MapPin, Wand2, Download, Share2, Upload, FileText, X, List, GitBranch, ChevronDown, ChevronUp, Maximize2 } from "lucide-react"
 import { toast } from "react-toastify"
 import { ROUTES } from "@/common/constants/routes"
 import { activityService } from "@/features/activities/services/activity.service"
+import { activityMatchService } from "@/services/activityMatch.service"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { ClassGroupService } from "@/services/classgroup.service"
 import { timetableService } from "@/services/timetable.service"
 import { AcademicYearService } from "@/services/academicyear.service"
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
+import { BracketTree } from "./BracketTree"
 
 export default function AISchedule() {
   const params = useParams()
-  const navigate = useNavigate()
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedSchedule, setGeneratedSchedule] = useState(null)
   const [activity, setActivity] = useState(null)
@@ -27,6 +29,16 @@ export default function AISchedule() {
   const [loadingClasses, setLoadingClasses] = useState(false)
   const [viewMode, setViewMode] = useState("list") // "list" or "bracket"
   const [isFormCollapsed, setIsFormCollapsed] = useState(false) // Collapse form when schedule is generated
+  const [editedMatches, setEditedMatches] = useState({})
+  const [isApplyingSchedule, setIsApplyingSchedule] = useState(false)
+  const [publishSchedule, setPublishSchedule] = useState(false)
+  const [officialBracket, setOfficialBracket] = useState(null)
+  const [loadingOfficialBracket, setLoadingOfficialBracket] = useState(false)
+  const [matchResults, setMatchResults] = useState({})
+  const [officialViewCollapsed, setOfficialViewCollapsed] = useState(false)
+  const [selectedBracketMatch, setSelectedBracketMatch] = useState(null) // match được click trong cây
+  const [activeTab, setActiveTab] = useState("generator") // "generator" | "manager"
+  const handleBracketMatchClick = useCallback((match) => setSelectedBracketMatch(match), [])
 
   const [formData, setFormData] = useState({
     sportId: null,
@@ -37,6 +49,7 @@ export default function AISchedule() {
     preferredStartTime: "08:00",
     preferredEndTime: "17:00",
     availableLocations: [],
+    availableLocationsRaw: "", // Lưu raw string để user có thể gõ dấu phẩy
     maxMatchesPerDay: 10,
     minGapBetweenMatches: 30,
     tournamentFormat: "SingleElimination",
@@ -49,9 +62,48 @@ export default function AISchedule() {
   const [currentAcademicYear, setCurrentAcademicYear] = useState(null)
   const [timetableUploaded, setTimetableUploaded] = useState(false)
 
+  const memoizedOfficialMatches = useMemo(() => {
+    if (!officialBracket?.rounds?.length) return []
+    return officialBracket.rounds.flatMap((round) => round.matches)
+  }, [officialBracket])
+
+  const normalizeDateString = (dateStr) => {
+    if (!dateStr) return ""
+    return dateStr.includes("T") ? dateStr.split("T")[0] : dateStr
+  }
+
+  const normalizeTimeString = (timeStr) => {
+    if (!timeStr) return ""
+    const time = timeStr.toString().replace(/\s*(AM|PM|am|pm)/gi, "").trim()
+    const parts = time.split(":")
+    const hours = (parts[0] ?? "00").padStart(2, "0")
+    const minutes = (parts[1] ?? "00").padStart(2, "0")
+    return `${hours}:${minutes}`
+  }
+
+  const toBackendTimeSpan = (timeStr) => {
+    if (!timeStr) return null
+    return `${normalizeTimeString(timeStr)}:00`
+  }
+
+  const buildEditedMatchMap = useCallback(
+    (matches = []) => {
+      const map = {}
+      matches.forEach((match) => {
+        map[match.matchNumber] = {
+          matchDate: normalizeDateString(match.matchDate) || formData.startDate || "",
+          startTime: normalizeTimeString(match.startTime) || formData.preferredStartTime || "08:00",
+          endTime: normalizeTimeString(match.endTime) || normalizeTimeString(formData.matchDuration) || "09:00",
+          location: match.location || formData.availableLocations[0] || "",
+        }
+      })
+      return map
+    },
+    [formData.startDate, formData.preferredStartTime, formData.matchDuration, formData.availableLocations]
+  )
+
   // Load activity data
-  useEffect(() => {
-    const loadActivity = async () => {
+  const loadActivity = useCallback(async () => {
       if (!params.id) return
       
       setLoading(true)
@@ -65,23 +117,33 @@ export default function AISchedule() {
         
         if (response?.data) {
           setActivity(response.data)
-          // Set default values from activity
           if (response.data.startDate) {
-            setFormData(prev => ({
+          setFormData((prev) => ({
               ...prev,
               startDate: response.data.startDate.split("T")[0],
             }))
           }
           if (response.data.endDate) {
-            setFormData(prev => ({
+          setFormData((prev) => ({
               ...prev,
               endDate: response.data.endDate.split("T")[0],
             }))
           }
           if (response.data.location) {
-            setFormData(prev => ({
+          setFormData((prev) => ({
               ...prev,
               availableLocations: [response.data.location],
+            availableLocationsRaw: response.data.location,
+          }))
+        }
+        // Tự động chọn môn thể thao đầu tiên để load bracket chính thức
+        if (response.data.sports && response.data.sports.length > 0) {
+          const firstSport = response.data.sports[0]
+          const firstSportId =
+            typeof firstSport.id === "number" ? firstSport.id : parseInt(firstSport.id)
+          setFormData((prev) => ({
+            ...prev,
+            sportId: prev.sportId ?? firstSportId,
             }))
           }
         }
@@ -91,10 +153,82 @@ export default function AISchedule() {
       } finally {
         setLoading(false)
       }
-    }
-    
-    loadActivity()
   }, [params.id])
+    
+  useEffect(() => {
+    loadActivity()
+  }, [loadActivity])
+
+  const fetchOfficialBracket = useCallback(
+    async (sportId) => {
+      if (!params.id || !sportId) return
+
+      setLoadingOfficialBracket(true)
+      try {
+        const token = localStorage.getItem("token")
+        const response = await executeApiCall(
+          activityMatchService.getBracket.bind(activityMatchService),
+          [params.id, sportId, null, token],
+          { setLoading: setLoadingOfficialBracket }
+        )
+
+        if (response?.data) {
+          setOfficialBracket(response.data)
+        } else {
+          setOfficialBracket(null)
+        }
+      } catch (error) {
+        const status = error?.statusCode ?? error?.status ?? error?.response?.status
+        if (status === 404) {
+          console.log("No official bracket yet (404). This is expected until schedule is applied.")
+          setOfficialBracket(null)
+        } else {
+          console.error("Error loading official bracket:", error)
+          setOfficialBracket(null)
+          // Optionally show toast for real errors:
+          // toast.error("Không thể tải lịch thi đấu chính thức")
+        }
+      } finally {
+        setLoadingOfficialBracket(false)
+      }
+    },
+    [params.id]
+  )
+
+  useEffect(() => {
+    if (!activity || !formData.sportId) {
+      setOfficialBracket(null)
+      return
+    }
+    fetchOfficialBracket(formData.sportId)
+  }, [activity, formData.sportId, fetchOfficialBracket])
+
+  useEffect(() => {
+    if (!officialBracket?.rounds) {
+      setMatchResults({})
+      return
+    }
+
+    const initialResults = {}
+    officialBracket.rounds.forEach((round) => {
+      round.matches.forEach((match) => {
+        initialResults[match.id] = {
+          score1: match.score1 ?? 0,
+          score2: match.score2 ?? 0,
+          winnerClassGroupId: match.winnerClassGroupId ?? "",
+          markAsCompleted: match.status === 2,
+        }
+      })
+    })
+    setMatchResults(initialResults)
+  }, [officialBracket])
+
+  // Nếu đã có officialBracket mà chưa có generatedSchedule, ưu tiên tab "Quản lý giải đấu"
+  useEffect(() => {
+    if (officialBracket?.rounds?.length && !generatedSchedule) {
+      setActiveTab("manager")
+    }
+  }, [officialBracket, generatedSchedule])
 
   // Load current academic year
   useEffect(() => {
@@ -327,6 +461,7 @@ export default function AISchedule() {
         // Format response for display
         const formattedSchedule = formatScheduleForDisplay(response.data)
         setGeneratedSchedule(formattedSchedule)
+        setEditedMatches(buildEditedMatchMap(response.data.generatedMatches))
         setIsFormCollapsed(true) // Collapse form when schedule is generated successfully
         toast.success("AI đã tạo lịch thi đấu tối ưu cho bạn")
       } else {
@@ -338,6 +473,30 @@ export default function AISchedule() {
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  const handleMatchFieldChange = (matchNumber, field, value) => {
+    setEditedMatches((prev) => {
+      const nextValue =
+        field === "startTime" || field === "endTime" ? normalizeTimeString(value) : value
+      return {
+        ...prev,
+        [matchNumber]: {
+          ...(prev[matchNumber] || {}),
+          [field]: nextValue,
+        },
+      }
+    })
+  }
+
+  const handleResultFieldChange = (matchId, field, value) => {
+    setMatchResults((prev) => ({
+      ...prev,
+      [matchId]: {
+        ...(prev[matchId] || {}),
+        [field]: field === "markAsCompleted" ? value : value,
+      },
+    }))
   }
 
   // Helper function to format time (remove AM/PM, ensure HH:mm format)
@@ -475,11 +634,13 @@ export default function AISchedule() {
             
             return {
               time: formatTimeForDisplay(match.startTime),
+              endTime: formatTimeForDisplay(match.endTime),
               sport: (match.roundName || `Round ${match.round}`).replace("Chung kết nhánh", "Bán kết"),
               venue: match.location || "N/A",
               teams: teamsText,
               matchNumber: match.matchNumber,
               round: match.round,
+              rawMatchDate: match.matchDate,
               previousMatches: matchInfo.previousMatches,
               nextMatch: matchInfo.nextMatch,
               notes: match.notes,
@@ -499,9 +660,78 @@ export default function AISchedule() {
     }
   }
 
-  const handleApplySchedule = () => {
-    toast.success("Lịch thi đấu đã được áp dụng")
-    navigate(`/activities/${params.id}`)
+  const buildMatchesPayload = () => {
+    if (!generatedSchedule?.rawData?.generatedMatches) return []
+
+    return generatedSchedule.rawData.generatedMatches.map((match) => {
+      const overrides = editedMatches[match.matchNumber] || {}
+      const matchDate = overrides.matchDate || normalizeDateString(match.matchDate) || formData.startDate
+
+      return {
+        sportId: match.sportId || formData.sportId,
+        classGroup1Id: match.classGroup1Id,
+        classGroup2Id: match.classGroup2Id,
+        grade: match.grade,
+        matchDate,
+        startTime: toBackendTimeSpan(overrides.startTime || match.startTime),
+        endTime: toBackendTimeSpan(overrides.endTime || match.endTime),
+        location: overrides.location ?? match.location ?? "",
+        status: match.status ?? 0,
+        score1: match.score1 ?? 0,
+        score2: match.score2 ?? 0,
+        winnerClassGroupId: match.winnerClassGroupId ?? null,
+        round: match.round,
+        roundName: match.roundName,
+        matchNumber: match.matchNumber,
+        nextMatchNumber: match.nextMatchId || match.NextMatchId || null,
+        isBye: match.isBye,
+        notes: match.notes,
+      }
+    })
+  }
+
+  const handleApplySchedule = async () => {
+    if (!generatedSchedule?.rawData?.generatedMatches?.length) {
+      toast.error("Không có trận nào để áp dụng")
+      return
+    }
+
+    const matchesPayload = buildMatchesPayload()
+    if (!matchesPayload.length) {
+      toast.error("Không thể chuẩn hóa dữ liệu trận đấu")
+      return
+    }
+
+    setIsApplyingSchedule(true)
+    try {
+      const token = localStorage.getItem("token")
+      const payload = {
+        isPublished: publishSchedule,
+        matches: matchesPayload,
+      }
+
+      await executeApiCall(
+        activityService.applyTournamentSchedule.bind(activityService),
+        [params.id, payload, token],
+        { setLoading: setIsApplyingSchedule }
+      )
+
+      toast.success("Đã áp dụng lịch thi đấu")
+      await loadActivity()
+      if (formData.sportId) {
+        await fetchOfficialBracket(formData.sportId)
+      }
+      setActiveTab("manager")
+    } catch (error) {
+      const message =
+        error?.message ||
+        error?.error ||
+        error?.data?.message ||
+        "Có lỗi xảy ra khi áp dụng lịch thi đấu"
+      toast.error(message)
+    } finally {
+      setIsApplyingSchedule(false)
+    }
   }
 
   const handleSportSelect = (sportId) => {
@@ -509,6 +739,45 @@ export default function AISchedule() {
       ...prev,
       sportId: prev.sportId === sportId ? null : sportId,
     }))
+  }
+
+  const handleSubmitMatchResult = async (match, overrideState = null) => {
+    const current = overrideState || matchResults[match.id] || {}
+    const payload = {
+      score1: Number(current.score1 ?? 0),
+      score2: Number(current.score2 ?? 0),
+      markAsCompleted: !!current.markAsCompleted,
+      winnerClassGroupId: current.winnerClassGroupId ? Number(current.winnerClassGroupId) : null,
+      // Nếu backend hỗ trợ, các field dưới có thể được map thêm
+      penaltyScore1: current.penaltyScore1 ?? null,
+      penaltyScore2: current.penaltyScore2 ?? null,
+      penaltySummary: current.penaltySummary ?? null,
+    }
+
+    if (payload.markAsCompleted && !payload.winnerClassGroupId) {
+      toast.error("Vui lòng chọn đội thắng trước khi hoàn tất trận đấu")
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+      await executeApiCall(
+        activityMatchService.updateMatchResult.bind(activityMatchService),
+        [match.id, payload, token],
+        {}
+      )
+      toast.success(`Đã cập nhật kết quả trận #${match.matchNumber}`)
+      if (formData.sportId) {
+        await fetchOfficialBracket(formData.sportId)
+      }
+    } catch (error) {
+      const message =
+        error?.message ||
+        error?.error ||
+        error?.data?.message ||
+        "Có lỗi xảy ra khi cập nhật kết quả"
+      toast.error(message)
+    }
   }
 
   // Helper function to get class name (grade + name)
@@ -523,7 +792,7 @@ export default function AISchedule() {
     return grade && name ? `${grade}${name}` : name || `Lớp ${classGroupId}`
   }
 
-  // Build bracket hierarchy from matches
+  // Build bracket hierarchy from matches (group by round, enrich team names & linkage)
   const buildBracketHierarchy = (matches) => {
     if (!matches || matches.length === 0) return null
 
@@ -577,19 +846,19 @@ export default function AISchedule() {
           }
           
           return {
-            matchNumber: match.matchNumber,
+          matchNumber: match.matchNumber,
             team1: team1,
             team2: team2,
-            team1Id: match.classGroup1Id,
-            team2Id: match.classGroup2Id,
-            nextMatchId: match.nextMatchId || match.NextMatchId,
+          team1Id: match.classGroup1Id,
+          team2Id: match.classGroup2Id,
+          nextMatchId: match.nextMatchId || match.NextMatchId,
             previousMatches: prevMatches.map(m => m.matchNumber),
-            date: match.matchDate ? match.matchDate.split("T")[0] : null,
-            time: formatTimeForDisplay(match.startTime),
-            location: match.location,
+          date: match.matchDate ? match.matchDate.split("T")[0] : null,
+          time: formatTimeForDisplay(match.startTime),
+          location: match.location,
             notes: (match.notes || "").replace(/Nhóm A/g, prevMatches.length > 0 ? `Thắng trận #${prevMatches[0].matchNumber}` : "Nhóm A")
                                       .replace(/Nhóm B/g, prevMatches.length > 1 ? `Thắng trận #${prevMatches[1].matchNumber}` : "Nhóm B"),
-            isBye: match.isBye,
+          isBye: match.isBye,
           }
         })
       }
@@ -598,136 +867,557 @@ export default function AISchedule() {
     return rounds
   }
 
-  // Render bracket view
-  const renderBracketView = () => {
-    if (!generatedSchedule?.rawData?.generatedMatches) return null
+  // Transform flat matches to tree structure (root = final match, children = previous matches)
+  // Dùng cho layout dạng cây kim tự tháp (Final ở trên, Round 1 ở dưới)
+  const transformToTreeStructure = (matches = []) => {
+    if (!matches || matches.length === 0) return null
 
-    const bracketRounds = buildBracketHierarchy(generatedSchedule.rawData.generatedMatches)
-    if (!bracketRounds || bracketRounds.length === 0) return null
+    // Map theo matchNumber để dễ lookup
+    const nodeMap = new Map()
+    matches.forEach((m) => {
+      nodeMap.set(m.matchNumber, {
+        match: m,
+        children: [],
+      })
+    })
 
-    // Calculate max matches in a round to determine spacing
-    const maxMatches = Math.max(...bracketRounds.map(r => r.matches.length))
+    // Gắn children: mỗi match là "cha" của những match có nextMatchId = match.matchNumber
+    matches.forEach((m) => {
+      const parentNode = nodeMap.get(m.matchNumber)
+      const children = matches.filter(
+        (c) => (c.nextMatchId || c.NextMatchId) === m.matchNumber
+      )
+      children.forEach((child) => {
+        const childNode = nodeMap.get(child.matchNumber)
+        if (childNode) {
+          parentNode.children.push(childNode)
+        }
+      })
+    })
+
+    // Root = match không có nextMatchId (thường là Chung kết)
+    let root = null
+    for (const node of nodeMap.values()) {
+      const nextId = node.match.nextMatchId || node.match.NextMatchId
+      if (!nextId) {
+        root = node
+        break
+      }
+    }
+
+    // Fallback: lấy match có round lớn nhất nếu không xác định được root rõ ràng
+    if (!root) {
+      root = [...nodeMap.values()].reduce((max, curr) =>
+        (curr.match.round || 0) > (max.match.round || 0) ? curr : max
+      )
+    }
+
+    return root
+  }
+
+  // Modal hiển thị / chỉnh sửa kết quả trận đấu từ bracket
+  const MatchDetailModal = ({ match, onClose }) => {
+    if (!match) return null
+
+    const baseState = matchResults[match.id] || {
+      score1: match.score1 ?? 0,
+      score2: match.score2 ?? 0,
+      markAsCompleted: match.status === 2,
+    }
+
+    const [localScore1, setLocalScore1] = useState(Number(baseState.score1 ?? 0))
+    const [localScore2, setLocalScore2] = useState(Number(baseState.score2 ?? 0))
+    const [localPenalty1, setLocalPenalty1] = useState(0)
+    const [localPenalty2, setLocalPenalty2] = useState(0)
+
+    const team1Name = match.classGroup1Name || `Lớp ${match.classGroup1Id || "?"}`
+    const team2Name = match.classGroup2Name || `Lớp ${match.classGroup2Id || "?"}`
+
+    let winnerId = null
+    let winnerLabel = "Chưa xác định"
+    let isMainDraw = false
+    let isPenaltyDraw = false
+
+    if (localScore1 > localScore2 && match.classGroup1Id) {
+      winnerId = match.classGroup1Id
+      winnerLabel = team1Name
+    } else if (localScore2 > localScore1 && match.classGroup2Id) {
+      winnerId = match.classGroup2Id
+      winnerLabel = team2Name
+    } else if (localScore1 === localScore2 && (localScore1 !== 0 || localScore2 !== 0)) {
+      isMainDraw = true
+      // Tạm thời quyết định bằng luân lưu nếu có
+      if (localPenalty1 > localPenalty2 && match.classGroup1Id) {
+        winnerId = match.classGroup1Id
+        winnerLabel = `${team1Name} (thắng luân lưu)`
+      } else if (localPenalty2 > localPenalty1 && match.classGroup2Id) {
+        winnerId = match.classGroup2Id
+        winnerLabel = `${team2Name} (thắng luân lưu)`
+      } else if (
+        (localPenalty1 !== 0 || localPenalty2 !== 0) &&
+        localPenalty1 === localPenalty2
+      ) {
+        isPenaltyDraw = true
+        winnerLabel = "Hòa cả luân lưu - cần cập nhật tỉ số phân định thắng thua"
+      } else {
+        winnerLabel = "Hòa - cần nhập tỉ số luân lưu để phân định thắng thua"
+      }
+    }
+
+    const showPenaltySection =
+      isMainDraw || localPenalty1 > 0 || localPenalty2 > 0
+
+    const handleSave = async () => {
+      if (!winnerId || isPenaltyDraw) {
+        toast.error("Vui lòng nhập tỉ số (kể cả luân lưu nếu cần) sao cho có đội thắng rõ ràng.")
+        return
+      }
+
+      let penaltySummary = null
+      if (showPenaltySection && (localPenalty1 > 0 || localPenalty2 > 0)) {
+        penaltySummary = `(Luân lưu: ${localPenalty1}-${localPenalty2})`
+      }
+
+      const overrideState = {
+        score1: localScore1,
+        score2: localScore2,
+        winnerClassGroupId: winnerId,
+        markAsCompleted: true,
+        penaltyScore1: localPenalty1,
+        penaltyScore2: localPenalty2,
+        penaltySummary,
+      }
+
+      // Đồng bộ state cục bộ để UI official card thấy ngay kết quả
+      setMatchResults((prev) => ({
+        ...prev,
+        [match.id]: {
+          ...(prev[match.id] || {}),
+          ...overrideState,
+        },
+      }))
+
+      await handleSubmitMatchResult(match, overrideState)
+      onClose()
+    }
 
     return (
-      <div className="overflow-x-auto pb-6 -mx-4 px-4">
-        <div className="inline-flex gap-6 min-w-full py-4" style={{ minWidth: `${bracketRounds.length * 300}px` }}>
-          {bracketRounds.map((round, roundIdx) => {
-            const isLastRound = roundIdx === bracketRounds.length - 1
-            const isFirstRound = roundIdx === 0
-            
-            return (
-              <div key={roundIdx} className="flex-shrink-0 flex flex-col" style={{ width: '280px' }}>
-                {/* Round Header */}
-                <div className="sticky top-0 bg-gradient-to-b from-blue-50 to-white z-10 pb-3 mb-4 border-b-2 border-blue-600 shadow-sm">
-                  <h3 className="font-bold text-lg text-center text-blue-700 mb-1">{round.roundName}</h3>
-                  <p className="text-xs text-center text-gray-500">{round.matches.length} trận đấu</p>
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl p-6 relative">
+          <button
+            className="absolute top-3 right-3 text-slate-400 hover:text-slate-700"
+            onClick={onClose}
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          {/* Header */}
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">
+            Trận #{match.matchNumber} • {match.roundName || `Vòng ${match.round}`}
+          </h3>
+
+          {/* VS Banner */}
+          <div className="mb-4 rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex-1 text-right">
+              <p className="text-xs text-slate-500">Đội 1</p>
+              <p className="font-semibold text-slate-800 truncate">{team1Name}</p>
+            </div>
+            <div className="px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full">
+              VS
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-slate-500">Đội 2</p>
+              <p className="font-semibold text-slate-800 truncate">{team2Name}</p>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-4 mb-3">
+            <div>
+              <Label className="text-xs text-slate-500">Điểm đội 1</Label>
+              <Input
+                type="number"
+                min="0"
+                value={localScore1}
+                onChange={(e) => {
+                  const val = Number(e.target.value || 0)
+                  setLocalScore1(val)
+                  handleResultFieldChange(match.id, "score1", val)
+                }}
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-slate-500">Điểm đội 2</Label>
+              <Input
+                type="number"
+                min="0"
+                value={localScore2}
+                onChange={(e) => {
+                  const val = Number(e.target.value || 0)
+                  setLocalScore2(val)
+                  handleResultFieldChange(match.id, "score2", val)
+                }}
+              />
+            </div>
+            <div className="flex items-center justify-center">
+              <div className="text-xs">
+                <p className="text-slate-500 mb-1">🏆 Đội thắng (tính tự động)</p>
+                <p
+                  className={`font-semibold ${
+                    isPenaltyDraw || isMainDraw ? "text-amber-600" : winnerId ? "text-emerald-700" : "text-slate-400"
+                  }`}
+                >
+                  {winnerLabel}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {isMainDraw && (
+            <p className="text-xs text-amber-600 mb-3">
+              Tỉ số đang hòa. Vui lòng cập nhật kết quả cuối cùng (sau luân lưu, hiệp phụ, ...).
+            </p>
+          )}
+
+        {showPenaltySection && (
+          <div className="mt-3 p-3 rounded-md bg-orange-50 border border-orange-200 grid md:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-slate-600">Luân lưu Đội 1</Label>
+              <Input
+                type="number"
+                min="0"
+                value={localPenalty1}
+                onChange={(e) => {
+                  const val = Number(e.target.value || 0)
+                  setLocalPenalty1(val)
+                }}
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-slate-600">Luân lưu Đội 2</Label>
+              <Input
+                type="number"
+                min="0"
+                value={localPenalty2}
+                onChange={(e) => {
+                  const val = Number(e.target.value || 0)
+                  setLocalPenalty2(val)
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={onClose}>
+              Đóng
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={handleSave}
+            >
+              Lưu kết quả
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Match tree rendering moved to BracketTree.jsx
+
+  // Bracket view cho official (tab Quản lý giải đấu)
+  const renderOfficialBracketView = () => {
+    if (!memoizedOfficialMatches.length) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+          <Sparkles className="w-8 h-8 mb-2 text-gray-400" />
+          <p className="text-sm">
+            Chưa có lịch thi đấu chính thức. Hãy tạo lịch và áp dụng ở tab "Tạo lịch với AI".
+          </p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="relative border border-slate-200 rounded-lg overflow-hidden bg-slate-50/50">
+        <TransformWrapper
+          initialScale={0.8}
+          minScale={0.2}
+          maxScale={4}
+          centerOnInit={true}
+          limitToBounds={false}
+          wheel={{
+            step: 0.1,
+          }}
+          panning={{
+            velocityDisabled: false, // Bắt buộc phải có cái này thì velocityAnimation mới chạy
+          }}
+          doubleClick={{
+            disabled: true,
+          }}
+          // --- Đặt velocityAnimation ở đây (Bên trong thẻ mở) ---
+          velocityAnimation={{
+            animationTime: 400,
+            animationType: "easeOut",
+            sensitivity: 1, 
+          }}
+          // -----------------------------------------------------
+          alignmentAnimation={{ animationTime: 0, animationType: "linear" }}
+        >
+          {({ zoomIn, zoomOut, resetTransform, centerView }) => (
+            <>
+              {/* Toolbar điều khiển */}
+              <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 bg-white shadow-md border border-slate-200 rounded-lg p-1.5">
+                <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-slate-100" onClick={() => zoomIn()} title="Phóng to">
+                  <span className="text-lg font-bold">+</span>
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-slate-100" onClick={() => zoomOut()} title="Thu nhỏ">
+                  <span className="text-lg font-bold">-</span>
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-slate-100" onClick={() => centerView()} title="Căn giữa">
+                  <Maximize2 className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-slate-100 text-red-500 hover:text-red-600" onClick={() => resetTransform()} title="Reset">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <TransformComponent
+                wrapperStyle={{
+                  width: "100%",
+                  height: "700px",
+                  overflow: "hidden",
+                  cursor: "grab",
+                }}
+                contentStyle={{
+                  width: "100%",
+                  height: "100%",
+                  willChange: "transform",
+                  transformOrigin: "center center",
+                }}
+              >
+                <div className="min-w-[100vw] min-h-[100vh] flex items-center justify-center p-20">
+                  <BracketTree
+                    matches={memoizedOfficialMatches}
+                    official={officialBracket}
+                    onMatchClick={handleBracketMatchClick}
+                  />
                 </div>
-                
-                {/* Matches Container */}
-                <div className="flex-1 flex flex-col justify-center space-y-6" style={{ minHeight: `${maxMatches * 180}px` }}>
-                  {round.matches.map((match, matchIdx) => {
-                    const hasNextMatch = match.nextMatchId
-                    const nextRound = bracketRounds[roundIdx + 1]
-                    const nextMatch = nextRound?.matches.find(m => m.matchNumber === match.nextMatchId)
-                    
-                    return (
-                      <div key={matchIdx} className="relative flex items-center">
-                        {/* Match Card */}
-                        <div className={`relative bg-white border-2 rounded-lg p-4 shadow-lg transition-all hover:shadow-xl ${
-                          isLastRound 
-                            ? 'border-yellow-400 bg-gradient-to-br from-yellow-50 to-yellow-100' 
-                            : hasNextMatch 
-                              ? 'border-blue-400 hover:border-blue-600' 
-                              : 'border-gray-300 bg-gray-50'
-                        }`} style={{ width: '260px' }}>
-                          {/* Match Number Badge */}
-                          <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
-                            #{match.matchNumber}
-                          </div>
-                          
-                          {/* Team 1 */}
-                          <div className={`mb-2 p-3 rounded-lg transition-colors ${
-                            match.team1 
-                              ? 'bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300' 
-                              : match.isBye
-                                ? 'bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-300'
-                                : 'bg-gray-100 border-2 border-gray-300'
-                          }`}>
-                            <div className="font-bold text-sm text-gray-800">
-                              {match.team1 || (match.isBye ? '⚡ Đặc cách' : '⏳ Chờ kết quả')}
+              </TransformComponent>
+            </>
+          )}
+        </TransformWrapper>
+        
+        {/* Modal nằm ngoài TransformWrapper để không bị zoom theo */}
+        {selectedBracketMatch && (
+          <MatchDetailModal
+            match={selectedBracketMatch}
+            onClose={() => setSelectedBracketMatch(null)}
+          />
+        )}
+      </div>
+    )
+  }
+
+  const renderOfficialBracketCard = () => {
+    if (!officialBracket || !formData.sportId) return null
+
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle>Lịch đã áp dụng (Sport #{formData.sportId})</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3"
+                onClick={() => setOfficialViewCollapsed(!officialViewCollapsed)}
+              >
+                {officialViewCollapsed ? (
+                  <>
+                    <ChevronDown className="w-4 h-4 mr-1" />
+                    Mở rộng
+                  </>
+                ) : (
+                  <>
+                    <ChevronUp className="w-4 h-4 mr-1" />
+                    Thu gọn
+                  </>
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 px-3"
+                disabled={loadingOfficialBracket}
+                onClick={() => fetchOfficialBracket(formData.sportId)}
+              >
+                <Download className="w-4 h-4 mr-1" />
+                Tải lại
+              </Button>
+                      </div>
+          </div>
+          <p className="text-xs text-gray-500">
+            Tổng {officialBracket.totalMatches} trận • {officialBracket.totalRounds} vòng đấu
+          </p>
+        </CardHeader>
+        {!officialViewCollapsed && (
+          <CardContent className="space-y-4">
+            {loadingOfficialBracket ? (
+              <p className="text-sm text-gray-500">Đang tải lịch chính thức...</p>
+            ) : (
+              officialBracket.rounds.map((round) => (
+                <div key={round.roundNumber} className="space-y-3 border rounded-md p-4 bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-gray-800">
+                      {round.roundName || `Vòng ${round.roundNumber}`}
+                    </h4>
+                    <span className="text-xs text-gray-500">{round.matches.length} trận</span>
+                  </div>
+                  <div className="space-y-3">
+                    {round.matches.map((match) => {
+                      const resultState = matchResults[match.id] || {
+                        score1: match.score1 ?? 0,
+                        score2: match.score2 ?? 0,
+                        winnerClassGroupId: match.winnerClassGroupId ?? "",
+                        markAsCompleted: match.status === 2,
+                      }
+
+                      const statusLabel =
+                        match.status === 0
+                          ? "Chờ đấu"
+                          : match.status === 1
+                          ? "Đang diễn ra"
+                          : match.status === 2
+                          ? "Hoàn thành"
+                          : "Đã hủy"
+
+                      return (
+                        <div key={match.id} className="bg-white border rounded-md p-3 shadow-sm">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">Trận #{match.matchNumber}</Badge>
+                              <span className="text-sm text-gray-600">
+                                {match.matchDate
+                                  ? formatDateDDMMYYYY(match.matchDate.split("T")[0])
+                                  : "Chưa lên lịch"}
+                              </span>
                             </div>
+                            <Badge className="bg-blue-100 text-blue-700 border border-blue-300">
+                              {statusLabel}
+                            </Badge>
                           </div>
-                          
-                          {/* VS Divider */}
-                          <div className="text-center my-2">
-                            <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded">VS</span>
-                          </div>
-                          
-                          {/* Team 2 */}
-                          <div className={`p-3 rounded-lg transition-colors ${
-                            match.team2 
-                              ? 'bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300' 
-                              : match.isBye
-                                ? 'bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-300'
-                                : 'bg-gray-100 border-2 border-gray-300'
-                          }`}>
-                            <div className="font-bold text-sm text-gray-800">
-                              {match.team2 || (match.isBye ? '⚡ Đặc cách' : '⏳ Chờ kết quả')}
+                          <div className="space-y-2 text-sm text-gray-700 mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">
+                                {match.classGroup1Name || `Lớp ${match.classGroup1Id || "?"}`}
+                              </span>
+                              <span className="text-gray-500">vs</span>
+                              <span className="font-semibold">
+                                {match.classGroup2Name || `Lớp ${match.classGroup2Id || "?"}`}
+                              </span>
                             </div>
-                          </div>
-                          
-                          {/* Match Info */}
-                          {match.date && match.time && (
-                            <div className="mt-3 pt-3 border-t-2 border-gray-200 space-y-1">
-                              <div className="flex items-center gap-2 text-xs text-gray-700">
-                                <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                                <span className="font-medium">{formatDateDDMMYYYY(match.date)}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-xs text-gray-700">
-                                <Clock className="w-3.5 h-3.5 text-blue-600" />
-                                <span className="font-medium">{match.time}</span>
-                              </div>
+                            <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+                              {match.matchDate && match.startTime && (
+                                <span>
+                                  <Calendar className="inline w-3 h-3 mr-1" />
+                                  {formatDateDDMMYYYY(match.matchDate.split("T")[0])} -{" "}
+                                  {formatTimeForDisplay(match.startTime)}
+                                </span>
+                              )}
                               {match.location && (
-                                <div className="flex items-center gap-2 text-xs text-gray-700">
-                                  <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                                  <span className="font-medium truncate">{match.location}</span>
-                                </div>
+                                <span>
+                                  <MapPin className="inline w-3 h-3 mr-1" />
+                                  {match.location}
+                                </span>
                               )}
                             </div>
-                          )}
-                          
-                          {/* Notes */}
-                          {match.notes && (
-                            <div className="mt-2 pt-2 border-t border-gray-200">
-                              <p className="text-xs text-gray-600 italic bg-gray-50 p-2 rounded">{match.notes}</p>
+                          </div>
+                          <div className="grid md:grid-cols-4 gap-3">
+                            <div>
+                              <Label className="text-xs text-gray-500">Điểm đội 1</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={resultState.score1}
+                                onChange={(e) =>
+                                  handleResultFieldChange(match.id, "score1", e.target.value)
+                                }
+                              />
                             </div>
-                          )}
-                        </div>
-                        
-                        {/* Connection line to next match (horizontal) */}
-                        {hasNextMatch && !isLastRound && (
-                          <div className="absolute left-full top-1/2 -translate-y-1/2 w-6 h-1 bg-blue-400 z-0"></div>
-                        )}
-                        
-                        {/* Connection line to next match (vertical) - only for first match in pair */}
-                        {hasNextMatch && !isLastRound && matchIdx % 2 === 0 && round.matches[matchIdx + 1] && (
-                          <div 
-                            className="absolute left-full top-1/2 w-1 bg-blue-400 z-0" 
-                            style={{ 
-                              height: `${180}px`,
-                              transform: 'translateY(-50%)'
-                            }}
-                          ></div>
-                        )}
-                      </div>
-                    )
-                  })}
+                            <div>
+                              <Label className="text-xs text-gray-500">Điểm đội 2</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={resultState.score2}
+                                onChange={(e) =>
+                                  handleResultFieldChange(match.id, "score2", e.target.value)
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs text-gray-500">Đội thắng</Label>
+                              <select
+                                className="w-full border rounded-md px-3 py-2 text-sm"
+                                value={resultState.winnerClassGroupId || ""}
+                                onChange={(e) =>
+                                  handleResultFieldChange(
+                                    match.id,
+                                    "winnerClassGroupId",
+                                    e.target.value
+                                  )
+                                }
+                              >
+                                <option value="">Chưa xác định</option>
+                                {match.classGroup1Id && (
+                                  <option value={match.classGroup1Id}>
+                                    {match.classGroup1Name || `Lớp ${match.classGroup1Id}`}
+                                  </option>
+                                )}
+                                {match.classGroup2Id && (
+                                  <option value={match.classGroup2Id}>
+                                    {match.classGroup2Name || `Lớp ${match.classGroup2Id}`}
+                                  </option>
+                                )}
+                              </select>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id={`mark-complete-${match.id}`}
+                                  checked={!!resultState.markAsCompleted}
+                                  onCheckedChange={(checked) =>
+                                    handleResultFieldChange(
+                                      match.id,
+                                      "markAsCompleted",
+                                      !!checked
+                                    )
+                                  }
+                                />
+                                <Label
+                                  htmlFor={`mark-complete-${match.id}`}
+                                  className="text-xs text-gray-600"
+                                >
+                                  Kết thúc trận
+                                </Label>
+                              </div>
+                              <Button size="sm" onClick={() => handleSubmitMatchResult(match)}>
+                                Cập nhật kết quả
+                              </Button>
+                            </div>
                 </div>
               </div>
             )
           })}
         </div>
       </div>
+              ))
+            )}
+          </CardContent>
+        )}
+      </Card>
     )
   }
 
@@ -750,16 +1440,45 @@ export default function AISchedule() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Input Form */}
-        <div className="space-y-6">
+      {/* Tabs chế độ */}
+      <div className="mt-4 border-b flex gap-2">
+        <button
+          className={`px-4 py-2 text-sm font-medium border-b-2 ${
+            activeTab === "generator"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+          onClick={() => setActiveTab("generator")}
+        >
+          Tạo lịch với AI
+        </button>
+        <button
+          className={`px-4 py-2 text-sm font-medium border-b-2 ${
+            activeTab === "manager"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+          onClick={() => setActiveTab("manager")}
+        >
+          Quản lý giải đấu
+        </button>
+      </div>
+
+      {activeTab === "generator" ? (
+        <div className="flex flex-col lg:flex-row gap-6 mt-4">
+          {/* Input Form */}
+          <div
+            className={`space-y-6 transition-all duration-300 ${
+              isFormCollapsed ? "lg:w-64" : "lg:w-[420px]"
+            }`}
+          >
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                  Thông tin sự kiện
-                </CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                Thông tin sự kiện
+              </CardTitle>
                 {generatedSchedule && (
                   <Button
                     variant="ghost"
@@ -1041,18 +1760,72 @@ export default function AISchedule() {
                 <Label htmlFor="availableLocations">Địa điểm (phân cách bằng dấu phẩy)</Label>
                 <Textarea
                   id="availableLocations"
-                  value={formData.availableLocations.join(", ")}
+                  value={formData.availableLocationsRaw}
                   onChange={(e) => {
-                    const locations = e.target.value
-                      .split(",")
+                    // QUAN TRỌNG: Lưu raw value để user có thể gõ dấu phẩy tự do
+                    const inputValue = e.target.value
+                    
+                    // Lưu raw value
+                    setFormData(prev => ({
+                      ...prev,
+                      availableLocationsRaw: inputValue
+                    }))
+                    
+                    // Parse thành array (loại bỏ phần tử rỗng) nhưng vẫn giữ raw value
+                    if (!inputValue || inputValue.trim() === "") {
+                      setFormData(prev => ({
+                        ...prev,
+                        availableLocationsRaw: inputValue,
+                        availableLocations: []
+                      }))
+                      return
+                    }
+                    
+                    // Tách bằng dấu phẩy (hỗ trợ cả dấu phẩy tiếng Việt và tiếng Anh)
+                    const locations = inputValue
+                      .split(/[,，]/) // Hỗ trợ cả dấu phẩy tiếng Anh (,) và tiếng Việt (，)
                       .map((loc) => loc.trim())
                       .filter((loc) => loc.length > 0)
-                    setFormData({ ...formData, availableLocations: locations })
+                    
+                    setFormData(prev => ({
+                      ...prev,
+                      availableLocationsRaw: inputValue,
+                      availableLocations: locations
+                    }))
+                  }}
+                  onBlur={(e) => {
+                    // Khi blur (mất focus), parse lại và loại bỏ các phần tử rỗng
+                    const inputValue = e.target.value
+                    if (!inputValue || inputValue.trim() === "") {
+                      setFormData(prev => ({
+                        ...prev,
+                        availableLocationsRaw: "",
+                        availableLocations: []
+                      }))
+                      return
+                    }
+                    
+                    const locations = inputValue
+                      .split(/[,，]/)
+                      .map((loc) => loc.trim())
+                      .filter((loc) => loc.length > 0)
+                    
+                    // Cập nhật raw value (loại bỏ dấu phẩy thừa ở cuối)
+                    const cleanedValue = locations.join(", ")
+                    
+                    setFormData(prev => ({
+                      ...prev,
+                      availableLocationsRaw: cleanedValue,
+                      availableLocations: locations
+                    }))
                   }}
                   rows={2}
                   placeholder="Sân bóng A, Sân bóng chuyền, Đường chạy 1"
                   className="mt-2"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  💡 Nhập các địa điểm, phân cách bằng dấu phẩy. Ví dụ: "Sân bóng A, Sân bóng chuyền, Đường chạy 1"
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1149,17 +1922,9 @@ export default function AISchedule() {
           </Card>
         </div>
 
-        {/* Generated Schedule */}
-        <div className="space-y-6">
-          {!generatedSchedule ? (
-            <Card className="h-full">
-              <CardContent className="flex flex-col items-center justify-center h-full p-12 text-center">
-                <Sparkles className="w-16 h-16 text-gray-300 mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Chưa có lịch thi đấu</h3>
-                <p className="text-gray-600 text-sm">Điền thông tin bên trái và nhấn "Tạo lịch với AI" để bắt đầu</p>
-              </CardContent>
-            </Card>
-          ) : (
+          {/* Generated Schedule / Official Schedule / Empty State */}
+          <div className="flex-1 space-y-6">
+          {generatedSchedule ? (
             <>
               {/* Stats */}
               <div className="grid grid-cols-2 gap-4">
@@ -1179,7 +1944,7 @@ export default function AISchedule() {
                 </Card>
               </div>
 
-              {/* Schedule */}
+              {/* Schedule (AI preview) */}
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -1218,10 +1983,27 @@ export default function AISchedule() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {formData.availableLocations?.length > 0 && (
+                    <datalist id="available-locations-list">
+                      {formData.availableLocations.map((loc) => (
+                        <option key={loc} value={loc} />
+                      ))}
+                    </datalist>
+                  )}
                   {viewMode === "bracket" ? (
-                    // Bracket View
+                    // Bracket View (preview từ lịch AI, không edit)
                     <div className="py-4">
-                      {renderBracketView()}
+                      {generatedSchedule?.rawData?.generatedMatches?.length ? (
+                        <BracketTree
+                          matches={generatedSchedule.rawData.generatedMatches}
+                          official={null}
+                          onMatchClick={() => {}}
+                        />
+                      ) : (
+                        <p className="text-sm text-gray-500">
+                          Chưa có dữ liệu để hiển thị sơ đồ.
+                        </p>
+                      )}
                     </div>
                   ) : (
                     // List View (existing code)
@@ -1234,15 +2016,22 @@ export default function AISchedule() {
                       </div>
                       <div className="space-y-2">
                         {day.events.map((event, eventIdx) => {
-                          // Format date for display (dd/mm/yyyy)
-                          const formatDate = (dateStr) => {
-                            return formatDateDDMMYYYY(dateStr)
+                          const editable =
+                            editedMatches[event.matchNumber] || {
+                              matchDate: event.rawMatchDate ? normalizeDateString(event.rawMatchDate) : day.date,
+                              startTime: event.time,
+                              endTime: event.endTime || "",
+                              location: event.venue || "",
                           }
                           
                           return (
-                            <div key={eventIdx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div
+                              key={eventIdx}
+                              className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                            >
+                              <div className="flex items-start gap-3">
                               <div className="bg-blue-600 text-white rounded px-2 py-1 text-sm font-semibold min-w-[60px] text-center">
-                                {event.time}
+                                  {editable.startTime || event.time}
                               </div>
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
@@ -1251,15 +2040,62 @@ export default function AISchedule() {
                                     Trận #{event.matchNumber}
                                   </Badge>
                                 </div>
-                                <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-2 flex-wrap">
                                   <span className="flex items-center gap-1">
                                     <MapPin className="w-3 h-3" />
-                                    {event.venue}
+                                      {editable.location || "N/A"}
                                   </span>
                                   <span className="font-medium">{event.teams}</span>
                                 </div>
                                 
-                                {/* Hiển thị thông tin về các trận trước đó */}
+                                  <div className="grid md:grid-cols-3 gap-3 mb-3">
+                                    <div>
+                                      <Label className="text-xs text-gray-500">Ngày thi đấu</Label>
+                                      <Input
+                                        type="date"
+                                        value={editable.matchDate || ""}
+                                        onChange={(e) =>
+                                          handleMatchFieldChange(event.matchNumber, "matchDate", e.target.value)
+                                        }
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs text-gray-500">Giờ bắt đầu</Label>
+                                      <Input
+                                        type="time"
+                                        value={editable.startTime || ""}
+                                        onChange={(e) =>
+                                          handleMatchFieldChange(event.matchNumber, "startTime", e.target.value)
+                                        }
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs text-gray-500">Giờ kết thúc</Label>
+                                      <Input
+                                        type="time"
+                                        value={editable.endTime || ""}
+                                        onChange={(e) =>
+                                          handleMatchFieldChange(event.matchNumber, "endTime", e.target.value)
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="mb-3">
+                                    <Label className="text-xs text-gray-500">Địa điểm</Label>
+                                    <Input
+                                      list="available-locations-list"
+                                      placeholder="Nhập tên sân"
+                                      value={editable.location || ""}
+                                      onChange={(e) =>
+                                        handleMatchFieldChange(event.matchNumber, "location", e.target.value)
+                                      }
+                                    />
+                                    <p className="text-[11px] text-gray-500 mt-1">
+                                      Thay đổi sẽ áp dụng khi bạn nhấn "Áp dụng lịch"
+                                    </p>
+                                  </div>
+
                                 {event.previousMatches && event.previousMatches.length > 0 && (
                                   <div className="mt-2 pt-2 border-t border-gray-300">
                                     <p className="text-xs font-semibold text-gray-700 mb-1">Thắng các trận sau sẽ đấu ở trận này:</p>
@@ -1269,7 +2105,11 @@ export default function AISchedule() {
                                         <span>
                                           <strong>Trận #{prevInfo.matchNumber}</strong> ({prevInfo.round}: {prevInfo.teams})
                                           {prevInfo.date && prevInfo.time && (
-                                            <span> lúc <strong>{prevInfo.time}</strong> ngày <strong>{formatDate(prevInfo.date)}</strong></span>
+                                            <span>
+                                              {" "}
+                                              lúc <strong>{prevInfo.time}</strong> ngày{" "}
+                                              <strong>{formatDateDDMMYYYY(prevInfo.date)}</strong>
+                                            </span>
                                           )}
                                         </span>
                                       </div>
@@ -1285,7 +2125,11 @@ export default function AISchedule() {
                                       <span>
                                         <strong>Thắng</strong> sẽ vào <strong>{event.nextMatch.round}</strong> 
                                         {event.nextMatch.date && event.nextMatch.time && (
-                                          <span> lúc <strong>{event.nextMatch.time}</strong> ngày <strong>{formatDate(event.nextMatch.date)}</strong></span>
+                                          <span>
+                                            {" "}
+                                            lúc <strong>{event.nextMatch.time}</strong> ngày{" "}
+                                            <strong>{formatDateDDMMYYYY(event.nextMatch.date)}</strong>
+                                          </span>
                                         )}
                                         {" "}(Trận #{event.nextMatch.matchNumber})
                                       </span>
@@ -1300,6 +2144,7 @@ export default function AISchedule() {
                                   </div>
                                 )}
                               </div>
+                              </div>
                             </div>
                           )
                         })}
@@ -1311,18 +2156,88 @@ export default function AISchedule() {
                 </CardContent>
               </Card>
 
-              <div className="flex gap-4">
-                <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={handleApplySchedule}>
-                  Áp dụng lịch này
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="publishSchedule"
+                      checked={publishSchedule}
+                      onCheckedChange={(checked) => setPublishSchedule(!!checked)}
+                    />
+                    <Label htmlFor="publishSchedule" className="text-sm text-gray-600">
+                      Đánh dấu là đã công bố lịch chính thức
+                    </Label>
+                  </div>
+                </div>
+                <div className="flex flex-col md:flex-row gap-4">
+                  <Button
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    onClick={handleApplySchedule}
+                    disabled={isApplyingSchedule}
+                  >
+                    {isApplyingSchedule ? "Đang áp dụng..." : "Áp dụng lịch này"}
                 </Button>
-                <Button variant="outline" className="flex-1" onClick={handleGenerate}>
+                  <Button variant="outline" className="flex-1" onClick={handleGenerate} disabled={isGenerating}>
                   Tạo lại
                 </Button>
+                </div>
               </div>
             </>
+          ) : officialBracket && formData.sportId ? (
+            // State B: Chỉ có lịch chính thức trong DB
+            <>{renderOfficialBracketCard()}</>
+          ) : (
+            // State C: Empty state hoàn toàn
+            <Card className="h-full">
+              <CardContent className="flex flex-col items-center justify-center h-full p-12 text-center">
+                <Sparkles className="w-16 h-16 text-gray-300 mb-4" />
+                <h3 className="font-semibold text-lg mb-2">Chưa có lịch thi đấu</h3>
+                <p className="text-gray-600 text-sm">
+                  Điền thông tin bên trái và nhấn "Tạo lịch với AI" để bắt đầu
+                </p>
+              </CardContent>
+            </Card>
+          )}
+          </div>
+        </div>
+      ) : (
+        // Tab "Quản lý giải đấu" – full-screen bracket chính thức
+        <div className="mt-4">
+          {officialBracket && formData.sportId ? (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Quản lý giải đấu (Sport #{formData.sportId})</CardTitle>
+                    <p className="text-xs text-gray-500">
+                      Tổng {officialBracket.totalMatches} trận • {officialBracket.totalRounds} vòng đấu
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-3"
+                    disabled={loadingOfficialBracket}
+                    onClick={() => fetchOfficialBracket(formData.sportId)}
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Tải lại
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {renderOfficialBracketView()}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="mt-4">
+              <CardContent className="p-6 text-center text-sm text-gray-500">
+                Chưa có lịch thi đấu chính thức. Hãy tạo lịch và áp dụng ở tab "Tạo lịch với AI".
+              </CardContent>
+            </Card>
           )}
         </div>
-      </div>
+      )}
     </div>
   )
 }

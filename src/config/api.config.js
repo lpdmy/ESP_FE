@@ -241,7 +241,13 @@ export const API_CONFIG = {
     UPDATE: '/activity',
     DELETE: '/activity/{id}',
     GENERATE_TOURNAMENT_SCHEDULE: '/activity/{id}/generate-schedule',
+    APPLY_TOURNAMENT_SCHEDULE: '/activity/{id}/apply-schedule',
     TRAIN_SCHEDULE_MODEL: '/activity/train-schedule-model',
+  },
+
+  ACTIVITY_MATCH: {
+    GET_BRACKET: '/activity-match/bracket',
+    UPDATE_MATCH_RESULT: '/activity-match/{id}/result',
   },
 
   // Activity Participant endpoints
