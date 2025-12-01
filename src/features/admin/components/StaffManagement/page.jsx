@@ -52,6 +52,7 @@ import {
   UserCog,
   Shield,
   Users,
+  User,
   Edit,
   Search,
   UserPlus,
@@ -189,9 +190,10 @@ export default function StaffManagement() {
           <p className="text-gray-600">Cấp quyền và quản lý nhân sự hệ thống</p>
         </div>
         <Button
-          className="bg-blue-600 hover:bg-blue-700 text-white p-5"
+          className="!bg-blue-600 hover:!bg-blue-700 !text-white"
           onClick={() => setCreateDiagOpen(true)}
         >
+          <User className="h-4 w-4 mr-2" />
           Tạo nhân viên
         </Button>
         <CreateEmployeeModal
@@ -416,7 +418,7 @@ export default function StaffManagement() {
                                   if (staff.isDeleted) {
                                     handleRecoveryStaff(staff.id);
                                   } else {
-                                    handleDeleteStaff(staff.id); 
+                                    handleDeleteStaff(staff.id);
                                   }
                                 }}
                               >

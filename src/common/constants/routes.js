@@ -6,7 +6,7 @@ export const ROUTES = {
     LOGIN: "/auth/login",
     ONE_TIME_LOGIN: "/auth/one-time-login",
     FORGETPASSWORD: "/auth/forget-password",
-    CHANGEPASSWORD: "/auth/change-password"
+    CHANGEPASSWORD: "/auth/change-password",
   },
   ADMIN: {
     USER_MANAGEMENT: "/admin/users",
@@ -24,14 +24,13 @@ export const ROUTES = {
     AI_SCHEDULE: "/admin/activities/:id/ai-schedule",
     CLASSES: 'admin/classes',
     CLASS_DETAIL: '/admin/classes/:id'
-
   },
   USER_PROFILE: {
     PROFILE: "/profile",
-    PROFILEId: "/profile/:id",
+    PROFILEId: "/student-profile/:id",
     EDIT: "/profile/edit",
     TEACHER_PROFILE: "/profile/teacher",
-    TEACHER_PROFILE_id: "/profile/teacher/:id",
+    TEACHER_PROFILE_id: "/teacher-profile/:id",
     EDIT_TEACHER: "/profile/teacher/edit",
   },
   ONBOARDING: {
@@ -39,23 +38,24 @@ export const ROUTES = {
   },
   COLLECTION: {
     LIST_COLLECTION: "/list-collection",
-    COLLECTION_DETAIL: "/collection-detail/:id"
+    COLLECTION_DETAIL: "/collection-detail/:id",
   },
   CLUB: {
     CREATE_CLUB: "/club/create-club-creation",
     LIST_CLUB: "/club/list-club",
     CLUB_DETAIL: "/club/:id",
-    MANAGE_CLUB: "/club/manage/:id"
+    MANAGE_CLUB: "/club/manage/:id",
   },
   STAR_POINT: {
     REWARD_STORE: "/reward-store",
     REWARD_DETAIL: "/reward-store/:id",
     HISTORY: "/points/history",
-    MY_REDEMPTIONS: "/points/my-redemptions"
+    MY_REDEMPTIONS: "/points/my-redemptions",
   },
-  SYSTEM_NEWS_AND_NOTICES: {  // Thay đổi từ SYSTEM_ANNOUNCEMENTS
+  SYSTEM_NEWS_AND_NOTICES: {
+    // Thay đổi từ SYSTEM_ANNOUNCEMENTS
     LIST: "/system-news-and-notices",
-    DETAIL: "/system-news-and-notices/:id"
+    DETAIL: "/system-news-and-notices/:id",
   },
   SEARCH: {
     STUDENT: "/Search/students",
@@ -72,6 +72,16 @@ export const ROUTES = {
   },
   NOTIFICATION: {
     LIST_NOTIFICATION: "/notifications",
+  },
+  JURY:{
+    ASSIGN_JURY:"/jury/assign-jury/:id",
+    JURY_DASHBOARD:"/jury/dashboard",
+    JURY_SUBMISSION:"/jury/submission/:id",
+    JURY_GRADE :"/jury/grade/:id"
+  },
+  SUBMISSION:{
+    MY_SUBMISSION : "/submission/my-submission",
+    MY_SUBMISSION_DETAIL : "/submission/my-submission/detail/:id",
   }
 };
 

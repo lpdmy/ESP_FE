@@ -748,9 +748,9 @@ export default function ViewActivity() {
 
           const activityData = response.data?.data || response.data
           if (!activityData) {
-            setError("Không tìm thấy dữ liệu hoạt động")
-            setLoading(false)
-            return
+            setError("Không tìm thấy dữ liệu hoạt động");
+            setLoading(false);
+            return;
           }
           
           const now = new Date()
@@ -762,11 +762,11 @@ export default function ViewActivity() {
           let status = "Đang đăng ký"
           if (startDate && endDate) {
             if (now >= startDate && now <= endDate) {
-              status = "Đang diễn ra"
+              status = "Đang diễn ra";
             } else if (now > endDate) {
-              status = "Đã kết thúc"
+              status = "Đã kết thúc";
             } else if (now >= registerDate && now < startDate) {
-              status = "Sắp tới"
+              status = "Sắp tới";
             }
           }
           
@@ -802,10 +802,20 @@ export default function ViewActivity() {
             category: activityData?.category === 1 ? "Activity" : "Event",
             subType: activityData?.subType || "",
             thumbnail: activityData?.thumbnailUrl || "",
-            startDate: activityData?.startDate ? new Date(activityData.startDate).toISOString().split("T")[0] : "",
-            endDate: activityData?.endDate ? new Date(activityData.endDate).toISOString().split("T")[0] : "",
-            registerDate: activityData?.registerDate ? new Date(activityData.registerDate).toISOString().split("T")[0] : "",
-            endRegisterDate: activityData?.endRegisterDate ? new Date(activityData.endRegisterDate).toISOString().split("T")[0] : "",
+            startDate: activityData?.startDate
+              ? new Date(activityData.startDate).toISOString().split("T")[0]
+              : "",
+            endDate: activityData?.endDate
+              ? new Date(activityData.endDate).toISOString().split("T")[0]
+              : "",
+            registerDate: activityData?.registerDate
+              ? new Date(activityData.registerDate).toISOString().split("T")[0]
+              : "",
+            endRegisterDate: activityData?.endRegisterDate
+              ? new Date(activityData.endRegisterDate)
+                  .toISOString()
+                  .split("T")[0]
+              : "",
             location: activityData?.location || "",
             organizer: activityData?.organizer || "",
             maxParticipants: activityData?.maxParticipants || 0,
@@ -1100,7 +1110,7 @@ export default function ViewActivity() {
       } finally {
         setLoadingSportRosters(false)
       }
-    }
+    };
 
     fetchSportRosters()
   }, [activity?.id, activity?.subType, sportRostersPageNumber, sportRostersPageSize])
@@ -1459,11 +1469,13 @@ export default function ViewActivity() {
 
   const handleAction = (action) => {
     if (isPreview) {
-      toast.showWarning("Bạn đang ở chế độ xem trước, không thể thực hiện hành động này.")
-      return
+      toast.showWarning(
+        "Bạn đang ở chế độ xem trước, không thể thực hiện hành động này."
+      );
+      return;
     }
-    action()
-  }
+    action();
+  };
 
   const handleRegister = async () => {
     handleAction(async () => {
@@ -2257,7 +2269,7 @@ export default function ViewActivity() {
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white flex items-center justify-center">
         <LoadingCard isLoading={true} text="Đang tải thông tin hoạt động..." />
       </div>
-    )
+    );
   }
 
   if (error || !activity) {
@@ -2265,7 +2277,9 @@ export default function ViewActivity() {
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white flex items-center justify-center">
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-red-600 mb-4">{error || "Không tìm thấy hoạt động"}</p>
+            <p className="text-red-600 mb-4">
+              {error || "Không tìm thấy hoạt động"}
+            </p>
             <Button onClick={() => navigate("/activities")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Quay lại danh sách
@@ -2273,7 +2287,7 @@ export default function ViewActivity() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -2283,7 +2297,8 @@ export default function ViewActivity() {
           <div className="max-w-7xl mx-auto flex items-center gap-2 text-yellow-800">
             <Info className="w-4 h-4" />
             <span className="text-sm font-medium">
-              Bạn đang ở chế độ xem trước. Các hành động sẽ không được thực hiện.
+              Bạn đang ở chế độ xem trước. Các hành động sẽ không được thực
+              hiện.
             </span>
           </div>
         </div>
@@ -2309,7 +2324,10 @@ export default function ViewActivity() {
                 {getSubTypeLabel(activity.subType)}
               </Badge>
               {activity.onlyTeacherCanRegister && (
-                <Badge variant="outline" className="bg-blue-500/20 text-white border-white/30">
+                <Badge
+                  variant="outline"
+                  className="bg-blue-500/20 text-white border-white/30"
+                >
                   Chỉ giáo viên
                 </Badge>
               )}
@@ -2404,7 +2422,9 @@ export default function ViewActivity() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Địa điểm</p>
-                        <p className="font-semibold text-sm">{activity.location}</p>
+                        <p className="font-semibold text-sm">
+                          {activity.location}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -2443,7 +2463,9 @@ export default function ViewActivity() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Đăng ký đến</p>
-                        <p className="font-semibold text-sm">{activity.endRegisterDate}</p>
+                        <p className="font-semibold text-sm">
+                          {activity.endRegisterDate}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -2903,8 +2925,8 @@ export default function ViewActivity() {
                       size="icon"
                       onClick={() => {
                         handleAction(() => {
-                          toast.showInfo("Tính năng yêu thích sẽ được mở sớm.")
-                        })
+                          toast.showInfo("Tính năng yêu thích sẽ được mở sớm.");
+                        });
                       }}
                       disabled={isPreview}
                     >
@@ -2919,11 +2941,12 @@ export default function ViewActivity() {
           {/* Center Content - Tabs */}
           <div className="lg:col-span-6">
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-2">
+              <TabsList className="grid w-full grid-cols-5 mb-2">
                 <TabsTrigger value="overview">Tổng quan</TabsTrigger>
                 <TabsTrigger value="participants">Người tham gia</TabsTrigger>
                 <TabsTrigger value="timeline">Lịch trình</TabsTrigger>
                 <TabsTrigger value="awards">Giải thưởng</TabsTrigger>
+                <TabsTrigger value="ranking">Xếp hạng</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
@@ -3247,27 +3270,38 @@ export default function ViewActivity() {
                 </Card>
 
                 {/* Grading Settings */}
-                {activity.gradingSettings && activity.gradingSettings.criteria && activity.gradingSettings.criteria.length > 0 && (
-                  <Card className="glass hover-lift">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5 text-blue-500" />
-                        Cài đặt chấm điểm
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <p className="text-sm text-gray-600 mb-2">Tiêu chí chấm điểm:</p>
-                        {activity.gradingSettings.criteria.map((criterion, index) => (
-                          <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
-                            <span className="text-blue-600">•</span>
-                            <span className="text-sm text-gray-700">{criterion}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                {activity.gradingSettings &&
+                  activity.gradingSettings.criteria &&
+                  activity.gradingSettings.criteria.length > 0 && (
+                    <Card className="glass hover-lift">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <CheckCircle className="w-5 h-5 text-blue-500" />
+                          Cài đặt chấm điểm
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-600 mb-2">
+                            Tiêu chí chấm điểm:
+                          </p>
+                          {activity.gradingSettings.criteria.map(
+                            (criterion, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg"
+                              >
+                                <span className="text-blue-600">•</span>
+                                <span className="text-sm text-gray-700">
+                                  {criterion}
+                                </span>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
                 {/* Registration Settings */}
                 {activity.onlyTeacherCanRegister && (
@@ -3454,7 +3488,9 @@ export default function ViewActivity() {
 
                 <Card className="glass hover-lift">
                   <CardHeader>
-                    <CardTitle>Danh sách người tham gia ({participants.length})</CardTitle>
+                    <CardTitle>
+                      Danh sách người tham gia ({participants.length})
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -3503,7 +3539,9 @@ export default function ViewActivity() {
                         <div key={index} className="flex items-start gap-4">
                           <div
                             className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              milestone.status === "completed" ? "bg-green-100" : "bg-gray-100"
+                              milestone.status === "completed"
+                                ? "bg-green-100"
+                                : "bg-gray-100"
                             }`}
                           >
                             {milestone.status === "completed" ? (
@@ -3514,7 +3552,9 @@ export default function ViewActivity() {
                           </div>
                           <div className="flex-1">
                             <p className="font-semibold">{milestone.title}</p>
-                            <p className="text-sm text-gray-600">{milestone.date}</p>
+                            <p className="text-sm text-gray-600">
+                              {milestone.date}
+                            </p>
                           </div>
                         </div>
                       ))}
@@ -3785,6 +3825,55 @@ export default function ViewActivity() {
                   </CardContent>
                 </Card>
               </TabsContent>
+              <TabsContent value="ranking" className="space-y-4">
+                <Tabs defaultValue="individual" className="space-y-4">
+                  <TabsContent value="individual">
+                    <Card>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {rank.map((participant, index) => (
+                            <div
+                              key={participant.id}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                            >
+                              <div className="flex items-center gap-4 flex-1">
+                                <div
+                                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${
+                                    index === 0
+                                      ? "bg-yellow-500"
+                                      : index === 1
+                                      ? "bg-gray-400"
+                                      : index === 2
+                                      ? "bg-orange-600"
+                                      : "bg-gray-300"
+                                  }`}
+                                >
+                                  {index + 1}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-semibold">
+                                    {participant.userFullName}
+                                  </p>
+                                  <p className="text-xs text-gray-600">
+                                    Lớp{" "}
+                                    {participant.class?.class ||
+                                      participant.class?.name}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-orange-600">
+                                  {participant.score}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </TabsContent>
             </Tabs>
           </div>
 
@@ -3835,6 +3924,5 @@ export default function ViewActivity() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-

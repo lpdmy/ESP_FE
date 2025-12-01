@@ -1,13 +1,18 @@
-import { useState, useRef, useEffect } from "react"
-import { useParams, useNavigate, Link } from "react-router-dom"
-import { Button } from "@/common/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
-import { Input } from "@/common/components/ui/input"
-import { Label } from "@/common/components/ui/label"
-import { Textarea } from "@/common/components/ui/textarea"
-import { SimpleSelect } from "@/common/components/ui/select"
-import { Checkbox } from "@/common/components/ui/checkbox"
-import { Switch } from "@/common/components/ui/switch"
+import { useState, useRef, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { Button } from "@/common/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/common/components/ui/card";
+import { Input } from "@/common/components/ui/input";
+import { Label } from "@/common/components/ui/label";
+import { Textarea } from "@/common/components/ui/textarea";
+import { SimpleSelect } from "@/common/components/ui/select";
+import { Checkbox } from "@/common/components/ui/checkbox";
+import { Switch } from "@/common/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -27,23 +32,32 @@ import { GradingCriteriaSection } from "./GradingCriteriaSection"
 import { vnTimeToUTC, utcToVNTime } from "@/common/utils/dateUtils"
 
 export default function EditActivity() {
-  const params = useParams()
-  const navigate = useNavigate()
-  const [activeSection, setActiveSection] = useState("basic")
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
-  const [isSpeakerDialogOpen, setIsSpeakerDialogOpen] = useState(false)
-  const [isProgramDialogOpen, setIsProgramDialogOpen] = useState(false)
-  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false)
-  const [editingSpeakerIndex, setEditingSpeakerIndex] = useState(null)
-  const [editingProgramIndex, setEditingProgramIndex] = useState(null)
-  const [speakerForm, setSpeakerForm] = useState({ name: "", title: "", bio: "", image: "" })
-  const [programForm, setProgramForm] = useState({ title: "", time: "", description: "" })
-  const [customSportInput, setCustomSportInput] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [gradingEnabled, setGradingEnabled] = useState(false)
-  const [gradingCriteria, setGradingCriteria] = useState([])
-  const [onlyTeacherCanRegister, setOnlyTeacherCanRegister] = useState(false)
+  const params = useParams();
+  const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState("basic");
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isSpeakerDialogOpen, setIsSpeakerDialogOpen] = useState(false);
+  const [isProgramDialogOpen, setIsProgramDialogOpen] = useState(false);
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+  const [editingSpeakerIndex, setEditingSpeakerIndex] = useState(null);
+  const [editingProgramIndex, setEditingProgramIndex] = useState(null);
+  const [speakerForm, setSpeakerForm] = useState({
+    name: "",
+    title: "",
+    bio: "",
+    image: "",
+  });
+  const [programForm, setProgramForm] = useState({
+    title: "",
+    time: "",
+    description: "",
+  });
+  const [customSportInput, setCustomSportInput] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [gradingEnabled, setGradingEnabled] = useState(false);
+  const [gradingCriteria, setGradingCriteria] = useState([]);
+  const [onlyTeacherCanRegister, setOnlyTeacherCanRegister] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -89,20 +103,21 @@ export default function EditActivity() {
     { id: "schedule", title: "Lịch trình", icon: Calendar },
     { id: "details", title: "Chi tiết hoạt động", icon: Edit2 },
     { id: "rules", title: "Quy định", icon: Users },
-  ]
+    { id: "assign-jury", title: "Phân công giám khảo", icon: UserCheck },
+  ];
 
   const subTypes = [
     { value: "SportsFestival", label: "Hội thao" },
     { value: "CreativeContest", label: "Cuộc thi sáng tạo" },
     { value: "SeminarWorkshop", label: "Hội thảo / Workshop" },
     { value: "Other", label: "Khác" },
-  ]
+  ];
 
   const competitionTypes = [
     { value: "Individual", label: "Cá nhân" },
     { value: "Team", label: "Đồng đội" },
     { value: "Mixed", label: "Kết hợp" },
-  ]
+  ];
 
   const sportsOptions = [
     "Chạy 100m",
@@ -113,22 +128,22 @@ export default function EditActivity() {
     "Bóng đá",
     "Bóng chuyền",
     "Bóng rổ",
-  ]
+  ];
 
   // Load activity data
   useEffect(() => {
     const loadActivityData = async () => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
-        const token = localStorage.getItem("token")
+        const token = localStorage.getItem("token");
         const response = await executeApiCall(
           activityService.getActivityById.bind(activityService),
           [params.id, token],
           { setError: () => {} }
-        )
+        );
 
         if (response?.data) {
-          const activityData = response.data
+          const activityData = response.data;
           // Map API response to formData
           setFormData({
             title: activityData.title || "",
@@ -144,34 +159,43 @@ export default function EditActivity() {
             registerDate: activityData.registerDate ? utcToVNTime(activityData.registerDate, false) : "",
             endRegisterDate: activityData.endRegisterDate ? utcToVNTime(activityData.endRegisterDate, false) : "",
             maxParticipants: activityData.maxParticipants?.toString() || "",
-            sportsCategories: activityData.sports?.map(s => s.sportName) || [],
+            sportsCategories:
+              activityData.sports?.map((s) => s.sportName) || [],
             competitionType: activityData.activityDetail?.competitionType || "",
             theme: activityData.activityDetail?.theme || "",
             genre: activityData.activityDetail?.genre || "",
             paperSize: activityData.activityDetail?.paperSize || "",
             drawingMedium: activityData.activityDetail?.drawingMedium || "",
             timeLimit: activityData.activityDetail?.timeLimit || "",
-            submissionFormat: activityData.activityDetail?.submissionFormat || "",
+            submissionFormat:
+              activityData.activityDetail?.submissionFormat || "",
             wordLimit: "",
             writingFormat: "",
-            rules: activityData.rules && activityData.rules.length > 0 ? activityData.rules : [""],
-            speakers: activityData.speakers?.map(s => ({
-              name: s.name || "",
-              title: s.title || "",
-              bio: s.bio || "",
-              image: s.imageUrl || ""
-            })) || [],
-            programItems: activityData.programs?.map(p => ({
-              title: p.title || "",
-              time: p.time || "",
-              description: p.description || ""
-            })) || [],
+            rules:
+              activityData.rules && activityData.rules.length > 0
+                ? activityData.rules
+                : [""],
+            speakers:
+              activityData.speakers?.map((s) => ({
+                name: s.name || "",
+                title: s.title || "",
+                bio: s.bio || "",
+                image: s.imageUrl || "",
+              })) || [],
+            programItems:
+              activityData.programs?.map((p) => ({
+                title: p.title || "",
+                time: p.time || "",
+                description: p.description || "",
+              })) || [],
             starPointRewards: {
-              registration: activityData.registrationReward?.starPoints?.toString() || "",
-              awards: activityData.awards?.map(a => ({
-                name: a.name || a.rank || "",
-                points: (a.starPoints || a.points || 0).toString()
-              })) || []
+              registration:
+                activityData.registrationReward?.starPoints?.toString() || "",
+              awards:
+                activityData.awards?.map((a) => ({
+                  name: a.name || a.rank || "",
+                  points: (a.starPoints || a.points || 0).toString(),
+                })) || [],
             },
             registrationSettings: activityData.registrationSettings?.groupRegistration
               ? {
@@ -191,81 +215,85 @@ export default function EditActivity() {
           })
           
           // Load grading settings (enabled is determined by presence of gradingSettings)
-          if (activityData.gradingSettings && activityData.gradingSettings.criteria) {
-            setGradingEnabled(true)
-            setGradingCriteria(activityData.gradingSettings.criteria || [])
+          if (
+            activityData.gradingSettings &&
+            activityData.gradingSettings.criteria
+          ) {
+            setGradingEnabled(true);
+            setGradingCriteria(activityData.gradingSettings.criteria || []);
           } else {
-            setGradingEnabled(false)
-            setGradingCriteria([])
+            setGradingEnabled(false);
+            setGradingCriteria([]);
           }
-          
+
           // Load registration settings
-          setOnlyTeacherCanRegister(activityData.onlyTeacherCanRegister || false)
+          setOnlyTeacherCanRegister(
+            activityData.onlyTeacherCanRegister || false
+          );
         }
       } catch (error) {
-        console.error("Error loading activity:", error)
-        toast.error(error?.message || "Không thể tải thông tin hoạt động")
+        console.error("Error loading activity:", error);
+        toast.error(error?.message || "Không thể tải thông tin hoạt động");
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
     if (params.id) {
-      loadActivityData()
+      loadActivityData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id])
-
+  }, [params.id]);
 
   const handleAddRule = () => {
-    setFormData({ ...formData, rules: [...formData.rules, ""] })
-  }
+    setFormData({ ...formData, rules: [...formData.rules, ""] });
+  };
 
   const handleRemoveRule = (index) => {
-    const newRules = formData.rules.filter((_, i) => i !== index)
-    setFormData({ ...formData, rules: newRules })
-  }
+    const newRules = formData.rules.filter((_, i) => i !== index);
+    setFormData({ ...formData, rules: newRules });
+  };
 
   const handleRuleChange = (index, value) => {
-    const newRules = [...formData.rules]
-    newRules[index] = value
-    setFormData({ ...formData, rules: newRules })
-  }
+    const newRules = [...formData.rules];
+    newRules[index] = value;
+    setFormData({ ...formData, rules: newRules });
+  };
 
   const handleSportToggle = (sport) => {
     const newSports = formData.sportsCategories.includes(sport)
       ? formData.sportsCategories.filter((s) => s !== sport)
-      : [...formData.sportsCategories, sport]
-    setFormData({ ...formData, sportsCategories: newSports })
-  }
+      : [...formData.sportsCategories, sport];
+    setFormData({ ...formData, sportsCategories: newSports });
+  };
 
   const handleAddCustomSport = () => {
-    const sportName = customSportInput.trim()
+    const sportName = customSportInput.trim();
     if (!sportName) {
-      toast.error("Vui lòng nhập tên môn thể thao")
-      return
+      toast.error("Vui lòng nhập tên môn thể thao");
+      return;
     }
     if (formData.sportsCategories.includes(sportName)) {
-      toast.error("Môn thể thao này đã được thêm")
-      return
+      toast.error("Môn thể thao này đã được thêm");
+      return;
     }
     if (sportsOptions.includes(sportName)) {
-      toast.error("Môn thể thao này đã có trong danh sách")
-      return
+      toast.error("Môn thể thao này đã có trong danh sách");
+      return;
     }
     setFormData({
       ...formData,
       sportsCategories: [...formData.sportsCategories, sportName],
-    })
-    setCustomSportInput("")
-    toast.success("Đã thêm môn thể thao")
-  }
+    });
+    setCustomSportInput("");
+    toast.success("Đã thêm môn thể thao");
+  };
 
   const handleRemoveCustomSport = (sport) => {
-    const newSports = formData.sportsCategories.filter((s) => s !== sport)
-    setFormData({ ...formData, sportsCategories: newSports })
-    toast.success("Đã xóa môn thể thao")
-  }
+    const newSports = formData.sportsCategories.filter((s) => s !== sport);
+    setFormData({ ...formData, sportsCategories: newSports });
+    toast.success("Đã xóa môn thể thao");
+  };
 
   const handleAddAward = () => {
     setFormData({
@@ -274,146 +302,160 @@ export default function EditActivity() {
         ...formData.starPointRewards,
         awards: [...formData.starPointRewards.awards, { name: "", points: "" }],
       },
-    })
-  }
+    });
+  };
 
   const handleRemoveAward = (index) => {
-    const newAwards = formData.starPointRewards.awards.filter((_, i) => i !== index)
+    const newAwards = formData.starPointRewards.awards.filter(
+      (_, i) => i !== index
+    );
     setFormData({
       ...formData,
       starPointRewards: {
         ...formData.starPointRewards,
         awards: newAwards,
       },
-    })
-  }
+    });
+  };
 
   const handleAwardChange = (index, field, value) => {
-    const newAwards = [...formData.starPointRewards.awards]
-    newAwards[index] = { ...newAwards[index], [field]: value }
+    const newAwards = [...formData.starPointRewards.awards];
+    newAwards[index] = { ...newAwards[index], [field]: value };
     setFormData({
       ...formData,
       starPointRewards: {
         ...formData.starPointRewards,
         awards: newAwards,
       },
-    })
-  }
+    });
+  };
 
   // Handler cho Diễn giả
   const handleOpenSpeakerDialog = (index = null) => {
     if (index !== null) {
-      setEditingSpeakerIndex(index)
-      setSpeakerForm({ ...formData.speakers[index] })
+      setEditingSpeakerIndex(index);
+      setSpeakerForm({ ...formData.speakers[index] });
     } else {
-      setEditingSpeakerIndex(null)
-      setSpeakerForm({ name: "", title: "", bio: "", image: "" })
+      setEditingSpeakerIndex(null);
+      setSpeakerForm({ name: "", title: "", bio: "", image: "" });
     }
-    setIsSpeakerDialogOpen(true)
-  }
+    setIsSpeakerDialogOpen(true);
+  };
 
   const handleSaveSpeaker = () => {
     if (!speakerForm.name.trim()) {
-      toast.error("Vui lòng nhập tên diễn giả")
-      return
+      toast.error("Vui lòng nhập tên diễn giả");
+      return;
     }
-    const newSpeakers = [...formData.speakers]
+    const newSpeakers = [...formData.speakers];
     if (editingSpeakerIndex !== null) {
-      newSpeakers[editingSpeakerIndex] = { ...speakerForm }
+      newSpeakers[editingSpeakerIndex] = { ...speakerForm };
     } else {
-      newSpeakers.push({ ...speakerForm })
+      newSpeakers.push({ ...speakerForm });
     }
-    setFormData({ ...formData, speakers: newSpeakers })
-    setIsSpeakerDialogOpen(false)
-    setSpeakerForm({ name: "", title: "", bio: "", image: "" })
-    setEditingSpeakerIndex(null)
-    toast.success(editingSpeakerIndex !== null ? "Cập nhật diễn giả thành công" : "Thêm diễn giả thành công")
-  }
+    setFormData({ ...formData, speakers: newSpeakers });
+    setIsSpeakerDialogOpen(false);
+    setSpeakerForm({ name: "", title: "", bio: "", image: "" });
+    setEditingSpeakerIndex(null);
+    toast.success(
+      editingSpeakerIndex !== null
+        ? "Cập nhật diễn giả thành công"
+        : "Thêm diễn giả thành công"
+    );
+  };
 
   const handleRemoveSpeaker = (index) => {
-    const newSpeakers = formData.speakers.filter((_, i) => i !== index)
-    setFormData({ ...formData, speakers: newSpeakers })
-    toast.success("Đã xóa diễn giả")
-  }
+    const newSpeakers = formData.speakers.filter((_, i) => i !== index);
+    setFormData({ ...formData, speakers: newSpeakers });
+    toast.success("Đã xóa diễn giả");
+  };
 
   // Handler cho Mục chương trình
   const handleOpenProgramDialog = (index = null) => {
     if (index !== null) {
-      setEditingProgramIndex(index)
-      setProgramForm({ ...formData.programItems[index] })
+      setEditingProgramIndex(index);
+      setProgramForm({ ...formData.programItems[index] });
     } else {
-      setEditingProgramIndex(null)
-      setProgramForm({ title: "", time: "", description: "" })
+      setEditingProgramIndex(null);
+      setProgramForm({ title: "", time: "", description: "" });
     }
-    setIsProgramDialogOpen(true)
-  }
+    setIsProgramDialogOpen(true);
+  };
 
   const handleSaveProgram = () => {
     if (!programForm.title.trim()) {
-      toast.error("Vui lòng nhập tên mục chương trình")
-      return
+      toast.error("Vui lòng nhập tên mục chương trình");
+      return;
     }
-    const newPrograms = [...formData.programItems]
+    const newPrograms = [...formData.programItems];
     if (editingProgramIndex !== null) {
-      newPrograms[editingProgramIndex] = { ...programForm }
+      newPrograms[editingProgramIndex] = { ...programForm };
     } else {
-      newPrograms.push({ ...programForm })
+      newPrograms.push({ ...programForm });
     }
-    setFormData({ ...formData, programItems: newPrograms })
-    setIsProgramDialogOpen(false)
-    setProgramForm({ title: "", time: "", description: "" })
-    setEditingProgramIndex(null)
-    toast.success(editingProgramIndex !== null ? "Cập nhật mục chương trình thành công" : "Thêm mục chương trình thành công")
-  }
+    setFormData({ ...formData, programItems: newPrograms });
+    setIsProgramDialogOpen(false);
+    setProgramForm({ title: "", time: "", description: "" });
+    setEditingProgramIndex(null);
+    toast.success(
+      editingProgramIndex !== null
+        ? "Cập nhật mục chương trình thành công"
+        : "Thêm mục chương trình thành công"
+    );
+  };
 
   const handleRemoveProgram = (index) => {
-    const newPrograms = formData.programItems.filter((_, i) => i !== index)
-    setFormData({ ...formData, programItems: newPrograms })
-    toast.success("Đã xóa mục chương trình")
-  }
+    const newPrograms = formData.programItems.filter((_, i) => i !== index);
+    setFormData({ ...formData, programItems: newPrograms });
+    toast.success("Đã xóa mục chương trình");
+  };
 
   const handleSave = async () => {
     // Validate required fields
     if (!formData.title?.trim()) {
-      toast.error("Vui lòng nhập tiêu đề hoạt động")
-      return
+      toast.error("Vui lòng nhập tiêu đề hoạt động");
+      return;
     }
     if (!formData.description?.trim()) {
-      toast.error("Vui lòng nhập mô tả hoạt động")
-      return
+      toast.error("Vui lòng nhập mô tả hoạt động");
+      return;
     }
     if (!formData.subType) {
-      toast.error("Vui lòng chọn phân loại hoạt động")
-      return
+      toast.error("Vui lòng chọn phân loại hoạt động");
+      return;
     }
     if (!formData.location?.trim()) {
-      toast.error("Vui lòng nhập địa điểm")
-      return
+      toast.error("Vui lòng nhập địa điểm");
+      return;
     }
     if (!formData.organizer?.trim()) {
-      toast.error("Vui lòng nhập đơn vị tổ chức")
-      return
+      toast.error("Vui lòng nhập đơn vị tổ chức");
+      return;
     }
     if (!formData.startDate || !formData.endDate) {
-      toast.error("Vui lòng nhập thời gian diễn ra")
-      return
+      toast.error("Vui lòng nhập thời gian diễn ra");
+      return;
     }
     if (!formData.registerDate || !formData.endRegisterDate) {
-      toast.error("Vui lòng nhập thời gian đăng ký")
-      return
+      toast.error("Vui lòng nhập thời gian đăng ký");
+      return;
     }
     if (!formData.maxParticipants) {
-      toast.error("Vui lòng nhập số người tham gia tối đa")
-      return
+      toast.error("Vui lòng nhập số người tham gia tối đa");
+      return;
     }
-    if (!formData.rules || formData.rules.length === 0 || formData.rules.every(r => !r.trim())) {
-      toast.error("Vui lòng nhập ít nhất một quy định")
-      return
+    if (
+      !formData.rules ||
+      formData.rules.length === 0 ||
+      formData.rules.every((r) => !r.trim())
+    ) {
+      toast.error("Vui lòng nhập ít nhất một quy định");
+      return;
     }
 
-    setIsSaving(true)
-    const token = localStorage.getItem("token")
-    
+    setIsSaving(true);
+    const token = localStorage.getItem("token");
+
     try {
       // Map formData to API format
       const activityData = {
@@ -431,40 +473,63 @@ export default function EditActivity() {
         registerDate: formData.registerDate ? vnTimeToUTC(formData.registerDate) : null,
         endRegisterDate: formData.endRegisterDate ? vnTimeToUTC(formData.endRegisterDate) : null,
         maxParticipants: parseInt(formData.maxParticipants) || 0,
-        rules: formData.rules.filter(r => r.trim()),
+        rules: formData.rules.filter((r) => r.trim()),
         // SportsFestival fields
-        sportsCategories: formData.subType === "SportsFestival" ? formData.sportsCategories : null,
-        competitionType: formData.subType === "SportsFestival" ? formData.competitionType : null,
+        sportsCategories:
+          formData.subType === "SportsFestival"
+            ? formData.sportsCategories
+            : null,
+        competitionType:
+          formData.subType === "SportsFestival"
+            ? formData.competitionType
+            : null,
         // CreativeContest fields
         theme: formData.subType === "CreativeContest" ? formData.theme : null,
         genre: formData.subType === "CreativeContest" ? formData.genre : null,
-        paperSize: formData.subType === "CreativeContest" ? formData.paperSize : null,
-        drawingMedium: formData.subType === "CreativeContest" ? formData.drawingMedium : null,
-        timeLimit: formData.subType === "CreativeContest" ? formData.timeLimit : null,
-        submissionFormat: formData.subType === "CreativeContest" ? formData.submissionFormat : null,
+        paperSize:
+          formData.subType === "CreativeContest" ? formData.paperSize : null,
+        drawingMedium:
+          formData.subType === "CreativeContest"
+            ? formData.drawingMedium
+            : null,
+        timeLimit:
+          formData.subType === "CreativeContest" ? formData.timeLimit : null,
+        submissionFormat:
+          formData.subType === "CreativeContest"
+            ? formData.submissionFormat
+            : null,
         // SeminarWorkshop fields
-        speakers: formData.subType === "SeminarWorkshop" ? formData.speakers.map((s, index) => ({
-          name: s.name,
-          title: s.title,
-          bio: s.bio,
-          imageUrl: s.image,
-          order: index
-        })) : null,
-        programItems: formData.subType === "SeminarWorkshop" ? formData.programItems.map((p, index) => ({
-          title: p.title,
-          time: p.time,
-          description: p.description,
-          order: index
-        })) : null,
+        speakers:
+          formData.subType === "SeminarWorkshop"
+            ? formData.speakers.map((s, index) => ({
+                name: s.name,
+                title: s.title,
+                bio: s.bio,
+                imageUrl: s.image,
+                order: index,
+              }))
+            : null,
+        programItems:
+          formData.subType === "SeminarWorkshop"
+            ? formData.programItems.map((p, index) => ({
+                title: p.title,
+                time: p.time,
+                description: p.description,
+                order: index,
+              }))
+            : null,
         // StarPoint Rewards
         starPointRewards: {
           registration: formData.starPointRewards.registration || "",
-          awards: formData.starPointRewards.awards || []
+          awards: formData.starPointRewards.awards || [],
         },
         // Grading Settings (only criteria, enabled is stored in IsGrade column)
-        gradingSettings: gradingEnabled && gradingCriteria && gradingCriteria.length > 0 ? {
-          criteria: gradingCriteria
-        } : null,
+        gradingSettings:
+          gradingEnabled && gradingCriteria && gradingCriteria.length > 0
+            ? {
+                criteria: gradingCriteria,
+              }
+            : null,
         // Registration Settings
         onlyTeacherCanRegister: onlyTeacherCanRegister,
         registrationSettings: formData.subType === "CreativeContest" && formData.registrationSettings?.groupRegistration
@@ -487,100 +552,99 @@ export default function EditActivity() {
         activityService.updateActivity.bind(activityService),
         [activityData, token],
         { setError: () => {} }
-      )
+      );
 
       if (response?.data) {
-        toast.success("Hoạt động đã được cập nhật thành công.")
-        navigate(`/activities/${params.id}`)
+        toast.success("Hoạt động đã được cập nhật thành công.");
+        navigate(`/activities/${params.id}`);
       }
     } catch (error) {
-      console.error("Error saving activity:", error)
-      toast.error(error?.message || "Có lỗi xảy ra khi lưu hoạt động")
+      console.error("Error saving activity:", error);
+      toast.error(error?.message || "Có lỗi xảy ra khi lưu hoạt động");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // File upload handlers
-  const fileInputRef = useRef(null)
+  const fileInputRef = useRef(null);
 
   const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith("image/")) {
-        toast.error("Vui lòng chọn file ảnh (PNG, JPG, JPEG)")
-        return
+        toast.error("Vui lòng chọn file ảnh (PNG, JPG, JPEG)");
+        return;
       }
       if (file.size > 10 * 1024 * 1024) {
-        toast.error("File ảnh không được vượt quá 10MB")
-        return
+        toast.error("File ảnh không được vượt quá 10MB");
+        return;
       }
-      
+
       // Upload file directly
-      setIsUploadingThumbnail(true)
+      setIsUploadingThumbnail(true);
       try {
-        const uploadedUrl = await uploadImage(file)
+        const uploadedUrl = await uploadImage(file);
         if (uploadedUrl) {
-          setFormData({ ...formData, thumbnail: uploadedUrl })
-          toast.success("Đã upload ảnh thành công")
+          setFormData({ ...formData, thumbnail: uploadedUrl });
+          toast.success("Đã upload ảnh thành công");
         }
       } catch (error) {
-        console.error("Error uploading image:", error)
-        toast.error(error.message || "Có lỗi xảy ra khi upload ảnh")
+        console.error("Error uploading image:", error);
+        toast.error(error.message || "Có lỗi xảy ra khi upload ảnh");
       } finally {
-        setIsUploadingThumbnail(false)
+        setIsUploadingThumbnail(false);
         if (fileInputRef.current) {
-          fileInputRef.current.value = ""
+          fileInputRef.current.value = "";
         }
       }
     }
-  }
+  };
 
   const handleDragOver = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-  }
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
   const handleDrop = async (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    const file = e.dataTransfer.files?.[0]
+    e.preventDefault();
+    e.stopPropagation();
+
+    const file = e.dataTransfer.files?.[0];
     if (file) {
       if (!file.type.startsWith("image/")) {
-        toast.error("Vui lòng chọn file ảnh (PNG, JPG, JPEG)")
-        return
+        toast.error("Vui lòng chọn file ảnh (PNG, JPG, JPEG)");
+        return;
       }
       if (file.size > 10 * 1024 * 1024) {
-        toast.error("File ảnh không được vượt quá 10MB")
-        return
+        toast.error("File ảnh không được vượt quá 10MB");
+        return;
       }
-      
+
       // Upload file directly
-      setIsUploadingThumbnail(true)
+      setIsUploadingThumbnail(true);
       try {
-        const uploadedUrl = await uploadImage(file)
+        const uploadedUrl = await uploadImage(file);
         if (uploadedUrl) {
-          setFormData({ ...formData, thumbnail: uploadedUrl })
-          toast.success("Đã upload ảnh thành công")
+          setFormData({ ...formData, thumbnail: uploadedUrl });
+          toast.success("Đã upload ảnh thành công");
         }
       } catch (error) {
-        console.error("Error uploading image:", error)
-        toast.error(error.message || "Có lỗi xảy ra khi upload ảnh")
+        console.error("Error uploading image:", error);
+        toast.error(error.message || "Có lỗi xảy ra khi upload ảnh");
       } finally {
-        setIsUploadingThumbnail(false)
+        setIsUploadingThumbnail(false);
       }
     }
-  }
+  };
 
   const handleRemoveImage = () => {
-    setFormData({ ...formData, thumbnail: "" })
+    setFormData({ ...formData, thumbnail: "" });
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+      fileInputRef.current.value = "";
     }
-    toast.success("Đã xóa ảnh")
-  }
-
+    toast.success("Đã xóa ảnh");
+  };
 
   if (isLoading) {
     return (
@@ -590,7 +654,7 @@ export default function EditActivity() {
           <p className="text-gray-600">Đang tải thông tin hoạt động...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -604,26 +668,33 @@ export default function EditActivity() {
               Quay lại
             </Link>
           </Button>
-          <h1 className="text-3xl font-bold text-gray-900">Chỉnh sửa hoạt động</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Chỉnh sửa hoạt động
+          </h1>
           <p className="text-gray-600 mt-1">Cập nhật thông tin hoạt động</p>
         </div>
       </div>
 
       {/* Navigation Bar */}
-        <Card>
+      <Card>
         <CardContent className="p-0">
           <div className="flex items-center border-b border-gray-200 overflow-x-auto">
             {sections.map((section) => {
-              const Icon = section.icon
+              const Icon = section.icon;
               return (
                 <button
                   key={section.id}
                   onClick={() => {
-                    setActiveSection(section.id)
+                    setActiveSection(section.id);
                     // Scroll to section
-                    const element = document.getElementById(`section-${section.id}`)
+                    const element = document.getElementById(
+                      `section-${section.id}`
+                    );
                     if (element) {
-                      element.scrollIntoView({ behavior: "smooth", block: "start" })
+                      element.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      });
                     }
                   }}
                   className={`flex items-center gap-2 px-6 py-4 border-b-2 transition-colors whitespace-nowrap ${
@@ -635,7 +706,7 @@ export default function EditActivity() {
                   <Icon className="w-4 h-4" />
                   <span className="font-medium">{section.title}</span>
                 </button>
-              )
+              );
             })}
           </div>
         </CardContent>
@@ -657,7 +728,9 @@ export default function EditActivity() {
                 label="Tiêu đề hoạt động"
                 placeholder="Ví dụ: Hội thao Liên trường 2024"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
                 required
               />
 
@@ -665,17 +738,21 @@ export default function EditActivity() {
                 label="Mô tả chi tiết"
                 placeholder="Mô tả chi tiết về hoạt động..."
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 rows={5}
                 required
               />
 
-            <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-4">
                 <InputField
                   label="Địa điểm"
                   placeholder="Ví dụ: Sân vận động FPT"
                   value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, location: e.target.value })
+                  }
                   required
                 />
 
@@ -683,7 +760,9 @@ export default function EditActivity() {
                   label="Đơn vị tổ chức"
                   placeholder="Ví dụ: Đoàn trường"
                   value={formData.organizer}
-                  onChange={(e) => setFormData({ ...formData, organizer: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, organizer: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -708,7 +787,9 @@ export default function EditActivity() {
                       {isUploadingThumbnail ? (
                         <div className="bg-white/90 rounded-lg px-3 py-2 flex items-center gap-2">
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                          <span className="text-sm text-gray-700">Đang upload...</span>
+                          <span className="text-sm text-gray-700">
+                            Đang upload...
+                          </span>
                         </div>
                       ) : (
                         <>
@@ -735,26 +816,36 @@ export default function EditActivity() {
                         </>
                       )}
                     </div>
-              </div>
+                  </div>
                 ) : (
                   <div
                     className={`border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors ${
-                      isUploadingThumbnail ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                      isUploadingThumbnail
+                        ? "cursor-not-allowed opacity-50"
+                        : "cursor-pointer"
                     }`}
-                    onClick={() => !isUploadingThumbnail && fileInputRef.current?.click()}
+                    onClick={() =>
+                      !isUploadingThumbnail && fileInputRef.current?.click()
+                    }
                     onDragOver={handleDragOver}
                     onDrop={handleDrop}
                   >
                     {isUploadingThumbnail ? (
                       <>
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-3"></div>
-                        <p className="text-sm text-gray-600">Đang upload ảnh...</p>
+                        <p className="text-sm text-gray-600">
+                          Đang upload ảnh...
+                        </p>
                       </>
                     ) : (
                       <>
                         <Upload className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                        <p className="text-sm text-gray-600">Kéo thả ảnh vào đây hoặc click để chọn</p>
-                        <p className="text-xs text-gray-500 mt-1">PNG, JPG tối đa 10MB</p>
+                        <p className="text-sm text-gray-600">
+                          Kéo thả ảnh vào đây hoặc click để chọn
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PNG, JPG tối đa 10MB
+                        </p>
                       </>
                     )}
                   </div>
@@ -774,12 +865,14 @@ export default function EditActivity() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-6">
-            <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-4">
                 <InputField
                   label="Ngày bắt đầu"
                   type="date"
                   value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startDate: e.target.value })
+                  }
                   required
                 />
 
@@ -787,17 +880,21 @@ export default function EditActivity() {
                   label="Ngày kết thúc"
                   type="date"
                   value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, endDate: e.target.value })
+                  }
                   required
                 />
-            </div>
+              </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-4">
                 <InputField
                   label="Mở đăng ký"
                   type="date"
                   value={formData.registerDate}
-                  onChange={(e) => setFormData({ ...formData, registerDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, registerDate: e.target.value })
+                  }
                   required
                 />
 
@@ -805,15 +902,20 @@ export default function EditActivity() {
                   label="Đóng đăng ký"
                   type="date"
                   value={formData.endRegisterDate}
-                  onChange={(e) => setFormData({ ...formData, endRegisterDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      endRegisterDate: e.target.value,
+                    })
+                  }
                   required
                 />
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Lưu ý:</strong> Ngày kết thúc phải sau ngày bắt đầu. Ngày đóng đăng ký phải trước ngày bắt
-                  đầu hoạt động.
+                  <strong>Lưu ý:</strong> Ngày kết thúc phải sau ngày bắt đầu.
+                  Ngày đóng đăng ký phải trước ngày bắt đầu hoạt động.
                 </p>
               </div>
             </div>
@@ -836,7 +938,9 @@ export default function EditActivity() {
                 </Label>
                 <SimpleSelect
                   value={formData.subType}
-                  onValueChange={(value) => setFormData({ ...formData, subType: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, subType: value })
+                  }
                   placeholder="Chọn phân loại"
                   options={subTypes}
                 />
@@ -857,10 +961,15 @@ export default function EditActivity() {
                           <div className="flex items-center gap-2">
                             <Checkbox
                               id={sport}
-                              checked={formData.sportsCategories.includes(sport)}
+                              checked={formData.sportsCategories.includes(
+                                sport
+                              )}
                               onChange={() => handleSportToggle(sport)}
                             />
-                            <Label htmlFor={sport} className="cursor-pointer font-medium">
+                            <Label
+                              htmlFor={sport}
+                              className="cursor-pointer font-medium"
+                            >
                               {sport}
                             </Label>
                           </div>
@@ -873,17 +982,19 @@ export default function EditActivity() {
                   {/* Thêm môn tự do */}
                   <div className="border-t pt-4 mt-4">
                     <div className="flex items-center justify-between mb-3">
-                      <Label className="text-base font-semibold">Môn thi đấu tùy chỉnh</Label>
+                      <Label className="text-base font-semibold">
+                        Môn thi đấu tùy chỉnh
+                      </Label>
                     </div>
                     <div className="flex gap-2 mb-3">
-              <Input
+                      <Input
                         placeholder="VD: Cầu lông, Bơi lội, Đấu vật..."
                         value={customSportInput}
                         onChange={(e) => setCustomSportInput(e.target.value)}
                         onKeyPress={(e) => {
                           if (e.key === "Enter") {
-                            e.preventDefault()
-                            handleAddCustomSport()
+                            e.preventDefault();
+                            handleAddCustomSport();
                           }
                         }}
                         className="flex-1"
@@ -895,7 +1006,9 @@ export default function EditActivity() {
                     </div>
 
                     {/* Danh sách môn tự do đã thêm */}
-                    {formData.sportsCategories.filter((sport) => !sportsOptions.includes(sport)).length > 0 && (
+                    {formData.sportsCategories.filter(
+                      (sport) => !sportsOptions.includes(sport)
+                    ).length > 0 && (
                       <div className="grid md:grid-cols-3 gap-3">
                         {formData.sportsCategories
                           .filter((sport) => !sportsOptions.includes(sport))
@@ -907,14 +1020,23 @@ export default function EditActivity() {
                               <div className="flex items-center gap-2">
                                 <Checkbox
                                   id={`custom-${sport}`}
-                                  checked={formData.sportsCategories.includes(sport)}
+                                  checked={formData.sportsCategories.includes(
+                                    sport
+                                  )}
                                   onChange={() => handleSportToggle(sport)}
                                 />
-                                <Label htmlFor={`custom-${sport}`} className="cursor-pointer font-medium">
+                                <Label
+                                  htmlFor={`custom-${sport}`}
+                                  className="cursor-pointer font-medium"
+                                >
                                   {sport}
                                 </Label>
                               </div>
-                              <Button variant="outline" size="icon" onClick={() => handleRemoveCustomSport(sport)}>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleRemoveCustomSport(sport)}
+                              >
                                 <Trash2 className="w-4 h-4 text-red-500" />
                               </Button>
                             </div>
@@ -929,7 +1051,9 @@ export default function EditActivity() {
                     </Label>
                     <SimpleSelect
                       value={formData.competitionType}
-                      onValueChange={(value) => setFormData({ ...formData, competitionType: value })}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, competitionType: value })
+                      }
                       placeholder="Chọn hình thức"
                       options={competitionTypes}
                     />
@@ -943,17 +1067,21 @@ export default function EditActivity() {
                     label="Chủ đề"
                     placeholder="Ví dụ: Mùa xuân, Tuổi trẻ và ước mơ..."
                     value={formData.theme}
-                    onChange={(e) => setFormData({ ...formData, theme: e.target.value })}
-                required
+                    onChange={(e) =>
+                      setFormData({ ...formData, theme: e.target.value })
+                    }
+                    required
                   />
-                  
+
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label>Loại hình sáng tạo</Label>
                       <Input
                         placeholder="VD: Vẽ tranh, Sáng tác văn học, Nhiếp ảnh, Video..."
                         value={formData.genre}
-                        onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, genre: e.target.value })
+                        }
                       />
                     </div>
                     <div className="grid gap-2">
@@ -961,10 +1089,15 @@ export default function EditActivity() {
                       <Input
                         placeholder="VD: A4, A3, 500-1000 từ, Tối đa 5 trang..."
                         value={formData.paperSize}
-                        onChange={(e) => setFormData({ ...formData, paperSize: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            paperSize: e.target.value,
+                          })
+                        }
                       />
                     </div>
-            </div>
+                  </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="grid gap-2">
@@ -972,7 +1105,12 @@ export default function EditActivity() {
                       <Input
                         placeholder="VD: Màu nước, Chì màu, Truyện ngắn, Thơ, Digital..."
                         value={formData.drawingMedium}
-                        onChange={(e) => setFormData({ ...formData, drawingMedium: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            drawingMedium: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="grid gap-2">
@@ -980,7 +1118,12 @@ export default function EditActivity() {
                       <Input
                         placeholder="VD: 90 phút, 2 giờ, Tự do..."
                         value={formData.timeLimit}
-                        onChange={(e) => setFormData({ ...formData, timeLimit: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            timeLimit: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -990,19 +1133,31 @@ export default function EditActivity() {
                     <Input
                       placeholder="VD: File số (JPG, PNG, PDF, Word), Bản giấy, Cả hai..."
                       value={formData.submissionFormat}
-                      onChange={(e) => setFormData({ ...formData, submissionFormat: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          submissionFormat: e.target.value,
+                        })
+                      }
                     />
                   </div>
                 </div>
               )}
 
-              {(formData.subType === "SeminarWorkshop" || formData.subType === "Seminar") && (
+              {(formData.subType === "SeminarWorkshop" ||
+                formData.subType === "Seminar") && (
                 <div className="grid gap-6">
                   {/* Diễn giả - có thể có hoặc không */}
                   <div className="grid gap-3">
                     <div className="flex items-center justify-between">
-                      <Label className="text-base font-semibold">Diễn giả (Tùy chọn)</Label>
-                      <Button variant="outline" size="sm" onClick={() => handleOpenSpeakerDialog()}>
+                      <Label className="text-base font-semibold">
+                        Diễn giả (Tùy chọn)
+                      </Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenSpeakerDialog()}
+                      >
                         <Plus className="w-4 h-4 mr-2" />
                         Thêm diễn giả
                       </Button>
@@ -1010,12 +1165,18 @@ export default function EditActivity() {
                     {formData.speakers.length === 0 ? (
                       <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
                         <User className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                        <p>Chưa có diễn giả nào. Nhấn "Thêm diễn giả" để thêm (không bắt buộc).</p>
+                        <p>
+                          Chưa có diễn giả nào. Nhấn "Thêm diễn giả" để thêm
+                          (không bắt buộc).
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {formData.speakers.map((speaker, index) => (
-                          <div key={index} className="flex gap-3 items-start p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div
+                            key={index}
+                            className="flex gap-3 items-start p-4 bg-gray-50 rounded-lg border border-gray-200"
+                          >
                             {speaker.image && (
                               <img
                                 src={speaker.image}
@@ -1030,20 +1191,28 @@ export default function EditActivity() {
                             )}
                             <div className="flex-1">
                               <div className="flex items-start justify-between">
-            <div>
-                                  <p className="font-semibold text-base">{speaker.name || "Chưa có tên"}</p>
+                                <div>
+                                  <p className="font-semibold text-base">
+                                    {speaker.name || "Chưa có tên"}
+                                  </p>
                                   {speaker.title && (
-                                    <p className="text-sm text-gray-600 mt-1">{speaker.title}</p>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {speaker.title}
+                                    </p>
                                   )}
                                   {speaker.bio && (
-                                    <p className="text-sm text-gray-500 mt-2 line-clamp-2">{speaker.bio}</p>
+                                    <p className="text-sm text-gray-500 mt-2 line-clamp-2">
+                                      {speaker.bio}
+                                    </p>
                                   )}
                                 </div>
                                 <div className="flex gap-2">
                                   <Button
                                     variant="outline"
                                     size="icon"
-                                    onClick={() => handleOpenSpeakerDialog(index)}
+                                    onClick={() =>
+                                      handleOpenSpeakerDialog(index)
+                                    }
                                   >
                                     <Edit2 className="w-4 h-4" />
                                   </Button>
@@ -1066,8 +1235,14 @@ export default function EditActivity() {
                   {/* Chương trình - có thể có hoặc không */}
                   <div className="grid gap-3">
                     <div className="flex items-center justify-between">
-                      <Label className="text-base font-semibold">Chương trình (Tùy chọn)</Label>
-                      <Button variant="outline" size="sm" onClick={() => handleOpenProgramDialog()}>
+                      <Label className="text-base font-semibold">
+                        Chương trình (Tùy chọn)
+                      </Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenProgramDialog()}
+                      >
                         <Plus className="w-4 h-4 mr-2" />
                         Thêm mục chương trình
                       </Button>
@@ -1075,29 +1250,43 @@ export default function EditActivity() {
                     {formData.programItems.length === 0 ? (
                       <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
                         <Clock className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                        <p>Chưa có mục chương trình nào. Nhấn "Thêm mục chương trình" để thêm (không bắt buộc).</p>
+                        <p>
+                          Chưa có mục chương trình nào. Nhấn "Thêm mục chương
+                          trình" để thêm (không bắt buộc).
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {formData.programItems.map((item, index) => (
-                          <div key={index} className="flex gap-3 items-start p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div
+                            key={index}
+                            className="flex gap-3 items-start p-4 bg-gray-50 rounded-lg border border-gray-200"
+                          >
                             <div className="flex items-center gap-2 min-w-[100px]">
                               <Clock className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm font-medium text-blue-600">{item.time || "Chưa có giờ"}</span>
+                              <span className="text-sm font-medium text-blue-600">
+                                {item.time || "Chưa có giờ"}
+                              </span>
                             </div>
                             <div className="flex-1">
                               <div className="flex items-start justify-between">
                                 <div>
-                                  <p className="font-semibold text-base">{item.title || "Chưa có tiêu đề"}</p>
+                                  <p className="font-semibold text-base">
+                                    {item.title || "Chưa có tiêu đề"}
+                                  </p>
                                   {item.description && (
-                                    <p className="text-sm text-gray-500 mt-2">{item.description}</p>
+                                    <p className="text-sm text-gray-500 mt-2">
+                                      {item.description}
+                                    </p>
                                   )}
                                 </div>
                                 <div className="flex gap-2">
                                   <Button
                                     variant="outline"
                                     size="icon"
-                                    onClick={() => handleOpenProgramDialog(index)}
+                                    onClick={() =>
+                                      handleOpenProgramDialog(index)
+                                    }
                                   >
                                     <Edit2 className="w-4 h-4" />
                                   </Button>
@@ -1123,19 +1312,23 @@ export default function EditActivity() {
               <div className="border-t pt-6 mt-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Star className="w-5 h-5 text-yellow-500" />
-                  <Label className="text-lg font-semibold">Cài đặt điểm thưởng StarPoint</Label>
+                  <Label className="text-lg font-semibold">
+                    Cài đặt điểm thưởng StarPoint
+                  </Label>
                 </div>
 
                 <div className="grid gap-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p className="text-sm text-blue-800">
-                      <strong>Lưu ý:</strong> Điểm StarPoint sẽ được tự động cộng vào tài khoản của người tham gia khi họ đăng ký hoặc đạt giải trong hoạt động này.
+                      <strong>Lưu ý:</strong> Điểm StarPoint sẽ được tự động
+                      cộng vào tài khoản của người tham gia khi họ đăng ký hoặc
+                      đạt giải trong hoạt động này.
                     </p>
                   </div>
 
                   <div className="grid gap-2">
                     <Label>Điểm thưởng khi đăng ký tham gia</Label>
-              <Input
+                    <Input
                       type="number"
                       placeholder="VD: 10 điểm"
                       value={formData.starPointRewards.registration}
@@ -1150,84 +1343,124 @@ export default function EditActivity() {
                       }
                     />
                     <p className="text-xs text-gray-500">
-                      Điểm sẽ được cộng ngay khi người tham gia đăng ký thành công{" "}
+                      Điểm sẽ được cộng ngay khi người tham gia đăng ký thành
+                      công{" "}
                       <span className="relative inline-block group">
                         <Info className="w-4 h-4 text-blue-500 cursor-help inline-block ml-1 align-middle" />
                         <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                          <p className="font-semibold mb-1">Lưu ý quan trọng:</p>
+                          <p className="font-semibold mb-1">
+                            Lưu ý quan trọng:
+                          </p>
                           <p>
-                            Đăng ký tham gia đồng nghĩa với cam kết tham gia nghiêm túc vào hoạt động. Điểm thưởng chỉ được cộng khi người tham gia thực sự tham dự hoạt động theo quy định. Việc đăng ký nhưng không tham gia có thể bị xử lý theo quy định của nhà trường.
+                            Đăng ký tham gia đồng nghĩa với cam kết tham gia
+                            nghiêm túc vào hoạt động. Điểm thưởng chỉ được cộng
+                            khi người tham gia thực sự tham dự hoạt động theo
+                            quy định. Việc đăng ký nhưng không tham gia có thể
+                            bị xử lý theo quy định của nhà trường.
                           </p>
                           <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-            </div>
+                        </div>
                       </span>
                     </p>
                   </div>
 
                   {/* Chỉ hiển thị phần giải thưởng nếu không phải Hội thảo/Workshop */}
-                  {formData.subType !== "SeminarWorkshop" && formData.subType !== "Seminar" && (
-                    <div className="border-t pt-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                          <Trophy className="w-4 h-4 text-yellow-600" />
-                          <Label className="font-semibold">Điểm thưởng theo giải thưởng</Label>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={handleAddAward}>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Thêm giải
-                        </Button>
-                      </div>
-
-                      {formData.starPointRewards.awards.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
-                          <Trophy className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                          <p>Chưa có giải thưởng nào. Nhấn "Thêm giải" để thêm giải thưởng mới.</p>
-                        </div>
-                      ) : (
-                      <div className="grid gap-3">
-                        {formData.starPointRewards.awards.map((award, index) => (
-                          <div key={index} className="flex gap-3 items-start p-3 bg-gray-50 rounded-lg">
-                            <div className="flex-1 grid md:grid-cols-2 gap-4">
-                              <div className="grid gap-2">
-                                <Label htmlFor={`award-name-${index}`}>Tên giải</Label>
-                                <Input
-                                  id={`award-name-${index}`}
-                                  placeholder="VD: Giải Nhất, Giải Nhì, Giải Đặc biệt..."
-                                  value={award.name}
-                                  onChange={(e) => handleAwardChange(index, "name", e.target.value)}
-                                />
-                              </div>
-                              <div className="grid gap-2">
-                                <Label htmlFor={`award-points-${index}`}>Điểm thưởng</Label>
-                                <Input
-                                  id={`award-points-${index}`}
-                                  type="number"
-                                  placeholder="VD: 500 điểm"
-                                  value={award.points}
-                                  onChange={(e) => handleAwardChange(index, "points", e.target.value)}
-                                />
-                              </div>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleRemoveAward(index)}
-                              className="mt-7"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
+                  {formData.subType !== "SeminarWorkshop" &&
+                    formData.subType !== "Seminar" && (
+                      <div className="border-t pt-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <Trophy className="w-4 h-4 text-yellow-600" />
+                            <Label className="font-semibold">
+                              Điểm thưởng theo giải thưởng
+                            </Label>
                           </div>
-                        ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleAddAward}
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Thêm giải
+                          </Button>
+                        </div>
+
+                        {formData.starPointRewards.awards.length === 0 ? (
+                          <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+                            <Trophy className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                            <p>
+                              Chưa có giải thưởng nào. Nhấn "Thêm giải" để thêm
+                              giải thưởng mới.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid gap-3">
+                            {formData.starPointRewards.awards.map(
+                              (award, index) => (
+                                <div
+                                  key={index}
+                                  className="flex gap-3 items-start p-3 bg-gray-50 rounded-lg"
+                                >
+                                  <div className="flex-1 grid md:grid-cols-2 gap-4">
+                                    <div className="grid gap-2">
+                                      <Label htmlFor={`award-name-${index}`}>
+                                        Tên giải
+                                      </Label>
+                                      <Input
+                                        id={`award-name-${index}`}
+                                        placeholder="VD: Giải Nhất, Giải Nhì, Giải Đặc biệt..."
+                                        value={award.name}
+                                        onChange={(e) =>
+                                          handleAwardChange(
+                                            index,
+                                            "name",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                    <div className="grid gap-2">
+                                      <Label htmlFor={`award-points-${index}`}>
+                                        Điểm thưởng
+                                      </Label>
+                                      <Input
+                                        id={`award-points-${index}`}
+                                        type="number"
+                                        placeholder="VD: 500 điểm"
+                                        value={award.points}
+                                        onChange={(e) =>
+                                          handleAwardChange(
+                                            index,
+                                            "points",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => handleRemoveAward(index)}
+                                    className="mt-7"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        )}
                       </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {(formData.subType === "SeminarWorkshop" || formData.subType === "Seminar") && (
+                    )}
+
+                  {(formData.subType === "SeminarWorkshop" ||
+                    formData.subType === "Seminar") && (
                     <div className="border-t pt-4">
                       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <p className="text-sm text-gray-600">
-                          <strong>Lưu ý:</strong> Hội thảo/Workshop không có giải thưởng, chỉ có điểm thưởng khi đăng ký tham gia.
+                          <strong>Lưu ý:</strong> Hội thảo/Workshop không có
+                          giải thưởng, chỉ có điểm thưởng khi đăng ký tham gia.
                         </p>
                       </div>
                     </div>
@@ -1236,18 +1469,20 @@ export default function EditActivity() {
               </div>
 
               {!formData.subType && (
-                <div className="text-center py-12 text-gray-500">Vui lòng chọn phân loại hoạt động ở trên</div>
+                <div className="text-center py-12 text-gray-500">
+                  Vui lòng chọn phân loại hoạt động ở trên
+                </div>
               )}
             </div>
-            
+
             {/* Grading Criteria Section */}
             <GradingCriteriaSection
               enabled={gradingEnabled}
               onEnabledChange={(newEnabled) => {
-                setGradingEnabled(newEnabled)
+                setGradingEnabled(newEnabled);
                 // Clear criteria when disabled
                 if (!newEnabled) {
-                  setGradingCriteria([])
+                  setGradingCriteria([]);
                 }
               }}
               onCriteriaChange={setGradingCriteria}
@@ -1266,19 +1501,26 @@ export default function EditActivity() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-6">
-            <div>
-                <Label htmlFor="maxParticipants">Số người tham gia tối đa *</Label>
-              <Input
-                id="maxParticipants"
-                type="number"
+              <div>
+                <Label htmlFor="maxParticipants">
+                  Số người tham gia tối đa *
+                </Label>
+                <Input
+                  id="maxParticipants"
+                  type="number"
                   placeholder="Ví dụ: 500"
-                value={formData.maxParticipants}
-                onChange={(e) => setFormData({ ...formData, maxParticipants: e.target.value })}
-                className="mt-2"
-              />
-            </div>
+                  value={formData.maxParticipants}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      maxParticipants: e.target.value,
+                    })
+                  }
+                  className="mt-2"
+                />
+              </div>
 
-            <div>
+              <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label>Quy định tham gia *</Label>
                   <Button variant="outline" size="sm" onClick={handleAddRule}>
@@ -1292,14 +1534,20 @@ export default function EditActivity() {
                       <Input
                         placeholder={`Quy định ${index + 1}`}
                         value={rule}
-                        onChange={(e) => handleRuleChange(index, e.target.value)}
+                        onChange={(e) =>
+                          handleRuleChange(index, e.target.value)
+                        }
                       />
                       {formData.rules.length > 1 && (
-                        <Button variant="outline" size="icon" onClick={() => handleRemoveRule(index)}>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleRemoveRule(index)}
+                        >
                           <X className="w-4 h-4" />
                         </Button>
                       )}
-            </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -1309,27 +1557,38 @@ export default function EditActivity() {
                 {/* Only Teacher Can Register */}
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <Label className="text-base font-semibold">Cài đặt đăng ký</Label>
+                    <Label className="text-base font-semibold">
+                      Cài đặt đăng ký
+                    </Label>
                     <p className="text-sm text-gray-500 mt-1">
                       Chỉ giáo viên chủ nhiệm mới được đăng ký đại diện lớp
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Label htmlFor="only-teacher-register" className="cursor-pointer text-sm font-medium">
+                    <Label
+                      htmlFor="only-teacher-register"
+                      className="cursor-pointer text-sm font-medium"
+                    >
                       Chỉ giáo viên
                     </Label>
-                    <Switch 
-                      id="only-teacher-register" 
-                      checked={onlyTeacherCanRegister} 
+                    <Switch
+                      id="only-teacher-register"
+                      checked={onlyTeacherCanRegister}
                       onCheckedChange={setOnlyTeacherCanRegister}
-                      className={onlyTeacherCanRegister ? "!bg-blue-500 focus-visible:!ring-blue-500" : "bg-gray-200"}
+                      className={
+                        onlyTeacherCanRegister
+                          ? "!bg-blue-500 focus-visible:!ring-blue-500"
+                          : "bg-gray-200"
+                      }
                     />
                   </div>
                 </div>
                 {onlyTeacherCanRegister && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-sm text-blue-800">
-                      <strong>Lưu ý:</strong> Khi bật tùy chọn này, chỉ có giáo viên mới có thể đăng ký tham gia hoạt động. Học sinh/sinh viên sẽ không thể đăng ký.
+                      <strong>Lưu ý:</strong> Khi bật tùy chọn này, chỉ có giáo
+                      viên mới có thể đăng ký tham gia hoạt động. Học sinh/sinh
+                      viên sẽ không thể đăng ký.
                     </p>
                   </div>
                 )}
@@ -1415,16 +1674,31 @@ export default function EditActivity() {
             </div>
           </CardContent>
         </Card>
+        {/* Section 4: Assign-jury */}
+        <Card id="section-assign-jury">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCheck className="w-5 h-5 text-blue-600" />
+              Phân công giám khảo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AssignJurySection activityId={params.id} />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Action Buttons - Fixed at bottom */}
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
-            <Button variant="outline" onClick={() => navigate(`/activities/${params.id}`)}>
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/activities/${params.id}`)}
+            >
               <X className="w-4 h-4 mr-2" />
               Hủy
-          </Button>
+            </Button>
             <div className="flex gap-2">
               <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
                 <DialogTrigger asChild>
@@ -1454,20 +1728,27 @@ export default function EditActivity() {
 
                     <div className="space-y-3">
                       <div>
-                        <h3 className="font-bold text-xl mb-1">{formData.title || "Chưa có tiêu đề"}</h3>
+                        <h3 className="font-bold text-xl mb-1">
+                          {formData.title || "Chưa có tiêu đề"}
+                        </h3>
                         <p className="text-sm text-gray-600">
-                          {subTypes.find((s) => s.value === formData.subType)?.label || "-"}
+                          {subTypes.find((s) => s.value === formData.subType)
+                            ?.label || "-"}
                         </p>
                       </div>
 
                       {formData.description && (
-                        <p className="text-gray-700 leading-relaxed">{formData.description}</p>
+                        <p className="text-gray-700 leading-relaxed">
+                          {formData.description}
+                        </p>
                       )}
                     </div>
 
                     <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Thời gian diễn ra:</span>
+                        <span className="text-sm text-gray-600">
+                          Thời gian diễn ra:
+                        </span>
                         <span className="font-semibold text-sm">
                           {formData.startDate && formData.endDate
                             ? `${formData.startDate} - ${formData.endDate}`
@@ -1476,18 +1757,30 @@ export default function EditActivity() {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600">Địa điểm:</span>
-                        <span className="font-semibold text-sm">{formData.location || "Chưa cài đặt"}</span>
+                        <span className="font-semibold text-sm">
+                          {formData.location || "Chưa cài đặt"}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Đơn vị tổ chức:</span>
-                        <span className="font-semibold text-sm">{formData.organizer || "Chưa cài đặt"}</span>
+                        <span className="text-sm text-gray-600">
+                          Đơn vị tổ chức:
+                        </span>
+                        <span className="font-semibold text-sm">
+                          {formData.organizer || "Chưa cài đặt"}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Số người tham gia tối đa:</span>
-                        <span className="font-semibold text-sm">{formData.maxParticipants || "Chưa cài đặt"}</span>
+                        <span className="text-sm text-gray-600">
+                          Số người tham gia tối đa:
+                        </span>
+                        <span className="font-semibold text-sm">
+                          {formData.maxParticipants || "Chưa cài đặt"}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Thời gian đăng ký:</span>
+                        <span className="text-sm text-gray-600">
+                          Thời gian đăng ký:
+                        </span>
                         <span className="font-semibold text-sm">
                           {formData.registerDate && formData.endRegisterDate
                             ? `${formData.registerDate} - ${formData.endRegisterDate}`
@@ -1501,32 +1794,50 @@ export default function EditActivity() {
                         <Star className="w-5 h-5 text-yellow-500" />
                         <p className="font-semibold">Điểm thưởng StarPoint</p>
                       </div>
-                      
+
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Điểm khi đăng ký tham gia:</span>
+                        <span className="text-sm text-gray-600">
+                          Điểm khi đăng ký tham gia:
+                        </span>
                         <span className="font-bold text-orange-600">
-                          {formData.starPointRewards.registration ? `${formData.starPointRewards.registration} điểm` : "0 điểm"}
+                          {formData.starPointRewards.registration
+                            ? `${formData.starPointRewards.registration} điểm`
+                            : "0 điểm"}
                         </span>
                       </div>
 
-                      {formData.subType !== "SeminarWorkshop" && formData.subType !== "Seminar" && formData.starPointRewards.awards.length > 0 && (
-                        <div className="border-t pt-3 mt-3">
-                          <p className="text-sm font-semibold mb-2 text-gray-700">Điểm thưởng theo giải:</p>
-                          <div className="space-y-2">
-                            {formData.starPointRewards.awards.map((award, index) => (
-                              <div key={index} className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600">{award.name || `Giải ${index + 1}`}:</span>
-                                <span className="font-bold text-green-600">
-                                  {award.points ? `${award.points} điểm` : "0 điểm"}
-                                </span>
-                              </div>
-                            ))}
+                      {formData.subType !== "SeminarWorkshop" &&
+                        formData.subType !== "Seminar" &&
+                        formData.starPointRewards.awards.length > 0 && (
+                          <div className="border-t pt-3 mt-3">
+                            <p className="text-sm font-semibold mb-2 text-gray-700">
+                              Điểm thưởng theo giải:
+                            </p>
+                            <div className="space-y-2">
+                              {formData.starPointRewards.awards.map(
+                                (award, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex justify-between items-center"
+                                  >
+                                    <span className="text-sm text-gray-600">
+                                      {award.name || `Giải ${index + 1}`}:
+                                    </span>
+                                    <span className="font-bold text-green-600">
+                                      {award.points
+                                        ? `${award.points} điểm`
+                                        : "0 điểm"}
+                                    </span>
+                                  </div>
+                                )
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </div>
 
-                    {(formData.subType === "SeminarWorkshop" || formData.subType === "Seminar") && (
+                    {(formData.subType === "SeminarWorkshop" ||
+                      formData.subType === "Seminar") && (
                       <>
                         {formData.speakers.length > 0 && (
                           <div className="bg-gray-50 rounded-lg p-4">
@@ -1536,7 +1847,10 @@ export default function EditActivity() {
                             </div>
                             <div className="space-y-2">
                               {formData.speakers.map((speaker, index) => (
-                                <div key={index} className="flex gap-2 items-start">
+                                <div
+                                  key={index}
+                                  className="flex gap-2 items-start"
+                                >
                                   {speaker.image && (
                                     <img
                                       src={speaker.image}
@@ -1545,9 +1859,13 @@ export default function EditActivity() {
                                     />
                                   )}
                                   <div className="flex-1">
-                                    <p className="text-sm font-semibold">{speaker.name || "Chưa có tên"}</p>
+                                    <p className="text-sm font-semibold">
+                                      {speaker.name || "Chưa có tên"}
+                                    </p>
                                     {speaker.title && (
-                                      <p className="text-xs text-gray-600">{speaker.title}</p>
+                                      <p className="text-xs text-gray-600">
+                                        {speaker.title}
+                                      </p>
                                     )}
                                   </div>
                                 </div>
@@ -1564,12 +1882,21 @@ export default function EditActivity() {
                             </div>
                             <div className="space-y-2">
                               {formData.programItems.map((item, index) => (
-                                <div key={index} className="flex gap-2 items-start">
-                                  <span className="text-xs font-medium text-blue-600 min-w-[80px]">{item.time || "Chưa có giờ"}</span>
+                                <div
+                                  key={index}
+                                  className="flex gap-2 items-start"
+                                >
+                                  <span className="text-xs font-medium text-blue-600 min-w-[80px]">
+                                    {item.time || "Chưa có giờ"}
+                                  </span>
                                   <div className="flex-1">
-                                    <p className="text-sm font-semibold">{item.title || "Chưa có tiêu đề"}</p>
+                                    <p className="text-sm font-semibold">
+                                      {item.title || "Chưa có tiêu đề"}
+                                    </p>
                                     {item.description && (
-                                      <p className="text-xs text-gray-500 mt-1">{item.description}</p>
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        {item.description}
+                                      </p>
                                     )}
                                   </div>
                                 </div>
@@ -1582,12 +1909,17 @@ export default function EditActivity() {
 
                     {formData.rules.filter((r) => r).length > 0 && (
                       <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-sm font-semibold mb-2 text-gray-700">Quy định tham gia:</p>
+                        <p className="text-sm font-semibold mb-2 text-gray-700">
+                          Quy định tham gia:
+                        </p>
                         <ul className="space-y-1">
                           {formData.rules
                             .filter((r) => r)
                             .map((rule, index) => (
-                              <li key={index} className="text-sm text-gray-600 flex items-start gap-2">
+                              <li
+                                key={index}
+                                className="text-sm text-gray-600 flex items-start gap-2"
+                              >
                                 <span className="text-orange-600 mt-1">•</span>
                                 <span>{rule}</span>
                               </li>
@@ -1597,25 +1929,34 @@ export default function EditActivity() {
                     )}
 
                     {/* Grading Settings */}
-                    {gradingEnabled && gradingCriteria && gradingCriteria.length > 0 && (
-                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                        <div className="flex items-center gap-2 mb-3">
-                          <CheckCircle className="w-5 h-5 text-blue-500" />
-                          <p className="font-semibold">Cài đặt chấm điểm</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600 mb-2">Tiêu chí chấm điểm:</p>
-                          <div className="space-y-2">
-                            {gradingCriteria.map((criterion, index) => (
-                              <div key={index} className="flex items-center gap-2">
-                                <span className="text-blue-600">•</span>
-                                <span className="text-sm text-gray-700">{criterion}</span>
-                              </div>
-                            ))}
+                    {gradingEnabled &&
+                      gradingCriteria &&
+                      gradingCriteria.length > 0 && (
+                        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                          <div className="flex items-center gap-2 mb-3">
+                            <CheckCircle className="w-5 h-5 text-blue-500" />
+                            <p className="font-semibold">Cài đặt chấm điểm</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600 mb-2">
+                              Tiêu chí chấm điểm:
+                            </p>
+                            <div className="space-y-2">
+                              {gradingCriteria.map((criterion, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center gap-2"
+                                >
+                                  <span className="text-blue-600">•</span>
+                                  <span className="text-sm text-gray-700">
+                                    {criterion}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
                     {/* Registration Settings */}
                     {onlyTeacherCanRegister && (
@@ -1627,21 +1968,25 @@ export default function EditActivity() {
                         <div className="flex items-center gap-2">
                           <CheckCircle className="w-4 h-4 text-green-600" />
                           <span className="text-sm text-gray-700">
-                            Chỉ giáo viên chủ nhiệm mới được đăng ký đại diện lớp
+                            Chỉ giáo viên chủ nhiệm mới được đăng ký đại diện
+                            lớp
                           </span>
                         </div>
                       </div>
                     )}
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsPreviewOpen(false)}
+                    >
                       Đóng
                     </Button>
                     <Button
                       className="bg-green-600 hover:bg-green-700 text-white"
                       onClick={() => {
-                        setIsPreviewOpen(false)
-                        handleSave()
+                        setIsPreviewOpen(false);
+                        handleSave();
                       }}
                       disabled={isSaving}
                     >
@@ -1651,11 +1996,15 @@ export default function EditActivity() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-              <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700 text-white" disabled={isSaving}>
-            <Save className="w-4 h-4 mr-2" />
-            {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
-          </Button>
-        </div>
+              <Button
+                onClick={handleSave}
+                className="bg-green-600 hover:bg-green-700 text-white"
+                disabled={isSaving}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -1664,9 +2013,15 @@ export default function EditActivity() {
       <Dialog open={isSpeakerDialogOpen} onOpenChange={setIsSpeakerDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingSpeakerIndex !== null ? "Chỉnh sửa diễn giả" : "Thêm diễn giả"}</DialogTitle>
+            <DialogTitle>
+              {editingSpeakerIndex !== null
+                ? "Chỉnh sửa diễn giả"
+                : "Thêm diễn giả"}
+            </DialogTitle>
             <DialogDescription>
-              {editingSpeakerIndex !== null ? "Cập nhật thông tin diễn giả" : "Nhập thông tin diễn giả mới"}
+              {editingSpeakerIndex !== null
+                ? "Cập nhật thông tin diễn giả"
+                : "Nhập thông tin diễn giả mới"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1677,7 +2032,9 @@ export default function EditActivity() {
               <Input
                 placeholder="VD: Nguyễn Văn A"
                 value={speakerForm.name}
-                onChange={(e) => setSpeakerForm({ ...speakerForm, name: e.target.value })}
+                onChange={(e) =>
+                  setSpeakerForm({ ...speakerForm, name: e.target.value })
+                }
               />
             </div>
             <div className="grid gap-2">
@@ -1685,7 +2042,9 @@ export default function EditActivity() {
               <Input
                 placeholder="VD: Giáo sư, Tiến sĩ, Chuyên gia..."
                 value={speakerForm.title}
-                onChange={(e) => setSpeakerForm({ ...speakerForm, title: e.target.value })}
+                onChange={(e) =>
+                  setSpeakerForm({ ...speakerForm, title: e.target.value })
+                }
               />
             </div>
             <div className="grid gap-2">
@@ -1694,7 +2053,9 @@ export default function EditActivity() {
                 placeholder="Mô tả về diễn giả..."
                 rows={4}
                 value={speakerForm.bio}
-                onChange={(e) => setSpeakerForm({ ...speakerForm, bio: e.target.value })}
+                onChange={(e) =>
+                  setSpeakerForm({ ...speakerForm, bio: e.target.value })
+                }
               />
             </div>
             <div className="grid gap-2">
@@ -1702,7 +2063,9 @@ export default function EditActivity() {
               <Input
                 placeholder="https://example.com/avatar.jpg"
                 value={speakerForm.image}
-                onChange={(e) => setSpeakerForm({ ...speakerForm, image: e.target.value })}
+                onChange={(e) =>
+                  setSpeakerForm({ ...speakerForm, image: e.target.value })
+                }
               />
               {speakerForm.image && (
                 <div className="mt-2">
@@ -1711,7 +2074,7 @@ export default function EditActivity() {
                     alt="Preview"
                     className="w-20 h-20 rounded-full object-cover border border-gray-300"
                     onError={(e) => {
-                      e.target.style.display = "none"
+                      e.target.style.display = "none";
                     }}
                   />
                 </div>
@@ -1719,10 +2082,16 @@ export default function EditActivity() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSpeakerDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsSpeakerDialogOpen(false)}
+            >
               Hủy
             </Button>
-            <Button onClick={handleSaveSpeaker} className="bg-green-600 hover:bg-green-700 text-white">
+            <Button
+              onClick={handleSaveSpeaker}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
               {editingSpeakerIndex !== null ? "Cập nhật" : "Thêm"}
             </Button>
           </DialogFooter>
@@ -1733,9 +2102,15 @@ export default function EditActivity() {
       <Dialog open={isProgramDialogOpen} onOpenChange={setIsProgramDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingProgramIndex !== null ? "Chỉnh sửa mục chương trình" : "Thêm mục chương trình"}</DialogTitle>
+            <DialogTitle>
+              {editingProgramIndex !== null
+                ? "Chỉnh sửa mục chương trình"
+                : "Thêm mục chương trình"}
+            </DialogTitle>
             <DialogDescription>
-              {editingProgramIndex !== null ? "Cập nhật thông tin mục chương trình" : "Nhập thông tin mục chương trình mới"}
+              {editingProgramIndex !== null
+                ? "Cập nhật thông tin mục chương trình"
+                : "Nhập thông tin mục chương trình mới"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1746,7 +2121,9 @@ export default function EditActivity() {
               <Input
                 placeholder="VD: Khai mạc hội thảo, Coffee Break, Thảo luận..."
                 value={programForm.title}
-                onChange={(e) => setProgramForm({ ...programForm, title: e.target.value })}
+                onChange={(e) =>
+                  setProgramForm({ ...programForm, title: e.target.value })
+                }
               />
             </div>
             <div className="grid gap-2">
@@ -1754,7 +2131,9 @@ export default function EditActivity() {
               <Input
                 placeholder="VD: 08:00 - 08:30, 14:00 - 15:00"
                 value={programForm.time}
-                onChange={(e) => setProgramForm({ ...programForm, time: e.target.value })}
+                onChange={(e) =>
+                  setProgramForm({ ...programForm, time: e.target.value })
+                }
               />
             </div>
             <div className="grid gap-2">
@@ -1763,27 +2142,45 @@ export default function EditActivity() {
                 placeholder="Mô tả chi tiết về mục chương trình..."
                 rows={4}
                 value={programForm.description}
-                onChange={(e) => setProgramForm({ ...programForm, description: e.target.value })}
+                onChange={(e) =>
+                  setProgramForm({
+                    ...programForm,
+                    description: e.target.value,
+                  })
+                }
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsProgramDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsProgramDialogOpen(false)}
+            >
               Hủy
             </Button>
-            <Button onClick={handleSaveProgram} className="bg-green-600 hover:bg-green-700 text-white">
+            <Button
+              onClick={handleSaveProgram}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
               {editingProgramIndex !== null ? "Cập nhật" : "Thêm"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
-  )
+  );
 }
 
 // InputField helper component
-function InputField({ label, placeholder, type = "text", value, onChange, className = "", required = false }) {
+function InputField({
+  label,
+  placeholder,
+  type = "text",
+  value,
+  onChange,
+  className = "",
+  required = false,
+}) {
   return (
     <div className="grid gap-2">
       <Label>
@@ -1797,11 +2194,19 @@ function InputField({ label, placeholder, type = "text", value, onChange, classN
         className={className}
       />
     </div>
-  )
+  );
 }
 
 // TextareaField helper component
-function TextareaField({ label, placeholder, value, onChange, rows = 5, className = "", required = false }) {
+function TextareaField({
+  label,
+  placeholder,
+  value,
+  onChange,
+  rows = 5,
+  className = "",
+  required = false,
+}) {
   return (
     <div className="grid gap-2">
       <Label>
@@ -1815,5 +2220,5 @@ function TextareaField({ label, placeholder, value, onChange, rows = 5, classNam
         className={className}
       />
     </div>
-  )
+  );
 }
