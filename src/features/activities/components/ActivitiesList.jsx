@@ -1218,4 +1218,3 @@ function FilterSelect({ value, onChange, options, className }) {
     </div>
   )
 }
-
