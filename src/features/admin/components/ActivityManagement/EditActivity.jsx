@@ -21,35 +21,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/common/components/ui/dialog";
-import { toast } from "react-toastify";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Save,
-  Upload,
-  Plus,
-  X,
-  CheckCircle,
-  Star,
-  Trophy,
-  Eye,
-  Calendar,
-  MapPin,
-  Users,
-  User,
-  Clock,
-  Edit2,
-  Trash2,
-  Info,
-  UserCheck 
-} from "lucide-react";
-import { ROUTES } from "@/common/constants/routes";
-import { uploadImage } from "@/common/utils/upload";
-import { executeApiCall } from "@/common/utils/executeApiCall";
-import { activityService } from "@/features/activities/services/activity.service";
-import { GradingCriteriaSection } from "./GradingCriteriaSection";
-import AssignJurySection from "@/features/landing/jury/components/assign-jury/page";
+} from "@/common/components/ui/dialog"
+import { toast } from "react-toastify"
+import { ArrowLeft, ArrowRight, Save, Upload, Plus, X, CheckCircle, Star, Trophy, Eye, Calendar, MapPin, Users, User, Clock, Edit2, Trash2, Info } from "lucide-react"
+import { ROUTES } from "@/common/constants/routes"
+import { uploadImage } from "@/common/utils/upload"
+import { executeApiCall } from "@/common/utils/executeApiCall"
+import { activityService } from "@/features/activities/services/activity.service"
+import { GradingCriteriaSection } from "./GradingCriteriaSection"
+import { vnTimeToUTC, utcToVNTime } from "@/common/utils/dateUtils"
 
 export default function EditActivity() {
   const params = useParams();
@@ -109,7 +89,14 @@ export default function EditActivity() {
       registration: "",
       awards: [],
     },
-  });
+    registrationSettings: {
+      groupRegistration: {
+        minMembers: 1,
+        maxMembers: null,
+        requireLeader: false,
+      },
+    },
+  })
 
   const sections = [
     { id: "basic", title: "Thông tin cơ bản", icon: Info },
@@ -166,20 +153,11 @@ export default function EditActivity() {
             location: activityData.location || "",
             organizer: activityData.organizer || "",
             thumbnail: activityData.thumbnailUrl || "",
-            startDate: activityData.startDate
-              ? new Date(activityData.startDate).toISOString().split("T")[0]
-              : "",
-            endDate: activityData.endDate
-              ? new Date(activityData.endDate).toISOString().split("T")[0]
-              : "",
-            registerDate: activityData.registerDate
-              ? new Date(activityData.registerDate).toISOString().split("T")[0]
-              : "",
-            endRegisterDate: activityData.endRegisterDate
-              ? new Date(activityData.endRegisterDate)
-                  .toISOString()
-                  .split("T")[0]
-              : "",
+            // Convert UTC from BE to VN time (UTC+7) for display
+            startDate: activityData.startDate ? utcToVNTime(activityData.startDate, false) : "",
+            endDate: activityData.endDate ? utcToVNTime(activityData.endDate, false) : "",
+            registerDate: activityData.registerDate ? utcToVNTime(activityData.registerDate, false) : "",
+            endRegisterDate: activityData.endRegisterDate ? utcToVNTime(activityData.endRegisterDate, false) : "",
             maxParticipants: activityData.maxParticipants?.toString() || "",
             sportsCategories:
               activityData.sports?.map((s) => s.sportName) || [],
@@ -219,8 +197,23 @@ export default function EditActivity() {
                   points: (a.starPoints || a.points || 0).toString(),
                 })) || [],
             },
-          });
-
+            registrationSettings: activityData.registrationSettings?.groupRegistration
+              ? {
+                  groupRegistration: {
+                    minMembers: activityData.registrationSettings.groupRegistration.minMembers || 1,
+                    maxMembers: activityData.registrationSettings.groupRegistration.maxMembers || null,
+                    requireLeader: activityData.registrationSettings.groupRegistration.requireLeader || false,
+                  },
+                }
+              : {
+                  groupRegistration: {
+                    minMembers: 1,
+                    maxMembers: null,
+                    requireLeader: false,
+                  },
+                },
+          })
+          
           // Load grading settings (enabled is determined by presence of gradingSettings)
           if (
             activityData.gradingSettings &&
@@ -474,18 +467,11 @@ export default function EditActivity() {
         location: formData.location,
         organizer: formData.organizer,
         thumbnailUrl: formData.thumbnail,
-        startDate: formData.startDate
-          ? new Date(formData.startDate).toISOString()
-          : null,
-        endDate: formData.endDate
-          ? new Date(formData.endDate).toISOString()
-          : null,
-        registerDate: formData.registerDate
-          ? new Date(formData.registerDate).toISOString()
-          : null,
-        endRegisterDate: formData.endRegisterDate
-          ? new Date(formData.endRegisterDate).toISOString()
-          : null,
+        // Convert VN time (UTC+7) to UTC before sending to BE
+        startDate: formData.startDate ? vnTimeToUTC(formData.startDate) : null,
+        endDate: formData.endDate ? vnTimeToUTC(formData.endDate) : null,
+        registerDate: formData.registerDate ? vnTimeToUTC(formData.registerDate) : null,
+        endRegisterDate: formData.endRegisterDate ? vnTimeToUTC(formData.endRegisterDate) : null,
         maxParticipants: parseInt(formData.maxParticipants) || 0,
         rules: formData.rules.filter((r) => r.trim()),
         // SportsFestival fields
@@ -546,7 +532,21 @@ export default function EditActivity() {
             : null,
         // Registration Settings
         onlyTeacherCanRegister: onlyTeacherCanRegister,
-      };
+        registrationSettings: formData.subType === "CreativeContest" && formData.registrationSettings?.groupRegistration
+          ? {
+              groupRegistration: {
+                minMembers: parseInt(formData.registrationSettings?.groupRegistration?.minMembers, 10) || 1,
+                maxMembers:
+                  formData.registrationSettings?.groupRegistration?.maxMembers === "" ||
+                  formData.registrationSettings?.groupRegistration?.maxMembers === null ||
+                  formData.registrationSettings?.groupRegistration?.maxMembers === undefined
+                    ? null
+                    : parseInt(formData.registrationSettings?.groupRegistration?.maxMembers, 10),
+                requireLeader: !!formData.registrationSettings?.groupRegistration?.requireLeader,
+              },
+            }
+          : null
+      }
 
       const response = await executeApiCall(
         activityService.updateActivity.bind(activityService),
@@ -1553,7 +1553,8 @@ export default function EditActivity() {
               </div>
 
               {/* Registration Settings */}
-              <div className="border-t pt-6 mt-6">
+              <div className="border-t pt-6 mt-6 space-y-6">
+                {/* Only Teacher Can Register */}
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <Label className="text-base font-semibold">
@@ -1583,7 +1584,7 @@ export default function EditActivity() {
                   </div>
                 </div>
                 {onlyTeacherCanRegister && (
-                  <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-sm text-blue-800">
                       <strong>Lưu ý:</strong> Khi bật tùy chọn này, chỉ có giáo
                       viên mới có thể đăng ký tham gia hoạt động. Học sinh/sinh
@@ -1591,6 +1592,84 @@ export default function EditActivity() {
                     </p>
                   </div>
                 )}
+
+                {/* Group Registration Settings */}
+                <div className="border rounded-lg p-4 space-y-4">
+                  <div>
+                    <Label className="text-base font-semibold">Cài đặt đăng ký theo nhóm</Label>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Quy định số lượng thành viên và yêu cầu nhóm trưởng cho hoạt động có đăng ký nhóm.
+                    </p>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="min-members">Số thành viên tối thiểu</Label>
+                      <Input
+                        id="min-members"
+                        type="number"
+                        min={1}
+                        value={formData.registrationSettings?.groupRegistration?.minMembers || ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            registrationSettings: {
+                              ...prev.registrationSettings,
+                              groupRegistration: {
+                                ...prev.registrationSettings?.groupRegistration,
+                                minMembers: e.target.value,
+                              },
+                            },
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="max-members">Số thành viên tối đa</Label>
+                      <Input
+                        id="max-members"
+                        type="number"
+                        min={1}
+                        placeholder="Không giới hạn nếu để trống"
+                        value={formData.registrationSettings?.groupRegistration?.maxMembers ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            registrationSettings: {
+                              ...prev.registrationSettings,
+                              groupRegistration: {
+                                ...prev.registrationSettings?.groupRegistration,
+                                maxMembers: e.target.value,
+                              },
+                            },
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 border rounded-lg px-4 py-3">
+                      <div className="flex-1">
+                        <Label className="text-sm font-medium">Yêu cầu nhóm trưởng</Label>
+                        <p className="text-xs text-gray-500">
+                          Người tạo nhóm sẽ được chọn làm nhóm trưởng mặc định.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={!!formData.registrationSettings?.groupRegistration?.requireLeader}
+                        onCheckedChange={(checked) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            registrationSettings: {
+                              ...prev.registrationSettings,
+                              groupRegistration: {
+                                ...prev.registrationSettings?.groupRegistration,
+                                requireLeader: checked,
+                              },
+                            },
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>

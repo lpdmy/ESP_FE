@@ -1,12 +1,12 @@
 import LandingLayout from "@/common/components/layout/LandingLayout"
 import ContentLayout from "@/common/components/layout/ContentLayout"
-import ViewActivity from "@/features/activities/components/ViewActivity"
+import ActivitiesList from "@/features/activities/components/ActivitiesList"
 
-export default function ViewActivityPage() {
+export default function ActivitiesListPage() {
   return (
     <LandingLayout>
-      <ContentLayout contentMaxWidth="80rem">
-        <ViewActivity />
+      <ContentLayout>
+        <ActivitiesList />
       </ContentLayout>
     </LandingLayout>
   )

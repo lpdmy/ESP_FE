@@ -1,22 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
-import { Button } from "@/common/components/ui/button";
-import { Input } from "@/common/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/common/components/ui/card";
-import { Badge } from "@/common/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/common/components/ui/table";
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { Link } from "react-router-dom"
+import { Button } from "@/common/components/ui/button"
+import { Input } from "@/common/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
+import { Badge } from "@/common/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/common/components/ui/table"
+import { Tooltip } from "@/common/components/ui/tooltip"
 import {
   Dialog,
   DialogContent,
@@ -56,6 +45,19 @@ import { ROUTES } from "@/common/constants/routes";
 import { executeApiCall } from "@/common/utils/executeApiCall";
 import { activityService } from "@/features/activities/services/activity.service";
 import { LoadingCard } from "@/common/components/ui/loading";
+
+const parseRegistrationSettings = (settings) => {
+  if (!settings) return null
+  if (typeof settings === "string") {
+    try {
+      return JSON.parse(settings)
+    } catch (error) {
+      console.warn("Không thể parse registration settings:", error)
+      return null
+    }
+  }
+  return settings
+}
 
 export default function ActivityManagement() {
   // Data state
@@ -100,7 +102,18 @@ export default function ActivityManagement() {
       avoidLunch: true,
       maxSessionsPerDay: 3,
     },
-  });
+  })
+  const [selectedActivity, setSelectedActivity] = useState(null)
+  const [participantsDrawerOpen, setParticipantsDrawerOpen] = useState(false)
+  const selectedGroupRegistrations = useMemo(
+    () => (selectedActivity ? getGroupRegistrations(selectedActivity) : []),
+    [selectedActivity]
+  )
+  const selectedSportRosters = useMemo(
+    () => (selectedActivity ? getSportRosters(selectedActivity) : []),
+    [selectedActivity]
+  )
+  const selectedParticipants = selectedActivity?.participantDetails || []
 
   // Stats data (calculated from activities)
   const [stats, setStats] = useState([
@@ -206,12 +219,16 @@ export default function ActivityManagement() {
           description: activity.description || "",
           onlyTeacherCanRegister: activity.onlyTeacherCanRegister || false,
           gradingSettings: activity.gradingSettings || null,
-        }));
-
-        setActivities(mappedActivities);
-        setTotalCount(paginationData.totalCount || 0);
-        setTotalPages(Math.ceil((paginationData.totalCount || 0) / pageSize));
-
+          registrationSettings: parseRegistrationSettings(activity.registrationSettings),
+          sports: activity.sports || [],
+          participantDetails: activity.participants || [],
+          isDeleted: activity.isDeleted || false,
+        }))
+        
+        setActivities(mappedActivities)
+        setTotalCount(paginationData.totalCount || 0)
+        setTotalPages(Math.ceil((paginationData.totalCount || 0) / pageSize))
+        
         // Calculate stats
         const now = new Date();
         const activeCount = mappedActivities.filter((a) => {
@@ -416,7 +433,11 @@ export default function ActivityManagement() {
 
   // Filter activities on client side (since BE only supports search by title)
   // Note: Search is done on BE, but other filters are done on client side
-  const filteredActivities = activities.filter((activity) => {
+  const filteredActivities = activities.filter(activity => {
+    // Soft delete filter - only show activities that are not deleted
+    // Hide activities where isDeleted is explicitly true
+    if (activity.isDeleted === true || activity.isDeleted === "true") return false
+    
     // Category filter
     if (categoryFilter && categoryFilter !== "all") {
       const categoryMatch =
@@ -464,16 +485,61 @@ export default function ActivityManagement() {
       return false;
 
     // Organizer filter (client-side search)
-    if (
-      organizerFilter &&
-      activity.organizer &&
-      !activity.organizer.toLowerCase().includes(organizerFilter.toLowerCase())
-    )
-      return false;
+    if (organizerFilter && activity.organizer && !activity.organizer.toLowerCase().includes(organizerFilter.toLowerCase())) return false
+    
+    return true
+  })
 
-    return true;
-  });
+  const getGroupRegistrations = (activity) => {
+    if (!activity || !activity.participantDetails) return []
+    const map = new Map()
+    activity.participantDetails
+      .filter((p) => p.groupCode)
+      .forEach((p) => {
+        if (!map.has(p.groupCode)) {
+          map.set(p.groupCode, {
+            code: p.groupCode,
+            name: p.registrationMetadata || "",
+            members: [],
+          })
+        }
+        map.get(p.groupCode).members.push(p)
+      })
+    return Array.from(map.values())
+  }
 
+  const getSportRosters = (activity) => {
+    if (!activity || !activity.participantDetails) return []
+    const sportMap = new Map()
+    activity.participantDetails
+      .filter((p) => p.sportId)
+      .forEach((p) => {
+        if (!sportMap.has(p.sportId)) {
+          const sportMeta = activity.sports?.find((sport) => sport.id === p.sportId)
+          sportMap.set(p.sportId, {
+            sportId: p.sportId,
+            sportName: p.sportName || sportMeta?.sportName || "Môn thi đấu",
+            classes: new Map(),
+          })
+        }
+        const entry = sportMap.get(p.sportId)
+        const className = p.classGroupName || "Chưa rõ lớp"
+        if (!entry.classes.has(className)) {
+          entry.classes.set(className, [])
+        }
+        entry.classes.get(className).push(p)
+      })
+
+    return Array.from(sportMap.values()).map((sport) => ({
+      sportId: sport.sportId,
+      sportName: sport.sportName,
+      rosters: Array.from(sport.classes.entries()).map(([className, members]) => ({
+        className,
+        members,
+      })),
+    }))
+  }
+  
   // Handle pagination
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -646,14 +712,14 @@ export default function ActivityManagement() {
                   </div>
                 ) : (
                   <div className="py-4">
-                    <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="mb-4 p-4 bg-green-50  border-green-200 rounded-lg">
                       <p className="text-green-700 font-medium">
                         ✓ AI đã tạo lịch thi đấu tối ưu với {aiSchedule.length}{" "}
                         buổi
                       </p>
                     </div>
 
-                    <div className="border rounded-lg overflow-hidden">
+                    <div className=" rounded-lg overflow-hidden">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -818,7 +884,7 @@ export default function ActivityManagement() {
 
           {/* Advanced Filters Panel */}
           {showAdvancedFilters && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4  border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <Label className="mb-2 block">Phân loại</Label>
@@ -882,28 +948,6 @@ export default function ActivityManagement() {
             </div>
           )}
 
-          {selectedActivities.length > 0 && (
-            <div className="mt-4 flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
-              <span className="text-sm font-medium">
-                Đã chọn {selectedActivities.length} hoạt động
-              </span>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDeleteSelected}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Xóa
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedActivities([])}
-              >
-                Bỏ chọn
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -946,28 +990,10 @@ export default function ActivityManagement() {
             </div>
           ) : (
             <>
-              <div className="border rounded-lg overflow-hidden">
+              <div className=" rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox
-                          checked={
-                            selectedActivities.length ===
-                              filteredActivities.length &&
-                            filteredActivities.length > 0
-                          }
-                          onChange={(checked) => {
-                            if (checked) {
-                              setSelectedActivities(
-                                filteredActivities.map((a) => a.id)
-                              );
-                            } else {
-                              setSelectedActivities([]);
-                            }
-                          }}
-                        />
-                      </TableHead>
                       <TableHead>Tiêu đề</TableHead>
                       <TableHead>Phân loại</TableHead>
                       <TableHead>Ngày bắt đầu</TableHead>
@@ -979,13 +1005,10 @@ export default function ActivityManagement() {
                   </TableHeader>
                   <TableBody>
                     {filteredActivities.map((activity) => (
-                      <TableRow key={activity.id}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedActivities.includes(activity.id)}
-                            onChange={() => handleSelectActivity(activity.id)}
-                          />
-                        </TableCell>
+                      <TableRow
+                        key={activity.id}
+                        className="hover:bg-gray-50"
+                      >
                         <TableCell className="font-medium max-w-xs">
                           <div className="line-clamp-2">{activity.title}</div>
                         </TableCell>
@@ -1009,9 +1032,9 @@ export default function ActivityManagement() {
                               className="bg-green-600 h-1.5 rounded-full"
                               style={{
                                 width: `${
-                                  (activity.participants /
-                                    activity.maxParticipants) *
-                                  100
+                                  activity.maxParticipants
+                                    ? Math.min((activity.participants / activity.maxParticipants) * 100, 100)
+                                    : 0
                                 }%`,
                               }}
                             />
@@ -1019,69 +1042,143 @@ export default function ActivityManagement() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {/* Chỉ hiển thị nút AI cho hội thao */}
-                            {(activity.subType === "SportsFestival" ||
-                              (activity.sports &&
-                                activity.sports.length > 0)) && (
-                              <Button variant="ghost" size="icon" asChild>
-                                <Link
-                                  to={ROUTES.ADMIN.AI_SCHEDULE.replace(
-                                    ":id",
-                                    String(activity.id)
-                                  )}
-                                >
-                                  <Sparkles className="w-4 h-4 text-purple-500" />
+                            <Tooltip content="Xem trước trang">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                asChild
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Link to={`${ROUTES.ACTIVITY.VIEW_ACTIVITY.replace(':id', String(activity.id))}?isPreview=true`}>
+                                  <Eye className="w-4 h-4 text-blue-500" />
                                 </Link>
                               </Button>
+                            </Tooltip>
+                            <Tooltip content="Chỉnh sửa">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                asChild
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Link to={ROUTES.ADMIN.EDIT_ACTIVITY.replace(':id', String(activity.id))}>
+                                  <Edit className="w-4 h-4" />
+                                </Link>
+                              </Button>
+                            </Tooltip>
+                            <Tooltip content="Giám khảo">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedActivity(activity)
+                                  setParticipantsDrawerOpen(true)
+                                }}
+                              >
+                                <Users className="w-4 h-4 text-green-600" />
+                              </Button>
+                            </Tooltip>
+                            {(activity.subType === "SportsFestival" || (activity.sports && activity.sports.length > 0)) && (
+                              <Tooltip content="AI Tạo lịch">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  asChild
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Link to={ROUTES.ADMIN.AI_SCHEDULE.replace(':id', String(activity.id))}>
+                                    <Sparkles className="w-4 h-4 text-purple-500" />
+                                  </Link>
+                                </Button>
+                              </Tooltip>
                             )}
-                            <Button variant="ghost" size="icon" asChild>
-                              <Link
-                                to={`${ROUTES.ACTIVITY.VIEW_ACTIVITY.replace(
-                                  ":id",
-                                  String(activity.id)
-                                )}?isPreview=true`}
+                            <Tooltip content="Xóa sự kiện">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={async (e) => {
+                                  e.stopPropagation()
+                                  try {
+                                    const token = localStorage.getItem("token")
+                                    // Soft delete: Update activity with isDeleted = true
+                                    await executeApiCall(
+                                      activityService.updateActivity.bind(activityService),
+                                      [
+                                        {
+                                          id: activity.id,
+                                          isDeleted: true,
+                                        },
+                                        token
+                                      ],
+                                      { setLoading: () => {}, setError: () => {} }
+                                    )
+                                    // Update local state immediately for instant UI feedback
+                                    setActivities(prevActivities =>
+                                      prevActivities.map(a =>
+                                        a.id === activity.id ? { ...a, isDeleted: true } : a
+                                      )
+                                    )
+                                    toast.success(`Đã xóa hoạt động "${activity.title}".`)
+                                    // Also refresh from server to ensure consistency
+                                    fetchActivities()
+                                  } catch (err) {
+                                    console.error("Delete failed:", err)
+                                    toast.error(err?.message || "Không thể xóa hoạt động.")
+                                  }
+                                }}
                               >
-                                <Eye className="w-4 h-4 text-blue-500" />
-                              </Link>
-                            </Button>
-                            <Button variant="ghost" size="icon" asChild>
-                              <Link
-                                to={ROUTES.ADMIN.EDIT_ACTIVITY.replace(
-                                  ":id",
-                                  String(activity.id)
-                                )}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Link>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                toast.success(
-                                  `Đã xóa hoạt động "${activity.title}".`
-                                );
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
+                            </Tooltip>
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                  ))}
                   </TableBody>
                 </Table>
               </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm">Hiển thị:</Label>
-                    <SimpleSelect
-                      value={pageSize.toString()}
-                      onValueChange={(value) =>
-                        handlePageSizeChange(parseInt(value))
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 ">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm">Hiển thị:</Label>
+                  <SimpleSelect
+                    value={pageSize.toString()}
+                    onValueChange={(value) => handlePageSizeChange(parseInt(value))}
+                    options={[
+                      { value: "10", label: "10" },
+                      { value: "20", label: "20" },
+                      { value: "50", label: "50" },
+                      { value: "100", label: "100" },
+                    ]}
+                    className="w-20"
+                  />
+                  <span className="text-sm text-gray-600">mục mỗi trang</span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pageNumber - 1)}
+                    disabled={pageNumber === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum
+                      if (totalPages <= 5) {
+                        pageNum = i + 1
+                      } else if (pageNumber <= 3) {
+                        pageNum = i + 1
+                      } else if (pageNumber >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i
+                      } else {
+                        pageNum = pageNumber - 2 + i
                       }
                       options={[
                         { value: "10", label: "10" },
@@ -1151,6 +1248,207 @@ export default function ActivityManagement() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={participantsDrawerOpen}
+        onOpenChange={(open) => {
+          setParticipantsDrawerOpen(open)
+          if (!open) {
+            setSelectedActivity(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Chi tiết đăng ký</DialogTitle>
+            <DialogDescription>
+              {selectedActivity ? selectedActivity.title : "Chọn một hoạt động để xem chi tiết"}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedActivity ? (
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-3 gap-4">
+                <Card className="bg-orange-50 border-orange-100">
+                  <CardContent className="p-4">
+                    <p className="text-sm text-gray-500">Loại hoạt động</p>
+                    <p className="text-lg font-semibold">
+                      {getSubTypeLabel(selectedActivity.subType)}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-blue-50 border-blue-100">
+                  <CardContent className="p-4">
+                    <p className="text-sm text-gray-500">Số người tham gia</p>
+                    <p className="text-lg font-semibold">
+                      {selectedParticipants.length}/{selectedActivity.maxParticipants}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-green-50 border-green-100">
+                  <CardContent className="p-4">
+                    <p className="text-sm text-gray-500">Đăng ký mở đến</p>
+                    <p className="text-lg font-semibold">
+                      {selectedActivity.endRegisterDate || "-"}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {selectedActivity.registrationSettings?.groupRegistration && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Cài đặt đăng ký theo nhóm</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500">Số thành viên tối thiểu</p>
+                      <p className="font-semibold">
+                        {selectedActivity.registrationSettings.groupRegistration.minMembers || 1}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Số thành viên tối đa</p>
+                      <p className="font-semibold">
+                        {selectedActivity.registrationSettings.groupRegistration.maxMembers
+                          ? selectedActivity.registrationSettings.groupRegistration.maxMembers
+                          : "Không giới hạn"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Yêu cầu nhóm trưởng</p>
+                      <p className="font-semibold">
+                        {selectedActivity.registrationSettings.groupRegistration.requireLeader ? "Có" : "Không"}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {selectedGroupRegistrations.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Nhóm tham gia ({selectedGroupRegistrations.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {selectedGroupRegistrations.map((group, index) => (
+                      <div key={group.code || index} className=" rounded-lg p-4 space-y-2">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div>
+                            <p className="font-semibold text-base">{group.name || `Nhóm ${index + 1}`}</p>
+                            <p className="text-sm text-gray-500">{group.members.length} thành viên</p>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          {group.members.map((member) => (
+                            <div key={member.id} className="flex items-center justify-between text-sm">
+                              <span className="font-medium">{member.userFullName || member.fullName}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500">
+                                  {member.classGroupName || "Chưa rõ lớp"}
+                                </span>
+                                {member.isLeader && (
+                                  <Badge className="bg-blue-50 text-blue-700">Nhóm trưởng</Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {selectedSportRosters.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Đội hình hội thao</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {selectedSportRosters.map((sport) => (
+                      <div key={sport.sportId} className=" rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <p className="font-semibold text-base">{sport.sportName}</p>
+                          {selectedActivity.sports
+                            ?.find((item) => item.id === sport.sportId)
+                            ?.maxMembers && (
+                            <span className="text-xs text-gray-500">
+                              Giới hạn{" "}
+                              {selectedActivity.sports.find((item) => item.id === sport.sportId).maxMembers} người
+                            </span>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          {sport.rosters.map((roster, rosterIndex) => (
+                            <div key={`${sport.sportId}-${rosterIndex}`} className="bg-gray-50 rounded-lg p-3">
+                              <p className="font-medium text-sm mb-2">Lớp {roster.className}</p>
+                              <div className="flex flex-wrap gap-2">
+                                {roster.members.map((member) => (
+                                  <Badge key={member.id} variant="outline" className="bg-white">
+                                    {member.userFullName || member.fullName}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tất cả người tham gia ({selectedParticipants.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {selectedParticipants.length === 0 ? (
+                    <p className="text-sm text-gray-500">Chưa có thành viên nào đăng ký.</p>
+                  ) : (
+                    <div className="space-y-2 pr-2">
+                      {selectedParticipants.map((participant) => (
+                        <div
+                          key={participant.id}
+                          className="flex items-center justify-between py-2  last:"
+                        >
+                          <div>
+                            <p className="font-medium">{participant.userFullName || participant.fullName}</p>
+                            <p className="text-sm text-gray-500">
+                              {participant.classGroupName || "Chưa rõ lớp"}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {participant.groupCode && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                                Nhóm
+                              </Badge>
+                            )}
+                            {participant.sportName && (
+                              <Badge variant="outline" className="bg-green-50 text-green-700">
+                                {participant.sportName}
+                              </Badge>
+                            )}
+                            <Badge
+                              className={
+                                participant.status?.toLowerCase() === "approved" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                              }
+                            >
+                              {participant.status === "approved" ? "Đã duyệt" : "Chờ duyệt"}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">Chưa chọn hoạt động nào.</p>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Quick Actions */}
       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -1,13 +1,14 @@
 import LandingLayout from "@/common/components/layout/LandingLayout"
 import ContentLayout from "@/common/components/layout/ContentLayout"
-import ViewActivity from "@/features/activities/components/ViewActivity"
+import ActivityRegisterForm from "@/features/activities/components/ActivityRegisterForm"
 
-export default function ViewActivityPage() {
+export default function ActivityRegisterPage() {
   return (
     <LandingLayout>
       <ContentLayout contentMaxWidth="80rem">
-        <ViewActivity />
+        <ActivityRegisterForm />
       </ContentLayout>
     </LandingLayout>
   )
 }
+
