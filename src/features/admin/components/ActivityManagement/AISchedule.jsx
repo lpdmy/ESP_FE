@@ -54,21 +54,19 @@ const OfficialBracketViewer = memo(
       <div className="relative border border-slate-200 rounded-lg overflow-hidden bg-slate-50/50 h-[700px]">
         <TransformWrapper
           initialScale={0.8}
-          minScale={0.2}
-          maxScale={4}
+          minScale={0.5}
+          maxScale={2.5}
           centerOnInit={true}
           limitToBounds={false}
-          wheel={{ step: 0.0005, smoothStep: 0.0005 }}
+          // Tắt zoom bằng con lăn để tránh lag, chỉ dùng nút + / - cho zoom
+          wheel={{ disabled: true }}
+          // Panning đơn giản, không velocity animation để kéo thả mượt
           panning={{
-            velocityDisabled: false,
+            disabled: false,
             excluded: ["button", "input", "select"],
           }}
           alignmentAnimation={{ animationTime: 0 }}
-          velocityAnimation={{
-            animationTime: 300,
-            animationType: "easeOut",
-            sensitivity: 1.5,
-          }}
+          velocityAnimation={{ animationTime: 0 }}
         >
           {({ zoomIn, zoomOut, resetTransform, centerView }) => (
             <>

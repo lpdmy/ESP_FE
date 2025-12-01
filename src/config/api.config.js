@@ -257,6 +257,7 @@ export const API_CONFIG = {
     REMOVE: '/activityparticipant',
     GROUP: '/activityparticipant/group',
     SPORT: '/activityparticipant/sport',
+    GET_SPORT_ROSTERS: '/activityparticipant/sport-rosters',
   },
 
   // Timetable endpoints

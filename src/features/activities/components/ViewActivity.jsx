@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import { Button } from "@/common/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
@@ -18,18 +18,12 @@ import {
   DialogTrigger,
   DialogOverlay,
 } from "@/common/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  useDropdownMenu,
-} from "@/common/components/ui/dropdown-menu"
 import { Label } from "@/common/components/ui/label"
 import { Textarea } from "@/common/components/ui/textarea"
 import { useToast } from "@/common/hooks/useToast"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
+import { activityMatchService } from "@/services/activityMatch.service"
 import { activityParticipantService } from "@/features/activities/services/activityParticipant.service"
 import { submissionService } from "@/features/activities/services/submission.service"
 import { ROUTES } from "@/common/constants/routes"
@@ -37,6 +31,350 @@ import { LoadingCard } from "@/common/components/ui/loading"
 import { ClassGroupService } from "@/services/classgroup.service"
 import { jwtDecode } from "jwt-decode"
 import { useSearchApi } from "@/common/hooks/useSearchApi"
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
+import { BracketTree as AdminBracketTree } from "@/features/admin/components/ActivityManagement/BracketTree"
+
+// Custom BracketTree với kẻ ngang và card lớn hơn
+const CustomBracketTree = memo(({ matches, official, onMatchClick }) => {
+  const formatDate = (dateStr) => {
+    if (!dateStr) return ""
+    try {
+      const d = new Date(dateStr)
+      return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`
+    } catch {
+      return ""
+    }
+  }
+
+  const formatTime = (timeStr) => (timeStr ? timeStr.toString().slice(0, 5) : "")
+
+  // Transform to tree structure
+  const treeData = useMemo(() => {
+    if (!matches || matches.length === 0) return null
+    
+    const nodeMap = new Map()
+    matches.forEach((m) => {
+      nodeMap.set(m.matchNumber, { match: m, children: [] })
+    })
+
+    matches.forEach((m) => {
+      const parentNode = nodeMap.get(m.matchNumber)
+      const childrenMatches = matches.filter(
+        (child) => (child.nextMatchId || child.NextMatchId) === m.matchNumber
+      )
+
+      childrenMatches
+        .sort((a, b) => (a.matchNumber || 0) - (b.matchNumber || 0))
+        .forEach((child) => {
+          const childNode = nodeMap.get(child.matchNumber)
+          if (childNode) parentNode.children.push(childNode)
+        })
+    })
+
+    let root =
+      [...nodeMap.values()].find((node) => {
+        const nextId = node.match.nextMatchId || node.match.NextMatchId
+        return !nextId
+      }) || [...nodeMap.values()].pop()
+
+    const officialMatchByNumber = {}
+    if (official?.rounds?.length) {
+      official.rounds.forEach((round) => {
+        round.matches.forEach((m) => {
+          officialMatchByNumber[m.matchNumber] = m
+        })
+      })
+    }
+
+    return { root, officialMatchByNumber }
+  }, [matches, official])
+
+  const MatchNode = ({ node, onMatchClick, officialMatchByNumber }) => {
+    if (!node) return null
+
+    const { match: m, children = [] } = node
+    const officialMatch = officialMatchByNumber?.[m.matchNumber] || m
+    const status = officialMatch.status ?? 0
+
+    let isLeftChildWinner = false
+    let isRightChildWinner = false
+    if (children.length === 2 && (officialMatch.classGroup1Id || officialMatch.classGroup2Id)) {
+      const leftChildMatch =
+        officialMatchByNumber?.[children[0].match.matchNumber] || children[0].match
+      const rightChildMatch =
+        officialMatchByNumber?.[children[1].match.matchNumber] || children[1].match
+
+      if (
+        leftChildMatch.winnerClassGroupId === officialMatch.classGroup1Id ||
+        leftChildMatch.winnerClassGroupId === officialMatch.classGroup2Id
+      ) {
+        isLeftChildWinner = true
+      }
+      if (
+        rightChildMatch.winnerClassGroupId === officialMatch.classGroup1Id ||
+        rightChildMatch.winnerClassGroupId === officialMatch.classGroup2Id
+      ) {
+        isRightChildWinner = true
+      }
+    }
+
+    const statusColors =
+      status === 2
+        ? "border-emerald-500 ring-1 ring-emerald-500 shadow-md"
+        : status === 1
+        ? "border-blue-500 ring-1 ring-blue-200"
+        : "border-slate-300"
+
+    const scoreText =
+      officialMatch.score1 != null && officialMatch.score2 != null
+        ? `${officialMatch.score1} - ${officialMatch.score2}`
+        : "vs"
+
+    // Detect bye teams (teams waiting for results or empty)
+    const isByeTeam1 = !officialMatch.classGroup1Name || 
+                       officialMatch.classGroup1Name === "Chờ kết quả" || 
+                       !officialMatch.classGroup1Id
+    const isByeTeam2 = !officialMatch.classGroup2Name || 
+                       officialMatch.classGroup2Name === "Chờ kết quả" || 
+                       !officialMatch.classGroup2Id
+
+    return (
+      <div className="flex flex-col-reverse items-center">
+        {/* children rows */}
+        {children.length > 0 && (
+          <div className="flex flex-row justify-center gap-8 w-full">
+            {children.map((child) => (
+              <div key={child.match.matchNumber} className="flex flex-col items-center w-full">
+                <MatchNode
+                  node={child}
+                  onMatchClick={onMatchClick}
+                  officialMatchByNumber={officialMatchByNumber}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* connector với kẻ ngang - rút ngắn */}
+        {children.length > 0 && (
+          <div className="w-full h-8 relative flex items-center justify-center">
+            <svg width="100%" height="100%" className="overflow-visible block">
+              {/* Đường kẻ ngang từ trái sang phải - rút ngắn từ 30% đến 70% */}
+              <line
+                x1="30%"
+                y1="50%"
+                x2="70%"
+                y2="50%"
+                stroke="#cbd5e1"
+                strokeWidth="2"
+                strokeDasharray="4 4"
+              />
+              {/* Stem từ parent xuống */}
+              <line
+                x1="50%"
+                y1="0"
+                x2="50%"
+                y2="50%"
+                stroke={isLeftChildWinner || isRightChildWinner ? "#10b981" : "#cbd5e1"}
+                strokeWidth={isLeftChildWinner || isRightChildWinner ? 3 : 2}
+              />
+              {/* Nhánh trái */}
+              <path
+                d="M 50% 50% L 25% 50% L 25% 100%"
+                fill="none"
+                stroke={isLeftChildWinner ? "#10b981" : "#cbd5e1"}
+                strokeWidth={isLeftChildWinner ? 3 : 2}
+                className="transition-colors duration-300"
+              />
+              {/* Nhánh phải */}
+              <path
+                d="M 50% 50% L 75% 50% L 75% 100%"
+                fill="none"
+                stroke={isRightChildWinner ? "#10b981" : "#cbd5e1"}
+                strokeWidth={isRightChildWinner ? 3 : 2}
+                className="transition-colors duration-300"
+              />
+            </svg>
+          </div>
+        )}
+
+        {/* card - lớn hơn */}
+        <div
+          className={`
+            bg-white border-t-4 rounded-lg p-3 w-56 text-center cursor-pointer
+            transition-all hover:scale-[1.02] shadow-sm
+            ${statusColors}
+          `}
+          onClick={() => onMatchClick(officialMatch)}
+        >
+          <div className="flex justify-between items-center mb-2 pb-2 border-b border-dashed border-slate-200">
+            <span className="text-xs font-bold text-slate-400">
+              #{officialMatch.matchNumber}
+            </span>
+            <span className="text-xs text-slate-500 truncate max-w-[140px]">
+              {officialMatch.roundName || `Vòng ${officialMatch.round}`}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1.5 my-2">
+            <div
+              className={`text-base font-semibold truncate ${
+                isByeTeam1
+                  ? "bg-amber-100 text-amber-800 px-2 py-1 rounded font-bold"
+                  : officialMatch.winnerClassGroupId === officialMatch.classGroup1Id
+                  ? "text-emerald-600"
+                  : "text-slate-700"
+              }`}
+            >
+              {officialMatch.classGroup1Name || `Lớp ${officialMatch.classGroup1Id || "?"}`}
+            </div>
+            <div className="text-sm font-bold text-slate-400">{scoreText}</div>
+            <div
+              className={`text-base font-semibold truncate ${
+                isByeTeam2
+                  ? "bg-amber-100 text-amber-800 px-2 py-1 rounded font-bold"
+                  : officialMatch.winnerClassGroupId === officialMatch.classGroup2Id
+                  ? "text-emerald-600"
+                  : "text-slate-700"
+              }`}
+            >
+              {officialMatch.classGroup2Name || `Lớp ${officialMatch.classGroup2Id || "?"}`}
+            </div>
+          </div>
+
+          {officialMatch.matchDate && (
+            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-center gap-1 text-xs text-slate-500">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>{formatDate(officialMatch.matchDate)}</span>
+              <span>•</span>
+              <span>{formatTime(officialMatch.startTime)}</span>
+            </div>
+          )}
+          {officialMatch.location && (
+            <div className="mt-1.5 flex items-center justify-center gap-1 text-xs text-slate-500">
+              <MapPin className="w-3.5 h-3.5" />
+              <span className="truncate max-w-[180px]">{officialMatch.location}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="h-4" />
+      </div>
+    )
+  }
+
+  if (!treeData?.root) return null
+
+  return (
+    <div className="p-8 min-w-max flex justify-center">
+      <MatchNode
+        node={treeData.root}
+        onMatchClick={onMatchClick}
+        officialMatchByNumber={treeData.officialMatchByNumber}
+      />
+    </div>
+  )
+}, (prev, next) =>
+  prev.matches === next.matches &&
+  prev.official === next.official &&
+  prev.onMatchClick === next.onMatchClick
+)
+
+// Tournament Bracket Viewer - Copy từ admin, dùng CustomBracketTree
+const TournamentBracketViewer = memo(({ rounds, formatClassName, onMatchClick, fullScreen = false, onMaximize }) => {
+  if (!rounds || rounds.length === 0) return null
+
+  // Transform rounds data sang format matches array cho BracketTree
+  const allMatches = useMemo(() => {
+    const matches = []
+    rounds.forEach(round => {
+      round.matches?.forEach(match => {
+        matches.push({
+          ...match,
+          round: round.roundNumber,
+          roundName: round.roundName || `Vòng ${round.roundNumber}`,
+          // Format class names với grade
+          classGroup1Name: formatClassName(match.classGroup1Name, match.classGroup1Id) || "Chờ kết quả",
+          classGroup2Name: formatClassName(match.classGroup2Name, match.classGroup2Id) || "Chờ kết quả",
+        })
+      })
+    })
+    return matches
+  }, [rounds, formatClassName])
+
+  // Tạo official object giống format từ API
+  const officialBracket = useMemo(() => {
+    return {
+      rounds: rounds.map(round => ({
+        roundNumber: round.roundNumber,
+        roundName: round.roundName || `Vòng ${round.roundNumber}`,
+        matches: round.matches?.map(match => ({
+          ...match,
+          classGroup1Name: formatClassName(match.classGroup1Name, match.classGroup1Id) || "Chờ kết quả",
+          classGroup2Name: formatClassName(match.classGroup2Name, match.classGroup2Id) || "Chờ kết quả",
+        })) || []
+      }))
+    }
+  }, [rounds, formatClassName])
+
+  if (allMatches.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+        <p className="text-sm">Chưa có lịch thi đấu.</p>
+      </div>
+    )
+  }
+
+  const containerHeight = fullScreen ? 'h-full' : 'h-[700px]'
+
+  // Khi fullScreen, dùng native scroll, không dùng zoom/pan
+  if (fullScreen) {
+    return (
+      <div className={`w-full h-full overflow-auto bg-slate-50`}>
+        <div className="min-w-full min-h-full flex items-center justify-center p-20">
+          <CustomBracketTree 
+            matches={allMatches} 
+            official={officialBracket} 
+            onMatchClick={onMatchClick} 
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // Khi không fullScreen, dùng native scroll với thanh cuộn ngang và dọc
+  return (
+    <div className={`relative border border-slate-200 rounded-lg overflow-auto bg-slate-50/50 ${containerHeight}`}>
+      {/* Toolbar chỉ có nút phóng to */}
+      {onMaximize && (
+        <div className="absolute top-4 right-4 z-10">
+          <Button 
+            size="icon" 
+            variant="ghost"
+            className="bg-white shadow-md border border-slate-200"
+            onClick={onMaximize}
+          >
+            <Maximize2 className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+      
+      {/* Bracket với native scroll */}
+      <div className="min-w-full min-h-full flex items-center justify-center p-20">
+        <CustomBracketTree 
+          matches={allMatches} 
+          official={officialBracket} 
+          onMatchClick={onMatchClick} 
+        />
+      </div>
+    </div>
+  )
+}, (prev, next) => 
+  prev.rounds === next.rounds && 
+  prev.formatClassName === next.formatClassName &&
+  prev.fullScreen === next.fullScreen &&
+  prev.onMaximize === next.onMaximize
+)
 
 // Placeholder image as data URI to avoid 404 errors
 const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23e5e7eb' width='400' height='300'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='18' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3EẢnh hoạt động%3C/text%3E%3C/svg%3E"
@@ -62,13 +400,97 @@ import {
   X,
   Upload,
   File,
+  ChevronDown,
+  Plus,
+  Minus,
+  Maximize2,
+  RotateCcw,
 } from "lucide-react"
+
+// FilterSelect component giống ActivitiesList.jsx
+function SportFilterSelect({ value, onChange, options, placeholder, className }) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const selected = options.find((option) => option.value === value)
+
+  return (
+    <div ref={containerRef} className={`relative z-10 ${className || ""}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={`flex h-8 w-44 items-center justify-between rounded-lg border px-3 text-sm font-medium text-gray-700 transition focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white ${
+          open ? "border-orange-400 ring-2 ring-orange-500" : "border-orange-200"
+        }`}
+      >
+        <span className="truncate">
+          {selected ? selected.label : placeholder || "Chọn môn"}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-orange-500 transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-[9999] mt-2 w-full rounded-xl border border-orange-100 bg-white shadow-xl overflow-hidden">
+          {options.map((option) => (
+            <button
+              type="button"
+              key={option.value}
+              onClick={() => {
+                onChange(option.value)
+                setOpen(false)
+              }}
+              className={`w-full text-left px-4 py-2.5 text-sm transition-colors first:rounded-t-xl last:rounded-b-xl ${
+                value === option.value
+                  ? "bg-orange-50 font-semibold text-orange-600"
+                  : "text-gray-700 hover:bg-orange-50"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function ViewActivity() {
   const params = useParams()
   const navigate = useNavigate()
   const toast = useToast()
   const toastRef = useRef(toast)
+
+  // Helper function để convert category và subType sang tiếng Việt
+  const getCategoryLabel = useCallback((category) => {
+    if (category === "Activity") return "Hoạt động"
+    if (category === "Event") return "Sự kiện"
+    return category
+  }, [])
+
+  const getSubTypeLabel = useCallback((subType) => {
+    const labels = {
+      "SportsFestival": "Hội thao",
+      "CreativeContest": "Cuộc thi sáng tạo",
+      "SeminarWorkshop": "Hội thảo",
+      "Seminar": "Hội thảo",
+      "Workshop": "Workshop",
+      "Competition": "Cuộc thi",
+      "Exhibition": "Triển lãm",
+      "Performance": "Biểu diễn",
+      "Other": "Khác"
+    }
+    return labels[subType] || subType
+  }, [])
   const [activity, setActivity] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -96,7 +518,8 @@ export default function ViewActivity() {
   const [searchedUsers, setSearchedUsers] = useState([]) // Kết quả tìm kiếm user trong hệ thống
   const [isSearchingUsers, setIsSearchingUsers] = useState(false)
   const { searchUsers } = useSearchApi()
-  const { isOpen, toggleMenu, closeMenu } = useDropdownMenu()
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef(null)
   const location = useLocation()
   const queryParams = new URLSearchParams(location.search)
   const isPreview = queryParams.get("isPreview") === "true"
@@ -107,6 +530,22 @@ export default function ViewActivity() {
   const [isSubmissionDialogOpen, setIsSubmissionDialogOpen] = useState(false)
   const [submissionFile, setSubmissionFile] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  // Lịch thi đấu / kết quả cho hội thao
+  const [selectedScheduleSportId, setSelectedScheduleSportId] = useState(null)
+  const [scheduleBracket, setScheduleBracket] = useState(null)
+  const [loadingScheduleBracket, setLoadingScheduleBracket] = useState(false)
+  const [scheduleBracketError, setScheduleBracketError] = useState(null)
+  const [viewMode, setViewMode] = useState("list") // "list" or "hierarchy"
+  const [isBracketFullScreen, setIsBracketFullScreen] = useState(false)
+  const [classGroups, setClassGroups] = useState([]) // Lưu classGroups để lấy grade
+  const [loadingClassGroups, setLoadingClassGroups] = useState(false)
+  // Sport rosters pagination
+  const [sportRosters, setSportRosters] = useState([])
+  const [loadingSportRosters, setLoadingSportRosters] = useState(false)
+  const [sportRostersPageNumber, setSportRostersPageNumber] = useState(1)
+  const [sportRostersPageSize] = useState(10)
+  const [sportRostersTotalCount, setSportRostersTotalCount] = useState(0)
+  const [sportRostersTotalPages, setSportRostersTotalPages] = useState(0)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -160,16 +599,79 @@ export default function ViewActivity() {
     }
   }
 
+  // Helper function to get class name (grade + name) - giống AISchedule.jsx
+  // Luôn lấy từ classGroups đã load từ API
+  const getClassName = useCallback((classGroupId) => {
+    if (!classGroupId) return "Chờ kết quả"
+    
+    // Tìm classGroup trong classGroups array
+    const classGroup = classGroups.find(cg => {
+      const id = typeof cg.id === 'number' ? cg.id : parseInt(cg.id)
+      const targetId = typeof classGroupId === 'number' ? classGroupId : parseInt(classGroupId)
+      return id === targetId
+    })
+    
+    if (!classGroup) {
+      // Nếu không tìm thấy, trả về fallback (sẽ được update khi classGroups load xong)
+      return `Lớp ${classGroupId}`
+    }
+    
+    // Lấy grade và name từ classGroup
+    const grade = classGroup.grade != null ? String(classGroup.grade) : ''
+    const name = classGroup.name || ''
+    
+    // Format: grade + name (ví dụ: "10A1")
+    if (grade && name) {
+      return `${grade}${name}`
+    }
+    
+    // Nếu không có grade, chỉ trả về name
+    if (name) {
+      return name
+    }
+    
+    // Fallback
+    return `Lớp ${classGroupId}`
+  }, [classGroups])
+
+  // Helper function to format className with grade
+  // Backend đã format sẵn ClassGroup1Name và ClassGroup2Name thành "grade + name" (ví dụ: "10A1")
+  // Nếu className từ backend đã có format (có số ở đầu), dùng luôn
+  // Nếu chưa có, dùng getClassName để format từ classGroups
+  const formatClassNameWithGrade = useCallback((className, classGroupId) => {
+    // Backend đã format sẵn: nếu className có số ở đầu (ví dụ: "10A1"), dùng luôn
+    if (className && /^\d/.test(className)) {
+      return className
+    }
+    
+    // Nếu className chưa có format và có classGroupId, dùng getClassName để format
+    if (classGroupId) {
+      const formatted = getClassName(classGroupId)
+      // Nếu getClassName trả về format đúng (có số), dùng nó
+      if (formatted && /^\d/.test(formatted)) {
+        return formatted
+      }
+    }
+    
+    // Nếu không có className hoặc là fallback, trả về
+    if (!className || className === "Chờ kết quả" || className === "Lớp ?") {
+      return classGroupId ? getClassName(classGroupId) : "Chờ kết quả"
+    }
+    
+    // Trả về className gốc
+    return className
+  }, [getClassName])
+
   const normalizeParticipants = (list) => {
     if (!Array.isArray(list)) return []
     return list.map((participant) => {
       // Format className: Grade + className (ví dụ: "10A1")
       // Kiểm tra xem className đã có Grade ở đầu chưa (tránh duplicate như "1010A1")
       const grade = participant?.grade || participant?.Grade
-      const className = participant?.classGroupName || "Chưa rõ lớp"
+      const className = participant?.classGroupName || "Chờ kết quả"
       
       let formattedClassName = className
-      if (grade && className !== "Chưa rõ lớp") {
+      if (grade && className !== "Chờ kết quả") {
         // Kiểm tra xem className đã bắt đầu bằng Grade chưa
         const gradeStr = String(grade)
         if (!className.startsWith(gradeStr)) {
@@ -182,14 +684,16 @@ export default function ViewActivity() {
       userId: participant?.userId,
       fullName: participant?.userFullName || participant?.userName || "Người tham gia",
         className: formattedClassName,
+        classGroupName: participant?.classGroupName, // Giữ lại để dùng khi cần
+        classGroupId: participant?.classGroupId || null, // QUAN TRỌNG: Giữ lại classGroupId
         grade: grade,
-      status: participant?.status || "pending",
       groupCode: participant?.groupCode || null,
       isLeader: participant?.isLeader || false,
       sportId: participant?.sportId || null,
       sportName: participant?.sportName || null,
       registrationMetadata: participant?.registrationMetadata || "",
       avatar: participant?.userAvatarUrl,
+      isDeleted: participant?.isDeleted || false, // QUAN TRỌNG: Giữ lại isDeleted
       }
     })
   }
@@ -197,6 +701,28 @@ export default function ViewActivity() {
   useEffect(() => {
     toastRef.current = toast
   }, [toast])
+
+  // Handle click outside dropdown
+  useEffect(() => {
+    if (!dropdownOpen) return
+    
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false)
+      }
+    }
+    
+    // Use setTimeout to avoid immediate trigger
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside)
+    }, 0)
+    
+    return () => {
+      clearTimeout(timeoutId)
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [dropdownOpen])
+
 
   const fetchActivity = useCallback(async () => {
       if (!params.id) {
@@ -358,6 +884,226 @@ export default function ViewActivity() {
   useEffect(() => {
     fetchActivity()
   }, [fetchActivity])
+
+  // Load classGroups từ participants (chỉ khi cần, không load tất cả)
+  // Backend đã format sẵn ClassGroup1Name và ClassGroup2Name thành "grade + name" trong bracket response
+  // Chỉ cần load classGroups khi cần format cho các chỗ khác (participants list, etc.)
+  useEffect(() => {
+    const loadClassGroups = async () => {
+      if (!activity || !activity.participants || activity.participants.length === 0) {
+        setClassGroups([])
+        setLoadingClassGroups(false)
+        return
+      }
+
+      setLoadingClassGroups(true)
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) {
+          setClassGroups([])
+          setLoadingClassGroups(false)
+          return
+        }
+
+        // Lấy danh sách ClassGroupId duy nhất từ participants
+        const classGroupIds = new Set()
+        activity.participants.forEach(participant => {
+          if (participant.classGroupId && !participant.isDeleted) {
+            classGroupIds.add(participant.classGroupId)
+          }
+        })
+
+        if (classGroupIds.size === 0) {
+          setClassGroups([])
+          setLoadingClassGroups(false)
+          return
+        }
+
+        // Load từng page (max 100 mỗi page)
+        let allClasses = []
+        let pageNumber = 1
+        const pageSize = 100
+        let hasMore = true
+
+        while (hasMore) {
+          const response = await ClassGroupService.list({ pageNumber, pageSize }, token)
+          const pageData = response?.data?.data || response?.data || []
+          
+          if (Array.isArray(pageData) && pageData.length > 0) {
+            // Lọc chỉ các lớp cần thiết
+            const neededClasses = pageData.filter(c => 
+              !c.isDeleted && 
+              classGroupIds.has(typeof c.id === 'number' ? c.id : parseInt(c.id))
+            )
+            allClasses = [...allClasses, ...neededClasses]
+            
+            // Nếu đã tìm đủ hoặc số lượng < pageSize thì dừng
+            if (allClasses.length >= classGroupIds.size || pageData.length < pageSize) {
+              hasMore = false
+            } else {
+              pageNumber++
+            }
+          } else {
+            hasMore = false
+          }
+        }
+        
+        // Sort by grade first, then by name alphabetically
+        const sorted = allClasses.sort((a, b) => {
+          const gradeA = a.grade ?? 999
+          const gradeB = b.grade ?? 999
+          if (gradeA !== gradeB) {
+            return gradeA - gradeB
+          }
+          const nameA = (a.name || '').toLowerCase()
+          const nameB = (b.name || '').toLowerCase()
+          return nameA.localeCompare(nameB)
+        })
+        
+        setClassGroups(sorted)
+      } catch (error) {
+        console.error("Error loading class groups:", error)
+        setClassGroups([])
+      } finally {
+        setLoadingClassGroups(false)
+      }
+    }
+    
+    if (activity) {
+      loadClassGroups()
+    }
+  }, [activity]) // Chỉ load khi activity thay đổi
+
+  // Khi load activity xong, nếu là hội thao và có môn thì chọn môn đầu tiên để load lịch
+  useEffect(() => {
+    if (!activity || !activity.sports || activity.sports.length === 0) return
+    setSelectedScheduleSportId((prev) => {
+      if (prev) return prev
+      const first = activity.sports[0]
+      return first?.id ? Number(first.id) : null
+    })
+  }, [activity])
+
+  // Handle ESC key và body scroll lock khi full screen modal mở
+  useEffect(() => {
+    if (isBracketFullScreen) {
+      // Lock body scroll
+      document.body.style.overflow = 'hidden'
+      
+      // Handle ESC key
+      const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+          setIsBracketFullScreen(false)
+        }
+      }
+      document.addEventListener('keydown', handleEsc)
+      
+      return () => {
+        document.body.style.overflow = ''
+        document.removeEventListener('keydown', handleEsc)
+      }
+    }
+  }, [isBracketFullScreen])
+
+  // Load bracket lịch thi đấu cho hội thao
+  useEffect(() => {
+    const fetchScheduleBracket = async () => {
+      if (!activity?.id || !selectedScheduleSportId) {
+        setScheduleBracket(null)
+        setScheduleBracketError(null)
+        return
+      }
+      if (activity.subType !== "SportsFestival") {
+        setScheduleBracket(null)
+        setScheduleBracketError(null)
+        return
+      }
+
+      const token = localStorage.getItem("token")
+      setLoadingScheduleBracket(true)
+      setScheduleBracketError(null)
+
+      try {
+        const response = await executeApiCall(
+          activityMatchService.getBracket.bind(activityMatchService),
+          [activity.id, selectedScheduleSportId, null, token],
+          { setLoading: setLoadingScheduleBracket }
+        )
+
+        const data = response?.data || response?.data?.data
+        if (data) {
+          setScheduleBracket(data)
+        } else {
+          setScheduleBracket(null)
+        }
+      } catch (err) {
+        const status = err?.statusCode ?? err?.status ?? err?.response?.status
+        if (status === 404) {
+          // Chưa có lịch thi đấu cho môn này là bình thường
+          setScheduleBracket(null)
+        } else {
+          console.error("Error loading schedule bracket:", err)
+          setScheduleBracketError(err?.message || "Không thể tải lịch thi đấu")
+          setScheduleBracket(null)
+        }
+      } finally {
+        setLoadingScheduleBracket(false)
+      }
+    }
+
+    fetchScheduleBracket()
+  }, [activity?.id, activity?.subType, selectedScheduleSportId])
+
+  // Load sport rosters với pagination
+  useEffect(() => {
+    const fetchSportRosters = async () => {
+      if (!activity?.id || activity?.subType !== "SportsFestival") {
+        setSportRosters([])
+        setSportRostersTotalCount(0)
+        setSportRostersTotalPages(0)
+        return
+      }
+
+      const token = localStorage.getItem("token")
+      setLoadingSportRosters(true)
+
+      try {
+        const response = await executeApiCall(
+          activityParticipantService.getSportRosters.bind(activityParticipantService),
+          [
+            {
+              activityId: activity.id,
+              pageNumber: sportRostersPageNumber,
+              pageSize: sportRostersPageSize,
+            },
+            token,
+          ],
+          { setLoading: setLoadingSportRosters }
+        )
+
+        // Response structure: { statusCode, message, data: { data: [...], totalCount, pageNumber, pageSize, totalPages } }
+        const paginationData = response?.data
+        if (paginationData) {
+          setSportRosters(paginationData.data || [])
+          setSportRostersTotalCount(paginationData.totalCount || 0)
+          setSportRostersTotalPages(paginationData.totalPages || 0)
+        } else {
+          setSportRosters([])
+          setSportRostersTotalCount(0)
+          setSportRostersTotalPages(0)
+        }
+      } catch (err) {
+        console.error("Error loading sport rosters:", err)
+        setSportRosters([])
+        setSportRostersTotalCount(0)
+        setSportRostersTotalPages(0)
+      } finally {
+        setLoadingSportRosters(false)
+      }
+    }
+
+    fetchSportRosters()
+  }, [activity?.id, activity?.subType, sportRostersPageNumber, sportRostersPageSize])
 
   // Check submission status when activity is loaded
   useEffect(() => {
@@ -1388,10 +2134,10 @@ export default function ViewActivity() {
         // Format className với Grade cho member
         // Kiểm tra xem className đã có Grade ở đầu chưa (tránh duplicate như "1010A1")
         const grade = participant.grade || participant.Grade
-        const className = participant.classGroupName || participant.className || "Chưa rõ lớp"
+        const className = participant.classGroupName || participant.className || "Chờ kết quả"
         
         let formattedClassName = className
-        if (grade && className !== "Chưa rõ lớp") {
+        if (grade && className !== "Chờ kết quả") {
           // Kiểm tra xem className đã bắt đầu bằng Grade chưa
           const gradeStr = String(grade)
           if (!className.startsWith(gradeStr)) {
@@ -1427,11 +2173,23 @@ export default function ViewActivity() {
           })
         }
         const entry = map.get(sportId)
-        const className = participant.className || "Chưa rõ lớp"
-        if (!entry.classes.has(className)) {
-          entry.classes.set(className, [])
+        
+        // Format className với Grade (giống normalizeParticipants)
+        const grade = participant?.grade || participant?.Grade
+        const className = participant.className || participant.classGroupName || "Chờ kết quả"
+        
+        let formattedClassName = className
+        if (grade && className !== "Chờ kết quả") {
+          const gradeStr = String(grade)
+          if (!className.startsWith(gradeStr)) {
+            formattedClassName = `${grade}${className}`
+          }
         }
-        entry.classes.get(className).push(participant)
+        
+        if (!entry.classes.has(formattedClassName)) {
+          entry.classes.set(formattedClassName, [])
+        }
+        entry.classes.get(formattedClassName).push(participant)
       })
 
     return Array.from(map.values()).map((entry) => ({
@@ -1443,6 +2201,56 @@ export default function ViewActivity() {
       })),
     }))
   }, [activity])
+
+  // Lấy danh sách các lớp đã đăng ký tham gia hội thao (unique classNames)
+  // Logic giống AISchedule: lấy tất cả participants có classGroupId, không cần sportId
+  const registeredClassesForSportsFestival = useMemo(() => {
+    if (!isSportsFestival || !activity?.participants) {
+      return []
+    }
+    
+    // Nếu classGroups đã load xong, format trực tiếp từ classGroups (giống AISchedule)
+    if (classGroups && classGroups.length > 0) {
+      return classGroups.map(cg => {
+        const grade = cg.grade != null ? String(cg.grade) : ''
+        const name = cg.name || ''
+        return grade && name ? `${grade}${name}` : name || `Lớp ${cg.id}`
+      }).sort()
+    }
+    
+    // Nếu classGroups chưa load, lấy từ participants data (fallback)
+    const classGroupIds = new Set()
+    activity.participants.forEach(participant => {
+      if (participant.classGroupId && !participant.isDeleted) {
+        classGroupIds.add(participant.classGroupId)
+      }
+    })
+    
+    if (classGroupIds.size === 0) {
+      return []
+    }
+    
+    // Format từ participant data
+    const classSet = new Set()
+    activity.participants.forEach(participant => {
+      if (participant.classGroupId && !participant.isDeleted) {
+        const grade = participant?.grade || participant?.Grade
+        const className = participant.className || participant.classGroupName
+        if (className && className !== "Chờ kết quả") {
+          // Kiểm tra xem đã có số ở đầu chưa (đã format)
+          if (/^\d/.test(className)) {
+            classSet.add(className)
+          } else if (grade) {
+            classSet.add(`${grade}${className}`)
+          } else {
+            classSet.add(className)
+          }
+        }
+      }
+    })
+    
+    return Array.from(classSet).sort()
+  }, [isSportsFestival, activity?.participants, classGroups, loadingClassGroups])
 
   if (loading) {
     return (
@@ -1496,9 +2304,9 @@ export default function ViewActivity() {
           <div className="absolute inset-0 bg-black/40"></div>
           <div className="absolute bottom-8 left-8 text-white">
             <div className="flex items-center gap-3 mb-4">
-              <Badge className="bg-orange-500">{activity.category}</Badge>
+              <Badge className="bg-orange-500">{getCategoryLabel(activity.category)}</Badge>
               <Badge variant="outline" className="bg-white/20 text-white border-white/30">
-                {activity.subType}
+                {getSubTypeLabel(activity.subType)}
               </Badge>
               {activity.onlyTeacherCanRegister && (
                 <Badge variant="outline" className="bg-blue-500/20 text-white border-white/30">
@@ -1519,40 +2327,50 @@ export default function ViewActivity() {
             >
               <Share2 className="w-4 h-4" />
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                asChild
-                onClick={toggleMenu}
-                data-dropdown-trigger
+            <div ref={dropdownRef} className="relative z-50">
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-white/20 text-white border-white/30 hover:bg-white/30"
+                disabled={isPreview}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setDropdownOpen(!dropdownOpen)
+                }}
               >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-white/20 text-white border-white/30 hover:bg-white/30"
-                  disabled={isPreview}
-                >
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-48"
-                isOpen={isOpen}
-                onClose={closeMenu}
-              >
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.preventDefault()
-                    handleAction(() => {
-                      toast.showInfo("Tính năng báo cáo sẽ được mở sớm.")
-                    })
-                  }}
-                >
-                  Báo cáo
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleShare}>Chia sẻ</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 rounded-xl border border-orange-100 bg-white shadow-xl overflow-hidden z-[9999]">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setDropdownOpen(false)
+                      handleAction(() => {
+                        toast.showInfo("Tính năng báo cáo sẽ được mở sớm.")
+                      })
+                    }}
+                    className="w-full text-left px-4 py-3 text-sm transition-colors hover:bg-orange-50 text-gray-700"
+                  >
+                    Báo cáo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setDropdownOpen(false)
+                      handleShare()
+                    }}
+                    className="w-full text-left px-4 py-3 text-sm transition-colors hover:bg-orange-50 text-gray-700"
+                  >
+                    Chia sẻ
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1593,11 +2411,30 @@ export default function ViewActivity() {
                       <div className="bg-green-100 p-3 rounded-lg">
                         <Users className="w-5 h-5 text-green-600" />
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Người tham gia</p>
-                        <p className="font-semibold text-sm">
-                          {activity.currentParticipants}/{activity.maxParticipants}
-                        </p>
+                      <div className="flex-1 min-w-0">
+                        {isSportsFestival ? (
+                          <>
+                            <p className="text-sm text-gray-600 mb-1">Lớp đã đăng ký</p>
+                            {registeredClassesForSportsFestival.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {registeredClassesForSportsFestival.map((className, idx) => (
+                                  <Badge key={idx} variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                    {className}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-500">Chưa có lớp nào đăng ký</p>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm text-gray-600">Người tham gia</p>
+                            <p className="font-semibold text-sm">
+                              {activity.currentParticipants}/{activity.maxParticipants}
+                            </p>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -1612,7 +2449,7 @@ export default function ViewActivity() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-sm text-gray-700 mb-2">Phân loại</h4>
-                    <Badge className="bg-orange-100 text-orange-800">{activity.category}</Badge>
+                    <Badge className="bg-orange-100 text-orange-800">{getCategoryLabel(activity.category)}</Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -1620,20 +2457,40 @@ export default function ViewActivity() {
               {/* Registration Card */}
               <Card className="glass sticky top-6 !bg-white">
                 <CardContent className="p-6 space-y-4">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-orange-600 mb-1">
-                      {activity.currentParticipants}/{activity.maxParticipants}
+                  {isSportsFestival ? (
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-orange-600 mb-2">
+                        {registeredClassesForSportsFestival.length} lớp
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">Lớp đã đăng ký tham gia</p>
+                      {registeredClassesForSportsFestival.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 justify-center max-h-32 overflow-y-auto">
+                          {registeredClassesForSportsFestival.map((className, idx) => (
+                            <Badge key={idx} variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                              {className}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500">Chưa có lớp nào đăng ký</p>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-600">Người tham gia</p>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-                      <div
-                        className="bg-orange-500 h-2 rounded-full"
-                        style={{
-                        width: `${participantProgress}%`,
-                        }}
-                      />
+                  ) : (
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-orange-600 mb-1">
+                        {activity.currentParticipants}/{activity.maxParticipants}
+                      </div>
+                      <p className="text-sm text-gray-600">Người tham gia</p>
+                      <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+                        <div
+                          className="bg-orange-500 h-2 rounded-full"
+                          style={{
+                          width: `${participantProgress}%`,
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {renderRegistrationActions()}
 
@@ -2467,38 +3324,130 @@ export default function ViewActivity() {
                   </Card>
                 )}
 
-                {isSportsFestival && sportRegistrations.length > 0 && (
+                {isSportsFestival && (
                   <Card className="glass hover-lift">
                     <CardHeader>
-                      <CardTitle>Đội hình từng môn ({sportRegistrations.length})</CardTitle>
+                      <CardTitle>
+                        Đội hình từng môn
+                        {sportRostersTotalCount > 0 && (
+                          <span className="text-sm font-normal text-gray-500 ml-2">
+                            ({sportRostersTotalCount} môn)
+                          </span>
+                        )}
+                      </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {sportRegistrations.map((sport) => (
-                        <div key={sport.sportId} className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between flex-wrap gap-2">
-                            <p className="font-semibold text-base">{sport.sportName}</p>
-                            {activity?.sports?.find((s) => s.id === sport.sportId)?.maxMembers && (
-                              <span className="text-xs text-gray-500">
-                                Giới hạn {activity.sports.find((s) => s.id === sport.sportId).maxMembers} người
-                              </span>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            {sport.rosters.map((roster, rosterIndex) => (
-                              <div key={`${sport.sportId}-${rosterIndex}`} className="bg-gray-50 rounded-lg p-3">
-                                <p className="font-medium text-sm mb-2">Lớp {roster.className}</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {roster.members.map((member) => (
-                                    <Badge key={member.id} variant="outline" className="bg-white">
-                                      {member.fullName}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                      {loadingSportRosters ? (
+                        <div className="text-center py-8">
+                          <p className="text-sm text-gray-500">Đang tải đội hình...</p>
                         </div>
-                      ))}
+                      ) : sportRosters.length === 0 ? (
+                        <div className="text-center py-8">
+                          <p className="text-sm text-gray-500">Chưa có đội hình nào.</p>
+                        </div>
+                      ) : (
+                        <>
+                          {sportRosters.map((sport) => (
+                            <div key={sport.sportId} className="border rounded-lg p-4 space-y-3">
+                              <div className="flex items-center justify-between flex-wrap gap-2">
+                                <p className="font-semibold text-base">{sport.sportName}</p>
+                                {sport.maxMembers && (
+                                  <span className="text-xs text-gray-500">
+                                    Giới hạn {sport.maxMembers} người
+                                  </span>
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                {sport.classes.map((classRoster, classIndex) => (
+                                  <div
+                                    key={`${sport.sportId}-${classRoster.classGroupId}-${classIndex}`}
+                                    className="bg-gray-50 rounded-lg p-3"
+                                  >
+                                    <p className="font-medium text-sm mb-2">
+                                      Lớp {classRoster.classGroupName}
+                                      {classRoster.memberCount > 0 && (
+                                        <span className="text-xs text-gray-500 ml-2">
+                                          ({classRoster.memberCount} thành viên)
+                                        </span>
+                                      )}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {classRoster.members.map((member) => (
+                                        <Badge key={member.id} variant="outline" className="bg-white">
+                                          {member.userFullName}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Pagination Controls */}
+                          {sportRostersTotalPages > 1 && (
+                            <div className="flex items-center justify-between pt-4 border-t">
+                              <div className="text-sm text-gray-600">
+                                Trang {sportRostersPageNumber} / {sportRostersTotalPages}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    setSportRostersPageNumber((prev) => Math.max(1, prev - 1))
+                                  }
+                                  disabled={sportRostersPageNumber === 1 || loadingSportRosters}
+                                >
+                                  <ArrowLeft className="w-4 h-4 mr-1" />
+                                  Trước
+                                </Button>
+                                <div className="flex items-center gap-1">
+                                  {Array.from({ length: Math.min(5, sportRostersTotalPages) }, (_, i) => {
+                                    let pageNum
+                                    if (sportRostersTotalPages <= 5) {
+                                      pageNum = i + 1
+                                    } else if (sportRostersPageNumber <= 3) {
+                                      pageNum = i + 1
+                                    } else if (sportRostersPageNumber >= sportRostersTotalPages - 2) {
+                                      pageNum = sportRostersTotalPages - 4 + i
+                                    } else {
+                                      pageNum = sportRostersPageNumber - 2 + i
+                                    }
+                                    return (
+                                      <Button
+                                        key={pageNum}
+                                        variant={sportRostersPageNumber === pageNum ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => setSportRostersPageNumber(pageNum)}
+                                        disabled={loadingSportRosters}
+                                        className="min-w-[40px]"
+                                      >
+                                        {pageNum}
+                                      </Button>
+                                    )
+                                  })}
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    setSportRostersPageNumber((prev) =>
+                                      Math.min(sportRostersTotalPages, prev + 1)
+                                    )
+                                  }
+                                  disabled={
+                                    sportRostersPageNumber >= sportRostersTotalPages || loadingSportRosters
+                                  }
+                                >
+                                  Sau
+                                  <ArrowRight className="w-4 h-4 ml-1" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </CardContent>
                   </Card>
                 )}
@@ -2524,7 +3473,7 @@ export default function ViewActivity() {
                             <div>
                               <p className="font-semibold">{participant.fullName}</p>
                               <p className="text-sm text-gray-600">
-                                {participant.className || "Chưa rõ lớp"}
+                                {participant.className || "Chờ kết quả"}
                               </p>
                               {participant.groupCode && (
                                 <p className="text-xs text-orange-600">
@@ -2536,19 +3485,6 @@ export default function ViewActivity() {
                               )}
                             </div>
                           </div>
-                          {(() => {
-                            const status = participant.status?.toLowerCase()
-                            const approved = status === "approved" || status === "joined"
-                            return (
-                          <Badge
-                            className={
-                                  approved ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
-                            }
-                          >
-                                {approved ? "Đã duyệt" : "Chờ duyệt"}
-                          </Badge>
-                            )
-                          })()}
                         </div>
                       ))}
                     </div>
@@ -2585,6 +3521,245 @@ export default function ViewActivity() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Lịch thi đấu & kết quả cho hội thao */}
+                {isSportsFestival && activity.sports && activity.sports.length > 0 && (
+                  <Card className="glass hover-lift">
+                    <CardHeader>
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <CardTitle>Lịch thi đấu & kết quả</CardTitle>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Label className="text-xs text-gray-600">Môn</Label>
+                          <SportFilterSelect
+                            value={selectedScheduleSportId ? String(selectedScheduleSportId) : activity.sports[0]?.id ? String(activity.sports[0].id) : ""}
+                            onChange={(value) => setSelectedScheduleSportId(value ? Number(value) : null)}
+                            options={activity.sports.map((sport) => ({
+                              value: String(sport.id),
+                              label: sport.name
+                            }))}
+                            placeholder="Chọn môn"
+                          />
+                          {!loadingScheduleBracket &&
+                            scheduleBracket &&
+                            Array.isArray(scheduleBracket.rounds) &&
+                            scheduleBracket.rounds.length > 0 && (
+                              <div className="flex items-center gap-2 border border-gray-200 rounded-lg overflow-hidden">
+                                <button
+                                  type="button"
+                                  onClick={() => setViewMode("list")}
+                                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                                    viewMode === "list"
+                                      ? "bg-orange-500 text-white"
+                                      : "bg-white text-gray-700 hover:bg-gray-50"
+                                  }`}
+                                >
+                                  Danh sách
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setViewMode("hierarchy")}
+                                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                                    viewMode === "hierarchy"
+                                      ? "bg-orange-500 text-white"
+                                      : "bg-white text-gray-700 hover:bg-gray-50"
+                                  }`}
+                                >
+                                  Sơ đồ
+                                </button>
+                              </div>
+                            )}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {loadingScheduleBracket && (
+                        <p className="text-sm text-gray-500">Đang tải lịch thi đấu...</p>
+                      )}
+                      {!loadingScheduleBracket && scheduleBracketError && (
+                        <p className="text-sm text-red-600">{scheduleBracketError}</p>
+                      )}
+                      {!loadingScheduleBracket && !scheduleBracket && !scheduleBracketError && (
+                        <p className="text-sm text-gray-500">
+                          Chưa có lịch thi đấu cho môn này. Vui lòng quay lại sau khi ban tổ chức
+                          công bố lịch chính thức.
+                        </p>
+                      )}
+                      {!loadingScheduleBracket &&
+                        scheduleBracket &&
+                        Array.isArray(scheduleBracket.rounds) &&
+                        scheduleBracket.rounds.length > 0 && (
+                          <>
+                            {viewMode === "list" ? (
+                              <div className="space-y-4">
+                                {scheduleBracket.rounds.map((round) => (
+                                  <div
+                                    key={round.roundNumber}
+                                    className="border border-gray-200 rounded-lg p-3 bg-gray-50"
+                                  >
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h4 className="font-semibold text-sm text-gray-800">
+                                        {round.roundName || `Vòng ${round.roundNumber}`}
+                                      </h4>
+                                      <span className="text-xs text-gray-500">
+                                        {round.matches?.length || 0} trận
+                                      </span>
+                                    </div>
+                                    <div className="space-y-2">
+                                      {(round.matches || []).map((match) => {
+                                        const isCompleted = match.status === 2
+                                        const isOngoing = match.status === 1
+                                        const hasScores =
+                                          match.score1 != null && match.score2 != null
+                                        const matchDate = match.matchDate
+                                          ? new Date(match.matchDate)
+                                          : null
+                                        const now = new Date()
+                                        const isUpcoming =
+                                          matchDate && matchDate > now && !isCompleted && !isOngoing
+
+                                        return (
+                                          <div
+                                            key={match.id}
+                                            className="flex flex-col md:flex-row md:items-center gap-2 p-2 bg-white rounded-md border border-gray-200"
+                                          >
+                                            <div className="flex-1 min-w-0">
+                                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                  <Badge variant="outline" className="text-xs">
+                                                    Trận #{match.matchNumber}
+                                                  </Badge>
+                                                  <p className="text-sm font-semibold text-gray-800 truncate">
+                                                    {formatClassNameWithGrade(
+                                                      match.classGroup1Name,
+                                                      match.classGroup1Id
+                                                    )}{" "}
+                                                    vs{" "}
+                                                    {formatClassNameWithGrade(
+                                                      match.classGroup2Name,
+                                                      match.classGroup2Id
+                                                    )}
+                                                  </p>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                  {match.matchDate && match.startTime && (
+                                                    <span className="flex items-center gap-1">
+                                                      <Calendar className="w-3 h-3" />
+                                                      {new Date(
+                                                        match.matchDate
+                                                      ).toLocaleDateString("vi-VN", {
+                                                        day: "2-digit",
+                                                        month: "2-digit",
+                                                        year: "numeric",
+                                                      })}
+                                                      {" • "}
+                                                      {match.startTime?.toString().slice(0, 5)}
+                                                    </span>
+                                                  )}
+                                                  {match.location && (
+                                                    <span className="flex items-center gap-1">
+                                                      <MapPin className="w-3 h-3" />
+                                                      {match.location}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                              <div className="text-sm font-semibold text-gray-800">
+                                                {hasScores ? (
+                                                  <>
+                                                    {match.score1} - {match.score2}
+                                                  </>
+                                                ) : (
+                                                  <span className="text-xs text-gray-500">
+                                                    Chưa có kết quả
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <Badge
+                                                className={
+                                                  isCompleted
+                                                    ? "bg-green-100 text-green-700"
+                                                    : isOngoing
+                                                    ? "bg-blue-100 text-blue-700"
+                                                    : isUpcoming
+                                                    ? "bg-yellow-100 text-yellow-700"
+                                                    : "bg-gray-100 text-gray-600"
+                                                }
+                                              >
+                                                {isCompleted
+                                                  ? "Đã kết thúc"
+                                                  : isOngoing
+                                                  ? "Đang diễn ra"
+                                                  : isUpcoming
+                                                  ? "Sắp diễn ra"
+                                                  : "Chờ lịch"}
+                                              </Badge>
+                                            </div>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <TournamentBracketViewer
+                                rounds={scheduleBracket.rounds}
+                                formatClassName={formatClassNameWithGrade}
+                                onMatchClick={(match) => {
+                                  // Optional: handle match click
+                                  console.log("Match clicked:", match)
+                                }}
+                                fullScreen={false}
+                                onMaximize={() => setIsBracketFullScreen(true)}
+                              />
+                            )}
+                          </>
+                        )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Full Screen Bracket Modal - Custom */}
+                {isBracketFullScreen && (
+                  <div 
+                    className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4"
+                    onClick={() => setIsBracketFullScreen(false)}
+                  >
+                    <div 
+                      className="w-full h-full max-w-[95vw] max-h-[95vh] bg-white flex flex-col rounded-lg border border-gray-200 shadow-2xl overflow-hidden"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between p-4 border-b bg-white shadow-sm">
+                        <h2 className="text-xl font-bold">Sơ đồ giải đấu</h2>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setIsBracketFullScreen(false)}
+                          className="h-8 w-8"
+                        >
+                          <X className="w-5 h-5" />
+                        </Button>
+                      </div>
+                      {/* Bracket Content */}
+                      <div className="flex-1 overflow-hidden">
+                        {scheduleBracket && scheduleBracket.rounds && scheduleBracket.rounds.length > 0 && (
+                          <TournamentBracketViewer
+                            rounds={scheduleBracket.rounds}
+                            formatClassName={formatClassNameWithGrade}
+                            onMatchClick={(match) => {
+                              // Optional: handle match click
+                              console.log("Match clicked:", match)
+                            }}
+                            fullScreen={true}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="awards" className="space-y-4">

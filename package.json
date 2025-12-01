@@ -17,6 +17,7 @@
     "@fortawesome/fontawesome-svg-core": "^6.7.1",
     "@fortawesome/free-solid-svg-icons": "^6.7.1",
     "@fortawesome/react-fontawesome": "^0.2.2",
+    "@g-loot/react-tournament-brackets": "^1.0.31-rc",
     "@hello-pangea/dnd": "^17.0.0",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.2",
