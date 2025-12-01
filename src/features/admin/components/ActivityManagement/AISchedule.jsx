@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, memo } from "react"
 import { useParams, Link } from "react-router-dom"
 import { Button } from "@/common/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
@@ -7,7 +7,26 @@ import { Label } from "@/common/components/ui/label"
 import { Textarea } from "@/common/components/ui/textarea"
 import { Badge } from "@/common/components/ui/badge"
 import { Checkbox } from "@/common/components/ui/checkbox"
-import { ArrowLeft, Sparkles, Calendar, Clock, MapPin, Wand2, Download, Share2, Upload, FileText, X, List, GitBranch, ChevronDown, ChevronUp, Maximize2 } from "lucide-react"
+import {
+  ArrowLeft,
+  Sparkles,
+  Calendar,
+  Clock,
+  MapPin,
+  Wand2,
+  Download,
+  Share2,
+  Upload,
+  FileText,
+  X,
+  List,
+  GitBranch,
+  ChevronDown,
+  ChevronUp,
+  Maximize2,
+  Plus,
+  Minus,
+} from "lucide-react"
 import { toast } from "react-toastify"
 import { ROUTES } from "@/common/constants/routes"
 import { activityService } from "@/features/activities/services/activity.service"
@@ -18,6 +37,83 @@ import { timetableService } from "@/services/timetable.service"
 import { AcademicYearService } from "@/services/academicyear.service"
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
 import { BracketTree } from "./BracketTree"
+
+// Viewer riêng cho bracket chính thức, được memo hóa để tránh re-render không cần thiết
+const OfficialBracketViewer = memo(
+  ({ matches, official, onMatchClick }) => {
+    if (!matches || !matches.length) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+          <Sparkles className="w-8 h-8 mb-2 text-gray-400" />
+          <p className="text-sm">Chưa có lịch thi đấu chính thức.</p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="relative border border-slate-200 rounded-lg overflow-hidden bg-slate-50/50 h-[700px]">
+        <TransformWrapper
+          initialScale={0.8}
+          minScale={0.2}
+          maxScale={4}
+          centerOnInit={true}
+          limitToBounds={false}
+          wheel={{ step: 0.0005, smoothStep: 0.0005 }}
+          panning={{
+            velocityDisabled: false,
+            excluded: ["button", "input", "select"],
+          }}
+          alignmentAnimation={{ animationTime: 0 }}
+          velocityAnimation={{
+            animationTime: 300,
+            animationType: "easeOut",
+            sensitivity: 1.5,
+          }}
+        >
+          {({ zoomIn, zoomOut, resetTransform, centerView }) => (
+            <>
+              <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 bg-white shadow-md border border-slate-200 rounded-lg p-1.5">
+                <Button size="icon" variant="ghost" onClick={() => zoomIn(0.12)}>
+                  <Plus className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" onClick={() => zoomOut(0.12)}>
+                  <Minus className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" onClick={() => centerView()}>
+                  <Maximize2 className="w-4 h-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => resetTransform()}
+                  className="text-red-500"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <TransformComponent
+                wrapperStyle={{ width: "100%", height: "100%", overflow: "hidden" }}
+                contentStyle={{
+                  width: "100%",
+                  height: "100%",
+                  willChange: "transform",
+                  transformOrigin: "center center",
+                  backfaceVisibility: "hidden",
+                }}
+              >
+                <div className="min-w-[100vw] min-h-[100vh] flex items-center justify-center p-20">
+                  <BracketTree matches={matches} official={official} onMatchClick={onMatchClick} />
+                </div>
+              </TransformComponent>
+            </>
+          )}
+        </TransformWrapper>
+      </div>
+    )
+  },
+  (prev, next) => prev.matches === next.matches && prev.official === next.official
+)
 
 export default function AISchedule() {
   const params = useParams()
@@ -639,6 +735,8 @@ export default function AISchedule() {
               venue: match.location || "N/A",
               teams: teamsText,
               matchNumber: match.matchNumber,
+              classGroup1Id: match.classGroup1Id,
+              classGroup2Id: match.classGroup2Id,
               round: match.round,
               rawMatchDate: match.matchDate,
               previousMatches: matchInfo.previousMatches,
@@ -669,8 +767,14 @@ export default function AISchedule() {
 
       return {
         sportId: match.sportId || formData.sportId,
-        classGroup1Id: match.classGroup1Id,
-        classGroup2Id: match.classGroup2Id,
+        classGroup1Id:
+          overrides.classGroup1Id != null && overrides.classGroup1Id !== ""
+            ? Number(overrides.classGroup1Id)
+            : match.classGroup1Id,
+        classGroup2Id:
+          overrides.classGroup2Id != null && overrides.classGroup2Id !== ""
+            ? Number(overrides.classGroup2Id)
+            : match.classGroup2Id,
         grade: match.grade,
         matchDate,
         startTime: toBackendTimeSpan(overrides.startTime || match.startTime),
@@ -917,169 +1021,183 @@ export default function AISchedule() {
 
   // Modal hiển thị / chỉnh sửa kết quả trận đấu từ bracket
   const MatchDetailModal = ({ match, onClose }) => {
-    if (!match) return null
+  if (!match) return null
 
-    const baseState = matchResults[match.id] || {
-      score1: match.score1 ?? 0,
-      score2: match.score2 ?? 0,
-      markAsCompleted: match.status === 2,
-    }
+  const baseState = matchResults[match.id] || {
+    score1: match.score1 ?? 0,
+    score2: match.score2 ?? 0,
+    markAsCompleted: match.status === 2,
+  }
 
-    const [localScore1, setLocalScore1] = useState(Number(baseState.score1 ?? 0))
-    const [localScore2, setLocalScore2] = useState(Number(baseState.score2 ?? 0))
-    const [localPenalty1, setLocalPenalty1] = useState(0)
-    const [localPenalty2, setLocalPenalty2] = useState(0)
+  const [localScore1, setLocalScore1] = useState(Number(baseState.score1 ?? 0))
+  const [localScore2, setLocalScore2] = useState(Number(baseState.score2 ?? 0))
+  const [localPenalty1, setLocalPenalty1] = useState(0)
+  const [localPenalty2, setLocalPenalty2] = useState(0)
 
-    const team1Name = match.classGroup1Name || `Lớp ${match.classGroup1Id || "?"}`
-    const team2Name = match.classGroup2Name || `Lớp ${match.classGroup2Id || "?"}`
+  const team1Name = match.classGroup1Name || `Lớp ${match.classGroup1Id || "?"}`
+  const team2Name = match.classGroup2Name || `Lớp ${match.classGroup2Id || "?"}`
 
-    let winnerId = null
-    let winnerLabel = "Chưa xác định"
-    let isMainDraw = false
-    let isPenaltyDraw = false
+  let winnerId = null
+  let winnerLabel = "Chưa xác định"
+  let isMainDraw = false
+  let isPenaltyDraw = false
 
-    if (localScore1 > localScore2 && match.classGroup1Id) {
+  // MAIN SCORE LOGIC
+  if (localScore1 > localScore2 && match.classGroup1Id) {
+    winnerId = match.classGroup1Id
+    winnerLabel = team1Name
+  } else if (localScore2 > localScore1 && match.classGroup2Id) {
+    winnerId = match.classGroup2Id
+    winnerLabel = team2Name
+  } else if (localScore1 === localScore2) {
+    // CHỈ CẦN BẰNG NHAU (kể cả 0-0) là hòa lượt chính
+    isMainDraw = true
+
+    // Nếu đã nhập luân lưu, dùng luân lưu để quyết định
+    if (localPenalty1 > localPenalty2 && match.classGroup1Id) {
       winnerId = match.classGroup1Id
-      winnerLabel = team1Name
-    } else if (localScore2 > localScore1 && match.classGroup2Id) {
+      winnerLabel = `${team1Name} (thắng luân lưu)`
+    } else if (localPenalty2 > localPenalty1 && match.classGroup2Id) {
       winnerId = match.classGroup2Id
-      winnerLabel = team2Name
-    } else if (localScore1 === localScore2 && (localScore1 !== 0 || localScore2 !== 0)) {
-      isMainDraw = true
-      // Tạm thời quyết định bằng luân lưu nếu có
-      if (localPenalty1 > localPenalty2 && match.classGroup1Id) {
-        winnerId = match.classGroup1Id
-        winnerLabel = `${team1Name} (thắng luân lưu)`
-      } else if (localPenalty2 > localPenalty1 && match.classGroup2Id) {
-        winnerId = match.classGroup2Id
-        winnerLabel = `${team2Name} (thắng luân lưu)`
-      } else if (
-        (localPenalty1 !== 0 || localPenalty2 !== 0) &&
-        localPenalty1 === localPenalty2
-      ) {
-        isPenaltyDraw = true
-        winnerLabel = "Hòa cả luân lưu - cần cập nhật tỉ số phân định thắng thua"
-      } else {
-        winnerLabel = "Hòa - cần nhập tỉ số luân lưu để phân định thắng thua"
-      }
+      winnerLabel = `${team2Name} (thắng luân lưu)`
+    } else if (
+      (localPenalty1 !== 0 || localPenalty2 !== 0) &&
+      localPenalty1 === localPenalty2
+    ) {
+      isPenaltyDraw = true
+      winnerLabel = "Hòa cả luân lưu - cần cập nhật tỉ số phân định thắng thua"
+    } else {
+      winnerLabel = "Hòa - cần nhập tỉ số luân lưu để phân định thắng thua"
+    }
+  }
+
+  const showPenaltySection =
+    isMainDraw || localPenalty1 > 0 || localPenalty2 > 0
+
+  const handleSave = async () => {
+    if (!winnerId || isPenaltyDraw) {
+      toast.error("Vui lòng nhập tỉ số (kể cả luân lưu nếu cần) sao cho có đội thắng rõ ràng.")
+      return
     }
 
-    const showPenaltySection =
-      isMainDraw || localPenalty1 > 0 || localPenalty2 > 0
-
-    const handleSave = async () => {
-      if (!winnerId || isPenaltyDraw) {
-        toast.error("Vui lòng nhập tỉ số (kể cả luân lưu nếu cần) sao cho có đội thắng rõ ràng.")
-        return
-      }
-
-      let penaltySummary = null
-      if (showPenaltySection && (localPenalty1 > 0 || localPenalty2 > 0)) {
-        penaltySummary = `(Luân lưu: ${localPenalty1}-${localPenalty2})`
-      }
-
-      const overrideState = {
-        score1: localScore1,
-        score2: localScore2,
-        winnerClassGroupId: winnerId,
-        markAsCompleted: true,
-        penaltyScore1: localPenalty1,
-        penaltyScore2: localPenalty2,
-        penaltySummary,
-      }
-
-      // Đồng bộ state cục bộ để UI official card thấy ngay kết quả
-      setMatchResults((prev) => ({
-        ...prev,
-        [match.id]: {
-          ...(prev[match.id] || {}),
-          ...overrideState,
-        },
-      }))
-
-      await handleSubmitMatchResult(match, overrideState)
-      onClose()
+    let penaltySummary = null
+    if (showPenaltySection && (localPenalty1 > 0 || localPenalty2 > 0)) {
+      penaltySummary = `(Luân lưu: ${localPenalty1}-${localPenalty2})`
     }
 
-    return (
-      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl p-6 relative">
-          <button
-            className="absolute top-3 right-3 text-slate-400 hover:text-slate-700"
-            onClick={onClose}
-          >
-            <X className="w-4 h-4" />
-          </button>
+    const overrideState = {
+      score1: localScore1,
+      score2: localScore2,
+      winnerClassGroupId: winnerId,
+      markAsCompleted: true,
+      penaltyScore1: localPenalty1,
+      penaltyScore2: localPenalty2,
+      penaltySummary,
+    }
 
-          {/* Header */}
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">
-            Trận #{match.matchNumber} • {match.roundName || `Vòng ${match.round}`}
-          </h3>
+    setMatchResults((prev) => ({
+      ...prev,
+      [match.id]: {
+        ...(prev[match.id] || {}),
+        ...overrideState,
+      },
+    }))
 
-          {/* VS Banner */}
-          <div className="mb-4 rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 flex items-center justify-between gap-3">
-            <div className="flex-1 text-right">
-              <p className="text-xs text-slate-500">Đội 1</p>
-              <p className="font-semibold text-slate-800 truncate">{team1Name}</p>
-            </div>
-            <div className="px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full">
-              VS
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-slate-500">Đội 2</p>
-              <p className="font-semibold text-slate-800 truncate">{team2Name}</p>
+    await handleSubmitMatchResult(match, overrideState)
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl p-6 relative">
+        <button
+          className="absolute top-3 right-3 text-slate-400 hover:text-slate-700"
+          onClick={onClose}
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        {/* Header */}
+        <h3 className="text-lg font-semibold text-slate-800 mb-2">
+          Trận #{match.matchNumber} • {match.roundName || `Vòng ${match.round}`}
+        </h3>
+
+        {/* VS Banner */}
+        <div className="mb-4 rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex-1 text-right">
+            <p className="text-xs text-slate-500">Đội 1</p>
+            <p className="font-semibold text-slate-800 truncate">{team1Name}</p>
+          </div>
+          <div className="px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full">
+            VS
+          </div>
+          <div className="flex-1">
+            <p className="text-xs text-slate-500">Đội 2</p>
+            <p className="font-semibold text-slate-800 truncate">{team2Name}</p>
+          </div>
+        </div>
+
+        {/* Điểm chính */}
+        <div className="grid md:grid-cols-3 gap-4 mb-3">
+          <div>
+            <Label className="text-xs text-slate-500">Điểm đội 1</Label>
+            <Input
+              type="number"
+              min="0"
+              value={localScore1}
+              onChange={(e) => {
+                const val = Number(e.target.value || 0)
+                setLocalScore1(val)
+                handleResultFieldChange(match.id, "score1", val)
+              }}
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-slate-500">Điểm đội 2</Label>
+            <Input
+              type="number"
+              min="0"
+              value={localScore2}
+              onChange={(e) => {
+                const val = Number(e.target.value || 0)
+                setLocalScore2(val)
+                handleResultFieldChange(match.id, "score2", val)
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-center">
+            <div className="text-xs">
+              <p className="text-slate-500 mb-1">🏆 Đội thắng (tính tự động)</p>
+              <p
+                className={`font-semibold ${
+                  isPenaltyDraw || isMainDraw
+                    ? "text-amber-600"
+                    : winnerId
+                    ? "text-emerald-700"
+                    : "text-slate-400"
+                }`}
+              >
+                {winnerLabel}
+              </p>
             </div>
           </div>
+        </div>
 
-          <div className="grid md:grid-cols-3 gap-4 mb-3">
-            <div>
-              <Label className="text-xs text-slate-500">Điểm đội 1</Label>
-              <Input
-                type="number"
-                min="0"
-                value={localScore1}
-                onChange={(e) => {
-                  const val = Number(e.target.value || 0)
-                  setLocalScore1(val)
-                  handleResultFieldChange(match.id, "score1", val)
-                }}
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500">Điểm đội 2</Label>
-              <Input
-                type="number"
-                min="0"
-                value={localScore2}
-                onChange={(e) => {
-                  const val = Number(e.target.value || 0)
-                  setLocalScore2(val)
-                  handleResultFieldChange(match.id, "score2", val)
-                }}
-              />
-            </div>
-            <div className="flex items-center justify-center">
-              <div className="text-xs">
-                <p className="text-slate-500 mb-1">🏆 Đội thắng (tính tự động)</p>
-                <p
-                  className={`font-semibold ${
-                    isPenaltyDraw || isMainDraw ? "text-amber-600" : winnerId ? "text-emerald-700" : "text-slate-400"
-                  }`}
-                >
-                  {winnerLabel}
-                </p>
-              </div>
-            </div>
-          </div>
+        {isMainDraw && (
+          <p className="text-xs text-amber-600 mb-2">
+            Tỉ số đang hòa. Bạn có thể nhập tỉ số luân lưu để phân định thắng thua.
+          </p>
+        )}
 
-          {isMainDraw && (
-            <p className="text-xs text-amber-600 mb-3">
-              Tỉ số đang hòa. Vui lòng cập nhật kết quả cuối cùng (sau luân lưu, hiệp phụ, ...).
-            </p>
-          )}
-
-        {showPenaltySection && (
-          <div className="mt-3 p-3 rounded-md bg-orange-50 border border-orange-200 grid md:grid-cols-2 gap-3">
+        {/* Vùng Luân lưu với animation */}
+        <div
+          className={`
+            transition-all duration-300 ease-in-out origin-top
+            ${showPenaltySection ? "max-h-[200px] opacity-100 scale-y-100 mt-2" : "max-h-0 opacity-0 scale-y-95"}
+            overflow-hidden
+          `}
+        >
+          <div className="mt-1 p-3 rounded-md bg-orange-50 border border-orange-200 grid md:grid-cols-2 gap-3">
             <div>
               <Label className="text-xs text-slate-600">Luân lưu Đội 1</Label>
               <Input
@@ -1105,119 +1223,23 @@ export default function AISchedule() {
               />
             </div>
           </div>
-        )}
+        </div>
 
         <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={onClose}>
-              Đóng
-            </Button>
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={handleSave}
-            >
-              Lưu kết quả
-            </Button>
-          </div>
+          <Button variant="outline" onClick={onClose}>
+            Đóng
+          </Button>
+          <Button
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={handleSave}
+          >
+            Lưu kết quả
+          </Button>
         </div>
       </div>
-    )
-  }
-
-  // Match tree rendering moved to BracketTree.jsx
-
-  // Bracket view cho official (tab Quản lý giải đấu)
-  const renderOfficialBracketView = () => {
-    if (!memoizedOfficialMatches.length) {
-      return (
-        <div className="flex flex-col items-center justify-center h-64 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-          <Sparkles className="w-8 h-8 mb-2 text-gray-400" />
-          <p className="text-sm">
-            Chưa có lịch thi đấu chính thức. Hãy tạo lịch và áp dụng ở tab "Tạo lịch với AI".
-          </p>
-        </div>
-      )
-    }
-
-    return (
-      <div className="relative border border-slate-200 rounded-lg overflow-hidden bg-slate-50/50">
-        <TransformWrapper
-          initialScale={0.8}
-          minScale={0.2}
-          maxScale={4}
-          centerOnInit={true}
-          limitToBounds={false}
-          wheel={{
-            step: 0.1,
-          }}
-          panning={{
-            velocityDisabled: false, // Bắt buộc phải có cái này thì velocityAnimation mới chạy
-          }}
-          doubleClick={{
-            disabled: true,
-          }}
-          // --- Đặt velocityAnimation ở đây (Bên trong thẻ mở) ---
-          velocityAnimation={{
-            animationTime: 400,
-            animationType: "easeOut",
-            sensitivity: 1, 
-          }}
-          // -----------------------------------------------------
-          alignmentAnimation={{ animationTime: 0, animationType: "linear" }}
-        >
-          {({ zoomIn, zoomOut, resetTransform, centerView }) => (
-            <>
-              {/* Toolbar điều khiển */}
-              <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 bg-white shadow-md border border-slate-200 rounded-lg p-1.5">
-                <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-slate-100" onClick={() => zoomIn()} title="Phóng to">
-                  <span className="text-lg font-bold">+</span>
-                </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-slate-100" onClick={() => zoomOut()} title="Thu nhỏ">
-                  <span className="text-lg font-bold">-</span>
-                </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-slate-100" onClick={() => centerView()} title="Căn giữa">
-                  <Maximize2 className="w-4 h-4" />
-                </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-slate-100 text-red-500 hover:text-red-600" onClick={() => resetTransform()} title="Reset">
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <TransformComponent
-                wrapperStyle={{
-                  width: "100%",
-                  height: "700px",
-                  overflow: "hidden",
-                  cursor: "grab",
-                }}
-                contentStyle={{
-                  width: "100%",
-                  height: "100%",
-                  willChange: "transform",
-                  transformOrigin: "center center",
-                }}
-              >
-                <div className="min-w-[100vw] min-h-[100vh] flex items-center justify-center p-20">
-                  <BracketTree
-                    matches={memoizedOfficialMatches}
-                    official={officialBracket}
-                    onMatchClick={handleBracketMatchClick}
-                  />
-                </div>
-              </TransformComponent>
-            </>
-          )}
-        </TransformWrapper>
-        
-        {/* Modal nằm ngoài TransformWrapper để không bị zoom theo */}
-        {selectedBracketMatch && (
-          <MatchDetailModal
-            match={selectedBracketMatch}
-            onClose={() => setSelectedBracketMatch(null)}
-          />
-        )}
-      </div>
-    )
-  }
+    </div>
+  )
+}
 
   const renderOfficialBracketCard = () => {
     if (!officialBracket || !formData.sportId) return null
@@ -2022,6 +2044,8 @@ export default function AISchedule() {
                               startTime: event.time,
                               endTime: event.endTime || "",
                               location: event.venue || "",
+                              classGroup1Id: event.classGroup1Id ?? null,
+                              classGroup2Id: event.classGroup2Id ?? null,
                           }
                           
                           return (
@@ -2040,12 +2064,81 @@ export default function AISchedule() {
                                     Trận #{event.matchNumber}
                                   </Badge>
                                 </div>
-                                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-2 flex-wrap">
+                                <div className="flex flex-col md:flex-row md:items-center gap-4 text-sm text-gray-600 mb-2 flex-wrap">
                                   <span className="flex items-center gap-1">
                                     <MapPin className="w-3 h-3" />
-                                      {editable.location || "N/A"}
+                                    {editable.location || "N/A"}
                                   </span>
-                                  <span className="font-medium">{event.teams}</span>
+                                  <div className="flex items-center gap-2">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <select
+                                        className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white"
+                                        value={
+                                          editable.classGroup1Id ??
+                                          event.classGroup1Id ??
+                                          ""
+                                        }
+                                        onChange={(e) =>
+                                          handleMatchFieldChange(
+                                            event.matchNumber,
+                                            "classGroup1Id",
+                                            e.target.value === "" ? null : e.target.value
+                                          )
+                                        }
+                                      >
+                                        <option value="">
+                                          {event.classGroup1Id ? "Chờ kết quả" : "Chọn lớp"}
+                                        </option>
+                                        {classGroups.map((cg) => {
+                                          const id =
+                                            typeof cg.id === "number"
+                                              ? cg.id
+                                              : parseInt(cg.id)
+                                          const label = cg.grade
+                                            ? `${cg.grade}${cg.name}`
+                                            : cg.name
+                                          return (
+                                            <option key={cg.id} value={id}>
+                                              {label}
+                                            </option>
+                                          )
+                                        })}
+                                      </select>
+                                      <select
+                                        className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white"
+                                        value={
+                                          editable.classGroup2Id ??
+                                          event.classGroup2Id ??
+                                          ""
+                                        }
+                                        onChange={(e) =>
+                                          handleMatchFieldChange(
+                                            event.matchNumber,
+                                            "classGroup2Id",
+                                            e.target.value === "" ? null : e.target.value
+                                          )
+                                        }
+                                      >
+                                        <option value="">
+                                          {event.classGroup2Id ? "Chờ kết quả" : "Chọn lớp"}
+                                        </option>
+                                        {classGroups.map((cg) => {
+                                          const id =
+                                            typeof cg.id === "number"
+                                              ? cg.id
+                                              : parseInt(cg.id)
+                                          const label = cg.grade
+                                            ? `${cg.grade}${cg.name}`
+                                            : cg.name
+                                          return (
+                                            <option key={cg.id} value={id}>
+                                              {label}
+                                            </option>
+                                          )
+                                        })}
+                                      </select>
+                                    </div>
+                                  </div>
                                 </div>
                                 
                                   <div className="grid md:grid-cols-3 gap-3 mb-3">
@@ -2225,8 +2318,12 @@ export default function AISchedule() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                {renderOfficialBracketView()}
+              <CardContent className="p-0">
+                <OfficialBracketViewer
+                  matches={memoizedOfficialMatches}
+                  official={officialBracket}
+                  onMatchClick={handleBracketMatchClick}
+                />
               </CardContent>
             </Card>
           ) : (
@@ -2237,6 +2334,13 @@ export default function AISchedule() {
             </Card>
           )}
         </div>
+      )}
+      {/* Modal quản lý kết quả trận đấu cho bracket – đặt ngoài viewer để không ảnh hưởng pan/zoom */}
+      {selectedBracketMatch && (
+        <MatchDetailModal
+          match={selectedBracketMatch}
+          onClose={() => setSelectedBracketMatch(null)}
+        />
       )}
     </div>
   )

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react"
+import React, { useMemo, memo } from "react"
 import { Calendar, MapPin } from "lucide-react"
 
 const CARD_HEIGHT = 100 // ước lượng để tính spacer
@@ -219,35 +219,41 @@ const transformToTreeStructure = (matches) => {
   return root
 }
 
-export const BracketTree = ({ matches, official, onMatchClick }) => {
-  const treeData = useMemo(() => {
-    if (!matches || matches.length === 0) return null
-    const root = transformToTreeStructure(matches)
-    if (!root) return null
+export const BracketTree = memo(
+  ({ matches, official, onMatchClick }) => {
+    const treeData = useMemo(() => {
+      if (!matches || matches.length === 0) return null
+      const root = transformToTreeStructure(matches)
+      if (!root) return null
 
-    const officialMatchByNumber = {}
-    if (official?.rounds?.length) {
-      official.rounds.forEach((round) => {
-        round.matches.forEach((m) => {
-          officialMatchByNumber[m.matchNumber] = m
+      const officialMatchByNumber = {}
+      if (official?.rounds?.length) {
+        official.rounds.forEach((round) => {
+          round.matches.forEach((m) => {
+            officialMatchByNumber[m.matchNumber] = m
+          })
         })
-      })
-    }
+      }
 
-    return { root, officialMatchByNumber }
-  }, [matches, official])
+      return { root, officialMatchByNumber }
+    }, [matches, official])
 
-  if (!treeData?.root) return null
+    if (!treeData?.root) return null
 
-  return (
-    <div className="p-8 min-w-max flex justify-center">
-      <MatchNode
-        node={treeData.root}
-        onMatchClick={onMatchClick}
-        officialMatchByNumber={treeData.officialMatchByNumber}
-      />
-    </div>
-  )
-}
+    return (
+      <div className="p-8 min-w-max flex justify-center">
+        <MatchNode
+          node={treeData.root}
+          onMatchClick={onMatchClick}
+          officialMatchByNumber={treeData.officialMatchByNumber}
+        />
+      </div>
+    )
+  },
+  (prev, next) =>
+    prev.matches === next.matches &&
+    prev.official === next.official &&
+    prev.onMatchClick === next.onMatchClick
+)
 
 
