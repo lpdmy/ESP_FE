@@ -147,7 +147,7 @@ const PERMISSION_ROUTE_MAP = {
                       <Input
                         id="login-email"
                         type="email"
-                        placeholder="your.email@fpt.edu.vn"
+                        placeholder="your.email@email.com"
                         className="pl-10 focus:ring-2 focus:ring-orange-500 border-gray-200"
                         required
                         value={loginEmail}
@@ -238,7 +238,7 @@ const PERMISSION_ROUTE_MAP = {
                       <Input
                         id="register-email"
                         type="email"
-                        placeholder="your.email@fpt.edu.vn"
+                        placeholder="your.email@email.com"
                         className="pl-10 focus:ring-2 focus:ring-orange-500 border-gray-200"
                         required
                       />

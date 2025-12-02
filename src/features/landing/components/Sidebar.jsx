@@ -30,7 +30,7 @@ export default function Sidebar() {
       ? user.username[0].toUpperCase()
       : "U";
   const menuItems = SIDEBAR_NAVIGATION.filter(item => {
-  if (item.label === "Giám Khảo") {
+  if (item.label === "Giám khảo") {
     return user?.role === 2;
   }
   return true;
@@ -171,11 +171,6 @@ export default function Sidebar() {
                   <p className="text-xs text-gray-500">
                     {club.categoryName} • {handleChangeRole(club.role)}
                   </p>
-                </div>
-                <div className="w-8 h-8 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">
-                    {club.clubName.charAt(0)}
-                  </span>
                 </div>
               </div>
             ))}
