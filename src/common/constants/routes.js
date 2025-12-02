@@ -22,8 +22,9 @@ export const ROUTES = {
     CREATE_ACTIVITY: "/admin/activities/create",
     EDIT_ACTIVITY: "/admin/activities/:id/edit",
     AI_SCHEDULE: "/admin/activities/:id/ai-schedule",
-    CLASSES: 'admin/classes',
-    CLASS_DETAIL: '/admin/classes/:id'
+    CLASSES: "admin/classes",
+    CLASS_DETAIL: "/admin/classes/:id",
+    MODERATION:"/admin/moderation"
   },
   USER_PROFILE: {
     PROFILE: "/profile",

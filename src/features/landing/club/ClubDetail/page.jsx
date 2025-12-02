@@ -49,12 +49,13 @@ import { LoadingOverlay } from "@/common/components/ui/loading";
 import { useDialog } from "@/common/components/ui/dialog";
 import JoinClubModal from "../Modal/JoinClubModal/page";
 import { useToast } from "@/common/hooks/useToast";
-import { ROUTES } from '@/common/constants/routes';
+import { ROUTES } from "@/common/constants/routes";
 import { LeaveClubDialogConfirm } from "../Modal/LeaveClubModal/page";
-const clubActivities = []; 
+const clubActivities = [];
 import CreatePostInput from "../../post/CreatePostInput";
 import CreatePostModal from "../../post/CreatePostModal";
 import DeletePostModal from "../../post/DeletePostModal";
+import UpdatePostModal from "../../post/UpdatePostModal";
 import { useSelector } from "react-redux";
 export default function ClubDetail() {
   const { isOpen: isDialogOpen, openDialog, closeDialog } = useDialog();
@@ -84,6 +85,7 @@ export default function ClubDetail() {
   const [isRequestToJoin, setIsRequestToJoin] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [posts, setPosts] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -115,15 +117,20 @@ export default function ClubDetail() {
     }
   };
   const getProfileRoute = (user) => {
-      console.log("User object:", user);
-      const role = Number(user?.userRole);
+    console.log("User object:", user);
+    const role = Number(user?.userRole);
     switch (role) {
       case 2:
         return `${ROUTES.USER_PROFILE.TEACHER_PROFILE}/${user.userId}`;
       default:
         return `${ROUTES.USER_PROFILE.PROFILE}/${user.userId}`;
     }
-  }
+  };
+   const handleCloseUpdateModal = () => {
+    setIsUpdateModalOpen(false);
+    setSelectedPost(null);
+  };
+
   const handleDeletePost = (post) => {
     setSelectedPost(post);
     setIsDeleteModalOpen(true);
@@ -136,6 +143,10 @@ export default function ClubDetail() {
     setPost((prev) => prev.filter((p) => p.id !== postId));
     setIsDeleteModalOpen(false);
     setSelectedPost(null);
+  };
+  const handleEditPost = (post) => {
+    setSelectedPost(post);
+    setIsUpdateModalOpen(true);
   };
   const handleClubPost = async () => {
     try {
@@ -199,10 +210,10 @@ export default function ClubDetail() {
   const handleAcceptMentorInvite = async () => {
     try {
       await approveInvitation(clubid);
-      toast.approveInvitationSuccess()
+      toast.approveInvitationSuccess();
     } catch (error) {
-      toast.approveInvitationFail()
-      console.log(error)
+      toast.approveInvitationFail();
+      console.log(error);
     }
   };
 
@@ -490,7 +501,9 @@ export default function ClubDetail() {
 
               {/* Bài đăng */}
               <TabsContent value="posts" className="space-y-4">
-                <CreatePostInput onOpenModal={handleOpenCreatePostModal} />
+                {isJoined && (
+                  <CreatePostInput onOpenModal={handleOpenCreatePostModal} />
+                )}
                 {posts.length === 0 ? (
                   <div className="text-center py-10 text-gray-500 bg-white rounded-lg shadow-sm">
                     <Users className="w-6 h-6 mx-auto mb-2 text-gray-400" />
@@ -598,7 +611,7 @@ export default function ClubDetail() {
                       <div
                         key={m.userId}
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 transition-colors"
-                        onClick={()=>navigate(getProfileRoute(m))}
+                        onClick={() => navigate(getProfileRoute(m))}
                       >
                         <Avatar className="w-10 h-10">
                           <AvatarImage
@@ -635,6 +648,12 @@ export default function ClubDetail() {
         onClose={handleCloseDeleteModal}
         post={selectedPost}
         onDelete={handleConfirmDelete}
+      />
+      <UpdatePostModal
+        isOpen={isUpdateModalOpen}
+        onClose={handleCloseUpdateModal}
+        post={selectedPost}
+        payload={payload}
       />
     </div>
   );

@@ -318,13 +318,6 @@ export default function PostCard({
                   <span>Chia sẻ</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => setIsDropdownOpen(false)}
-                  className="flex items-center space-x-2 text-gray-600 hover:bg-gray-50 cursor-pointer"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  <span>Báo cáo</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
                   onClick={() => {
                     hanldeOpenCollection();
                     setIsDropdownOpen(false);
