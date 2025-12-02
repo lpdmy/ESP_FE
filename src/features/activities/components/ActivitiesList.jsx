@@ -216,7 +216,7 @@ import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
 import { activityParticipantService } from "@/features/activities/services/activityParticipant.service"
 import { ROUTES } from "@/common/constants/routes"
-import { Calendar, MapPin, Users, CheckCircle, ChevronDown, ArrowLeft, ArrowRight } from "lucide-react"
+import { Calendar, MapPin, Users, CheckCircle, ChevronDown, ArrowLeft, ArrowRight, User } from "lucide-react"
 import { jwtDecode } from "jwt-decode"
 
 const PAGE_SIZE = 10
@@ -537,12 +537,23 @@ export default function ActivitiesList() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Badge className="bg-orange-100 text-orange-700">Hoạt động</Badge>
-        <h1 className="text-3xl font-bold text-gray-900">Khám phá sự kiện nổi bật</h1>
-        <p className="text-gray-600">
-          Danh sách workshop, cuộc thi sáng tạo và hội thao bạn có thể tham gia ngay hôm nay.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2 flex-1">
+          <Badge className="bg-orange-100 text-orange-700">Hoạt động</Badge>
+          <h1 className="text-3xl font-bold text-gray-900">Khám phá sự kiện nổi bật</h1>
+          <p className="text-gray-600">
+            Danh sách workshop, cuộc thi sáng tạo và hội thao bạn có thể tham gia ngay hôm nay.
+          </p>
+        </div>
+        <Link to={ROUTES.ACTIVITY.MY_ACTIVITY}>
+          <Button
+            type="button"
+            className="h-11 px-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl flex items-center gap-2 whitespace-nowrap"
+          >
+            <User className="w-4 h-4" />
+            Hoạt động của tôi
+          </Button>
+        </Link>
       </div>
 
       {/* Carousel với loading riêng */}

@@ -134,6 +134,26 @@ export class ActivityService extends ApiService {
   async trainScheduleModel(token) {
     return this.post(API_CONFIG.ACTIVITY.TRAIN_SCHEDULE_MODEL, {}, token);
   }
+
+  /**
+   * Get activities that the current user has participated in
+   * @param {number} pageNumber - Page number (default: 1)
+   * @param {number} pageSize - Page size (default: 10)
+   * @param {string} search - Search query (optional)
+   * @param {string} status - Status filter: 'ongoing' or 'finished' (optional)
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with activities data
+   */
+  async getMyActivities(pageNumber = 1, pageSize = 10, search = null, status = null, token) {
+    let endpoint = `${API_CONFIG.ACTIVITY.MY_ACTIVITIES}?pageNumber=${pageNumber}&pageSize=${pageSize}`;
+    if (search) {
+      endpoint += `&search=${encodeURIComponent(search)}`;
+    }
+    if (status) {
+      endpoint += `&status=${encodeURIComponent(status)}`;
+    }
+    return this.get(endpoint, token);
+  }
 }
 
 export const activityService = new ActivityService();

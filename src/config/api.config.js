@@ -263,6 +263,8 @@ export const API_CONFIG = {
     GENERATE_TOURNAMENT_SCHEDULE: '/activity/{id}/generate-schedule',
     APPLY_TOURNAMENT_SCHEDULE: '/activity/{id}/apply-schedule',
     TRAIN_SCHEDULE_MODEL: '/activity/train-schedule-model',
+    MY_ACTIVITIES: "/my-activities",
+
   },
 
   ACTIVITY_MATCH: {
@@ -301,11 +303,19 @@ export const API_CONFIG = {
     JURY_ASSIGN:"/jury/assign",
     GRADING:"/jury/grade-submission"
   },
-   SUBMISSION:{
+   // Submission endpoints
+   SUBMISSION: {
+    GET_ALL_BY_ACTIVITY_ID: "/submission/activity/{Id}",
+    CREATE: "/submission",
+    GET_BY_ID: "/submission/{id}",
+    GET_MY_SUBMISSIONS: "/submission/my-submissions",
+    GET_MY_SUBMISSION_BY_ACTIVITY_ID: "/submission/activity/{activityId}/my-submission",
+    UPDATE: "/submission/{id}",
+    DELETE: "/submission/{id}",
     GET_SUBMISSION_ACTIVITY:"/submission/activity",
     GET_MY_SUBMISSION:"/submission/activity/user",
     GET_SUBMISSION_DETAIL:"/submission",
-  }
+  },
 };
 // HTTP Headers
 export const getAuthHeaders = (token) => ({

@@ -69,6 +69,7 @@ export const ROUTES = {
     LIST: "/activities",
     VIEW_ACTIVITY: "/activities/:id",
     REGISTER_ACTIVITY: "/activities/:id/register",
+    MY_ACTIVITY: "/activities/my-activity",
   },
   NOTIFICATION: {
     LIST_NOTIFICATION: "/notifications",
