@@ -5,7 +5,7 @@ export const Table = ({ className, children, ...props }) => {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      className="relative w-full"
     >
       <table
         data-slot="table"
@@ -22,7 +22,7 @@ export const TableHeader = ({ className, children, ...props }) => {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={cn("bg-gray-100 [&_tr]:", className)}
       {...props}
     >
       {children}
@@ -47,7 +47,7 @@ export const TableFooter = ({ className, children, ...props }) => {
     <tfoot
       data-slot="table-footer"
       className={cn(
-        "bg-gray-50 border-t font-medium [&>tr]:last:border-b-0",
+        "bg-gray-50  font-medium [&>tr]:last:",
         className
       )}
       {...props}
@@ -62,7 +62,7 @@ export const TableRow = ({ className, children, ...props }) => {
     <tr
       data-slot="table-row"
       className={cn(
-        "hover:bg-gray-50 data-[state=selected]:bg-gray-100 border-b transition-colors",
+        "hover:bg-gray-50 data-[state=selected]:bg-gray-100  transition-colors",
         className
       )}
       {...props}

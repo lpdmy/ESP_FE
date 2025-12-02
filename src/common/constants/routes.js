@@ -60,14 +60,17 @@ export const ROUTES = {
   },
   SEARCH: {
     STUDENT: "/Search/students",
-    TEACHER: "/Search/teachers",
+    TEACHER: "/Search/teachers"
   },
   CHAT: {
     CHAT_PAGE: "/chat/:roomId",
     INBOX: "/chat",
   },
   ACTIVITY: {
+    LIST: "/activities",
     VIEW_ACTIVITY: "/activities/:id",
+    REGISTER_ACTIVITY: "/activities/:id/register",
+    MY_ACTIVITY: "/activities/my-activity",
   },
   NOTIFICATION: {
     LIST_NOTIFICATION: "/notifications",
@@ -83,3 +86,4 @@ export const ROUTES = {
     MY_SUBMISSION_DETAIL : "/submission/my-submission/detail/:id",
   }
 };
+
