@@ -23,14 +23,14 @@ import {
   DialogTrigger,
 } from "@/common/components/ui/dialog"
 import { toast } from "react-toastify"
-import { ArrowLeft, ArrowRight, Save, Upload, Plus, X, CheckCircle, Star, Trophy, Eye, Calendar, MapPin, Users, User, Clock, Edit2, Trash2, Info } from "lucide-react"
+import { ArrowLeft, ArrowRight, Save, Upload, Plus, X, CheckCircle, Star, Trophy, Eye, Calendar, MapPin, Users, User, Clock, Edit2, Trash2, Info,UserCheck } from "lucide-react"
 import { ROUTES } from "@/common/constants/routes"
 import { uploadImage } from "@/common/utils/upload"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
 import { GradingCriteriaSection } from "./GradingCriteriaSection"
 import { vnTimeToUTC, utcToVNTime } from "@/common/utils/dateUtils"
-
+import AssignJurySection from "@/features/landing/jury/components/assign-jury/page";
 export default function EditActivity() {
   const params = useParams();
   const navigate = useNavigate();

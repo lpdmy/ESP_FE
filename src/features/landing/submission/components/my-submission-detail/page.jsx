@@ -47,7 +47,7 @@ export default function SubmissionDetail() {
     try {
       const response = await getSubmissionDetail(params.id);
       const rawAssignments = response.data.juryAssignments;
-
+      console.log(response);
       const processedAssignments = rawAssignments.map((jury) => {
         let scores = {};
         try {
@@ -106,14 +106,32 @@ export default function SubmissionDetail() {
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardContent className="p-6">
-                <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-4">
-                  <img
-                    src={submission.thumbnail}
-                    alt={submission.title}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
+                {submission.attachments?.length > 0 && (
+                  <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-4">
+                    {submission.attachments[0].fileType === "image" ? (
+                      <img
+                        src={submission.attachments[0].url}
+                        alt={submission.attachments[0].fileName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <a
+                        href={submission.attachments[0].url}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex flex-col items-center justify-center w-full h-full bg-orange-50 border border-orange-200 rounded-lg p-4 hover:bg-orange-100"
+                      >
+                        <span className="text-orange-700 font-medium">
+                          {submission.attachments[0].fileName}
+                        </span>
+                        <span className="text-xs text-gray-500 mt-1">
+                          Tải xuống ({submission.attachments[0].fileType})
+                        </span>
+                      </a>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -154,7 +172,7 @@ export default function SubmissionDetail() {
                             <p className="font-semibold">{jury.juryName}</p>
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right flex items-baseline gap-1">
                           <div className="text-2xl font-bold text-orange-600">
                             {jury.averageScore}
                           </div>
@@ -166,8 +184,7 @@ export default function SubmissionDetail() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                       <div>
-                        <h4 className="font-semibold mb-3">Chi tiết điểm</h4>
-
+                        <h4 className="font-semibold mb-3 ">Chi tiết điểm</h4>
                         {jury?.scores && Object.keys(jury.scores).length > 0 ? (
                           <div
                             className={`grid gap-4 grid-cols-${
@@ -183,7 +200,7 @@ export default function SubmissionDetail() {
                                   <p className="text-xs text-muted-foreground">
                                     {label}
                                   </p>
-                                  <p className="text-2xl font-bold text-orange-600">
+                                  <p className="text-2xl font-bold text-orange-600 text-center">
                                     {value}
                                   </p>
                                 </div>
@@ -218,23 +235,27 @@ export default function SubmissionDetail() {
               <CardHeader>
                 <CardTitle className="text-center">Điểm trung bình</CardTitle>
               </CardHeader>
-              <CardContent className="text-center space-y-4">
-                <div className="text-5xl font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent">
-                  {overallAverageScore}
+              <CardContent className="text-center">
+                <div className="flex justify-center items-baseline gap-1">
+                  <div className="text-5xl font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent">
+                    {overallAverageScore}
+                  </div>
+                  <div className="text-muted-foreground text-sm">/100</div>
                 </div>
-                <p className="text-muted-foreground">/100</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="!gap-0">
               <CardHeader>
-                <CardTitle className="text-sm">Giám khảo chấm</CardTitle>
+                <CardTitle className="text-sm !gap-0">Giám khảo chấm</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">
-                  {juryAssignment.length}
+                <div className="flex items-baseline gap-1">
+                  <div className="text-3xl font-bold">
+                    {juryAssignment.length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">người chấm</p>
                 </div>
-                <p className="text-xs text-muted-foreground">người chấm</p>
               </CardContent>
             </Card>
 
