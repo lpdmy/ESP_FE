@@ -14,7 +14,7 @@ import ActivityManagementPage from "@/pages/Admin/Activities/ActivityManagementP
 import EditActivityPage from "@/pages/Admin/Activities/EditActivityPage";
 import AISchedulePage from "@/pages/Admin/Activities/AISchedulePage";
 import ClassDetailPage from "@/pages/Admin/ClassDetailPage";
-
+import ModerationManagementPage from "@/pages/Admin/ModerationPage";
 export const adminRoutes = [
   <Route
     element={<ProtectedRoute allowedRoles={[ROLE.ADMIN, ROLE.STAFF]} />}
@@ -158,6 +158,11 @@ export const adminRoutes = [
       key="activity-ai-schedule"
       path={ROUTES.ADMIN.AI_SCHEDULE}
       element={<AISchedulePage />}
+    />
+    <Route
+      key="moderation"
+      path={ROUTES.ADMIN.MODERATION}
+      element={<ModerationManagementPage />}
     />
   </Route>,
 ];

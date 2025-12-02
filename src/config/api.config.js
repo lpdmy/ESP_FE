@@ -6,7 +6,7 @@ export const API_CONFIG = {
 
     // Development environment
     //if (hostname.includes("edusphere-dev")) {
-    return "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net/api";
+    // return "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net/api";
     //}
 
     // Local development
@@ -22,9 +22,9 @@ export const API_CONFIG = {
     const hostname = window.location.hostname;
 
     // Development environment
-    if (hostname.includes("edusphere-dev")) {
-      return "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net";
-    }
+    // if (hostname.includes("edusphere-dev")) {
+    //   return "https://esp-dev-api-h0exebdyd0e0e2cn.eastasia-01.azurewebsites.net";
+    // }
 
     // Local development
     if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
@@ -261,6 +261,12 @@ export const API_CONFIG = {
     GET_SUBMISSION_ACTIVITY:"/submission/activity",
     GET_MY_SUBMISSION:"/submission/activity/user",
     GET_SUBMISSION_DETAIL:"/submission",
+  },
+  MODERATION :{
+    GET_ALL_MODERATION:"/moderation/report",
+    GET_USER_STAT:"/moderation/user-violations",
+    CREATE_NOTIFICATION:"/moderation/alert",
+    UPDATE_STATUS:"/moderation/update-status"
   }
 };
 // HTTP Headers

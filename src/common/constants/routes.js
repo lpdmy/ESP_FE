@@ -24,6 +24,7 @@ export const ROUTES = {
     AI_SCHEDULE: "/admin/activities/:id/ai-schedule",
     CLASSES: "admin/classes",
     CLASS_DETAIL: "/admin/classes/:id",
+    MODERATION:"/admin/moderation"
   },
   USER_PROFILE: {
     PROFILE: "/profile",
