@@ -2,6 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/common/components/ui/card';
 import { Button } from '@/common/components/ui/button';
 import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/common/components/ui/dialog';
+import { 
   Plus, 
   Edit2, 
   Eye, 
@@ -21,15 +29,20 @@ import StatusBadge from '@/common/components/ui/status-badge';
 export default function AdminSystemNewsAndNotices() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedNewsAndNotice, setSelectedNewsAndNotice] = useState(null);
+  const [announcementToDelete, setAnnouncementToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const toast = useToast();
 
   const {
     announcements,
+    currentAnnouncement,
     pagination,
     loading,
     error,
     getAllAnnouncements,
+    getAnnouncementById,
     deleteExistingAnnouncement,
     toggleVisibility,
     clearErrors
@@ -88,20 +101,51 @@ export default function AdminSystemNewsAndNotices() {
     general: "secondary",
   };
 
-  const handleEdit = (newsAndNotice) => {
-    setSelectedNewsAndNotice(newsAndNotice);
-    setIsEditModalOpen(true);
+  const handleEdit = async (newsAndNotice) => {
+    try {
+      // Fetch full details of the announcement
+      await getAnnouncementById(newsAndNotice.id);
+      setIsEditModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching announcement details:', error);
+      toast.showError("Không thể tải chi tiết thông báo");
+    }
   };
 
-  const handleDelete = async (newsAndNotice) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa thông báo này?')) {
-      try {
-        await deleteExistingAnnouncement(newsAndNotice.id);
-        toast.showSuccess("Xóa thông báo thành công");
-      } catch (error) {
-        toast.showError("Không thể xóa thông báo");
-      }
+  const handleDeleteClick = (newsAndNotice) => {
+    setAnnouncementToDelete(newsAndNotice);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!announcementToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await deleteExistingAnnouncement(announcementToDelete.id);
+      toast.showSuccess("Xóa thông báo thành công");
+      setIsDeleteDialogOpen(false);
+      setAnnouncementToDelete(null);
+      
+      // Refresh the list
+      getAllAnnouncements({
+        pageNumber: pagination.pageNumber,
+        pageSize: pagination.pageSize,
+        search: '',
+        sortBy: 'CreatedAt',
+        sortDescending: true
+      });
+    } catch (error) {
+      console.error('Error deleting announcement:', error);
+      toast.showError(error.message || "Không thể xóa thông báo");
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setIsDeleteDialogOpen(false);
+    setAnnouncementToDelete(null);
   };
 
   const handleToggleVisibility = async (newsAndNotice) => {
@@ -215,15 +259,16 @@ export default function AdminSystemNewsAndNotices() {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="text-gray-600 hover:text-blue-600"
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                         onClick={() => handleEdit(announcement)}
+                        title="Chỉnh sửa thông báo"
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="text-gray-600 hover:text-orange-600"
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
                         onClick={() => handleToggleVisibility(announcement)}
                         title={announcement.isVisible ? "Ẩn thông báo" : "Hiển thị thông báo"}
                       >
@@ -232,8 +277,9 @@ export default function AdminSystemNewsAndNotices() {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="text-gray-600 hover:text-red-600"
-                        onClick={() => handleDelete(announcement)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDeleteClick(announcement)}
+                        title="Xóa thông báo"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -259,9 +305,58 @@ export default function AdminSystemNewsAndNotices() {
           setIsEditModalOpen(false);
           setSelectedNewsAndNotice(null);
         }}
-        newsAndNotice={selectedNewsAndNotice}
+        newsAndNotice={currentAnnouncement}
         onSuccess={handleEditSuccess}
+        loading={loading && !currentAnnouncement}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Xác nhận xóa thông báo
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Bạn có chắc chắn muốn xóa thông báo này không? Hành động này không thể hoàn tác.
+              {announcementToDelete && (
+                <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                  <p className="font-medium text-gray-900">Tiêu đề:</p>
+                  <p className="text-sm text-gray-700 mt-1">{announcementToDelete.title}</p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-4 sm:gap-6">
+            <Button
+              variant="outline"
+              onClick={handleDeleteCancel}
+              disabled={isDeleting}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Đang xóa...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Xóa vĩnh viễn
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
