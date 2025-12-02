@@ -476,11 +476,8 @@ export default function MyEventsPage() {
 
   return (
     <>
-    <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-3">
-            <Sidebar />
-          </div>
+          
 
           <div className="lg:col-span-9">
             <div className="mb-6">
@@ -738,7 +735,6 @@ export default function MyEventsPage() {
             </Tabs>
           </div>
         </div>
-      </div>
 
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
         <DialogContent 

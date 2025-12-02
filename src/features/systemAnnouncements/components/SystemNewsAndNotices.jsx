@@ -16,8 +16,6 @@ import {
 import { useToast } from '@/common/hooks/useToast';
 import { useSystemAnnouncements } from '@/hooks/useSystemAnnouncements';
 import { LoadingOverlay } from '@/common/components/ui/loading';
-import Sidebar from "@/features/landing/components/Sidebar";
-import RightPanel from "@/features/landing/components/RightPanel";
 
 export default function SystemNewsAndNotices() {
   const toast = useToast();
@@ -134,7 +132,7 @@ export default function SystemNewsAndNotices() {
   return (
     <div className="w-full py-6">
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 mb-8 text-center">
+      <div className="max-w-7xl mx-auto px-4 mb-8">
         <h1 className="text-4xl font-bold gradient-text mb-2">Thông báo hệ thống</h1>
         <p className="text-gray-600 text-lg">
           Cập nhật các thông báo quan trọng từ nhà trường
@@ -142,14 +140,8 @@ export default function SystemNewsAndNotices() {
       </div>
 
       <div className="w-full px-4">
-        <div className="flex gap-8 justify-center">
-          {/* Sidebar */}
-          <aside className="hidden lg:block w-64 xl:w-72 sticky top-[88px] self-start flex-shrink-0">
-            <Sidebar />
-          </aside>
-
           {/* Main Content */}
-          <section className="flex-1 min-w-0 lg:max-w-3xl xl:max-w-3xl">
+         
             {/* Announcements List */}
             <div className="space-y-4">
         {publicAnnouncements.length === 0 ? (
@@ -292,14 +284,7 @@ export default function SystemNewsAndNotices() {
           ))
         )}
             </div>
-          </section>
-
-          {/* Right Panel */}
-          <aside className="hidden lg:block w-64 xl:w-72 sticky top-[88px] self-start flex-shrink-0">
-            <RightPanel />
-          </aside>
         </div>
-      </div>
     </div>
   );
 }

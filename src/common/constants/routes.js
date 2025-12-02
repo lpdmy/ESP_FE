@@ -1,6 +1,6 @@
 export const ROUTES = {
   LANDING: {
-    HOME: "/",
+    HOME: "/activities",
   },
   AUTH: {
     LOGIN: "/auth/login",
