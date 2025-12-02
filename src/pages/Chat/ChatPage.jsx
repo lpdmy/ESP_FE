@@ -1,10 +1,13 @@
-import FullLayout from "@/common/components/layout/FullLayout"
+import ContentLayout from "@/common/components/layout/ContentLayout"
+import LandingLayout from "@/common/components/layout/LandingLayout"
 import ChatDetail from "@/features/chat/ChatDetail"
 
 export default function ChatPage() {
   return (
-    <FullLayout>
-      <ChatDetail />
-    </FullLayout>
+    <LandingLayout>
+      <ContentLayout>
+        <ChatDetail />
+      </ContentLayout>
+    </LandingLayout>
   )
 }

@@ -50,9 +50,6 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
           </Button>
 
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">ES</span>
-            </div>
             <h1 className="text-xl font-semibold text-gray-900">EduSphere Quản trị</h1>
           </div>
         </div>
