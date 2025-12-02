@@ -51,6 +51,11 @@ export class SearchService extends ApiService {
       return this.get(`${API_CONFIG.SEARCH.USERS}?query=${encodeURIComponent(query)}&pageNumber=${pageNumber}&pageSize=${pageSize}`, token);
    }
 
+   async searchUserByEmail(email) {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      return this.get(`${API_CONFIG.SEARCH.USER_BY_EMAIL}?email=${encodeURIComponent(email)}`, token);
+   }
+
    async searchPosts(query, pageNumber = 1, pageSize = 10) {
       const token = localStorage.getItem('accessToken');
       return this.get(`${API_CONFIG.SEARCH.POSTS}?query=${encodeURIComponent(query)}&pageNumber=${pageNumber}&pageSize=${pageSize}`, token);

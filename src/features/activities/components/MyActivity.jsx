@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import Sidebar from "@/features/landing/components/Sidebar";
 import { Card, CardContent } from "@/common/components/ui/card";
 import { Badge } from "@/common/components/ui/badge";
@@ -10,13 +11,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/common/components/ui/dialog";
-import { Calendar, Clock, MapPin, Users, ChevronRight, BookOpen, Trophy, Music, Palette, Upload, FileText, Eye, Edit2, X } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, ChevronRight, BookOpen, Trophy, Music, Palette, Upload, FileText, Eye, Edit2, X, ArrowLeft } from "lucide-react";
 import { activityService } from "@/features/activities/services/activity.service";
 import { submissionService } from "@/features/activities/services/submission.service";
 import { executeApiCall } from "@/common/utils/executeApiCall";
 import { LoadingCard } from "@/common/components/ui/loading";
 import { uploadMultipleFiles } from "@/common/utils/upload";
 import { Button } from "@/common/components/ui/button";
+import { ROUTES } from "@/common/constants/routes";
+import { useToast } from "@/common/hooks/useToast";
 
 const categoryIcons = {
   workshop: BookOpen,
@@ -90,6 +93,14 @@ const mapActivityToEvent = (activity) => {
   // Get tags from rules (now it's array of strings, not objects)
   const tags = activity.rules?.slice(0, 3) || [];
 
+  // Get submission deadline - backend returns SubmissionDeadline (PascalCase) but JSON serializer may convert to camelCase
+  const submissionDeadline = activity.submissionDeadline || activity.SubmissionDeadline;
+  const submissionDeadlineDate = submissionDeadline ? new Date(submissionDeadline) : null;
+
+  // Get problem text and file URL - check both camelCase and PascalCase
+  const problemText = activity.problemText || activity.ProblemText || null;
+  const problemFileUrl = activity.problemFileUrl || activity.ProblemFileUrl || null;
+
   return {
     id: activity.id,
     title: activity.title || "",
@@ -106,10 +117,16 @@ const mapActivityToEvent = (activity) => {
     tags: tags,
     registeredDate: registeredDate,
     yourPoints: yourPoints,
+    startDate: startDate,
+    endDate: endDate,
+    submissionDeadline: submissionDeadlineDate,
+    problemText: problemText,
+    problemFileUrl: problemFileUrl,
   };
 };
 
 export default function MyEventsPage() {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState("ongoing");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -251,12 +268,11 @@ export default function MyEventsPage() {
     setSelectedFiles([]);
     setSubmissionTitle("");
     
-    // Check if this is a CreativeContest and ongoing
+    // Check if this is a CreativeContest
     const isCreativeContest = event.category === "CreativeContest";
-    const isOngoing = event.status === "ongoing";
     
-    if (isCreativeContest && isOngoing) {
-      // Fetch user's submission for this activity
+    if (isCreativeContest) {
+      // Fetch user's submission for this activity (always fetch if CreativeContest)
       await fetchSubmission(event.id);
     }
   };
@@ -300,7 +316,7 @@ export default function MyEventsPage() {
 
   const handleSubmitSubmission = async () => {
     if (!submissionTitle.trim()) {
-      setError("Vui lòng nhập tiêu đề bài nộp");
+      toast.showError("Vui lòng nhập tiêu đề bài nộp");
       return;
     }
 
@@ -309,13 +325,13 @@ export default function MyEventsPage() {
     const hasExistingFiles = existingAttachments.length > 0;
     
     if (!hasNewFiles && !hasExistingFiles) {
-      setError("Vui lòng chọn ít nhất một file");
+      toast.showError("Vui lòng chọn ít nhất một file");
       return;
     }
 
     const token = localStorage.getItem("token");
     if (!token) {
-      setError("Vui lòng đăng nhập");
+      toast.showError("Vui lòng đăng nhập");
       return;
     }
 
@@ -361,7 +377,7 @@ export default function MyEventsPage() {
           setShowSubmissionForm(false);
           setSelectedFiles([]);
           setError(null);
-          alert("Cập nhật bài nộp thành công!");
+          toast.showSuccess("Cập nhật bài nộp thành công!");
         }
       } else {
         // Create new submission
@@ -384,12 +400,12 @@ export default function MyEventsPage() {
           setSelectedFiles([]);
           setSubmissionTitle("");
           setError(null);
-          alert("Nộp bài thành công!");
+          toast.showSuccess("Nộp bài thành công!");
         }
       }
     } catch (error) {
       console.error("Error submitting submission:", error);
-      setError(error.message || "Không thể nộp bài. Vui lòng thử lại.");
+      toast.showError(error.message || "Không thể nộp bài. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
@@ -410,6 +426,24 @@ export default function MyEventsPage() {
   const formatTime = (timeString) => {
     if (!timeString) return "";
     return timeString;
+  };
+
+  const formatDateTime = (date) => {
+    if (!date) return "";
+    try {
+      const dateObj = date instanceof Date ? date : new Date(date);
+      if (isNaN(dateObj.getTime())) return "";
+      return dateObj.toLocaleString("vi-VN", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "";
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -450,8 +484,20 @@ export default function MyEventsPage() {
 
           <div className="lg:col-span-9">
             <div className="mb-6">
-              <h1 className="text-3xl font-bold gradient-text mb-2">Sự kiện của tôi</h1>
-              <p className="text-gray-600">Theo dõi và quản lý các sự kiện bạn đã tham gia</p>
+                <div className="mb-4">
+                <Link to={ROUTES.ACTIVITY.LIST}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 px-4 border-orange-200 text-orange-600 hover:bg-orange-50 rounded-xl flex items-center gap-2 whitespace-nowrap mb-4"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Quay lại
+                  </Button>
+                </Link>
+                <h1 className="text-3xl font-bold gradient-text mb-2">Sự kiện của tôi</h1>
+                <p className="text-gray-600">Theo dõi và quản lý các sự kiện bạn đã tham gia</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -709,14 +755,47 @@ export default function MyEventsPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-orange-500" />
-                    <div>
-                      <p className="text-sm font-medium">Ngày</p>
-                      <p className="text-sm text-gray-600">{formatDate(selectedEvent.date)}</p>
-                    </div>
+                {/* Thông tin thời gian sự kiện */}
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-3">
+                  <h4 className="text-sm font-semibold text-orange-900 mb-3">Thông tin thời gian sự kiện</h4>
+                  <div className="space-y-2">
+                    {selectedEvent.startDate && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-gray-600">Ngày bắt đầu</p>
+                          <p className="text-sm text-gray-900 font-medium">
+                            {formatDate(selectedEvent.startDate.toISOString().split("T")[0])}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {selectedEvent.submissionDeadline && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-gray-600">Hạn cuối nộp bài</p>
+                          <p className="text-sm text-gray-900 font-medium">
+                            {formatDateTime(selectedEvent.submissionDeadline)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {selectedEvent.endDate && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-gray-600">Ngày kết thúc</p>
+                          <p className="text-sm text-gray-900 font-medium">
+                            {formatDate(selectedEvent.endDate.toISOString().split("T")[0])}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
                     <Clock className="w-5 h-5 text-orange-500" />
                     <div>
@@ -771,27 +850,82 @@ export default function MyEventsPage() {
                 )}
 
                 {/* Submission Section for CreativeContest */}
-                {selectedEvent.category === "CreativeContest" && selectedEvent.status === "ongoing" && (
-                  <div className="border-t pt-4 mt-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">Nộp bài dự thi</h3>
-                      {submission && !showSubmissionForm && (
-                        <Button
-                          onClick={() => {
-                            setShowSubmissionForm(true);
-                            setSubmissionTitle(submission.title || "");
-                            setExistingAttachments(submission.attachments || []);
-                            setSelectedFiles([]);
-                          }}
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-2"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                          Chỉnh sửa
-                        </Button>
+                {(() => {
+                  // Kiểm tra thời gian nộp bài
+                  if (selectedEvent.category !== "CreativeContest") return null;
+                  
+                  const now = new Date();
+                  const startDate = selectedEvent.startDate;
+                  const endDate = selectedEvent.endDate;
+                  const submissionDeadline = selectedEvent.submissionDeadline;
+                  
+                  // Chưa đến thời gian bắt đầu: không hiện phần nộp bài
+                  if (startDate && now < startDate) {
+                    return null;
+                  }
+                  
+                  // Cuộc thi đã kết thúc: không cho nộp bài nữa
+                  const isActivityEnded = endDate ? now > endDate : false;
+                  
+                  // Kiểm tra có trong thời gian nộp bài không (phải trước deadline và trước khi kết thúc cuộc thi)
+                  const isInSubmissionPeriod = !isActivityEnded && (submissionDeadline ? now <= submissionDeadline : true);
+                  
+                  return (
+                    <div className="border-t pt-4 mt-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold">Nộp bài dự thi</h3>
+                        {submission && !showSubmissionForm && isInSubmissionPeriod && (
+                          <Button
+                            onClick={() => {
+                              setShowSubmissionForm(true);
+                              setSubmissionTitle(submission.title || "");
+                              setExistingAttachments(submission.attachments || []);
+                              setSelectedFiles([]);
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                            Chỉnh sửa
+                          </Button>
+                        )}
+                        {!isInSubmissionPeriod && (
+                          <Badge variant="outline" className="text-xs text-gray-500">
+                            {isActivityEnded ? "Cuộc thi đã kết thúc" : submissionDeadline ? "Đã hết hạn nộp bài" : ""}
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Hiển thị đề bài khi trong thời gian nộp bài */}
+                      {isInSubmissionPeriod && (selectedEvent.problemText || selectedEvent.problemFileUrl) && (
+                        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <h4 className="text-sm font-semibold text-blue-900 mb-3">Đề bài</h4>
+                          {selectedEvent.problemText && (
+                            <div className="mb-3">
+                              <p className="text-xs font-medium text-gray-600 mb-1">Nội dung đề bài:</p>
+                              <div className="text-sm text-gray-800 whitespace-pre-wrap bg-white p-3 rounded border border-blue-100">
+                                {selectedEvent.problemText}
+                              </div>
+                            </div>
+                          )}
+                          {selectedEvent.problemFileUrl && (
+                            <div>
+                              <p className="text-xs font-medium text-gray-600 mb-2">File đề bài:</p>
+                              <a
+                                href={selectedEvent.problemFileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-blue-300 rounded-md text-sm text-blue-600 hover:bg-blue-50 transition-colors"
+                              >
+                                <FileText className="w-4 h-4" />
+                                Tải file đề bài
+                                <Eye className="w-4 h-4" />
+                              </a>
+                            </div>
+                          )}
+                        </div>
                       )}
-                    </div>
 
                     {submissionLoading ? (
                       <div className="text-center py-4">
@@ -828,7 +962,7 @@ export default function MyEventsPage() {
                           </div>
                         )}
                       </div>
-                    ) : (
+                    ) : isInSubmissionPeriod ? (
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium mb-2">
@@ -937,12 +1071,6 @@ export default function MyEventsPage() {
                           )}
                         </div>
 
-                        {error && (
-                          <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
-                            {error}
-                          </div>
-                        )}
-
                         <div className="flex gap-2">
                           <Button
                             onClick={handleSubmitSubmission}
@@ -982,9 +1110,18 @@ export default function MyEventsPage() {
                           )}
                         </div>
                       </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-sm text-gray-500">
+                          {isActivityEnded 
+                            ? "Cuộc thi đã kết thúc. Bạn không thể nộp bài nữa."
+                            : "Đã hết thời hạn nộp bài. Bạn không thể chỉnh sửa bài nộp nữa."}
+                        </p>
+                      </div>
                     )}
                   </div>
-                )}
+                  );
+                })()}
               </div>
             </>
           )}

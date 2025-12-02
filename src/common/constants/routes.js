@@ -22,8 +22,8 @@ export const ROUTES = {
     CREATE_ACTIVITY: "/admin/activities/create",
     EDIT_ACTIVITY: "/admin/activities/:id/edit",
     AI_SCHEDULE: "/admin/activities/:id/ai-schedule",
-    CLASSES: "admin/classes",
-    CLASS_DETAIL: "/admin/classes/:id",
+    CLASSES: 'admin/classes',
+    CLASS_DETAIL: '/admin/classes/:id'
   },
   USER_PROFILE: {
     PROFILE: "/profile",
@@ -59,17 +59,30 @@ export const ROUTES = {
   },
   SEARCH: {
     STUDENT: "/Search/students",
-    TEACHER: "/Search/teachers",
+    TEACHER: "/Search/teachers"
   },
   CHAT: {
     CHAT_PAGE: "/chat/:roomId",
     INBOX: "/chat",
   },
   ACTIVITY: {
+    LIST: "/activities",
     VIEW_ACTIVITY: "/activities/:id",
+    REGISTER_ACTIVITY: "/activities/:id/register",
     MY_ACTIVITY: "/activities/my-activity",
   },
   NOTIFICATION: {
     LIST_NOTIFICATION: "/notifications",
   },
+  JURY:{
+    ASSIGN_JURY:"/jury/assign-jury/:id",
+    JURY_DASHBOARD:"/jury/dashboard",
+    JURY_SUBMISSION:"/jury/submission/:id",
+    JURY_GRADE :"/jury/grade/:id"
+  },
+  SUBMISSION:{
+    MY_SUBMISSION : "/submission/my-submission",
+    MY_SUBMISSION_DETAIL : "/submission/my-submission/detail/:id",
+  }
 };
+
