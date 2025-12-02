@@ -315,7 +315,7 @@ export const API_CONFIG = {
     GET_SUBMISSION_ACTIVITY:"/submission/activity",
     GET_MY_SUBMISSION:"/submission/activity/user",
     GET_SUBMISSION_DETAIL:"/submission",
-  },
+  }
 };
 // HTTP Headers
 export const getAuthHeaders = (token) => ({

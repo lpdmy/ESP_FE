@@ -74,24 +74,19 @@ const PRIVACY_OPTIONS = [
     description: "Mọi người có thể xem",
   },
   {
-    value: 2,
-    label: "Bạn bè",
-    icon: <Users className="h-4 w-4" />,
-    description: "Chỉ bạn bè có thể xem",
-  },
-  {
     value: 1,
-    label: "Chỉ mình tôi",
+    label: "Nội bộ",
     icon: <Lock className="h-4 w-4" />,
-    description: "Chỉ bạn có thể xem",
+    description: "Chỉ bạn và mọi người trong CLB có thể xem",
   },
 ];
 
-const UpdatePostModal = ({ isOpen, onClose, post, onUpdate }) => {
+const UpdatePostModal = ({ isOpen, onClose, post,payload }) => {
   const user = useSelector((state) => state.user.user);
   const { updatePost, saveLoading } = usePostApi();
   const { showSuccess, showError } = useToast();
-
+  const clubId = payload?.clubId;
+  
   const [formData, setFormData] = useState({
     title: "",
     body: "",
@@ -267,8 +262,6 @@ const simulateIndividualUpload = async (file) => {
 
   try {
     const uploadedAttachments = [];
-
-    // upload hoặc giữ link cũ
     for (const f of attachments.selectedMedia) {
       if (f.file) {
         const url = await uploadImage(f.file);
@@ -281,28 +274,22 @@ const simulateIndividualUpload = async (file) => {
     if (attachments.selectedGif) {
       uploadedAttachments.push({ url: attachments.selectedGif, fileType: "image" });
     }
-
     const payload = {
       id: post.id, 
       title: formData.title,
       body: formData.body,
-      classGroupId: formData.classGroupId ?? null,
-      clubId: formData.clubId ?? null,
       privacyLevel: Number(formData.privacyLevel),
       status: formData.status ?? 0,
       callToAction: formData.callToAction || "",
       hashtags: formData.hashtags || [],
-      mentionUsernames: formData.mentionUsernames || [],
       attachmentUrls: uploadedAttachments,
       hashtagInput: "",
     };
-
     console.log("📤 Update payload:", payload);
-
     await updatePost(payload);
     showSuccess("Cập nhật bài đăng thành công");
-    onUpdate(payload);
     onClose();
+    window.location.reload();
   } catch (err) {
     const msg =
       err?.response?.data?.message ||
