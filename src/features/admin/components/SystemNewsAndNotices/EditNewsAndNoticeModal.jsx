@@ -11,7 +11,7 @@ import {
   FileText, 
   Trash2, 
   Calendar,
-  X,
+  X,    
   File,
   FileSpreadsheet,
   Image as ImageIcon
@@ -415,7 +415,7 @@ export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice,
             <Button type="button" variant="outline" onClick={onClose}>
               Hủy
             </Button>
-            <Button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white">
+            <Button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white">
               {loading ? "Đang cập nhật..." : "Cập nhật thông báo"}
             </Button>
           </div>
