@@ -12,7 +12,7 @@ import {
   FileText, 
   Trash2, 
   Calendar,
-  X,
+  X,    
   File,
   FileSpreadsheet,
   Image as ImageIcon
