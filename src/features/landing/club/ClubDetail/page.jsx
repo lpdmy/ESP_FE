@@ -126,7 +126,7 @@ export default function ClubDetail() {
         return `${ROUTES.USER_PROFILE.PROFILE}/${user.userId}`;
     }
   };
-   const handleCloseUpdateModal = () => {
+  const handleCloseUpdateModal = () => {
     setIsUpdateModalOpen(false);
     setSelectedPost(null);
   };
