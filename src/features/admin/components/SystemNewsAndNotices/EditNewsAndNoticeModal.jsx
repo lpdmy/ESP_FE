@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/common/components/ui/dialog';
 import { Button } from '@/common/components/ui/button';
 import { Input } from '@/common/components/ui/input';
-import { Textarea } from '@/common/components/ui/textarea';
 import { Label } from '@/common/components/ui/label';
 import { Switch } from '@/common/components/ui/switch';
+import RichTextEditor from '@/common/components/ui/rich-text-editor';
+import CustomDropdown from '@/common/components/ui/custom-dropdown';
 import { 
   AlertTriangle, 
   Upload, 
@@ -18,8 +19,9 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/common/hooks/useToast';
 import { LoadingOverlay } from '@/common/components/ui/loading';
+import { useSystemAnnouncements } from '@/hooks/useSystemAnnouncements';
 
-export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice, onSuccess }) {
+export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice, onSuccess, loading: isLoadingData }) {
   const [formData, setFormData] = useState({
     title: '',
     body: '',
@@ -31,6 +33,7 @@ export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice,
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const toast = useToast();
+  const { updateExistingAnnouncement } = useSystemAnnouncements();
 
   const announcementTypes = [
     { value: 'exam', label: 'Lịch thi' },
@@ -41,13 +44,52 @@ export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice,
 
   useEffect(() => {
     if (newsAndNotice) {
+      // Format expiryDate for datetime-local input
+      let expiryDateValue = '';
+      if (newsAndNotice.expiryDate) {
+        const date = new Date(newsAndNotice.expiryDate);
+        // Convert to local datetime string format (YYYY-MM-DDTHH:mm)
+        expiryDateValue = date.toISOString().slice(0, 16);
+      }
+      
+      // Map existing attachments from API to form format
+      const existingAttachments = (newsAndNotice.attachments || []).map(att => {
+        // Extract filename from URL if available
+        const fileName = att.fileUrl 
+          ? att.fileUrl.split('/').pop().split('?')[0] 
+          : `File_${att.id}`;
+        
+        // Extract file extension
+        const extension = fileName.split('.').pop() || '';
+        
+        return {
+          id: att.id || `existing_${Date.now()}_${Math.random()}`,
+          name: fileName,
+          fileUrl: att.fileUrl,
+          fileType: att.fileType || att.mime || '',
+          size: 0, // Size not available from API
+          isExisting: true, // Mark as existing attachment
+          attachmentId: att.id // Keep original ID for reference
+        };
+      });
+      
       setFormData({
         title: newsAndNotice.title || '',
-        body: newsAndNotice.body || '',
+        body: newsAndNotice.content || newsAndNotice.body || '',
         announcementType: newsAndNotice.announcementType || 'general',
         isUrgent: newsAndNotice.isUrgent || false,
-        expiryDate: newsAndNotice.expiryDate || '',
-        attachments: newsAndNotice.attachments || []
+        expiryDate: expiryDateValue,
+        attachments: existingAttachments
+      });
+    } else {
+      // Reset form when modal closes
+      setFormData({
+        title: '',
+        body: '',
+        announcementType: 'general',
+        isUrgent: false,
+        expiryDate: '',
+        attachments: []
       });
     }
   }, [newsAndNotice]);
@@ -72,9 +114,11 @@ export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice,
 
   // Get file type info (icon, color, label)
   const getFileTypeInfo = (attachment) => {
-    const fileName = attachment.file ? attachment.file.name : attachment.fileUrl || '';
-    const extension = fileName.split('.').pop().toLowerCase();
-    const fileType = attachment.file?.type || attachment.fileType || '';
+    const fileName = attachment.file 
+      ? attachment.file.name 
+      : attachment.name || attachment.fileUrl?.split('/').pop() || '';
+    const extension = fileName.split('.').pop()?.toLowerCase() || '';
+    const fileType = attachment.file?.type || attachment.fileType || attachment.mime || '';
 
     // Image files
     if (fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
@@ -105,14 +149,20 @@ export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice,
 
   // Get preview URL (for new files or existing images)
   const getPreviewUrl = (attachment) => {
+    // For new files (File objects)
     if (attachment.file && attachment.file.type.startsWith('image/')) {
       return URL.createObjectURL(attachment.file);
     }
+    // For existing files from server
     if (attachment.fileUrl) {
-      const ext = attachment.fileUrl.split('.').pop().toLowerCase();
+      const ext = attachment.fileUrl.split('.').pop()?.toLowerCase() || '';
       if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
         return attachment.fileUrl;
       }
+    }
+    // Check by fileType/mime
+    if (attachment.fileType?.startsWith('image/') || attachment.mime?.startsWith('image/')) {
+      return attachment.fileUrl;
     }
     return null;
   };
@@ -187,45 +237,51 @@ export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice,
     e.preventDefault();
     
     if (!formData.title.trim()) {
-      toast({
-        title: "Lỗi",
-        description: "Vui lòng nhập tiêu đề thông báo",
-        variant: "destructive",
-      });
+      toast.showError("Vui lòng nhập tiêu đề thông báo");
       return;
     }
 
     if (!formData.body.trim()) {
-      toast({
-        title: "Lỗi", 
-        description: "Vui lòng nhập nội dung thông báo",
-        variant: "destructive",
-      });
+      toast.showError("Vui lòng nhập nội dung thông báo");
+      return;
+    }
+
+    if (!newsAndNotice || !newsAndNotice.id) {
+      toast.showError("Không tìm thấy thông báo để cập nhật");
       return;
     }
 
     try {
       setLoading(true);
       
-      // TODO: Thay thế bằng API call thực tế
-      // const response = await systemNewsAndNoticeService.updateNewsAndNotice(newsAndNotice.id, formData);
+      // Create FormData for API call
+      const submitData = new FormData();
+      submitData.append('Id', newsAndNotice.id.toString());
+      submitData.append('Title', formData.title);
+      submitData.append('Content', formData.body);
+      submitData.append('AnnouncementType', formData.announcementType);
+      submitData.append('IsUrgent', formData.isUrgent.toString());
+      submitData.append('IsVisible', newsAndNotice.isVisible !== undefined ? newsAndNotice.isVisible.toString() : 'true');
       
-      // Mock success
-      const updatedNewsAndNotice = {
-        ...newsAndNotice,
-        ...formData,
-        priority: formData.isUrgent ? 'urgent' : 'normal'
-      };
+      if (formData.expiryDate) {
+        submitData.append('ExpiryDate', new Date(formData.expiryDate).toISOString());
+      }
 
-      onSuccess(updatedNewsAndNotice);
+      // Add new files (only files that are File objects)
+      formData.attachments.forEach(attachment => {
+        if (attachment.file && attachment.file instanceof File) {
+          submitData.append('Files', attachment.file);
+        }
+      });
+
+      await updateExistingAnnouncement(newsAndNotice.id, submitData);
+      
+      toast.showSuccess("Cập nhật thông báo thành công");
+      onSuccess();
       
     } catch (error) {
       console.error('Error updating news and notice:', error);
-      toast({
-        title: "Lỗi",
-        description: "Không thể cập nhật thông báo",
-        variant: "destructive",
-      });
+      toast.showError(error.message || "Không thể cập nhật thông báo");
     } finally {
       setLoading(false);
     }
@@ -248,7 +304,12 @@ export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice,
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {isLoadingData || !newsAndNotice ? (
+          <div className="flex items-center justify-center py-12">
+            <LoadingOverlay isLoading={true} text="Đang tải thông tin thông báo..." />
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Tiêu đề thông báo *</Label>
@@ -264,30 +325,21 @@ export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice,
           {/* Type */}
           <div className="space-y-2">
             <Label htmlFor="type">Loại thông báo</Label>
-            <select
-              id="type"
+            <CustomDropdown
+              options={announcementTypes}
               value={formData.announcementType}
-              onChange={(e) => handleInputChange('announcementType', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-            >
-              {announcementTypes.map(type => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => handleInputChange('announcementType', value)}
+              placeholder="Chọn loại thông báo"
+            />
           </div>
 
           {/* Content */}
           <div className="space-y-2">
             <Label htmlFor="body">Nội dung thông báo *</Label>
-            <Textarea
-              id="body"
+            <RichTextEditor
               value={formData.body}
-              onChange={(e) => handleInputChange('body', e.target.value)}
+              onChange={(value) => handleInputChange('body', value)}
               placeholder="Nhập nội dung thông báo..."
-              rows={6}
-              className="w-full"
             />
           </div>
 
@@ -308,13 +360,16 @@ export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice,
           {/* Expiry Date */}
           <div className="space-y-2">
             <Label htmlFor="expiryDate">Ngày hết hạn (tùy chọn)</Label>
-            <Input
-              id="expiryDate"
-              type="date"
-              value={formData.expiryDate}
-              onChange={(e) => handleInputChange('expiryDate', e.target.value)}
-              className="w-full"
-            />
+            <div className="relative">
+              <Input
+                id="expiryDate"
+                type="datetime-local"
+                value={formData.expiryDate}
+                onChange={(e) => handleInputChange('expiryDate', e.target.value)}
+                className="w-full"
+              />
+              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
           </div>
 
           {/* File Upload with Drag & Drop */}
@@ -363,12 +418,15 @@ export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice,
                     const fileInfo = getFileTypeInfo(attachment);
                     const previewUrl = getPreviewUrl(attachment);
                     const IconComponent = fileInfo.icon;
-                    const displayName = attachment.file ? attachment.file.name : attachment.name || 'Unknown';
-                    const displaySize = attachment.size;
+                    const displayName = attachment.file 
+                      ? attachment.file.name 
+                      : attachment.name || attachment.fileUrl?.split('/').pop() || 'Unknown';
+                    const displaySize = attachment.size || (attachment.file ? attachment.file.size : 0);
+                    const isExisting = attachment.isExisting;
 
                     return (
                       <div key={attachment.id} className="relative group">
-                        <div className="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                        <div className={`flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border ${isExisting ? 'border-blue-200 bg-blue-50' : 'border-gray-200'} hover:border-gray-300 transition-colors`}>
                           {/* Preview/Icon */}
                           {previewUrl ? (
                             <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
@@ -387,8 +445,15 @@ export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice,
                           
                           {/* File Info */}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
-                            <p className="text-xs text-gray-500">{formatFileSize(displaySize)}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
+                              {isExisting && (
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Đã có</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              {displaySize > 0 ? formatFileSize(displaySize) : 'File từ server'}
+                            </p>
                           </div>
 
                           {/* Remove Button */}
@@ -398,6 +463,7 @@ export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice,
                             size="sm"
                             onClick={() => handleRemoveAttachment(attachment.id)}
                             className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            title={isExisting ? "Xóa file đính kèm" : "Xóa file"}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -411,15 +477,16 @@ export default function EditNewsAndNoticeModal({ isOpen, onClose, newsAndNotice,
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-4 border-t">
+          <div className="flex justify-end space-x-3 pt-4 ">
             <Button type="button" variant="outline" onClick={onClose}>
               Hủy
             </Button>
-            <Button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white">
+            <Button type="submit" className="bg-blue-500 hover:bg-blue-100-600 text-white" disabled={loading}>
               {loading ? "Đang cập nhật..." : "Cập nhật thông báo"}
             </Button>
           </div>
         </form>
+        )}
 
         {loading && <LoadingOverlay isLoading={true} text="Đang cập nhật thông báo..." />}
       </DialogContent>

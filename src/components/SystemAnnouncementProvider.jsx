@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import SystemNewsAndNoticesModal from '@/common/components/SystemNewsAndNoticesModal';
 import { useSystemAnnouncements } from '@/hooks/useSystemAnnouncements';
 import { ROLE } from '@/common/constants/roles';
+import { connectNotificationHub } from '@/features/notifications/services/signalr/notificationHub';
 
 export default function SystemAnnouncementProvider({ children }) {
   const [showModal, setShowModal] = useState(false);
@@ -59,6 +60,54 @@ export default function SystemAnnouncementProvider({ children }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldCheckAnnouncements, publicAnnouncements, hasCheckedOnce]);
+
+  // Listen for urgent announcement notifications via SignalR
+  useEffect(() => {
+    if (!user || !user.id) return;
+
+    // Connect to notification hub
+    let connection = null;
+    const setupSignalR = async () => {
+      try {
+        connection = await connectNotificationHub(user.id, () => {
+          // Handle regular notifications if needed
+        });
+      } catch (error) {
+        console.error('Error connecting to notification hub:', error);
+      }
+    };
+
+    setupSignalR();
+
+    // Listen for urgent announcement custom event
+    const handleUrgentAnnouncement = async (event) => {
+      const announcement = event.detail;
+      console.log('🚨 Urgent announcement received:', announcement);
+      
+      // Skip if user is admin or on admin pages
+      const isAdmin = user.role === ROLE.ADMIN || 
+                     user.role === 0 ||
+                     user.role === 'Admin' ||
+                     user.roles?.includes('Admin') || 
+                     user.roles?.some(role => role.name === 'Admin' || role === 0);
+      
+      if (isAdmin || location.pathname.startsWith('/admin')) {
+        return;
+      }
+
+      // Refresh public announcements to get the latest data
+      await getPublicAnnouncements();
+      
+      // Show modal immediately
+      setShowModal(true);
+    };
+
+    window.addEventListener('urgentAnnouncement', handleUrgentAnnouncement);
+
+    return () => {
+      window.removeEventListener('urgentAnnouncement', handleUrgentAnnouncement);
+    };
+  }, [user, location.pathname, getPublicAnnouncements]);
 
   // Reset modal when user logs out
   useEffect(() => {
