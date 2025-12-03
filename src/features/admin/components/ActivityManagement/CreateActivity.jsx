@@ -44,6 +44,13 @@ export default function CreateActivity() {
   const [gradingEnabled, setGradingEnabled] = useState(false) // Bật/tắt chấm điểm
   const [gradingCriteria, setGradingCriteria] = useState([]) // Danh sách tiêu chí chấm điểm
   const [onlyTeacherCanRegister, setOnlyTeacherCanRegister] = useState(false) // Chỉ giáo viên mới được đăng ký
+  const [dateErrors, setDateErrors] = useState({
+    startDate: "",
+    endDate: "",
+    registerDate: "",
+    endRegisterDate: "",
+    submissionDeadline: "",
+  })
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -332,6 +339,31 @@ export default function CreateActivity() {
     toast.success("Đã xóa mục chương trình")
   }
 
+  const handleDateChange = (field, label) => (e) => {
+    const value = e.target.value
+    let errorMessage = ""
+
+    if (value) {
+      const dateValue = new Date(value)
+      if (!Number.isNaN(dateValue.getTime())) {
+        const now = new Date()
+        if (dateValue <= now) {
+          errorMessage = `${label} phải lớn hơn thời điểm hiện tại`
+        }
+      }
+    }
+
+    setDateErrors((prev) => ({
+      ...prev,
+      [field]: errorMessage,
+    }))
+
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+  }
+
   const handlePublish = async () => {
     // Validate required fields
     if (!formData.title?.trim()) {
@@ -373,6 +405,28 @@ export default function CreateActivity() {
     if (formData.subType === "SportsFestival" && formData.sportsCategories.length === 0) {
       toast.error("Hội thao cần có ít nhất một môn thi đấu")
       return
+    }
+    const now = new Date()
+    const futureDateChecks = [
+      { value: formData.startDate, label: "Ngày bắt đầu" },
+      { value: formData.endDate, label: "Ngày kết thúc" },
+      { value: formData.registerDate, label: "Ngày mở đăng ký" },
+      { value: formData.endRegisterDate, label: "Ngày đóng đăng ký" },
+      {
+        value: formData.submissionDeadline,
+        label: "Hạn cuối nộp bài",
+        enabled: formData.subType === "CreativeContest"
+      }
+    ]
+    for (const check of futureDateChecks) {
+      if (check.enabled === false) continue
+      if (!check.value) continue
+      const dateValue = new Date(check.value)
+      if (Number.isNaN(dateValue.getTime())) continue
+      if (dateValue <= now) {
+        toast.error(`${check.label} phải lớn hơn thời điểm hiện tại`)
+        return
+      }
     }
     
     // Validate grading settings if enabled
@@ -862,7 +916,8 @@ export default function CreateActivity() {
                   label="Ngày bắt đầu"
                   type="date"
                   value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  onChange={handleDateChange("startDate", "Ngày bắt đầu")}
+                  error={dateErrors.startDate}
                   required
                 />
 
@@ -870,7 +925,8 @@ export default function CreateActivity() {
                   label="Ngày kết thúc"
                   type="date"
                   value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  onChange={handleDateChange("endDate", "Ngày kết thúc")}
+                  error={dateErrors.endDate}
                   required
                 />
               </div>
@@ -880,7 +936,8 @@ export default function CreateActivity() {
                   label="Mở đăng ký"
                   type="date"
                   value={formData.registerDate}
-                  onChange={(e) => setFormData({ ...formData, registerDate: e.target.value })}
+                  onChange={handleDateChange("registerDate", "Ngày mở đăng ký")}
+                  error={dateErrors.registerDate}
                   required
                 />
 
@@ -888,7 +945,8 @@ export default function CreateActivity() {
                   label="Đóng đăng ký"
                   type="date"
                   value={formData.endRegisterDate}
-                  onChange={(e) => setFormData({ ...formData, endRegisterDate: e.target.value })}
+                  onChange={handleDateChange("endRegisterDate", "Ngày đóng đăng ký")}
+                  error={dateErrors.endRegisterDate}
                   required
                 />
               </div>
@@ -1211,10 +1269,15 @@ export default function CreateActivity() {
                         <Input
                           type="datetime-local"
                           value={formData.submissionDeadline}
-                          onChange={(e) => setFormData({ ...formData, submissionDeadline: e.target.value })}
+                        onChange={handleDateChange("submissionDeadline", "Hạn cuối nộp bài")}
                           min={formData.startDate || ""}
                           max={formData.endDate || ""}
                         />
+                      {dateErrors.submissionDeadline && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {dateErrors.submissionDeadline}
+                        </p>
+                      )}
                         <p className="text-xs text-gray-500">
                           Hạn cuối nộp bài phải sau thời điểm bắt đầu (StartDate) và trước thời điểm kết thúc (EndDate).
                         </p>
@@ -2315,7 +2378,7 @@ export default function CreateActivity() {
 }
 
 // InputField helper component - tương tự RewardManagement
-function InputField({ label, placeholder, type = "text", value, onChange, className = "", required = false }) {
+function InputField({ label, placeholder, type = "text", value, onChange, className = "", required = false, error }) {
   return (
     <div className="grid gap-2">
       <Label>
@@ -2328,6 +2391,11 @@ function InputField({ label, placeholder, type = "text", value, onChange, classN
         onChange={onChange}
         className={className}
       />
+      {error && (
+        <p className="text-xs text-red-500 mt-1">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

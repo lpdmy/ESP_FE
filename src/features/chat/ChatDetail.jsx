@@ -1,8 +1,16 @@
 import React, { useState, useRef, useEffect } from "react"
-import { ArrowLeft, Send, Smile, Paperclip, MoreVertical, Phone, Video } from "lucide-react"
+import { ArrowLeft, Send, Smile, Paperclip, MoreVertical, Phone, Video, Users, X } from "lucide-react"
 import { Button } from "@/common/components/ui/button"
 import { Input } from "@/common/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/common/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  useDropdownMenu,
+} from "@/common/components/ui/dropdown-menu"
 import { useNavigate, useParams } from "react-router-dom"
 import { useChatApi } from "./hooks/useChatApi"
 import { useChatStore } from "@/store/chat/useChatStore"
@@ -17,6 +25,10 @@ export default function ChatDetail() {
   const [newMessage, setNewMessage] = useState("")
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [chatUser, setChatUser] = useState(null)
+  const [participants, setParticipants] = useState([])
+  const [isGroup, setIsGroup] = useState(false)
+  const [isMembersOpen, setIsMembersOpen] = useState(false)
+  const { isOpen: isMenuOpen, toggleMenu, closeMenu } = useDropdownMenu()
   const messagesEndRef = useRef(null)
   const fileInputRef = useRef(null)
   const navigate = useNavigate()
@@ -48,19 +60,49 @@ export default function ChatDetail() {
           if (response) {
             const room = response;
 
+            // Map id -> name for sender display
+            const nameDict = {};
+            if (room.participantIds && room.participantNames) {
+              room.participantIds.forEach((id, idx) => {
+                nameDict[id] = room.participantNames[idx];
+              });
+            }
+
+            // Lưu danh sách thành viên nhóm
+            const participantsList = (room.participantIds || []).map((id, idx) => ({
+              id,
+              name: room.participantNames?.[idx] || "Unknown",
+              avatar: room.participantAvatars?.[idx] || "/placeholder.svg",
+            }));
+            setParticipants(participantsList);
+
             // ✅ Lưu tin nhắn vào store
             setMessages(roomId, (room.messages || []).reverse());
 
-            // ✅ Xác định người còn lại (friend)
+            // ✅ Thiết lập thông tin phòng
             const currentUserId = getUserId(user)
-            const otherIndex = room.participantIds.findIndex(id => id !== currentUserId)
-            if (otherIndex !== -1) {
+            const group = room.roomType === "class" || room.roomType === "club";
+            setIsGroup(group);
+
+            if (group) {
               setChatUser({
-                id: room.participantIds[otherIndex],
-                name: room.participantNames[otherIndex],
-                avatar: room.participantAvatars[otherIndex] || "/placeholder.svg",
-                isOnline: false, // (sẽ cập nhật realtime nếu có)
+                id: null,
+                name: room.name || (room.roomType === "class" ? "Nhóm lớp" : "Nhóm CLB"),
+                avatar: "/logo.svg",
+                isOnline: false,
+                nameDict,
               })
+            } else {
+              const otherIndex = room.participantIds.findIndex(id => id !== currentUserId)
+              if (otherIndex !== -1) {
+                setChatUser({
+                  id: room.participantIds[otherIndex],
+                  name: room.participantNames[otherIndex],
+                  avatar: room.participantAvatars[otherIndex] || "/placeholder.svg",
+                  isOnline: false,
+                  nameDict,
+                })
+              }
             }
           } else {
             showError('Không thể tải tin nhắn')
@@ -223,12 +265,13 @@ export default function ChatDetail() {
   }
 
   return (
-    <LoadingCard isLoading={messagesLoading}>
+    <>
+      <LoadingCard isLoading={messagesLoading}>
 
-      <div className="min-h-[100%] bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
+        <div className="min-h-[100%] bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
         <div className="max-w-7xl mx-auto flex flex-col h-[calc(100vh-9rem)]">
           {/* Header */}
-          <div className="bg-white/80 backdrop-blur-md border-b border-orange-100 p-4 flex items-center justify-between sticky top-0 z-10">
+          <div className="bg-white/80 backdrop-blur-md border-b border-orange-100 p-4 flex items-center justify-between sticky top-0 z-10 relative">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="sm" className="hover:bg-orange-100" onClick={() => navigate(ROUTES.CHAT.INBOX)}>
                 <ArrowLeft className="w-5 h-5" />
@@ -243,9 +286,40 @@ export default function ChatDetail() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="hover:bg-orange-100">
-                <MoreVertical className="w-5 h-5" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  asChild
+                  onClick={toggleMenu}
+                  data-dropdown-trigger
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hover:bg-orange-100"
+                  >
+                    <MoreVertical className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-48"
+                  isOpen={isMenuOpen}
+                  onClose={closeMenu}
+                >
+                  {isGroup && (
+                    <DropdownMenuItem
+                      className="flex items-center cursor-pointer"
+                      onClick={() => {
+                        setIsMembersOpen(true)
+                        closeMenu()
+                      }}
+                    >
+                      <Users className="w-4 h-4 mr-2" />
+                      Xem thành viên nhóm
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -285,7 +359,11 @@ export default function ChatDetail() {
                             </AvatarFallback>
                           </Avatar>
                         )}
-                        {!isMine && <span className="text-xs text-gray-500">{chatUser?.name || "Unknown User"}</span>}
+                        {!isMine && (
+                          <span className="text-xs text-gray-500">
+                            {chatUser?.nameDict?.[message.senderId] || chatUser?.name || "Unknown User"}
+                          </span>
+                        )}
                       </div>
                     ) : null}
 
@@ -384,7 +462,43 @@ export default function ChatDetail() {
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
         </div>
       </div>
-    </LoadingCard>
+      </LoadingCard>
 
+      <Dialog open={isMembersOpen} onOpenChange={setIsMembersOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Thành viên nhóm</DialogTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full hover:bg-gray-100"
+                onClick={() => setIsMembersOpen(false)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="space-y-3 max-h-80 overflow-y-auto">
+            {participants.map((p) => (
+              <div key={p.id} className="flex items-center gap-3">
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={p.avatar || "/placeholder.svg"} alt={p.name} />
+                  <AvatarFallback className="bg-gradient-orange text-white text-xs">
+                    {(p.name || "U").charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium text-gray-800">{p.name}</p>
+                </div>
+              </div>
+            ))}
+            {participants.length === 0 && (
+              <p className="text-sm text-gray-500">Chưa có thành viên nào trong nhóm.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
