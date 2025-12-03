@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
+import Sidebar from "@/features/landing/components/Sidebar";
 import { Card, CardContent } from "@/common/components/ui/card";
 import { Badge } from "@/common/components/ui/badge";
 import {
@@ -12,11 +12,10 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/common/components/ui/dialog";
-
 import {
   Calendar,
   Clock,
@@ -34,7 +33,6 @@ import {
   X,
   ArrowLeft,
 } from "lucide-react";
-
 import { activityService } from "@/features/activities/services/activity.service";
 import { submissionService } from "@/features/activities/services/submission.service";
 import { executeApiCall } from "@/common/utils/executeApiCall";
@@ -76,84 +74,116 @@ const statusLabels = {
   finished: "Đã kết thúc",
 };
 
-
+// Helper function to map API data to component format
+// Now using MyActivityResponseDto which includes user participation info
+// Status is already determined by backend, so we just use it
 const mapActivityToEvent = (activity) => {
   const startDate = activity.startDate ? new Date(activity.startDate) : null;
   const endDate = activity.endDate ? new Date(activity.endDate) : null;
 
+  // Determine status based on dates (for display purposes)
+  // Backend already filters, but we still need to show correct badge
   const now = new Date();
   let status = "finished";
-  if (endDate && now <= endDate) status = "ongoing";
+  if (endDate) {
+    if (now <= endDate) {
+      status = "ongoing"; // Includes upcoming and currently running
+    } else {
+      status = "finished";
+    }
+  } else {
+    status = "ongoing"; // No end date means ongoing
+  }
 
+  // Map category from subType
   const category = activity.subType || "workshop";
+
+  // Get registered date from MyActivityResponseDto (already mapped by backend)
+  const registeredDate = activity.registeredAt
+    ? new Date(activity.registeredAt).toISOString().split("T")[0]
+    : null;
+
+  // Get points from MyActivityResponseDto (already mapped by backend)
+  const yourPoints = activity.starPoints || 0;
+
+  // Format time from startDate
+  const time = startDate
+    ? `${startDate.toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })} - ${
+        endDate
+          ? endDate.toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : ""
+      }`
+    : "";
+
+  // Get tags from rules (now it's array of strings, not objects)
+  const tags = activity.rules?.slice(0, 3) || [];
+
+  // Get submission deadline - backend returns SubmissionDeadline (PascalCase) but JSON serializer may convert to camelCase
+  const submissionDeadline =
+    activity.submissionDeadline || activity.SubmissionDeadline;
+  const submissionDeadlineDate = submissionDeadline
+    ? new Date(submissionDeadline)
+    : null;
+
+  // Get problem text and file URL - check both camelCase and PascalCase
+  const problemText = activity.problemText || activity.ProblemText || null;
+  const problemFileUrl =
+    activity.problemFileUrl || activity.ProblemFileUrl || null;
 
   return {
     id: activity.id,
     title: activity.title || "",
     description: activity.description || "",
     date: startDate ? startDate.toISOString().split("T")[0] : "",
-    time: startDate
-      ? `${startDate.toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })} - ${
-          endDate
-            ? endDate.toLocaleTimeString("vi-VN", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : ""
-        }`
-      : "",
+    time: time,
     location: activity.location || "",
     organizer: activity.organizer || "",
     participants: activity.numberOfParticipants || 0,
     maxParticipants: activity.maxParticipants || 0,
-    category,
-    status,
+    category: category,
+    status: status,
     image: activity.thumbnailUrl || "",
-    tags: activity.rules?.slice(0, 3) || [],
-    startDate,
-    endDate,
-    registeredDate: activity.registeredAt || null,
-    yourPoints: activity.starPoints || 0,
-    submissionDeadline:
-      activity.submissionDeadline || activity.SubmissionDeadline || null,
-    problemText: activity.problemText || activity.ProblemText || "",
-    problemFileUrl: activity.problemFileUrl || activity.ProblemFileUrl || "",
+    tags: tags,
+    registeredDate: registeredDate,
+    yourPoints: yourPoints,
+    startDate: startDate,
+    endDate: endDate,
+    submissionDeadline: submissionDeadlineDate,
+    problemText: problemText,
+    problemFileUrl: problemFileUrl,
   };
 };
 
 export default function MyEventsPage() {
-
   const toast = useToast();
   const navigate = useNavigate();
-
   const [activeTab, setActiveTab] = useState("ongoing");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-
   const [ongoingActivities, setOngoingActivities] = useState([]);
   const [finishedActivities, setFinishedActivities] = useState([]);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const [pageNumber] = useState(1);
-  const [pageSize] = useState(50);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize] = useState(50); // Get all activities for now
 
   // Submission states
   const [submission, setSubmission] = useState(null);
   const [submissionLoading, setSubmissionLoading] = useState(false);
-
-  const [showSubmissionForm, setShowSubmissionForm] = useState(false);
-  const [submissionTitle, setSubmissionTitle] = useState("");
-  const [submissionId, setSubmissionId] = useState(0);
-
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [existingAttachments, setExistingAttachments] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [submissionTitle, setSubmissionTitle] = useState("");
+  const [submissionId, setSubmissionId] = useState("");
+  const [showSubmissionForm, setShowSubmissionForm] = useState(false);
+  const [existingAttachments, setExistingAttachments] = useState([]); // Keep track of existing attachments when editing
 
+  // Fetch activities based on active tab
   useEffect(() => {
     const fetchActivities = async () => {
       const token = localStorage.getItem("token");
@@ -165,431 +195,1187 @@ export default function MyEventsPage() {
 
       try {
         setLoading(true);
+        setError(null);
 
-        const [ongoRes, finRes] = await Promise.all([
+        // Fetch both ongoing and finished activities independently
+        // Use Promise.allSettled to handle errors gracefully
+        console.log("Fetching activities with params:", {
+          pageNumber,
+          pageSize,
+          status: "ongoing/finished",
+        });
+
+        const [ongoingResult, finishedResult] = await Promise.allSettled([
           executeApiCall(
             activityService.getMyActivities.bind(activityService),
             [pageNumber, pageSize, null, "ongoing", token],
-            {}
-          ),
+            { setLoading: () => {}, setError: () => {} }
+          ).catch((err) => {
+            console.error("Error fetching ongoing activities:", err);
+            return null;
+          }),
           executeApiCall(
             activityService.getMyActivities.bind(activityService),
             [pageNumber, pageSize, null, "finished", token],
-            {}
-          ),
+            { setLoading: () => {}, setError: () => {} }
+          ).catch((err) => {
+            console.error("Error fetching finished activities:", err);
+            return null;
+          }),
         ]);
 
-        setOngoingActivities(
-          Array.isArray(ongoRes?.data?.data)
-            ? ongoingRes.data.data.map(mapActivityToEvent)
-            : []
-        );
-        setFinishedActivities(
-          Array.isArray(finRes?.data?.data)
-            ? finRes.data.data.map(mapActivityToEvent)
-            : []
+        // Process ongoing activities
+        const ongoingResponse =
+          ongoingResult.status === "fulfilled" ? ongoingResult.value : null;
+        console.log(
+          "Ongoing Response Full:",
+          JSON.stringify(ongoingResponse, null, 2)
         );
 
+        if (ongoingResponse?.data) {
+          // Backend returns: { data: { data: [...], totalCount, ... }, message, statusCode }
+          const paginationData = ongoingResponse.data;
+          console.log("Ongoing Pagination Data:", paginationData);
+          console.log("Ongoing Pagination Data.data:", paginationData?.data);
+          console.log("Ongoing Total Count:", paginationData?.totalCount);
+
+          const activitiesData = Array.isArray(paginationData?.data)
+            ? paginationData.data
+            : [];
+          console.log("Ongoing Activities Data (parsed):", activitiesData);
+          console.log("Ongoing Activities Data length:", activitiesData.length);
+
+          if (activitiesData.length > 0) {
+            const mappedActivities = activitiesData.map(mapActivityToEvent);
+            console.log("Mapped Ongoing Activities:", mappedActivities);
+            setOngoingActivities(mappedActivities);
+            console.log(
+              "Set ongoingActivities state with",
+              mappedActivities.length,
+              "items"
+            );
+          } else {
+            console.warn("Ongoing activities array is empty");
+            setOngoingActivities([]);
+          }
+        } else {
+          console.warn(
+            "No ongoing activities data in response",
+            ongoingResponse
+          );
+          setOngoingActivities([]);
+        }
+
+        // Process finished activities
+        const finishedResponse =
+          finishedResult.status === "fulfilled" ? finishedResult.value : null;
+        console.log(
+          "Finished Response Full:",
+          JSON.stringify(finishedResponse, null, 2)
+        );
+
+        if (finishedResponse?.data) {
+          // Backend returns: { data: { data: [...], totalCount, ... }, message, statusCode }
+          const paginationData = finishedResponse.data;
+          console.log("Finished Pagination Data:", paginationData);
+          console.log("Finished Pagination Data.data:", paginationData?.data);
+          console.log("Finished Total Count:", paginationData?.totalCount);
+
+          const activitiesData = Array.isArray(paginationData?.data)
+            ? paginationData.data
+            : [];
+          console.log("Finished Activities Data (parsed):", activitiesData);
+          console.log(
+            "Finished Activities Data length:",
+            activitiesData.length
+          );
+
+          if (activitiesData.length > 0) {
+            const mappedActivities = activitiesData.map(mapActivityToEvent);
+            console.log("Mapped Finished Activities:", mappedActivities);
+            setFinishedActivities(mappedActivities);
+            console.log(
+              "Set finishedActivities state with",
+              mappedActivities.length,
+              "items"
+            );
+          } else {
+            console.warn("Finished activities array is empty");
+            setFinishedActivities([]);
+          }
+        } else {
+          console.warn(
+            "No finished activities data in response",
+            finishedResponse
+          );
+          setFinishedActivities([]);
+        }
+
+        // Show error only if both requests failed
+        if (
+          ongoingResult.status === "rejected" &&
+          finishedResult.status === "rejected"
+        ) {
+          setError("Không thể tải danh sách hoạt động");
+        } else if (
+          ongoingResult.status === "rejected" ||
+          finishedResult.status === "rejected"
+        ) {
+          // Partial error - show warning but don't block UI
+          console.warn("Một số hoạt động không thể tải được");
+        }
+
+        setLoading(false);
       } catch (err) {
-        setError("Không thể tải danh sách sự kiện");
-      } finally {
+        console.error("Error fetching activities:", err);
+        setError(err.message || "Không thể tải danh sách hoạt động");
         setLoading(false);
       }
     };
 
     fetchActivities();
-  }, []);
+  }, [pageNumber, pageSize]);
+
+  const handleEventClick = async (event) => {
+    setSelectedEvent(event);
+    setShowDetailsModal(true);
+    setSubmission(null);
+    setShowSubmissionForm(false);
+    setSelectedFiles([]);
+    setSubmissionTitle("");
+    setSubmissionId(0);
+    // Check if this is a CreativeContest
+    const isCreativeContest = event.category === "CreativeContest";
+
+    if (isCreativeContest) {
+      // Fetch user's submission for this activity (always fetch if CreativeContest)
+      await fetchSubmission(event.id);
+    }
+  };
+
   const fetchSubmission = async (activityId) => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
     try {
       setSubmissionLoading(true);
-
       const response = await executeApiCall(
         submissionService.getMySubmissionByActivityId.bind(submissionService),
         [activityId, token],
-        {}
+        { setLoading: () => {}, setError: () => {} }
       );
 
       if (response?.data) {
         setSubmission(response.data);
-        setSubmissionId(response.data.id);
-        setSubmissionTitle(response.data.title);
+        setSubmissionTitle(response.data.title || "");
         setExistingAttachments(response.data.attachments || []);
+        setSubmissionId(response.data.id || 0);
+      } else {
+        setSubmission(null);
+        setExistingAttachments([]);
       }
-    } catch {
+    } catch (error) {
+      console.error("Error fetching submission:", error);
+      // If 404, user hasn't submitted yet
+      if (error.statusCode !== 404) {
+        setError("Không thể tải thông tin bài nộp");
+      }
       setSubmission(null);
-      setSubmissionId(0);
-      setExistingAttachments([]);
     } finally {
       setSubmissionLoading(false);
     }
   };
 
-  const handleEventClick = async (event) => {
-    setSelectedEvent(event);
-    setShowDetailsModal(true);
-
-    setSubmission(null);
-    setShowSubmissionForm(false);
-    setSelectedFiles([]);
-    setSubmissionTitle("");
-
-    if (event.category === "CreativeContest") {
-      await fetchSubmission(event.id);
-    }
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedFiles(files);
   };
+
   const handleSubmitSubmission = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return toast.showError("Bạn chưa đăng nhập");
-
-    if (!submissionTitle.trim())
-      return toast.showError("Vui lòng nhập tiêu đề bài nộp");
-
-    setSubmitting(true);
-
-    let attachments = [...existingAttachments];
-
-    if (selectedFiles.length > 0) {
-      const uploaded = await uploadMultipleFiles(selectedFiles);
-      attachments.push(...uploaded);
+    if (!submissionTitle.trim()) {
+      toast.showError("Vui lòng nhập tiêu đề bài nộp");
+      return;
     }
 
-    const formData = {
-      title: submissionTitle,
-      attachments: attachments,
-    };
+    // Check if there are any attachments (new files or existing ones)
+    const hasNewFiles = selectedFiles.length > 0;
+    const hasExistingFiles = existingAttachments.length > 0;
+
+    if (!hasNewFiles && !hasExistingFiles) {
+      toast.showError("Vui lòng chọn ít nhất một file");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.showError("Vui lòng đăng nhập");
+      return;
+    }
 
     try {
-      if (submission) {
-        const res = await executeApiCall(
-          submissionService.updateSubmission.bind(submissionService),
-          [submissionId, formData, token],
-          {}
-        );
-        setSubmission(res.data);
-      } else {
-        const res = await executeApiCall(
-          submissionService.createSubmission.bind(submissionService),
-          [
-            {
-              activityId: selectedEvent.id,
-              ...formData,
-            },
-            token,
-          ],
-          {}
-        );
-        setSubmission(res.data);
-        setSubmissionId(res.data.id);
+      setSubmitting(true);
+      setError(null);
+
+      let attachments = [];
+
+      // Add existing attachments that haven't been removed
+      if (existingAttachments.length > 0) {
+        attachments = [...existingAttachments];
       }
 
-      toast.showSuccess("Nộp bài thành công!");
-      setShowSubmissionForm(false);
+      // Upload new files if any and add to attachments
+      if (selectedFiles.length > 0) {
+        const uploadResults = await uploadMultipleFiles(selectedFiles);
+        const newAttachments = uploadResults.map((result) => ({
+          url: result.url,
+          fileName: result.fileName,
+          fileType: result.fileType,
+        }));
+        attachments = [...attachments, ...newAttachments];
+      }
 
-    } catch {
-      toast.showError("Không thể nộp bài");
+      if (submission) {
+        // Update existing submission
+        const updateData = {
+          id: submission.id,
+          title: submissionTitle,
+          attachments: attachments,
+        };
+
+        const response = await executeApiCall(
+          submissionService.updateSubmission.bind(submissionService),
+          [submission.id, updateData, token],
+          { setLoading: () => {}, setError: () => {} }
+        );
+
+        if (response?.data) {
+          setSubmission(response.data);
+          setExistingAttachments(response.data.attachments || []);
+          setShowSubmissionForm(false);
+          setSelectedFiles([]);
+          setError(null);
+          toast.showSuccess("Cập nhật bài nộp thành công!");
+        }
+      } else {
+        // Create new submission
+        const createData = {
+          activityId: selectedEvent.id,
+          title: submissionTitle,
+          attachments: attachments,
+        };
+
+        const response = await executeApiCall(
+          submissionService.createSubmission.bind(submissionService),
+          [createData, token],
+          { setLoading: () => {}, setError: () => {} }
+        );
+
+        if (response?.data) {
+          setSubmission(response.data);
+          setExistingAttachments(response.data.attachments || []);
+          setShowSubmissionForm(false);
+          setSelectedFiles([]);
+          setSubmissionTitle("");
+          setError(null);
+          toast.showSuccess("Nộp bài thành công!");
+        }
+      }
+    } catch (error) {
+      console.error("Error submitting submission:", error);
+      toast.showError(error.message || "Không thể nộp bài. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
   };
-  if (loading) return <LoadingCard />;
-  if (error)
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("vi-VN", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const formatTime = (timeString) => {
+    if (!timeString) return "";
+    return timeString;
+  };
+
+  const formatDateTime = (date) => {
+    if (!date) return "";
+    try {
+      const dateObj = date instanceof Date ? date : new Date(date);
+      if (isNaN(dateObj.getTime())) return "";
+      return dateObj.toLocaleString("vi-VN", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "";
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    return (
+      <Badge className={statusColors[status]}>{statusLabels[status]}</Badge>
+    );
+  };
+
+  if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <Card>
+        <LoadingCard />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <Card className="glass">
           <CardContent className="p-8 text-center">
-            <p className="text-red-500">{error}</p>
+            <p className="text-red-500 font-medium">{error}</p>
           </CardContent>
         </Card>
       </div>
     );
+  }
 
   return (
     <>
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <Link to={ROUTES.ACTIVITY.LIST}>
-          <Button
-            variant="outline"
-            className="mb-4 flex items-center gap-2 border-orange-200 text-orange-600"
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-9">
+          <div className="mb-6">
+            <div className="mb-4">
+              <Link to={ROUTES.ACTIVITY.LIST}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 px-4 border-orange-200 text-orange-600 hover:bg-orange-50 rounded-xl flex items-center gap-2 whitespace-nowrap mb-4"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Quay lại
+                </Button>
+              </Link>
+              <h1 className="text-3xl font-bold gradient-text mb-2">
+                Sự kiện của tôi
+              </h1>
+              <p className="text-gray-600">
+                Theo dõi và quản lý các sự kiện bạn đã tham gia
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card className="glass hover-lift">
+              <CardContent className="p-4 text-center">
+                <Calendar className="w-8 h-8 mx-auto mb-2 text-orange-500" />
+                <h3 className="font-semibold text-gray-900">Tổng cộng</h3>
+                <p className="text-2xl font-bold gradient-text">
+                  {ongoingActivities.length + finishedActivities.length}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="glass hover-lift">
+              <CardContent className="p-4 text-center">
+                <Trophy className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                <h3 className="font-semibold text-gray-900">Đang diễn ra</h3>
+                <p className="text-2xl font-bold gradient-text">
+                  {ongoingActivities.length}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="glass hover-lift">
+              <CardContent className="p-4 text-center">
+                <Users className="w-8 h-8 mx-auto mb-2 text-blue-500" />
+                <h3 className="font-semibold text-gray-900">Đã kết thúc</h3>
+                <p className="text-2xl font-bold gradient-text">
+                  {finishedActivities.length}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Tabs
+            defaultValue="ongoing"
+            className="w-full"
+            onValueChange={setActiveTab}
           >
-            <ArrowLeft className="w-4 h-4" /> Quay lại
-          </Button>
-        </Link>
+            <TabsList className="grid w-full grid-cols-2 mb-6 bg-white/50 backdrop-blur-sm">
+              <TabsTrigger value="ongoing">
+                Đang diễn ra ({ongoingActivities.length})
+              </TabsTrigger>
+              <TabsTrigger value="finished">
+                Đã kết thúc ({finishedActivities.length})
+              </TabsTrigger>
+            </TabsList>
 
-        <h1 className="text-3xl font-bold gradient-text mb-2">
-          Sự kiện của tôi
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Theo dõi và quản lý các sự kiện bạn đã tham gia
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card><CardContent className="text-center p-4">
-            <Calendar className="w-8 h-8 mx-auto text-orange-500" />
-            <p className="font-semibold">Tổng cộng</p>
-            <p className="text-2xl font-bold gradient-text">
-              {ongoingActivities.length + finishedActivities.length}
-            </p>
-          </CardContent></Card>
-
-          <Card><CardContent className="text-center p-4">
-            <Trophy className="w-8 h-8 mx-auto text-green-500" />
-            <p className="font-semibold">Đang diễn ra</p>
-            <p className="text-2xl font-bold gradient-text">
-              {ongoingActivities.length}
-            </p>
-          </CardContent></Card>
-
-          <Card><CardContent className="text-center p-4">
-            <Users className="w-8 h-8 mx-auto text-blue-500" />
-            <p className="font-semibold">Đã kết thúc</p>
-            <p className="text-2xl font-bold gradient-text">
-              {finishedActivities.length}
-            </p>
-          </CardContent></Card>
-        </div>
-        <Tabs defaultValue="ongoing" onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-2 w-full mb-6">
-            <TabsTrigger value="ongoing">
-              Đang diễn ra ({ongoingActivities.length})
-            </TabsTrigger>
-            <TabsTrigger value="finished">
-              Đã kết thúc ({finishedActivities.length})
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="ongoing">
-            {ongoingActivities.length === 0 ? (
-              <Card><CardContent className="p-8 text-center text-gray-500">
-                Không có sự kiện nào đang diễn ra
-              </CardContent></Card>
-            ) : (
-              <div className="space-y-4">
-                {ongoingActivities.map((event) => {
-                  const Icon = categoryIcons[event.category] || BookOpen;
-
-                  return (
-                    <Card
-                      key={event.id}
-                      onClick={() => handleEventClick(event)}
-                      className="cursor-pointer hover:shadow-lg transition"
-                    >
-                      <CardContent className="p-6 flex gap-4">
-
-                        <div className="w-16 h-16 bg-orange-500 rounded-lg flex items-center justify-center">
-                          <Icon className="text-white w-8 h-8" />
-                        </div>
-
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold">{event.title}</h3>
-                          <p className="text-sm text-gray-600 line-clamp-1">
-                            {event.description}
-                          </p>
-
-                          <div className="grid grid-cols-2 gap-2 mt-2 text-sm text-gray-600">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              {event.date}
+            <TabsContent value="ongoing">
+              {ongoingActivities.length === 0 ? (
+                <Card className="glass">
+                  <CardContent className="p-8 text-center">
+                    <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-gray-500 font-medium">
+                      Bạn chưa tham gia sự kiện nào đang diễn ra
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Hãy khám phá và tham gia những sự kiện thú vị!
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {ongoingActivities.map((event) => {
+                    const IconComponent =
+                      categoryIcons[event.category] || BookOpen;
+                    return (
+                      <Card
+                        key={event.id}
+                        className="glass hover-lift card-shine cursor-pointer transition-all"
+                        onClick={() => handleEventClick(event)}
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="w-16 h-16 bg-gradient-orange rounded-lg flex items-center justify-center flex-shrink-0">
+                              <IconComponent className="w-8 h-8 text-white" />
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              {event.time}
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start gap-3 mb-2">
+                                <div className="flex-1">
+                                  <h3 className="text-lg font-bold text-gray-900">
+                                    {event.title}
+                                  </h3>
+                                </div>
+                                <div className="flex gap-2 flex-shrink-0">
+                                  {getStatusBadge(event.status)}
+                                  <Badge
+                                    className={
+                                      categoryColors[event.category] ||
+                                      categoryColors.workshop
+                                    }
+                                  >
+                                    {event.category === "SeminarWorkshop" ||
+                                    event.category === "workshop"
+                                      ? "Workshop"
+                                      : event.category === "SportsFestival" ||
+                                        event.category === "Competition" ||
+                                        event.category === "competition"
+                                      ? "Cuộc thi"
+                                      : event.category === "CreativeContest"
+                                      ? "Cuộc thi sáng tạo"
+                                      : event.category}
+                                  </Badge>
+                                </div>
+                              </div>
+
+                              <p className="text-sm text-gray-600 mb-3 line-clamp-1">
+                                {event.description}
+                              </p>
+
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-600 mb-3">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-4 h-4 text-orange-500" />
+                                  <span>{formatDate(event.date)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-4 h-4 text-orange-500" />
+                                  <span>{formatTime(event.time)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="w-4 h-4 text-orange-500" />
+                                  <span className="truncate">
+                                    {event.location
+                                      ? event.location.split(" - ")[0]
+                                      : ""}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Users className="w-4 h-4 text-orange-500" />
+                                  <span>
+                                    {event.participants}/{event.maxParticipants}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {event.tags && event.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {event.tags.slice(0, 2).map((tag, idx) => (
+                                    <Badge
+                                      key={idx}
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                  {event.tags.length > 2 && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      +{event.tags.length - 2}
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                              {event.yourPoints > 0 && (
+                                <div className="text-right">
+                                  <p className="text-xs text-gray-500">
+                                    Điểm thưởng
+                                  </p>
+                                  <p className="text-lg font-bold text-orange-500">
+                                    +{event.yourPoints}
+                                  </p>
+                                </div>
+                              )}
+                              <ChevronRight className="w-5 h-5 text-gray-400" />
                             </div>
                           </div>
-                        </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
 
-                        <ChevronRight className="w-5 h-5 text-gray-400" />
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </TabsContent>
+            {/* FINISHED EVENTS */}
+            <TabsContent value="finished">
+              {finishedActivities.length === 0 ? (
+                <Card className="glass">
+                  <CardContent className="p-8 text-center">
+                    <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-gray-500 font-medium">
+                      Bạn chưa hoàn thành sự kiện nào
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Những sự kiện bạn tham gia sẽ xuất hiện tại đây khi kết
+                      thúc
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {finishedActivities.map((event) => {
+                    const IconComponent =
+                      categoryIcons[event.category] || BookOpen;
+                    return (
+                      <Card
+                        key={event.id}
+                        className="glass hover-lift card-shine cursor-pointer transition-all opacity-80 hover:opacity-100"
+                        onClick={() => handleEventClick(event)}
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="w-16 h-16 bg-gray-300 rounded-lg flex items-center justify-center">
+                              <IconComponent className="w-8 h-8 text-white" />
+                            </div>
 
-          {/* FINISHED =================================================== */}
-          <TabsContent value="finished">
-            {finishedActivities.length === 0 ? (
-              <Card><CardContent className="p-8 text-center text-gray-500">
-                Chưa có sự kiện nào kết thúc
-              </CardContent></Card>
-            ) : (
-              <div className="space-y-4">
-                {finishedActivities.map((event) => {
-                  const Icon = categoryIcons[event.category] || BookOpen;
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start gap-3 mb-2">
+                                <div className="flex-1">
+                                  <h3 className="text-lg font-bold text-gray-900">
+                                    {event.title}
+                                  </h3>
+                                </div>
+                                <div className="flex gap-2">
+                                  {getStatusBadge(event.status)}
+                                  <Badge
+                                    className={
+                                      categoryColors[event.category] ||
+                                      categoryColors.workshop
+                                    }
+                                  >
+                                    {event.category === "SeminarWorkshop" ||
+                                    event.category === "workshop"
+                                      ? "Workshop"
+                                      : event.category === "SportsFestival" ||
+                                        event.category === "Competition" ||
+                                        event.category === "competition"
+                                      ? "Cuộc thi"
+                                      : event.category === "CreativeContest"
+                                      ? "Cuộc thi sáng tạo"
+                                      : event.category}
+                                  </Badge>
+                                </div>
+                              </div>
 
-                  return (
-                    <Card
-                      key={event.id}
-                      onClick={() => handleEventClick(event)}
-                      className="cursor-pointer hover:shadow-lg transition opacity-80 hover:opacity-100"
-                    >
-                      <CardContent className="p-6 flex gap-4">
+                              <p className="text-sm text-gray-600 mb-3 line-clamp-1">
+                                {event.description}
+                              </p>
 
-                        <div className="w-16 h-16 bg-gray-400 rounded-lg flex items-center justify-center">
-                          <Icon className="text-white w-8 h-8" />
-                        </div>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-600 mb-3">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-4 h-4 text-gray-500" />
+                                  <span>{formatDate(event.date)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-4 h-4 text-gray-500" />
+                                  <span>{event.time}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="w-4 h-4 text-gray-500" />
+                                  <span className="truncate">
+                                    {event.location.split(" - ")[0]}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Users className="w-4 h-4 text-gray-500" />
+                                  <span>
+                                    {event.participants}/{event.maxParticipants}
+                                  </span>
+                                </div>
+                              </div>
 
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold">{event.title}</h3>
-                          <p className="text-sm text-gray-600 line-clamp-1">
-                            {event.description}
-                          </p>
-                        </div>
+                              {event.tags && event.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {event.tags.slice(0, 2).map((tag, idx) => (
+                                    <Badge
+                                      key={idx}
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                  {event.tags.length > 2 && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      +{event.tags.length - 2}
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                            </div>
 
-                        <ChevronRight className="w-5 h-5 text-gray-400" />
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="text-right">
+                                <p className="text-xs text-gray-500">
+                                  Điểm thưởng
+                                </p>
+                                <p className="text-lg font-bold text-orange-500">
+                                  +{event.yourPoints}
+                                </p>
+                              </div>
+                              <ChevronRight className="w-5 h-5 text-gray-400" />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
 
+      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          onClose={() => setShowDetailsModal(false)}
+          showCloseButton={true}
+        >
           {selectedEvent && (
             <>
               <DialogHeader>
-                <DialogTitle>{selectedEvent.title}</DialogTitle>
-                <DialogDescription>
+                <DialogTitle className="text-2xl font-bold">
+                  {selectedEvent.title}
+                </DialogTitle>
+                <DialogDescription className="text-base mt-2">
                   {selectedEvent.description}
                 </DialogDescription>
               </DialogHeader>
-
               <div className="space-y-4 mt-4">
-
-                {/* SUBMISSION SECTION */}
-                {selectedEvent.category === "CreativeContest" && (
-                  <div className="border-t pt-4">
-
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-semibold">Nộp bài dự thi</h3>
-
-                      {submission && !showSubmissionForm && (
-                        <Button
-                          onClick={() => setShowSubmissionForm(true)}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <Edit2 className="w-4 h-4" /> Chỉnh sửa
-                        </Button>
-                      )}
-                    </div>
-
-                    {submissionLoading ? (
-                      <p className="text-gray-500">Đang tải bài nộp…</p>
-                    ) : submission && !showSubmissionForm ? (
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <p className="font-medium">Tiêu đề bài nộp</p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              navigate(`/submission/my-submission/detail/${submissionId}`)
-                            }
-                            className="flex items-center gap-2"
-                          >
-                            <Eye className="w-4 h-4" /> Xem chi tiết
-                          </Button>
+                {/* Thông tin thời gian sự kiện */}
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-3">
+                  <h4 className="text-sm font-semibold text-orange-900 mb-3">
+                    Thông tin thời gian sự kiện
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedEvent.startDate && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-gray-600">
+                            Ngày bắt đầu
+                          </p>
+                          <p className="text-sm text-gray-900 font-medium">
+                            {formatDate(
+                              selectedEvent.startDate
+                                .toISOString()
+                                .split("T")[0]
+                            )}
+                          </p>
                         </div>
-
-                        <p className="text-gray-600">{submission.title}</p>
-
-                        {submission.attachments?.length > 0 && (
-                          <div className="space-y-2 mt-2">
-                            {submission.attachments.map((a, i) => (
-                              <div
-                                key={i}
-                                className="flex items-center gap-2 p-2 bg-gray-50 border rounded"
-                              >
-                                <FileText className="w-4 h-4" />
-                                <a
-                                  href={a.url}
-                                  target="_blank"
-                                  className="text-blue-600 hover:underline flex-1"
-                                >
-                                  {a.fileName}
-                                </a>
-                                <Eye className="w-4 h-4 text-gray-400" />
-                              </div>
-                            ))}
-                          </div>
-                        )}
                       </div>
-                    ) : (
-                      <div className="space-y-4">
-
-                        {/* TITLE INPUT */}
-                        <div>
-                          <label className="font-medium text-sm">
-                            Tiêu đề bài nộp <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            value={submissionTitle}
-                            onChange={(e) => setSubmissionTitle(e.target.value)}
-                            className="w-full mt-1 p-2 border rounded"
-                          />
+                    )}
+                    {selectedEvent.submissionDeadline && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-gray-600">
+                            Hạn cuối nộp bài
+                          </p>
+                          <p className="text-sm text-gray-900 font-medium">
+                            {formatDateTime(selectedEvent.submissionDeadline)}
+                          </p>
                         </div>
-
-                        {/* FILE UPLOAD */}
-                        <div>
-                          <label className="font-medium text-sm">
-                            File bài nộp <span className="text-red-500">*</span>
-                          </label>
-
-                          <div className="border-2 border-dashed rounded p-4 mt-1">
-                            <input
-                              id="upload"
-                              type="file"
-                              multiple
-                              className="hidden"
-                              onChange={(e) =>
-                                setSelectedFiles(Array.from(e.target.files))
-                              }
-                            />
-                            <label htmlFor="upload" className="cursor-pointer">
-                              <Upload className="w-6 h-6 text-gray-400 mx-auto" />
-                              <p className="text-gray-600 text-center">
-                                Chọn file để tải lên
-                              </p>
-                            </label>
-                          </div>
-
-                          {selectedFiles.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              {selectedFiles.map((f, i) => (
-                                <p key={i} className="text-sm text-gray-700">
-                                  {f.name}
-                                </p>
-                              ))}
-                            </div>
-                          )}
+                      </div>
+                    )}
+                    {selectedEvent.endDate && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-gray-600">
+                            Ngày kết thúc
+                          </p>
+                          <p className="text-sm text-gray-900 font-medium">
+                            {formatDate(
+                              selectedEvent.endDate.toISOString().split("T")[0]
+                            )}
+                          </p>
                         </div>
-                        <Button
-                          onClick={handleSubmitSubmission}
-                          className="bg-orange-500 hover:bg-orange-600"
-                          disabled={submitting}
-                        >
-                          {submitting ? "Đang xử lý…" : "Nộp bài"}
-                        </Button>
-
                       </div>
                     )}
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-orange-500" />
+                    <div>
+                      <p className="text-sm font-medium">Thời gian</p>
+                      <p className="text-sm text-gray-600">
+                        {formatTime(selectedEvent.time)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-orange-500" />
+                    <div>
+                      <p className="text-sm font-medium">Địa điểm</p>
+                      <p className="text-sm text-gray-600">
+                        {selectedEvent.location}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-orange-500" />
+                    <div>
+                      <p className="text-sm font-medium">Người tham gia</p>
+                      <p className="text-sm text-gray-600">
+                        {selectedEvent.participants}/
+                        {selectedEvent.maxParticipants}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-2">Tổ chức bởi</p>
+                  <p className="text-sm text-gray-600">
+                    {selectedEvent.organizer}
+                  </p>
+                </div>
+                {selectedEvent.tags && selectedEvent.tags.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Thẻ</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedEvent.tags.map((tag, index) => (
+                        <Badge key={index} variant="outline">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedEvent.yourPoints && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Điểm của bạn</p>
+                    <p className="text-lg font-bold text-orange-500">
+                      {selectedEvent.yourPoints} điểm
+                    </p>
+                  </div>
+                )}
+                {selectedEvent.registeredDate && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Ngày đăng ký</p>
+                    <p className="text-sm text-gray-600">
+                      {formatDate(selectedEvent.registeredDate)}
+                    </p>
+                  </div>
                 )}
 
+                {/* Submission Section for CreativeContest */}
+                {(() => {
+                  // Kiểm tra thời gian nộp bài
+                  if (selectedEvent.category !== "CreativeContest") return null;
+
+                  const now = new Date();
+                  const startDate = selectedEvent.startDate;
+                  const endDate = selectedEvent.endDate;
+                  const submissionDeadline = selectedEvent.submissionDeadline;
+
+                  // Chưa đến thời gian bắt đầu: không hiện phần nộp bài
+                  if (startDate && now < startDate) {
+                    return null;
+                  }
+
+                  // Cuộc thi đã kết thúc: không cho nộp bài nữa
+                  const isActivityEnded = endDate ? now > endDate : false;
+
+                  // Kiểm tra có trong thời gian nộp bài không (phải trước deadline và trước khi kết thúc cuộc thi)
+                  const isInSubmissionPeriod =
+                    !isActivityEnded &&
+                    (submissionDeadline ? now <= submissionDeadline : true);
+
+                  return (
+                    <div className="border-t pt-4 mt-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold">
+                          Nộp bài dự thi
+                        </h3>
+                        {submission &&
+                          !showSubmissionForm &&
+                          isInSubmissionPeriod && (
+                            <Button
+                              onClick={() => {
+                                setShowSubmissionForm(true);
+                                setSubmissionTitle(submission.title || "");
+                                setExistingAttachments(
+                                  submission.attachments || []
+                                );
+                                setSelectedFiles([]);
+                              }}
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                              Chỉnh sửa
+                            </Button>
+                          )}
+                        {!isInSubmissionPeriod && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs text-gray-500"
+                          >
+                            {isActivityEnded
+                              ? "Cuộc thi đã kết thúc"
+                              : submissionDeadline
+                              ? "Đã hết hạn nộp bài"
+                              : ""}
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Hiển thị đề bài khi trong thời gian nộp bài */}
+                      {isInSubmissionPeriod &&
+                        (selectedEvent.problemText ||
+                          selectedEvent.problemFileUrl) && (
+                          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <h4 className="text-sm font-semibold text-blue-900 mb-3">
+                              Đề bài
+                            </h4>
+                            {selectedEvent.problemText && (
+                              <div className="mb-3">
+                                <p className="text-xs font-medium text-gray-600 mb-1">
+                                  Nội dung đề bài:
+                                </p>
+                                <div className="text-sm text-gray-800 whitespace-pre-wrap bg-white p-3 rounded border border-blue-100">
+                                  {selectedEvent.problemText}
+                                </div>
+                              </div>
+                            )}
+                            {selectedEvent.problemFileUrl && (
+                              <div>
+                                <p className="text-xs font-medium text-gray-600 mb-2">
+                                  File đề bài:
+                                </p>
+                                <a
+                                  href={selectedEvent.problemFileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-blue-300 rounded-md text-sm text-blue-600 hover:bg-blue-50 transition-colors"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                  Tải file đề bài
+                                  <Eye className="w-4 h-4" />
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                      {submissionLoading ? (
+                        <div className="text-center py-4">
+                          <p className="text-sm text-gray-500">
+                            Đang tải thông tin bài nộp...
+                          </p>
+                        </div>
+                      ) : submission && !showSubmissionForm ? (
+                        <div className="space-y-3">
+                          <div className="space-y-1">
+                            {/* Row: Title + View Detail */}
+                            <div className="flex justify-between items-center">
+                              <p className="text-sm font-medium">
+                                Tiêu đề bài nộp
+                              </p>
+
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  navigate(
+                                    `/submission/my-submission/detail/${submissionId}`
+                                  )
+                                }
+                                className="flex items-center gap-2"
+                              >
+                                <Eye className="w-4 h-4" />
+                                Xem chi tiết
+                              </Button>
+                            </div>
+
+                            {/* Nội dung tiêu đề */}
+                            <p className="text-sm text-gray-600">
+                              {submission.title}
+                            </p>
+                          </div>
+
+                          {submission.attachments &&
+                            submission.attachments.length > 0 && (
+                              <div>
+                                <p className="text-sm font-medium mb-2">
+                                  File đã nộp
+                                </p>
+                                <div className="space-y-2">
+                                  {submission.attachments.map(
+                                    (attachment, index) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-center gap-2 p-2 bg-gray-50 rounded border"
+                                      >
+                                        <FileText className="w-4 h-4 text-gray-500" />
+                                        <a
+                                          href={attachment.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-sm text-blue-600 hover:underline flex-1"
+                                        >
+                                          {attachment.fileName ||
+                                            `File ${index + 1}`}
+                                        </a>
+                                        <Eye className="w-4 h-4 text-gray-400" />
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                        </div>
+                      ) : isInSubmissionPeriod ? (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">
+                              Tiêu đề bài nộp{" "}
+                              <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={submissionTitle}
+                              onChange={(e) =>
+                                setSubmissionTitle(e.target.value)
+                              }
+                              placeholder="Nhập tiêu đề bài nộp"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium mb-2">
+                              File bài nộp{" "}
+                              <span className="text-red-500">*</span>
+                            </label>
+
+                            {/* Show existing attachments when editing */}
+                            {submission && existingAttachments.length > 0 && (
+                              <div className="mb-3">
+                                <p className="text-xs text-gray-500 mb-2">
+                                  File hiện tại:
+                                </p>
+                                <div className="space-y-1">
+                                  {existingAttachments.map(
+                                    (attachment, index) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-center justify-between p-2 bg-blue-50 rounded text-sm border border-blue-200"
+                                      >
+                                        <span className="flex items-center gap-2">
+                                          <FileText className="w-4 h-4 text-blue-600" />
+                                          <a
+                                            href={attachment.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:underline"
+                                          >
+                                            {attachment.fileName ||
+                                              `File ${index + 1}`}
+                                          </a>
+                                        </span>
+                                        <button
+                                          onClick={() => {
+                                            const newAttachments =
+                                              existingAttachments.filter(
+                                                (_, i) => i !== index
+                                              );
+                                            setExistingAttachments(
+                                              newAttachments
+                                            );
+                                          }}
+                                          className="text-red-500 hover:text-red-700"
+                                          title="Xóa file"
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                              <input
+                                type="file"
+                                multiple
+                                onChange={handleFileSelect}
+                                className="hidden"
+                                id="submission-file-input"
+                              />
+                              <label
+                                htmlFor="submission-file-input"
+                                className="cursor-pointer flex flex-col items-center justify-center"
+                              >
+                                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                                <p className="text-sm text-gray-600">
+                                  {selectedFiles.length > 0
+                                    ? `${selectedFiles.length} file mới đã chọn`
+                                    : submission
+                                    ? "Chọn thêm file mới (tùy chọn)"
+                                    : "Chọn file để nộp bài"}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Có thể chọn nhiều file (PDF, Word, Image,
+                                  Video)
+                                </p>
+                              </label>
+                            </div>
+                            {selectedFiles.length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                <p className="text-xs text-gray-500 mb-1">
+                                  File mới:
+                                </p>
+                                {selectedFiles.map((file, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
+                                  >
+                                    <span className="flex items-center gap-2">
+                                      <FileText className="w-4 h-4" />
+                                      {file.name}
+                                    </span>
+                                    <button
+                                      onClick={() => {
+                                        const newFiles = selectedFiles.filter(
+                                          (_, i) => i !== index
+                                        );
+                                        setSelectedFiles(newFiles);
+                                      }}
+                                      className="text-red-500 hover:text-red-700"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handleSubmitSubmission}
+                              disabled={submitting}
+                              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600"
+                            >
+                              {submitting ? (
+                                <>
+                                  <span className="animate-spin">⏳</span>
+                                  Đang xử lý...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="w-4 h-4" />
+                                  {submission ? "Cập nhật bài nộp" : "Nộp bài"}
+                                </>
+                              )}
+                            </Button>
+                            {showSubmissionForm && (
+                              <Button
+                                onClick={() => {
+                                  setShowSubmissionForm(false);
+                                  setSelectedFiles([]);
+                                  setError(null);
+                                  if (submission) {
+                                    setSubmissionTitle(submission.title || "");
+                                    setExistingAttachments(
+                                      submission.attachments || []
+                                    );
+                                  } else {
+                                    setSubmissionTitle("");
+                                    setExistingAttachments([]);
+                                  }
+                                }}
+                                variant="outline"
+                              >
+                                Hủy
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4">
+                          <p className="text-sm text-gray-500">
+                            {isActivityEnded
+                              ? "Cuộc thi đã kết thúc. Bạn không thể nộp bài nữa."
+                              : "Đã hết thời hạn nộp bài. Bạn không thể chỉnh sửa bài nộp nữa."}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </>
           )}
-
         </DialogContent>
       </Dialog>
-
     </>
   );
 }
-
