@@ -64,10 +64,19 @@ export const deleteAnnouncement = createAsyncThunk(
 
 export const toggleAnnouncementVisibility = createAsyncThunk(
    'systemAnnouncements/toggleVisibility',
-   async (id, { rejectWithValue }) => {
+   async (id, { rejectWithValue, getState }) => {
       try {
          const response = await systemAnnouncementService.toggleVisibility(id);
-         return { id, isVisible: response.data };
+         
+         // Get current state to toggle visibility
+         const state = getState();
+         const announcement = state.systemAnnouncements.announcements.find(a => a.id === id);
+         const currentIsVisible = announcement ? announcement.isVisible : true;
+         
+         // Toggle the visibility state
+         const newIsVisible = !currentIsVisible;
+         
+         return { id, isVisible: newIsVisible };
       } catch (error) {
          return rejectWithValue(error.message);
       }

@@ -50,9 +50,8 @@ export default function Header() {
               <Menu className="h-5 w-5 text-gray-600" />
             </Button>
             <Link to={ROUTES.LANDING.HOME} className="flex items-center space-x-3 group">
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                <span className="text-white font-bold text-xl">E</span>
-              </div>
+              <img src="https://image2url.com/images/1764759513753-4a01ffc6-ebe9-4b17-8840-17c2162dba94.jpg" className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-105">
+              </img>
               <span className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                 EduSphere
               </span>

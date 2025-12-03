@@ -1,8 +1,4 @@
 import {
-  Home,
-  Users,
-  Calendar,
-  Clock,
   Activity,
   Gift,
   GraduationCap,
@@ -10,36 +6,28 @@ import {
   Settings,
   User,
   Bell,
-  Star
+  Star,
+  Trophy,
+  Users,
+  Book
 } from "lucide-react";
 import { ROUTES } from "@/common/constants/routes";
 export const SIDEBAR_NAVIGATION = [
   {
-    label: "Trang chủ",
-    icon: Home,
-    paths: [ROUTES.LANDING.HOME],
-  },
-  {
-    label: "Giám Khảo",
-    icon: Star,
-    paths: [ROUTES.JURY.JURY_DASHBOARD],
-    count: 24,
-  },
-  {
-    label: "Sự kiện",
-    icon: Calendar,
-    paths: ["/events"],
-    count: 5,
-  },
-  {
-    label: "Dòng thời gian",
-    icon: Clock,
-    paths: ["/timeline"],
-  },
-  {
     label: "Hoạt động",
     icon: Activity,
     paths: ["/activities"],
+  },
+  {
+    label: "Câu lạc bộ",
+    icon: Trophy,
+    key: "clubs",
+    paths: ["/club/list-club"],
+  },
+  {
+    label: "Giám khảo",
+    icon: Book,
+    paths: [ROUTES.JURY.JURY_DASHBOARD],
   },
   {
     label: "Đổi thưởng",
@@ -60,7 +48,6 @@ export const SIDEBAR_NAVIGATION = [
     label: "Tin nhắn",
     icon: MessageSquare,
     paths: ['/chat'],
-    // count: 3,
   },
   {
     label: "Thông báo hệ thống",
@@ -69,7 +56,6 @@ export const SIDEBAR_NAVIGATION = [
       ROUTES.SYSTEM_NEWS_AND_NOTICES.LIST,
       ROUTES.SYSTEM_NEWS_AND_NOTICES.DETAIL
     ],
-    count: 2,
   },
   {
     label: "Hồ sơ",

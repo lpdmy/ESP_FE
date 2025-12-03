@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
 import { useCommentApi } from "../hooks/useCommentApi";
-import { MoreHorizontal,Settings,Trash } from "lucide-react";
+import { MoreHorizontal, Settings, Trash } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -11,6 +11,8 @@ import {
 } from "@/common/components/ui/dropdown-menu";
 import { useToast } from "@/common/hooks/useToast";
 import { ConfirmDeleteModal } from "./ConfirmDeleteModal/page";
+import { useModerationApi } from "@/features/admin/hooks/useModerationApi";
+import { ConfirmReportModal } from "./ConfirmReportModal/page";
 export function CommentSection({ postId }) {
   const {
     getCommentByPost,
@@ -19,6 +21,7 @@ export function CommentSection({ postId }) {
     updateComment,
     deleteComment,
   } = useCommentApi();
+  const { createReport } = useModerationApi();
   const toast = useToast();
   const [comments, setComments] = useState([]);
   const [replyMap, setReplyMap] = useState({});
@@ -36,7 +39,13 @@ export function CommentSection({ postId }) {
   const pageSize = 10;
   const [openConfirm, setOpenConfirm] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
-
+  const [openReport, setOpenReport] = useState(false);
+  const [selectedReportComment, setSelectedReportComment] = useState(null);
+  const openReportModal = (comment) => {
+    setSelectedReportComment(comment);
+    console.log(comment)
+    setOpenReport(true);
+  };
   const handleDeleteClick = (id) => {
     setSelectedId(id);
     setOpenConfirm(true);
@@ -59,6 +68,31 @@ export function CommentSection({ postId }) {
     setEditingCommentId(comment.id);
     setEditingContent(comment.content);
   };
+  const confirmReport = async () => {
+    if (!selectedReportComment) return;
+
+    try {
+      const payload = {
+        authorId: selectedReportComment.userId,
+        contentText: selectedReportComment.content,
+        status: "Pending",
+      };
+      console.log("Payload gửi lên:", payload);
+      await createReport(payload);
+      toast.showSuccess("Đã gửi báo cáo");
+    } catch (e) {
+      if(e.statusCode == 400){
+        toast.showError(e.message)
+      }else{
+      toast.showError("Không thể gửi báo cáo");
+
+      }
+    } finally {
+      setOpenReport(false);
+      setSelectedReportComment(null);
+    }
+  };
+
   const formatTime = (time) => {
     const now = new Date();
     const postTime = new Date(time);
@@ -90,42 +124,42 @@ export function CommentSection({ postId }) {
       year: "numeric",
     });
   };
-   const fetchComments = async () => {
-      if (!postId) return;
-      if (loading) return; // tránh gọi chồng
-      if (!hasMore && pageNumber > 1) return; // hết rồi thì thôi
+  const fetchComments = async () => {
+    if (!postId) return;
+    if (loading) return; // tránh gọi chồng
+    if (!hasMore && pageNumber > 1) return; // hết rồi thì thôi
 
-      setLoading(true);
-      try {
-        const res = await getCommentByPost(postId, pageNumber, pageSize);
-        const newComments = res?.data?.data ?? [];
-        const total = res?.data?.totalCount ?? 0; // <-- backend C# có TotalCount
-        setTotalCount(total);
+    setLoading(true);
+    try {
+      const res = await getCommentByPost(postId, pageNumber, pageSize);
+      const newComments = res?.data?.data ?? [];
+      const total = res?.data?.totalCount ?? 0; // <-- backend C# có TotalCount
+      setTotalCount(total);
 
-        // Gộp + chống trùng theo id
-        setComments((prev) => {
-          const merged =
-            pageNumber === 1 ? newComments : [...prev, ...newComments];
-          const seen = new Set();
-          return merged.filter((c) => {
-            if (seen.has(c.id)) return false;
-            seen.add(c.id);
-            return true;
-          });
+      // Gộp + chống trùng theo id
+      setComments((prev) => {
+        const merged =
+          pageNumber === 1 ? newComments : [...prev, ...newComments];
+        const seen = new Set();
+        return merged.filter((c) => {
+          if (seen.has(c.id)) return false;
+          seen.add(c.id);
+          return true;
         });
+      });
 
-        // Tính hasMore CHUẨN bằng totalCount
-        const loadedCount = pageNumber * pageSize;
-        const noMoreByTotal = loadedCount >= total; // đã tải đủ/hết
-        const noMoreByEmpty = newComments.length === 0; // trang này rỗng
-        setHasMore(!(noMoreByTotal || noMoreByEmpty));
-      } catch (e) {
-        console.error(e);
-        toast.loadCommentFail?.();
-      } finally {
-        setLoading(false);
-      }
-    };
+      // Tính hasMore CHUẨN bằng totalCount
+      const loadedCount = pageNumber * pageSize;
+      const noMoreByTotal = loadedCount >= total; // đã tải đủ/hết
+      const noMoreByEmpty = newComments.length === 0; // trang này rỗng
+      setHasMore(!(noMoreByTotal || noMoreByEmpty));
+    } catch (e) {
+      console.error(e);
+      toast.loadCommentFail?.();
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     fetchComments();
   }, [postId, pageNumber]); // KHÔNG thêm hasMore/loading vào deps
@@ -184,37 +218,36 @@ export function CommentSection({ postId }) {
     try {
       await deleteComment(id);
       setComments((prev) => prev.filter((c) => c.id !== id));
-      toast.deleteCommentSuccess()
-      handleLoadReplies()
-      fetchComments()
+      toast.deleteCommentSuccess();
+      fetchComments();
     } catch (error) {
       console.error("Lỗi khi xóa bình luận:", error);
-      toast.deleteCommentFail()
+      toast.deleteCommentFail();
     }
   };
 
- const handleSendComment = async () => {
-  if (!newComment.trim()) return;
+  const handleSendComment = async () => {
+    if (!newComment.trim()) return;
 
-  try {
-    const payload = { postId, parentCommentId: null, content: newComment };
-    const res = await createComment(payload);
+    try {
+      const payload = { postId, parentCommentId: null, content: newComment };
+      const res = await createComment(payload);
 
-    setComments((prev) => [res.data, ...prev]);
-    setNewComment("");
-  } catch (error) {
-    const status = error?.response?.status;
-    const message = error?.response?.data?.message || "Đã xảy ra lỗi";
+      setComments((prev) => [res.data, ...prev]);
+      setNewComment("");
+    } catch (error) {
+      const status = error?.response?.status;
+      const message = error?.response?.data?.message || "Đã xảy ra lỗi";
 
-    if (status === 400) {
-      toast.showError(message);
-      console.log(message);
-    } else {
-      console.error("Lỗi khi gửi bình luận:", error);
-      toast.showError(error.message);
+      if (status === 400) {
+        toast.showError(message);
+        console.log(message);
+      } else {
+        console.error("Lỗi khi gửi bình luận:", error);
+        toast.showError(error.message);
+      }
     }
-  }
-};
+  };
 
   // ✅ Gửi phản hồi (reply)
   const handleSendReply = async (parentId) => {
@@ -322,21 +355,16 @@ export function CommentSection({ postId }) {
                               setOpenMenuId(null);
                             }}
                           >
-                            <Settings className="h-4 w-4 mr-1"/>
-                             Chỉnh sửa
+                            <Settings className="h-4 w-4 mr-1" />
+                            Chỉnh sửa
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDeleteClick(comment.id)}
                             className="text-red-500 focus:text-red-600"
                           >
-                            <Trash className="h-4 w-4 mr-1"/>
-                             Xóa
+                            <Trash className="h-4 w-4 mr-1" />
+                            Xóa
                           </DropdownMenuItem>
-                          <ConfirmDeleteModal
-                            isOpen={openConfirm}
-                            onClose={() => setOpenConfirm(false)}
-                            onConfirm={confirmDelete}
-                          />
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -408,6 +436,12 @@ export function CommentSection({ postId }) {
                     className="text-gray-600 font-medium hover:underline"
                   >
                     Phản hồi
+                  </button>
+                  <button
+                    onClick={() => openReportModal(comment)}
+                    className="text-red-500 font-medium hover:underline"
+                  >
+                    Báo cáo
                   </button>
                 </div>
                 {/* Ô nhập phản hồi */}
@@ -496,19 +530,14 @@ export function CommentSection({ postId }) {
                                       setOpenMenuId(null);
                                     }}
                                   >
-                                     Chỉnh sửa
+                                    Chỉnh sửa
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => handleDeleteClick(reply.id)}
                                     className="text-red-500 focus:text-red-600"
                                   >
-                                     Xóa
+                                    Xóa
                                   </DropdownMenuItem>
-                                  <ConfirmDeleteModal
-                            isOpen={openConfirm}
-                            onClose={() => setOpenConfirm(false)}
-                            onConfirm={confirmDelete}
-                          />
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             )}
@@ -590,6 +619,16 @@ export function CommentSection({ postId }) {
           </div>
         )}
       </div>
+      <ConfirmDeleteModal
+        isOpen={openConfirm}
+        onClose={() => setOpenConfirm(false)}
+        onConfirm={confirmDelete}
+      />
+      <ConfirmReportModal
+        isOpen={openReport}
+        onClose={() => setOpenReport(false)}
+        onConfirm={confirmReport}
+      />
     </div>
   );
 }

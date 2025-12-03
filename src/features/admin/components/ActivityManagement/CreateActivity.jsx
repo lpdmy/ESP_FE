@@ -24,6 +24,7 @@ import { uploadImage } from "@/common/utils/upload"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
 import { GradingCriteriaSection } from "./GradingCriteriaSection"
+import { vnTimeToUTC } from "@/common/utils/dateUtils"
 
 export default function CreateActivity() {
   const navigate = useNavigate()
@@ -43,6 +44,13 @@ export default function CreateActivity() {
   const [gradingEnabled, setGradingEnabled] = useState(false) // Bật/tắt chấm điểm
   const [gradingCriteria, setGradingCriteria] = useState([]) // Danh sách tiêu chí chấm điểm
   const [onlyTeacherCanRegister, setOnlyTeacherCanRegister] = useState(false) // Chỉ giáo viên mới được đăng ký
+  const [dateErrors, setDateErrors] = useState({
+    startDate: "",
+    endDate: "",
+    registerDate: "",
+    endRegisterDate: "",
+    submissionDeadline: "",
+  })
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -57,6 +65,7 @@ export default function CreateActivity() {
     endRegisterDate: "",
     maxParticipants: "",
     sportsCategories: [],
+    sportsConfigurations: [],
     competitionType: "",
     theme: "",
     // CreativeContest fields (gộp DrawingContest và CreativeWriting)
@@ -67,6 +76,10 @@ export default function CreateActivity() {
     genre: "",
     wordLimit: "",
     writingFormat: "",
+    // Problem/Submission fields - chỉ áp dụng cho CreativeContest
+    problemText: "",
+    problemFileUrl: "",
+    submissionDeadline: "",
     rules: [""],
     speakers: [], // [{ name: "", title: "", bio: "", image: "" }]
     programItems: [], // [{ title: "", time: "", description: "" }]
@@ -76,6 +89,13 @@ export default function CreateActivity() {
         // { name: "Giải Nhất", points: "" },
         // { name: "Giải Nhì", points: "" },
       ],
+    },
+    registrationSettings: {
+      groupRegistration: {
+        minMembers: 3,
+        maxMembers: 6,
+        requireLeader: true,
+      },
     },
   })
 
@@ -144,10 +164,25 @@ export default function CreateActivity() {
   }
 
   const handleSportToggle = (sport) => {
-    const newSports = formData.sportsCategories.includes(sport)
-      ? formData.sportsCategories.filter((s) => s !== sport)
-      : [...formData.sportsCategories, sport]
-    setFormData({ ...formData, sportsCategories: newSports })
+    setFormData((prev) => {
+      const isSelected = prev.sportsCategories.includes(sport)
+      const newSports = isSelected
+        ? prev.sportsCategories.filter((s) => s !== sport)
+        : [...prev.sportsCategories, sport]
+
+      let newConfigs = prev.sportsConfigurations
+      if (isSelected) {
+        newConfigs = prev.sportsConfigurations.filter((cfg) => cfg.sportName !== sport)
+      } else if (!prev.sportsConfigurations.some((cfg) => cfg.sportName === sport)) {
+        newConfigs = [...prev.sportsConfigurations, { sportName: sport, maxMembers: "" }]
+      }
+
+      return {
+        ...prev,
+        sportsCategories: newSports,
+        sportsConfigurations: newConfigs,
+      }
+    })
   }
 
   const handleAddCustomSport = () => {
@@ -164,18 +199,39 @@ export default function CreateActivity() {
       toast.error("Môn thể thao này đã có trong danh sách")
       return
     }
-    setFormData({
-      ...formData,
-      sportsCategories: [...formData.sportsCategories, sportName],
-    })
+    setFormData((prev) => ({
+      ...prev,
+      sportsCategories: [...prev.sportsCategories, sportName],
+      sportsConfigurations: prev.sportsConfigurations.some((cfg) => cfg.sportName === sportName)
+        ? prev.sportsConfigurations
+        : [...prev.sportsConfigurations, { sportName, maxMembers: "" }],
+    }))
     setCustomSportInput("")
     toast.success("Đã thêm môn thể thao")
   }
 
   const handleRemoveCustomSport = (sport) => {
-    const newSports = formData.sportsCategories.filter((s) => s !== sport)
-    setFormData({ ...formData, sportsCategories: newSports })
+    setFormData((prev) => ({
+      ...prev,
+      sportsCategories: prev.sportsCategories.filter((s) => s !== sport),
+      sportsConfigurations: prev.sportsConfigurations.filter((cfg) => cfg.sportName !== sport),
+    }))
     toast.success("Đã xóa môn thể thao")
+  }
+
+  const handleSportMaxMembersChange = (sportName, value) => {
+    const sanitizedValue = value === "" ? "" : Math.max(1, parseInt(value, 10) || 0)
+    setFormData((prev) => ({
+      ...prev,
+      sportsConfigurations: prev.sportsConfigurations.map((cfg) =>
+        cfg.sportName === sportName ? { ...cfg, maxMembers: sanitizedValue } : cfg
+      ),
+    }))
+  }
+
+  const getSportMaxMembers = (sportName) => {
+    const cfg = formData.sportsConfigurations.find((item) => item.sportName === sportName)
+    return cfg?.maxMembers ?? ""
   }
 
   const handleAddAward = () => {
@@ -283,6 +339,31 @@ export default function CreateActivity() {
     toast.success("Đã xóa mục chương trình")
   }
 
+  const handleDateChange = (field, label) => (e) => {
+    const value = e.target.value
+    let errorMessage = ""
+
+    if (value) {
+      const dateValue = new Date(value)
+      if (!Number.isNaN(dateValue.getTime())) {
+        const now = new Date()
+        if (dateValue <= now) {
+          errorMessage = `${label} phải lớn hơn thời điểm hiện tại`
+        }
+      }
+    }
+
+    setDateErrors((prev) => ({
+      ...prev,
+      [field]: errorMessage,
+    }))
+
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+  }
+
   const handlePublish = async () => {
     // Validate required fields
     if (!formData.title?.trim()) {
@@ -321,11 +402,54 @@ export default function CreateActivity() {
       toast.error("Vui lòng nhập ít nhất một quy định")
       return
     }
+    if (formData.subType === "SportsFestival" && formData.sportsCategories.length === 0) {
+      toast.error("Hội thao cần có ít nhất một môn thi đấu")
+      return
+    }
+    const now = new Date()
+    const futureDateChecks = [
+      { value: formData.startDate, label: "Ngày bắt đầu" },
+      { value: formData.endDate, label: "Ngày kết thúc" },
+      { value: formData.registerDate, label: "Ngày mở đăng ký" },
+      { value: formData.endRegisterDate, label: "Ngày đóng đăng ký" },
+      {
+        value: formData.submissionDeadline,
+        label: "Hạn cuối nộp bài",
+        enabled: formData.subType === "CreativeContest"
+      }
+    ]
+    for (const check of futureDateChecks) {
+      if (check.enabled === false) continue
+      if (!check.value) continue
+      const dateValue = new Date(check.value)
+      if (Number.isNaN(dateValue.getTime())) continue
+      if (dateValue <= now) {
+        toast.error(`${check.label} phải lớn hơn thời điểm hiện tại`)
+        return
+      }
+    }
     
     // Validate grading settings if enabled
     if (gradingEnabled) {
       if (!gradingCriteria || gradingCriteria.length === 0) {
         toast.error("Vui lòng chọn hoặc thêm ít nhất 1 tiêu chí chấm điểm")
+        return
+      }
+    }
+
+    if (formData.subType === "CreativeContest") {
+      const minMembers = parseInt(formData.registrationSettings?.groupRegistration?.minMembers, 10) || 1
+      const maxMembersRaw = formData.registrationSettings?.groupRegistration?.maxMembers
+      const maxMembers =
+        maxMembersRaw === "" || maxMembersRaw === null || maxMembersRaw === undefined
+          ? null
+          : parseInt(maxMembersRaw, 10)
+      if (minMembers < 1) {
+        toast.error("Số thành viên tối thiểu phải lớn hơn 0")
+        return
+      }
+      if (maxMembers && maxMembers < minMembers) {
+        toast.error("Số thành viên tối đa phải lớn hơn hoặc bằng tối thiểu")
         return
       }
     }
@@ -378,6 +502,37 @@ export default function CreateActivity() {
       };
       const categoryValue = categoryMap[formData.category] || 1; // Default to Activity (1)
       
+      const sportsConfigurationsPayload =
+        formData.subType === "SportsFestival"
+          ? formData.sportsCategories.map((sport) => {
+              const cfg = formData.sportsConfigurations.find((item) => item.sportName === sport)
+              const maxMembersValue = cfg?.maxMembers
+              return {
+                sportName: sport,
+                maxMembers:
+                  maxMembersValue === "" || maxMembersValue === undefined || maxMembersValue === null
+                    ? null
+                    : parseInt(maxMembersValue, 10),
+              }
+            })
+          : []
+
+      const registrationSettingsPayload =
+        formData.subType === "CreativeContest"
+          ? {
+              groupRegistration: {
+                minMembers: parseInt(formData.registrationSettings?.groupRegistration?.minMembers, 10) || 1,
+                maxMembers:
+                  formData.registrationSettings?.groupRegistration?.maxMembers === "" ||
+                  formData.registrationSettings?.groupRegistration?.maxMembers === null ||
+                  formData.registrationSettings?.groupRegistration?.maxMembers === undefined
+                    ? null
+                    : parseInt(formData.registrationSettings?.groupRegistration?.maxMembers, 10),
+                requireLeader: !!formData.registrationSettings?.groupRegistration?.requireLeader,
+              },
+            }
+          : null
+
       const activityData = {
         title: formData.title,
         description: formData.description,
@@ -386,14 +541,16 @@ export default function CreateActivity() {
         location: formData.location,
         organizer: formData.organizer,
         thumbnailUrl: thumbnailUrl,
-        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
-        registerDate: formData.registerDate ? new Date(formData.registerDate).toISOString() : null,
-        endRegisterDate: formData.endRegisterDate ? new Date(formData.endRegisterDate).toISOString() : null,
+        // Convert VN time (UTC+7) to UTC before sending to BE
+        startDate: formData.startDate ? vnTimeToUTC(formData.startDate) : null,
+        endDate: formData.endDate ? vnTimeToUTC(formData.endDate) : null,
+        registerDate: formData.registerDate ? vnTimeToUTC(formData.registerDate) : null,
+        endRegisterDate: formData.endRegisterDate ? vnTimeToUTC(formData.endRegisterDate) : null,
         maxParticipants: parseInt(formData.maxParticipants) || 0,
         rules: formData.rules.filter(r => r.trim()),
         // SportsFestival fields
         sportsCategories: formData.subType === "SportsFestival" ? formData.sportsCategories : [],
+        sportsConfigurations: formData.subType === "SportsFestival" ? sportsConfigurationsPayload : [],
         competitionType: formData.subType === "SportsFestival" ? formData.competitionType : null,
         // CreativeContest fields
         theme: formData.subType === "CreativeContest" ? formData.theme : null,
@@ -402,6 +559,12 @@ export default function CreateActivity() {
         drawingMedium: formData.subType === "CreativeContest" ? formData.drawingMedium : null,
         timeLimit: formData.subType === "CreativeContest" ? formData.timeLimit : null,
         submissionFormat: formData.subType === "CreativeContest" ? formData.submissionFormat : null,
+        // Problem/Submission fields - chỉ áp dụng cho CreativeContest
+        problemText: formData.subType === "CreativeContest" ? formData.problemText : null,
+        problemFileUrl: formData.subType === "CreativeContest" ? formData.problemFileUrl : null,
+        submissionDeadline: formData.subType === "CreativeContest" && formData.submissionDeadline 
+          ? vnTimeToUTC(formData.submissionDeadline) 
+          : null,
         // SeminarWorkshop fields
         speakers: formData.subType === "SeminarWorkshop" ? formData.speakers.map((s, index) => ({
           name: s.name,
@@ -422,11 +585,15 @@ export default function CreateActivity() {
           awards: formData.starPointRewards.awards || []
         },
         // Grading Settings (only criteria, enabled is stored in IsGrade column)
-        gradingSettings: gradingEnabled && gradingCriteria && gradingCriteria.length > 0 ? {
-          criteria: gradingCriteria
-        } : null,
+        gradingSettings:
+          gradingEnabled && gradingCriteria && gradingCriteria.length > 0
+            ? {
+                criteria: gradingCriteria,
+              }
+            : null,
         // Registration Settings
-        onlyTeacherCanRegister: onlyTeacherCanRegister
+        onlyTeacherCanRegister: onlyTeacherCanRegister,
+        registrationSettings: registrationSettingsPayload,
       }
 
       const response = await executeApiCall(
@@ -749,7 +916,8 @@ export default function CreateActivity() {
                   label="Ngày bắt đầu"
                   type="date"
                   value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  onChange={handleDateChange("startDate", "Ngày bắt đầu")}
+                  error={dateErrors.startDate}
                   required
                 />
 
@@ -757,7 +925,8 @@ export default function CreateActivity() {
                   label="Ngày kết thúc"
                   type="date"
                   value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  onChange={handleDateChange("endDate", "Ngày kết thúc")}
+                  error={dateErrors.endDate}
                   required
                 />
               </div>
@@ -767,7 +936,8 @@ export default function CreateActivity() {
                   label="Mở đăng ký"
                   type="date"
                   value={formData.registerDate}
-                  onChange={(e) => setFormData({ ...formData, registerDate: e.target.value })}
+                  onChange={handleDateChange("registerDate", "Ngày mở đăng ký")}
+                  error={dateErrors.registerDate}
                   required
                 />
 
@@ -775,7 +945,8 @@ export default function CreateActivity() {
                   label="Đóng đăng ký"
                   type="date"
                   value={formData.endRegisterDate}
-                  onChange={(e) => setFormData({ ...formData, endRegisterDate: e.target.value })}
+                  onChange={handleDateChange("endRegisterDate", "Ngày đóng đăng ký")}
+                  error={dateErrors.endRegisterDate}
                   required
                 />
               </div>
@@ -826,7 +997,16 @@ export default function CreateActivity() {
                             {sport}
                           </Label>
                           </div>
-                          <div className="w-10"></div>
+                          {formData.sportsCategories.includes(sport) && (
+                            <Input
+                              type="number"
+                              min={1}
+                              className="w-24"
+                              placeholder="Tối đa"
+                              value={getSportMaxMembers(sport)}
+                              onChange={(e) => handleSportMaxMembersChange(sport, e.target.value)}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>
@@ -876,9 +1056,21 @@ export default function CreateActivity() {
                                   {sport}
                                 </Label>
                               </div>
-                              <Button variant="outline" size="icon" onClick={() => handleRemoveCustomSport(sport)}>
-                                <Trash2 className="w-4 h-4 text-red-500" />
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                {formData.sportsCategories.includes(sport) && (
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    className="w-20"
+                                    placeholder="Tối đa"
+                                    value={getSportMaxMembers(sport)}
+                                    onChange={(e) => handleSportMaxMembersChange(sport, e.target.value)}
+                                  />
+                                )}
+                                <Button variant="outline" size="icon" onClick={() => handleRemoveCustomSport(sport)}>
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </Button>
+                              </div>
                             </div>
                           ))}
                       </div>
@@ -954,6 +1146,215 @@ export default function CreateActivity() {
                         value={formData.submissionFormat}
                         onChange={(e) => setFormData({ ...formData, submissionFormat: e.target.value })}
                       />
+                  </div>
+
+                  {/* Problem/Submission Section - Chỉ hiển thị cho CreativeContest */}
+                  <div className="border rounded-lg p-4 space-y-4 bg-blue-50">
+                    <div>
+                      <Label className="text-base font-semibold">Đề bài và hạn nộp bài</Label>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Đề bài sẽ được mở vào thời điểm bắt đầu hoạt động (StartDate). Hạn cuối nộp bài phải sau StartDate và trước EndDate.
+                      </p>
+                    </div>
+                    
+                    <div className="grid gap-4">
+                      <div className="grid gap-2">
+                        <Label>Đề bài (Text) <span className="text-red-500">*</span></Label>
+                        <Textarea
+                          placeholder="Nhập đề bài chi tiết cho cuộc thi..."
+                          value={formData.problemText}
+                          onChange={(e) => setFormData({ ...formData, problemText: e.target.value })}
+                          rows={6}
+                          className="resize-none"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Đề bài sẽ được hiển thị sau khi đến thời điểm bắt đầu hoạt động.
+                        </p>
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <Label>File đề bài (Tùy chọn)</Label>
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              placeholder="URL hoặc path đến file đề bài (PDF, DOCX, etc.)"
+                              value={formData.problemFileUrl}
+                              onChange={(e) => setFormData({ ...formData, problemFileUrl: e.target.value })}
+                              readOnly={!!formData.problemFileUrl}
+                            />
+                            <input
+                              type="file"
+                              id="problem-file-upload"
+                              className="hidden"
+                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0]
+                                if (!file) return
+                                
+                                // Validate file size (10MB max)
+                                const maxSize = 10 * 1024 * 1024
+                                if (file.size > maxSize) {
+                                  toast.error("File không được vượt quá 10MB")
+                                  return
+                                }
+                                
+                                // Validate file type
+                                const allowedTypes = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"]
+                                const fileExtension = "." + file.name.split(".").pop().toLowerCase()
+                                if (!allowedTypes.includes(fileExtension)) {
+                                  toast.error("Chỉ chấp nhận file PDF, DOC, DOCX, JPG, PNG")
+                                  return
+                                }
+                                
+                                setIsUploadingThumbnail(true)
+                                try {
+                                  const { uploadFile } = await import("@/common/utils/upload")
+                                  const fileUrl = await uploadFile(file)
+                                  if (fileUrl) {
+                                    setFormData({ ...formData, problemFileUrl: fileUrl })
+                                    toast.success("Upload file đề bài thành công!")
+                                  } else {
+                                    toast.error("Upload file thất bại. Vui lòng thử lại.")
+                                  }
+                                } catch (err) {
+                                  console.error("Upload error:", err)
+                                  toast.error("Upload file thất bại: " + (err?.message || "Lỗi không xác định"))
+                                } finally {
+                                  setIsUploadingThumbnail(false)
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                if (formData.problemFileUrl) {
+                                  // Clear file URL
+                                  setFormData({ ...formData, problemFileUrl: "" })
+                                  toast.info("Đã xóa file đề bài")
+                                } else {
+                                  // Trigger file input
+                                  document.getElementById("problem-file-upload")?.click()
+                                }
+                              }}
+                              disabled={isUploadingThumbnail}
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              {formData.problemFileUrl ? "Xóa" : isUploadingThumbnail ? "Đang upload..." : "Upload"}
+                            </Button>
+                          </div>
+                          {formData.problemFileUrl && (
+                            <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                              <span className="text-sm text-green-800">Đã upload file đề bài</span>
+                              <a
+                                href={formData.problemFileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-600 hover:underline ml-auto"
+                              >
+                                Xem file
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Có thể upload file PDF, DOCX, JPG, PNG (tối đa 10MB). File sẽ được hiển thị sau khi đến thời điểm bắt đầu hoạt động.
+                        </p>
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <Label>Hạn cuối nộp bài <span className="text-red-500">*</span></Label>
+                        <Input
+                          type="datetime-local"
+                          value={formData.submissionDeadline}
+                        onChange={handleDateChange("submissionDeadline", "Hạn cuối nộp bài")}
+                          min={formData.startDate || ""}
+                          max={formData.endDate || ""}
+                        />
+                      {dateErrors.submissionDeadline && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {dateErrors.submissionDeadline}
+                        </p>
+                      )}
+                        <p className="text-xs text-gray-500">
+                          Hạn cuối nộp bài phải sau thời điểm bắt đầu (StartDate) và trước thời điểm kết thúc (EndDate).
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border rounded-lg p-4 space-y-4">
+                    <div>
+                      <Label className="text-base font-semibold">Cài đặt đăng ký theo nhóm</Label>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Quy định số lượng thành viên và yêu cầu nhóm trưởng cho cuộc thi có nộp bài.
+                      </p>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <InputField
+                        label="Số thành viên tối thiểu"
+                        type="number"
+                        min={1}
+                        value={formData.registrationSettings?.groupRegistration?.minMembers}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            registrationSettings: {
+                              ...prev.registrationSettings,
+                              groupRegistration: {
+                                ...prev.registrationSettings?.groupRegistration,
+                                minMembers: e.target.value,
+                              },
+                            },
+                          }))
+                        }
+                        required
+                      />
+                      <InputField
+                        label="Số thành viên tối đa"
+                        type="number"
+                        min={1}
+                        placeholder="Không giới hạn nếu để trống"
+                        value={formData.registrationSettings?.groupRegistration?.maxMembers ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            registrationSettings: {
+                              ...prev.registrationSettings,
+                              groupRegistration: {
+                                ...prev.registrationSettings?.groupRegistration,
+                                maxMembers: e.target.value,
+                              },
+                            },
+                          }))
+                        }
+                      />
+                      <div className="flex items-center gap-3 border rounded-lg px-4 py-3">
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium">Yêu cầu nhóm trưởng</Label>
+                          <p className="text-xs text-gray-500">
+                            Người tạo nhóm sẽ được chọn làm nhóm trưởng mặc định.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={!!formData.registrationSettings?.groupRegistration?.requireLeader}
+                          onCheckedChange={(checked) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              registrationSettings: {
+                                ...prev.registrationSettings,
+                                groupRegistration: {
+                                  ...prev.registrationSettings?.groupRegistration,
+                                  requireLeader: checked,
+                                },
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1496,6 +1897,57 @@ export default function CreateActivity() {
                 </CardContent>
               </Card>
 
+              {formData.subType === "SportsFestival" && formData.sportsCategories.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Môn thi đấu</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {formData.sportsCategories.map((sport) => (
+                      <div key={sport} className="flex items-center justify-between">
+                        <span className="font-medium">{sport}</span>
+                        <span className="text-sm text-gray-600">
+                          Giới hạn{" "}
+                          {getSportMaxMembers(sport) && getSportMaxMembers(sport) !== ""
+                            ? `${getSportMaxMembers(sport)} người`
+                            : "không giới hạn"}
+                        </span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {formData.subType === "CreativeContest" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Cài đặt đăng ký theo nhóm</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div>
+                      <p className="text-sm text-gray-600">Số thành viên tối thiểu</p>
+                      <p className="font-semibold">
+                        {formData.registrationSettings?.groupRegistration?.minMembers || 1} người
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Số thành viên tối đa</p>
+                      <p className="font-semibold">
+                        {formData.registrationSettings?.groupRegistration?.maxMembers
+                          ? `${formData.registrationSettings.groupRegistration.maxMembers} người`
+                          : "Không giới hạn"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Yêu cầu nhóm trưởng</p>
+                      <p className="font-semibold">
+                        {formData.registrationSettings?.groupRegistration?.requireLeader ? "Có" : "Không"}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Grading Settings */}
               {gradingEnabled && gradingCriteria && gradingCriteria.length > 0 && (
                 <Card>
@@ -1926,7 +2378,7 @@ export default function CreateActivity() {
 }
 
 // InputField helper component - tương tự RewardManagement
-function InputField({ label, placeholder, type = "text", value, onChange, className = "", required = false }) {
+function InputField({ label, placeholder, type = "text", value, onChange, className = "", required = false, error }) {
   return (
     <div className="grid gap-2">
       <Label>
@@ -1939,6 +2391,11 @@ function InputField({ label, placeholder, type = "text", value, onChange, classN
         onChange={onChange}
         className={className}
       />
+      {error && (
+        <p className="text-xs text-red-500 mt-1">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

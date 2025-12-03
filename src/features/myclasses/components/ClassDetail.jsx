@@ -125,10 +125,6 @@ export default function ClassDetail() {
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Quay lại
-          </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Lớp {classData.grade}{classData.name}</h1>
             <p className="text-gray-600">Năm học {academicYear?.name || 'N/A'}</p>

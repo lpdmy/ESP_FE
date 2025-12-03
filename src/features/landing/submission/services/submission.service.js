@@ -8,4 +8,8 @@ export class SubmissionService extends ApiService {
     }
     return this.get(url, token);
   }
+  async getSubmissionDetail(token,id) {
+    let url = `${API_CONFIG.SUBMISSION.GET_SUBMISSION_DETAIL}/${id}`;
+    return this.get(url, token);
+  }
 }

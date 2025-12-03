@@ -14,8 +14,17 @@ export function useSubmissionApi() {
       { setLoading: setSaveLoading, setError }
     );
   };
+  const getSubmissionDetail = async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      submissionService.getSubmissionDetail.bind(submissionService),
+      [token, id],
+      { setLoading: setSaveLoading, setError }
+    );
+  };
 
   return {
-    getSubmissionByUser
+    getSubmissionByUser,
+    getSubmissionDetail
   };
 }

@@ -149,7 +149,7 @@ export default function JurySubmissions() {
 
   const handleNavigateGrade = async () => {
     const allSubmissions = await loadAllJurySubmissionsNotGrade();
-    navigate("/jury/grade", { state: { list: allSubmissions } });
+    navigate(`/jury/grade/${id}`);
     console.log("📌 Đã bấm và load đủ:", allSubmissions.length);
   };
   function formatToVietnamTime(isoString) {

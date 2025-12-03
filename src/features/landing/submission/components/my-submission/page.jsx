@@ -1,12 +1,7 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/common/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/common/components/ui/card";
+import { Card, CardTitle } from "@/common/components/ui/card";
 import { Badge } from "@/common/components/ui/badge";
 import {
   Tabs,
@@ -14,36 +9,21 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/common/components/ui/tabs";
-import { ArrowLeft, Eye, Edit, Trash2 } from "lucide-react";
-import { useSubmissionApi } from "../../hooks/useJuryApi";
+import { Eye } from "lucide-react";
+import { useSubmissionApi } from "../../hooks/useSubmissionApi";
 
 export default function MySubmissions() {
   const { getSubmissionByUser } = useSubmissionApi();
   const [submissions, setSubmissions] = useState([]);
-  const [pageSize, setPageSize] = useState(10);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [pageSize] = useState(10);
+  const [pageNumber] = useState(1);
+  const [searchTerm] = useState("");
 
-  //   const submissions = [
-  //     {
-  //       id: 1,
-  //       title: "Mùa xuân rực rỡ",
-  //       activity: "Cuộc thi vẽ tranh 'Mùa xuân'",
-  //       thumbnail: "/drawing-1.jpg",
-  //       submittedDate: "2024-03-10",
-  //       status: "Đã chấm",
-  //       score: "A",
-  //     },
-  //     {
-  //       id: 2,
-  //       title: "Tuổi trẻ và ước mơ",
-  //       activity: "Cuộc thi sáng tác",
-  //       thumbnail: "/writing-1.jpg",
-  //       submittedDate: "2024-03-08",
-  //       status: "Đang chấm",
-  //       score: null,
-  //     },
-  //   ];
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    handleLoadSubmission();
+  }, []);
 
   const handleLoadSubmission = async () => {
     try {
@@ -53,7 +33,6 @@ export default function MySubmissions() {
         pageNumber
       );
       setSubmissions(response.data.data);
-      console.log(response.data.data);
     } catch (error) {
       console.log(error);
     }
@@ -61,7 +40,7 @@ export default function MySubmissions() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "Đã chấm":
+      case "Đã chấm xong":
         return "bg-green-100 text-green-700";
       case "Đang chấm":
         return "bg-yellow-100 text-yellow-700";
@@ -69,27 +48,71 @@ export default function MySubmissions() {
         return "bg-gray-100 text-gray-700";
     }
   };
-  useState(() => {
-    handleLoadSubmission();
-  }, [pageNumber]);
-  function formatVietnamDate(date) {
+
+  const formatVietnamDate = (date) => {
     return new Date(date).toLocaleDateString("vi-VN", {
       timeZone: "Asia/Ho_Chi_Minh",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
     });
-  }
+  };
+
+  const renderSubmissionGrid = (list) => {
+    if (!list.length)
+      return (
+        <p className="text-gray-500 italic mt-4">
+          Không có bài nộp nào trong mục này.
+        </p>
+      );
+
+    return (
+      <div className="grid md:grid-cols-2 gap-6">
+        {list.map((submission) => (
+          <Card
+            key={submission.id}
+            className="rounded-2xl p-5 bg-white shadow-sm border border-gray-100 hover:shadow-md transition"
+          >
+            <div className="flex justify-between items-start">
+              <Badge
+                className={`${getStatusColor(
+                  submission.status
+                )} px-3 py-1 text-xs shadow`}
+              >
+                {submission.status}
+              </Badge>
+            </div>
+
+            <CardTitle className="text-base font-semibold text-gray-800 leading-tight mt-2">
+              {submission.title}
+            </CardTitle>
+
+            <p className="text-sm text-gray-600">{submission.activityName}</p>
+
+            <p className="text-xs text-gray-500 mt-1">
+              Nộp ngày: {formatVietnamDate(submission.createdAt)}
+            </p>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-4 rounded-xl border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+              onClick={() =>
+                navigate(`/submission/my-submission/detail/${submission.id}`)
+              }
+            >
+              <Eye className="w-4 h-4" />
+              Xem
+            </Button>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <Link to="/activities">
-          <Button variant="ghost" className="mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại
-          </Button>
-        </Link>
-
         <h1 className="text-3xl font-bold gradient-text mb-2">
           Bài nộp của tôi
         </h1>
@@ -104,61 +127,23 @@ export default function MySubmissions() {
             <TabsTrigger value="grading">Đang chấm</TabsTrigger>
           </TabsList>
 
+          {/* TẤT CẢ */}
           <TabsContent value="all" className="mt-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              {submissions.map((submission) => (
-                <Card
-                  key={submission.id}
-                  className="rounded-2xl p-5 bg-white shadow-sm border border-gray-100 hover:shadow-md transition"
-                >
-                  <div className="flex justify-between items-start">
-                    {/* Score Line */}
-                    {submission.score && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-medium text-gray-700">
-                          Điểm:
-                        </span>
-                        <div className="w-9 h-9 flex items-center justify-center bg-yellow-400 text-white text-sm font-bold rounded-full shadow">
-                          {submission.score}
-                        </div>
-                      </div>
-                    )}
+            {renderSubmissionGrid(submissions)}
+          </TabsContent>
 
-                    {/* Status */}
-                    <Badge
-                      className={`${getStatusColor(
-                        submission.status
-                      )} px-3 py-1 text-xs shadow`}
-                    >
-                      {submission.status}
-                    </Badge>
-                  </div>
+          {/* ĐÃ CHẤM */}
+          <TabsContent value="approved" className="mt-6">
+            {renderSubmissionGrid(
+              submissions.filter((s) => s.status === "Đã chấm xong")
+            )}
+          </TabsContent>
 
-                  {/* Title - Activity */}
-                  <CardTitle className="text-base font-semibold text-gray-800 leading-tight">
-                    {submission.title}
-                  </CardTitle>
-
-                  <p className="text-sm text-gray-600">
-                    {submission.activityName}
-                  </p>
-
-                  <p className="text-xs text-gray-500 mt-1">
-                    Nộp ngày: {formatVietnamDate(submission.createdAt)}
-                  </p>
-
-                  {/* View Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full mt-4 rounded-xl border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
-                  >
-                    <Eye className="w-4 h-4" />
-                    Xem
-                  </Button>
-                </Card>
-              ))}
-            </div>
+          {/* ĐANG CHẤM */}
+          <TabsContent value="grading" className="mt-6">
+            {renderSubmissionGrid(
+              submissions.filter((s) => s.status === "Đang chấm")
+            )}
           </TabsContent>
         </Tabs>
       </div>

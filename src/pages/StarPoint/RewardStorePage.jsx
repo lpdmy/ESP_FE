@@ -1,10 +1,13 @@
-import FullLayout from "@/common/components/layout/FullLayout"
+import ContentLayout from "@/common/components/layout/ContentLayout"
+import LandingLayout from "@/common/components/layout/LandingLayout"
 import RewardStore from "@/features/star-point/components/RewardStore"
 
 export default function RewardStorePage() {
   return (
-    <FullLayout>
-      <RewardStore />
-    </FullLayout>
+    <LandingLayout>
+      <ContentLayout>
+        <RewardStore />
+      </ContentLayout>
+    </LandingLayout>
   )
 }

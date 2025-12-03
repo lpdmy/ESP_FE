@@ -32,6 +32,13 @@ export async function connectNotificationHub(userId, onReceiveNotification) {
   // Receive notifications
   connection.on("ReceiveNotification", onReceiveNotification);
 
+  // Receive urgent announcement notifications
+  connection.on("UrgentAnnouncement", (announcement) => {
+    console.log("🚨 Urgent announcement received:", announcement);
+    // Trigger custom event for SystemAnnouncementProvider
+    window.dispatchEvent(new CustomEvent('urgentAnnouncement', { detail: announcement }));
+  });
+
   connection.onreconnecting((err) => console.warn("🔄 SignalR reconnecting", err));
   connection.onreconnected((connId) => console.log("✅ SignalR reconnected", connId));
   connection.onclose((err) => console.warn("❌ SignalR closed", err));

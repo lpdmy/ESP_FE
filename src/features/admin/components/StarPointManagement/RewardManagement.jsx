@@ -10,9 +10,7 @@ import { Button } from "@/common/components/ui/button";
 import { Badge } from "@/common/components/ui/badge";
 import { Input } from "@/common/components/ui/input";
 import { Label } from "@/common/components/ui/label";
-import {
-  SimpleSelect,
-} from "@/common/components/ui/select";
+import { SimpleSelect } from "@/common/components/ui/select";
 import {
   Tabs,
   TabsContent,
@@ -47,7 +45,10 @@ import {
   TrendingUp,
   Package,
 } from "lucide-react";
-import { REWARD_CATEGORY, REWARD_CATEGORY_LABELS } from "@/features/admin/components/StarPointManagement/enums/rewardCategory"; // import file của bạn
+import {
+  REWARD_CATEGORY,
+  REWARD_CATEGORY_LABELS,
+} from "@/features/admin/components/StarPointManagement/enums/rewardCategory"; // import file của bạn
 import { uploadImage } from "@common/utils/upload";
 import { useStarPointApi } from "@/features/admin/hooks/useStarPointApi";
 import { REWARD_ACTION_LABELS } from "./enums/rewardActionType";
@@ -56,7 +57,6 @@ const rewardOptions = Object.values(REWARD_CATEGORY).map((value) => ({
   value: value.toString(),
   label: REWARD_CATEGORY_LABELS[value],
 }));
-
 
 const leaderboard = [
   { rank: 1, name: "Nguyễn Văn An", points: 2850, change: "+50" },
@@ -139,7 +139,7 @@ const redeemedRewards = [
     redemptionDate: "2024-01-08",
     status: "pending",
   },
-]
+];
 // ================= MAIN COMPONENT =================
 export default function RewardsManagement() {
   const [isRuleDialogOpen, setIsRuleDialogOpen] = useState(false);
@@ -149,14 +149,14 @@ export default function RewardsManagement() {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
 
-  const [pickupSearch, setPickupSearch] = useState("")
-  const [selectedRule, setSelectedRule] = useState(null)
-  const [selectedReward, setSelectedReward] = useState(null)
-  const [selectedPickup, setSelectedPickup] = useState(null)
-  const [isPickupDialogOpen, setIsPickupDialogOpen] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 5
-  const [pickupFilter, setPickupFilter] = useState("all")
+  const [pickupSearch, setPickupSearch] = useState("");
+  const [selectedRule, setSelectedRule] = useState(null);
+  const [selectedReward, setSelectedReward] = useState(null);
+  const [selectedPickup, setSelectedPickup] = useState(null);
+  const [isPickupDialogOpen, setIsPickupDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  const [pickupFilter, setPickupFilter] = useState("all");
   const [pickups, setPickups] = useState([]);
   const [loadingPickups, setLoadingPickups] = useState(false);
 
@@ -179,14 +179,15 @@ export default function RewardsManagement() {
 
   const [editingReward, setEditingReward] = useState(null);
   const [rewards, setRewards] = useState([]);
-  const [isCreateRewardDialogOpen, setIsCreateRewardDialogOpen] = useState(false);
+  const [isCreateRewardDialogOpen, setIsCreateRewardDialogOpen] =
+    useState(false);
   const [isEditRewardDialogOpen, setIsEditRewardDialogOpen] = useState(false);
   const [rewardForm, setRewardForm] = useState({
     name: "",
     pointCost: 0,
     stock: 0,
     category: "",
-    imageUrl: ""
+    imageUrl: "",
   });
 
   const [loadingRules, setLoadingRules] = useState(false);
@@ -211,7 +212,6 @@ export default function RewardsManagement() {
 
         const rewardsResp = await getAllRewards();
         setRewards(rewardsResp.data);
-
       } catch (err) {
       } finally {
         setLoadingRules(false);
@@ -234,7 +234,7 @@ export default function RewardsManagement() {
       const resp = await getAllRedemptionsAdmin(queryParams);
       setPickups(resp.items);
       setTotalPickups(resp.totalCount);
-      console.log(pickups)
+      console.log(pickups);
     } catch (err) {
       console.error("Lấy dữ liệu nhận thưởng thất bại:", err);
     } finally {
@@ -250,7 +250,13 @@ export default function RewardsManagement() {
     if (!isEditRewardDialogOpen) {
       setEditingReward(null);
       setSelectedFile(null);
-      setRewardForm({ name: "", pointCost: 0, stock: 0, category: "", imageUrl: "" });
+      setRewardForm({
+        name: "",
+        pointCost: 0,
+        stock: 0,
+        category: "",
+        imageUrl: "",
+      });
       setImageUrl(null);
     }
   }, [isEditRewardDialogOpen]);
@@ -264,9 +270,14 @@ export default function RewardsManagement() {
   const handleSaveRuleEdit = async () => {
     try {
       console.log(newPoints);
-      const updatedRule = await updatePoints(editingRule.actionType, Number(newPoints));
+      const updatedRule = await updatePoints(
+        editingRule.actionType,
+        Number(newPoints)
+      );
       setRules((prev) =>
-        prev.map((r) => (r.actionType === updatedRule.actionType ? updatedRule : r))
+        prev.map((r) =>
+          r.actionType === updatedRule.actionType ? updatedRule : r
+        )
       );
       const response = await getAllRules();
       setRules(response.data);
@@ -284,7 +295,7 @@ export default function RewardsManagement() {
       pointCost: reward.pointCost,
       stock: reward.stock,
       category: reward.category,
-      imageUrl: reward.imageUrl
+      imageUrl: reward.imageUrl,
     });
     setImageUrl(reward.imageUrl);
     setIsEditRewardDialogOpen(true);
@@ -300,10 +311,20 @@ export default function RewardsManagement() {
         finalImageUrl = await uploadImage(selectedFile);
         setUploading(false);
       }
-      await updateReward(editingReward.id, { ...rewardForm, imageUrl: finalImageUrl, pointCost: Number(rewardForm.pointCost) });
+      await updateReward(editingReward.id, {
+        ...rewardForm,
+        imageUrl: finalImageUrl,
+        pointCost: Number(rewardForm.pointCost),
+      });
       const resp = await getAllRewards();
       setRewards(resp.data);
-      setRewardForm({ name: "", pointCost: 0, stock: 0, category: "", imageUrl: "" });
+      setRewardForm({
+        name: "",
+        pointCost: 0,
+        stock: 0,
+        category: "",
+        imageUrl: "",
+      });
       setIsEditRewardDialogOpen(false);
       setEditingReward(null);
       setSelectedFile(null);
@@ -325,21 +346,36 @@ export default function RewardsManagement() {
         finalImageUrl = await uploadImage(selectedFile);
         setUploading(false);
       }
-      await createReward({ ...rewardForm, imageUrl: finalImageUrl, pointCost: Number(rewardForm.pointCost) });
+      await createReward({
+        ...rewardForm,
+        imageUrl: finalImageUrl,
+        pointCost: Number(rewardForm.pointCost),
+      });
       const resp = await getAllRewards();
       setRewards(resp.data);
-      setRewardForm({ name: "", pointCost: 0, stock: 0, category: "", imageUrl: "" });
+      setRewardForm({
+        name: "",
+        pointCost: 0,
+        stock: 0,
+        category: "",
+        imageUrl: "",
+      });
       setIsCreateRewardDialogOpen(false);
       setSelectedFile(null);
       setImageUrl("");
-      setRewardForm({ name: "", pointCost: 0, stock: 0, category: "", imageUrl: "" });
+      setRewardForm({
+        name: "",
+        pointCost: 0,
+        stock: 0,
+        category: "",
+        imageUrl: "",
+      });
     } catch (err) {
       console.error(err);
     } finally {
       setLoadingCreateReward(false);
     }
   };
-
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -384,37 +420,51 @@ export default function RewardsManagement() {
     <div className="space-y-6 px-6 py-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Điểm thưởng & Phần thưởng</h1>
-        <p className="text-gray-600">Quản lý hệ thống điểm thưởng và kho phần thưởng</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Điểm thưởng & Phần thưởng
+        </h1>
+        <p className="text-gray-600">
+          Quản lý hệ thống điểm thưởng và kho phần thưởng
+        </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng điểm đã trao</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Tổng điểm đã trao
+            </CardTitle>
             <Star className="h-4 w-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">125,430</div>
-            <p className="text-xs text-blue-100 mt-1">+12% so với tháng trước</p>
+            <p className="text-xs text-blue-100 mt-1">
+              +12% so với tháng trước
+            </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Phần thưởng đã đổi</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Phần thưởng đã đổi
+            </CardTitle>
             <Gift className="h-4 w-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">1,234</div>
-            <p className="text-xs text-green-100 mt-1">+8% so với tháng trước</p>
+            <p className="text-xs text-green-100 mt-1">
+              +8% so với tháng trước
+            </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Người dùng tích cực</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Người dùng tích cực
+            </CardTitle>
             <Users className="h-4 w-4" />
           </CardHeader>
           <CardContent>
@@ -425,12 +475,16 @@ export default function RewardsManagement() {
 
         <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tỷ lệ đổi thưởng</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Tỷ lệ đổi thưởng
+            </CardTitle>
             <TrendingUp className="h-4 w-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">23.5%</div>
-            <p className="text-xs text-orange-100 mt-1">Người dùng đã đổi thưởng</p>
+            <p className="text-xs text-orange-100 mt-1">
+              Người dùng đã đổi thưởng
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -452,9 +506,12 @@ export default function RewardsManagement() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <Settings className="h-5 w-5 text-blue-600" /> Cấu hình quy tắc điểm thưởng
+                      <Settings className="h-5 w-5 text-blue-600" /> Cấu hình
+                      quy tắc điểm thưởng
                     </CardTitle>
-                    <CardDescription>Thiết lập điểm thưởng cho các hành động của người dùng</CardDescription>
+                    <CardDescription>
+                      Thiết lập điểm thưởng cho các hành động của người dùng
+                    </CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -471,11 +528,17 @@ export default function RewardsManagement() {
                   <TableBody>
                     {rules.map((rule) => (
                       <TableRow key={rule.id}>
-                        <TableCell className="font-medium">{REWARD_ACTION_LABELS[rule.actionType]}</TableCell>
-                        <TableCell>
-                          <Badge className="bg-blue-100 text-blue-800">+{rule.points}</Badge>
+                        <TableCell className="font-medium">
+                          {REWARD_ACTION_LABELS[rule.actionType]}
                         </TableCell>
-                        <TableCell className="text-gray-600">{rule.description}</TableCell>
+                        <TableCell>
+                          <Badge className="bg-blue-100 text-blue-800">
+                            +{rule.points}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-gray-600">
+                          {rule.description}
+                        </TableCell>
                         <TableCell className="text-right flex justify-end gap-2">
                           <Button
                             variant="outline"
@@ -492,12 +555,16 @@ export default function RewardsManagement() {
                 </Table>
 
                 {/* Edit Points Dialog */}
-                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <Dialog
+                  open={isEditDialogOpen}
+                  onOpenChange={setIsEditDialogOpen}
+                >
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Chỉnh sửa điểm thưởng</DialogTitle>
                       <DialogDescription>
-                        Cập nhật điểm thưởng cho hành động: {editingRule?.actionName}
+                        Cập nhật điểm thưởng cho hành động:{" "}
+                        {editingRule?.actionName}
                       </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -509,10 +576,17 @@ export default function RewardsManagement() {
                       />
                     </div>
                     <DialogFooter>
-                      <Button variant="cancelled" onClick={() => setIsEditDialogOpen(false)}>
+                      <Button
+                        variant="cancelled"
+                        onClick={() => setIsEditDialogOpen(false)}
+                      >
                         Hủy
                       </Button>
-                      <Button variant="primary" onClick={handleSaveRuleEdit} disabled={loading}>
+                      <Button
+                        variant="primary"
+                        onClick={handleSaveRuleEdit}
+                        disabled={loading}
+                      >
                         {loading ? "Đang lưu..." : "Lưu thay đổi"}
                       </Button>
                     </DialogFooter>
@@ -529,21 +603,31 @@ export default function RewardsManagement() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    <Gift className="h-5 w-5 text-green-600" /> Quản lý kho phần thưởng
+                    <Gift className="h-5 w-5 text-blue-600" /> Quản lý kho phần
+                    thưởng
                   </CardTitle>
-                  <CardDescription>Quản lý các phần thưởng có thể đổi bằng điểm</CardDescription>
+                  <CardDescription>
+                    Quản lý các phần thưởng có thể đổi bằng điểm
+                  </CardDescription>
                 </div>
                 <Button
-                  variant="green"
                   onClick={() => setIsCreateRewardDialogOpen(true)}
+                  className="h-11 px-6 bg-blue-500 hover:bg-blue-700 text-white rounded-md"
                 >
-                  <Plus className="h-4 w-4 mr-2" /> Thêm phần thưởng
+                  <Plus className="h-4 w-4 mr-2" />
+                  Thêm phần thưởng
                 </Button>
-                <Dialog open={isCreateRewardDialogOpen} onOpenChange={setIsCreateRewardDialogOpen}>
+
+                <Dialog
+                  open={isCreateRewardDialogOpen}
+                  onOpenChange={setIsCreateRewardDialogOpen}
+                >
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Thêm phần thưởng mới</DialogTitle>
-                      <DialogDescription>Tạo phần thưởng mới cho kho</DialogDescription>
+                      <DialogDescription>
+                        Tạo phần thưởng mới cho kho
+                      </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <InputField
@@ -551,7 +635,10 @@ export default function RewardsManagement() {
                         placeholder="Ví dụ: Voucher Shopee 50k"
                         value={rewardForm.name}
                         onChange={(e) =>
-                          setRewardForm((prev) => ({ ...prev, name: e.target.value }))
+                          setRewardForm((prev) => ({
+                            ...prev,
+                            name: e.target.value,
+                          }))
                         }
                       />
                       <InputField
@@ -561,7 +648,10 @@ export default function RewardsManagement() {
                         value={rewardForm.pointCost}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setRewardForm(prev => ({ ...prev, pointCost: val === "" ? "" : Number(val) }));
+                          setRewardForm((prev) => ({
+                            ...prev,
+                            pointCost: val === "" ? "" : Number(val),
+                          }));
                         }}
                       />
                       <InputField
@@ -571,14 +661,20 @@ export default function RewardsManagement() {
                         value={rewardForm.stock}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setRewardForm(prev => ({ ...prev, stock: val === "" ? "" : Number(val) }));
+                          setRewardForm((prev) => ({
+                            ...prev,
+                            stock: val === "" ? "" : Number(val),
+                          }));
                         }}
                       />
                       <Label>Danh mục</Label>
                       <SimpleSelect
                         value={rewardForm.category}
                         onValueChange={(value) =>
-                          setRewardForm((prev) => ({ ...prev, category: value }))
+                          setRewardForm((prev) => ({
+                            ...prev,
+                            category: value,
+                          }))
                         }
                         placeholder="Chọn danh mục"
                         options={rewardOptions}
@@ -593,24 +689,35 @@ export default function RewardsManagement() {
                           onChange={(e) => {
                             if (e.target.files && e.target.files[0]) {
                               setSelectedFile(e.target.files[0]);
-                              setImageUrl(URL.createObjectURL(e.target.files[0]));
+                              setImageUrl(
+                                URL.createObjectURL(e.target.files[0])
+                              );
                             }
                           }}
                         />
                       </label>
                       {imageUrl && (
                         <div className="relative mt-2 w-32 h-32 border-gray-300 border rounded-md overflow-hidden">
-                          <img src={imageUrl} alt="Preview" className="object-cover w-full h-full" />
+                          <img
+                            src={imageUrl}
+                            alt="Preview"
+                            className="object-cover w-full h-full"
+                          />
                           {uploading && (
                             <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                              <span className="text-white text-sm">Đang tải...</span>
+                              <span className="text-white text-sm">
+                                Đang tải...
+                              </span>
                             </div>
                           )}
                         </div>
                       )}
                     </div>
                     <DialogFooter>
-                      <Button variant="cancelled" onClick={() => setIsCreateRewardDialogOpen(false)}>
+                      <Button
+                        variant="cancelled"
+                        onClick={() => setIsCreateRewardDialogOpen(false)}
+                      >
                         Hủy
                       </Button>
                       <Button
@@ -618,25 +725,38 @@ export default function RewardsManagement() {
                         onClick={handleCreateReward}
                         disabled={uploading || loadingCreateReward}
                       >
-                        {loadingCreateReward ? "Đang tạo..." : uploading ? "Đang tải..." : "Lưu phần thưởng"}
+                        {loadingCreateReward
+                          ? "Đang tạo..."
+                          : uploading
+                          ? "Đang tải..."
+                          : "Lưu phần thưởng"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {rewards.map((reward) => (
-                  <Card key={reward.id} className="border hover:shadow-md transition">
+                  <Card
+                    key={reward.id}
+                    className="border hover:shadow-md transition"
+                  >
                     <CardHeader className="pb-3 flex justify-between">
                       <div>
                         <CardTitle className="text-lg">{reward.name}</CardTitle>
-                        <Badge variant="outline" className="mt-1">{REWARD_CATEGORY_LABELS[reward.category]}</Badge>
+                        <Badge variant="outline" className="mt-1">
+                          {REWARD_CATEGORY_LABELS[reward.category]}
+                        </Badge>
                       </div>
                       <div className="flex gap-1">
-                        <Button variant="outline" size="sm" className="text-blue-600 border-blue-200" onClick={() => handleEditRewardClick(reward)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 border-blue-200"
+                          onClick={() => handleEditRewardClick(reward)}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
@@ -652,7 +772,9 @@ export default function RewardsManagement() {
                     <CardContent className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span>Giá điểm:</span>
-                        <Badge className="bg-orange-100 text-orange-800">{reward.pointCost}</Badge>
+                        <Badge className="bg-orange-100 text-orange-800">
+                          {reward.pointCost}
+                        </Badge>
                       </div>
                       <div className="flex justify-between">
                         <span>Còn lại:</span>
@@ -669,18 +791,25 @@ export default function RewardsManagement() {
             </CardContent>
           </Card>
           {/* DIALOG EDIT REWARD */}
-          <Dialog open={isEditRewardDialogOpen} onOpenChange={setIsEditRewardDialogOpen}>
+          <Dialog
+            open={isEditRewardDialogOpen}
+            onOpenChange={setIsEditRewardDialogOpen}
+          >
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Chỉnh sửa phần thưởng</DialogTitle>
-                <DialogDescription>Cập nhật thông tin phần thưởng</DialogDescription>
+                <DialogDescription>
+                  Cập nhật thông tin phần thưởng
+                </DialogDescription>
               </DialogHeader>
 
               <div className="grid gap-4 py-4">
                 <InputField
                   label="Tên phần thưởng"
                   value={rewardForm.name}
-                  onChange={(e) => setRewardForm(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setRewardForm((prev) => ({ ...prev, name: e.target.value }))
+                  }
                 />
                 <InputField
                   label="Giá điểm"
@@ -688,7 +817,10 @@ export default function RewardsManagement() {
                   value={rewardForm.pointCost}
                   onChange={(e) => {
                     const val = e.target.value;
-                    setRewardForm(prev => ({ ...prev, pointCost: val === "" ? "" : Number(val) }));
+                    setRewardForm((prev) => ({
+                      ...prev,
+                      pointCost: val === "" ? "" : Number(val),
+                    }));
                   }}
                 />
                 <InputField
@@ -697,14 +829,19 @@ export default function RewardsManagement() {
                   value={rewardForm.stock}
                   onChange={(e) => {
                     const val = e.target.value;
-                    setRewardForm(prev => ({ ...prev, stock: val === "" ? "" : Number(val) }));
+                    setRewardForm((prev) => ({
+                      ...prev,
+                      stock: val === "" ? "" : Number(val),
+                    }));
                   }}
                 />
 
                 <Label>Danh mục</Label>
                 <SimpleSelect
                   value={rewardForm.category.toString()}
-                  onValueChange={(value) => setRewardForm(prev => ({ ...prev, category: value }))}
+                  onValueChange={(value) =>
+                    setRewardForm((prev) => ({ ...prev, category: value }))
+                  }
                   placeholder="Chọn danh mục"
                   options={rewardOptions}
                 />
@@ -722,21 +859,33 @@ export default function RewardsManagement() {
 
                 {imageUrl && (
                   <div className="relative mt-2 w-32 h-32 border-gray-300 border rounded-md overflow-hidden">
-                    <img src={imageUrl} alt="Preview" className="object-cover w-full h-full" />
+                    <img
+                      src={imageUrl}
+                      alt="Preview"
+                      className="object-cover w-full h-full"
+                    />
                   </div>
                 )}
               </div>
 
               <DialogFooter>
-                <Button variant="cancelled" onClick={() => setIsEditRewardDialogOpen(false)}>Hủy</Button>
+                <Button
+                  variant="cancelled"
+                  onClick={() => setIsEditRewardDialogOpen(false)}
+                >
+                  Hủy
+                </Button>
                 <Button
                   variant="green"
                   onClick={handleSaveRewardEdit}
                   disabled={uploading || loadingUpdateReward}
                 >
-                  {loadingUpdateReward ? "Đang lưu..." : uploading ? "Đang tải..." : "Lưu thay đổi"}
+                  {loadingUpdateReward
+                    ? "Đang lưu..."
+                    : uploading
+                    ? "Đang tải..."
+                    : "Lưu thay đổi"}
                 </Button>
-
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -749,10 +898,18 @@ export default function RewardsManagement() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Xác nhận xóa phần thưởng</DialogTitle>
-                <DialogDescription>Bạn có chắc muốn xóa phần thưởng này không? Hành động này không thể hoàn tác.</DialogDescription>
+                <DialogDescription>
+                  Bạn có chắc muốn xóa phần thưởng này không? Hành động này
+                  không thể hoàn tác.
+                </DialogDescription>
               </DialogHeader>
               <DialogFooter className="flex gap-2">
-                <Button variant="cancelled" onClick={() => setDeleteRewardId(null)}>Hủy</Button>
+                <Button
+                  variant="cancelled"
+                  onClick={() => setDeleteRewardId(null)}
+                >
+                  Hủy
+                </Button>
                 <Button
                   variant="red"
                   onClick={async () => handleDeleteReward(deleteRewardId)}
@@ -763,7 +920,6 @@ export default function RewardsManagement() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
         </TabsContent>
         {/* Reward Pickups Tab */}
         <TabsContent value="pickups" className="space-y-6">
@@ -776,7 +932,9 @@ export default function RewardsManagement() {
                       <Package className="h-5 w-5 text-indigo-600" />
                       Quản lý nhận thưởng
                     </CardTitle>
-                    <CardDescription>Danh sách phần thưởng đã đổi và trạng thái nhận thưởng</CardDescription>
+                    <CardDescription>
+                      Danh sách phần thưởng đã đổi và trạng thái nhận thưởng
+                    </CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -807,7 +965,7 @@ export default function RewardsManagement() {
                     options={[
                       { value: "all", label: "Tất cả" },
                       { value: "0", label: "Chưa nhận" },
-                      { value: "1", label: "Đã nhận" }
+                      { value: "1", label: "Đã nhận" },
                     ]}
                   />
                 </div>
@@ -828,7 +986,10 @@ export default function RewardsManagement() {
                     <TableBody>
                       {pickups.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                          <TableCell
+                            colSpan={6}
+                            className="text-center text-gray-500 py-8"
+                          >
                             Không tìm thấy kết quả phù hợp
                           </TableCell>
                         </TableRow>
@@ -837,20 +998,38 @@ export default function RewardsManagement() {
                           <TableRow key={pickup.id}>
                             <TableCell>
                               <div>
-                                <div className="font-medium text-gray-900">{pickup.userName}</div>
-                                <div className="text-sm text-gray-500">{pickup.studentId}</div>
+                                <div className="font-medium text-gray-900">
+                                  {pickup.userName}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {pickup.studentId}
+                                </div>
                               </div>
                             </TableCell>
-                            <TableCell className="font-medium">{pickup.rewardName}</TableCell>
+                            <TableCell className="font-medium">
+                              {pickup.rewardName}
+                            </TableCell>
                             <TableCell>{pickup.quantity}</TableCell>
-                            <TableCell>{pickup.status !== 0 ? new Date(pickup.redeemedAt).toLocaleDateString("vi-VN") : 'N/A'}</TableCell>
+                            <TableCell>
+                              {pickup.status !== 0
+                                ? new Date(
+                                    pickup.redeemedAt
+                                  ).toLocaleDateString("vi-VN")
+                                : "N/A"}
+                            </TableCell>
                             <TableCell>
                               {pickup.status === 0 ? (
-                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                <Badge
+                                  variant="outline"
+                                  className="bg-yellow-50 text-yellow-700 border-yellow-200"
+                                >
                                   Chưa nhận
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                <Badge
+                                  variant="outline"
+                                  className="bg-green-50 text-green-700 border-green-200"
+                                >
                                   Đã nhận
                                 </Badge>
                               )}
@@ -860,15 +1039,17 @@ export default function RewardsManagement() {
                                 <Button
                                   variant="indigo"
                                   onClick={() => {
-                                    setSelectedPickup(pickup)
-                                    setIsPickupDialogOpen(true)
+                                    setSelectedPickup(pickup);
+                                    setIsPickupDialogOpen(true);
                                   }}
                                   className="py-0"
                                 >
                                   Nhận
                                 </Button>
                               ) : (
-                                <span className="text-sm text-gray-400">Đã xử lý</span>
+                                <span className="text-sm text-gray-400">
+                                  Đã xử lý
+                                </span>
                               )}
                             </TableCell>
                           </TableRow>
@@ -883,32 +1064,48 @@ export default function RewardsManagement() {
                   <div className="flex items-center justify-between mt-4">
                     <div className="text-sm text-gray-600">
                       Hiển thị {(currentPage - 1) * itemsPerPage + 1} -{" "}
-                      {Math.min(currentPage * itemsPerPage, totalPickups)} trong tổng số{" "}
-                      {totalPickups} kết quả
+                      {Math.min(currentPage * itemsPerPage, totalPickups)} trong
+                      tổng số {totalPickups} kết quả
                     </div>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(1, prev - 1))
+                        }
                         disabled={currentPage === 1}
-                      >Trước</Button>
+                      >
+                        Trước
+                      </Button>
 
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                        <Button
-                          key={page}
-                          variant={currentPage === page ? "indigo" : "outline"}
-                          size="sm"
-                          onClick={() => setCurrentPage(page)}
-                        >{page}</Button>
-                      ))}
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                        (page) => (
+                          <Button
+                            key={page}
+                            variant={
+                              currentPage === page ? "indigo" : "outline"
+                            }
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                          >
+                            {page}
+                          </Button>
+                        )
+                      )}
 
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(totalPages, prev + 1)
+                          )
+                        }
                         disabled={currentPage === totalPages}
-                      >Sau</Button>
+                      >
+                        Sau
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -916,30 +1113,43 @@ export default function RewardsManagement() {
             </Card>
           </LoadingCard>
           {/* Pickup Confirmation Dialog */}
-          <Dialog open={isPickupDialogOpen} onOpenChange={setIsPickupDialogOpen}>
+          <Dialog
+            open={isPickupDialogOpen}
+            onOpenChange={setIsPickupDialogOpen}
+          >
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Xác nhận nhận thưởng</DialogTitle>
-                <DialogDescription>Vui lòng kiểm tra thông tin học sinh trước khi xác nhận</DialogDescription>
+                <DialogDescription>
+                  Vui lòng kiểm tra thông tin học sinh trước khi xác nhận
+                </DialogDescription>
               </DialogHeader>
               {selectedPickup && (
                 <div className="space-y-4 py-4">
                   <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                     <div>
                       <div className="text-sm text-gray-600">Học sinh</div>
-                      <div className="font-medium text-gray-900">{selectedPickup.userName}</div>
+                      <div className="font-medium text-gray-900">
+                        {selectedPickup.userName}
+                      </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">Mã học sinh</div>
-                      <div className="font-mono font-bold text-lg text-indigo-600">{selectedPickup.studentNumber}</div>
+                      <div className="font-mono font-bold text-lg text-indigo-600">
+                        {selectedPickup.studentNumber}
+                      </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">Phần thưởng</div>
-                      <div className="font-medium text-gray-900">{selectedPickup.rewardName}</div>
+                      <div className="font-medium text-gray-900">
+                        {selectedPickup.rewardName}
+                      </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">Số lượng</div>
-                      <div className="font-medium text-gray-900">{selectedPickup.quantity}</div>
+                      <div className="font-medium text-gray-900">
+                        {selectedPickup.quantity}
+                      </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">Ngày đổi</div>
@@ -950,14 +1160,17 @@ export default function RewardsManagement() {
                   </div>
                   <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
                     <p className="text-sm text-yellow-800">
-                      <strong>Lưu ý:</strong> Vui lòng đối chiếu mã học sinh với thẻ học sinh của người đến nhận trước khi
-                      xác nhận.
+                      <strong>Lưu ý:</strong> Vui lòng đối chiếu mã học sinh với
+                      thẻ học sinh của người đến nhận trước khi xác nhận.
                     </p>
                   </div>
                 </div>
               )}
               <DialogFooter>
-                <Button variant="cancelled" onClick={() => setIsPickupDialogOpen(false)}>
+                <Button
+                  variant="cancelled"
+                  onClick={() => setIsPickupDialogOpen(false)}
+                >
                   Hủy
                 </Button>
                 <Button
@@ -977,7 +1190,8 @@ export default function RewardsManagement() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-yellow-600" /> Bảng xếp hạng điểm thưởng
+                <Trophy className="h-5 w-5 text-yellow-600" /> Bảng xếp hạng
+                điểm thưởng
               </CardTitle>
               <CardDescription>Top người dùng có điểm cao nhất</CardDescription>
             </CardHeader>
@@ -989,27 +1203,31 @@ export default function RewardsManagement() {
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${user.rank === 1
-                        ? "bg-yellow-500"
-                        : user.rank === 2
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
+                        user.rank === 1
+                          ? "bg-yellow-500"
+                          : user.rank === 2
                           ? "bg-gray-400"
                           : user.rank === 3
-                            ? "bg-orange-500"
-                            : "bg-blue-500"
-                        }`}
+                          ? "bg-orange-500"
+                          : "bg-blue-500"
+                      }`}
                     >
                       {user.rank}
                     </div>
                     <div>
                       <p className="font-medium">{user.name}</p>
-                      <p className="text-sm text-gray-500">{user.points} điểm</p>
+                      <p className="text-sm text-gray-500">
+                        {user.points} điểm
+                      </p>
                     </div>
                   </div>
                   <Badge
-                    className={`${user.change.startsWith("+")
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                      }`}
+                    className={`${
+                      user.change.startsWith("+")
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
                   >
                     {user.change}
                   </Badge>
@@ -1019,7 +1237,7 @@ export default function RewardsManagement() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div >
+    </div>
   );
 }
 
@@ -1027,7 +1245,12 @@ function InputField({ label, placeholder, type = "text", value, onChange }) {
   return (
     <div className="grid gap-2">
       <Label>{label}</Label>
-      <Input type={type} placeholder={placeholder} value={value} onChange={onChange} />
+      <Input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+      />
     </div>
   );
 }
