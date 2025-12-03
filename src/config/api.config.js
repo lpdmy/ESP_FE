@@ -174,6 +174,14 @@ export const API_CONFIG = {
     DELETE_COMMENT: '/comment/{id}'
   },
 
+  MODERATION: {
+    GET_ALL_REPORT: '/moderation/report',
+    CREATE_REPORT: '/moderation/report',
+    GET_USER_STAT: '/moderation/user-violations',
+    CREATE_NOTIFICATION: '/moderation/alert',
+    UPDATE_STATUS: '/moderation/update-status',
+  },
+
   // Student Import endpoints
   STUDENT_IMPORT: {
     IMPORT_STUDENTS: "/admin/students/import",

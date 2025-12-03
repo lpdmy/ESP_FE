@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+  import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -180,6 +180,44 @@ export default function StaffManagement() {
   useEffect(() => {
     handleGetAllStaff();
   }, [pageNumber, searchTerm]);
+
+  const activeStaffCount = staff.filter((s) => !s.isDeleted).length;
+  const inactiveStaffCount = staff.filter((s) => s.isDeleted).length;
+
+  const stats = [
+    {
+      title: "Tổng nhân sự",
+      value: totalCount.toString(),
+      icon: Users,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
+      trend: "Tính từ dữ liệu hệ thống",
+    },
+    {
+      title: "Đang hoạt động",
+      value: activeStaffCount.toString(),
+      icon: UserCog,
+      color: "text-green-600",
+      bgColor: "bg-green-50",
+      trend: "Nhân sự chưa bị vô hiệu hóa",
+    },
+    {
+      title: "Đã vô hiệu hóa",
+      value: inactiveStaffCount.toString(),
+      icon: UserMinus,
+      color: "text-red-600",
+      bgColor: "bg-red-50",
+      trend: "Nhân sự không còn hoạt động",
+    },
+    {
+      title: "Quyền hạn",
+      value: availablePermissions.length.toString(),
+      icon: Settings,
+      color: "text-orange-600",
+      bgColor: "bg-orange-50",
+      trend: "Quyền có thể gán cho nhân sự",
+    },
+  ];
   return (
     <div className="space-y-6">
       <div className="mb-8 flex justify-between items-center">
@@ -205,57 +243,22 @@ export default function StaffManagement() {
           }}
         />
       </div>
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng nhân sự</CardTitle>
-            <Users className="h-4 w-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalCount}</div>
-            <p className="text-xs text-blue-100 mt-1">Đang hoạt động</p>
-          </CardContent>
-        </Card>
-
-        {/* <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Nhân sự hoạt động
-            </CardTitle>
-            <UserCog className="h-4 w-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {staffMembers.filter((s) => s.status === "active").length}
-            </div>
-            <p className="text-xs text-green-100 mt-1">Trong 7 ngày qua</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Vai trò</CardTitle>
-            <Shield className="h-4 w-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{roleTemplates.length}</div>
-            <p className="text-xs text-purple-100 mt-1">Mẫu vai trò có sẵn</p>
-          </CardContent>
-        </Card> */}
-
-        <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Quyền hạn</CardTitle>
-            <Settings className="h-4 w-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {availablePermissions.length}
-            </div>
-            <p className="text-xs text-orange-100 mt-1">Quyền có thể cấp</p>
-          </CardContent>
-        </Card>
+      {/* Stats Cards - đồng bộ với ActivityManagement */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, index) => (
+          <Card key={index} className="hover-lift">
+            <CardContent>
+              <div className="flex items-start justify-between mb-3">
+                <div className={`${stat.bgColor} p-3 rounded-lg`}>
+                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                </div>
+              </div>
+              <div className="text-3xl font-bold mb-1">{stat.value}</div>
+              <div className="text-sm text-gray-600 mb-2">{stat.title}</div>
+              <div className="text-xs text-gray-500">{stat.trend}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Tabs defaultValue="staff" className="space-y-6">
