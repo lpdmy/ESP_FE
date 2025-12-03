@@ -154,6 +154,15 @@ export class ActivityService extends ApiService {
     }
     return this.get(endpoint, token);
   }
+
+  /**
+   * Get activity statistics (ongoing, upcoming, completed, total participants)
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with activity statistics
+   */
+  async getActivityStatistics(token) {
+    return this.get(API_CONFIG.ACTIVITY.STATISTICS, token);
+  }
 }
 
 export const activityService = new ActivityService();

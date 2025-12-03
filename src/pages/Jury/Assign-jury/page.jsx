@@ -1,29 +1,19 @@
-import LandingLayout from "@/common/components/layout/LandingLayout";
-import Sidebar from "@/features/landing/components/Sidebar";
+import { useParams } from "react-router-dom";
 import AssignJury from "@/features/landing/jury/components/assign-jury/page";
+import AdminPageLayout from "@/features/admin/components/AdminPageLayout";
+
 export default function AssignJuryPage() {
+  const { id } = useParams();
+  
   return (
-    <LandingLayout>
-        <div className="w-full py-6 pl-6">
-      <div className="w-full px-4">
-        <div className="flex gap-7 justify-center">
-          {/* Sidebar */}
-          <aside className="hidden lg:block w-64 xl:w-72 sticky top-[88px] self-start flex-shrink-0">
-            <Sidebar />
-          </aside>
-          {/* Main Content (slightly wider than homepage center column) */}
-          <section className="flex-1 min-w-0 lg:max-w-6xl xl:max-w-6xl">
-            <AssignJury />
-          </section>
-    
-          {/* Right spacer to keep layout balanced like homepage (no panel) */}
-          <aside
-            className="hidden lg:block w-50 xl:w-60 flex-shrink-0"
-            aria-hidden="true"
-          />
+    <AdminPageLayout>
+      <div className="container mx-auto py-6 px-4">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Phân công giám khảo</h1>
+          <p className="text-gray-600 mt-1">Quản lý và phân công giám khảo cho hoạt động</p>
         </div>
+        <AssignJury activityId={id} />
       </div>
-    </div>
-    </LandingLayout>
+    </AdminPageLayout>
   );
 }

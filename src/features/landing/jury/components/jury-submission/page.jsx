@@ -208,9 +208,6 @@ export default function JurySubmissions() {
               <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent mb-2">
                 Bài nộp được phân công
               </h1>
-              <p className="text-muted-foreground">
-                Cuộc thi Lập trình 2024 - Giám khảo: TS. Nguyễn Văn X
-              </p>
             </div>
           </div>
         </div>

@@ -534,7 +534,7 @@ const SearchResultListItem = ({ result, type, color, query, onClick }) => {
           subtitle: `${getRoleText(result.role)} • ${result.email}`,
           avatar: result.avatarUrl,
           extra: result.role === 4 ? result.studentNumber : result.teacherCode,
-          action: 'Message'
+          action: 'Nhắn tin'
         };
       
       case 'posts':

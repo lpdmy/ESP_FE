@@ -93,15 +93,15 @@ export default function ChatDetail() {
                 nameDict,
               })
             } else {
-              const otherIndex = room.participantIds.findIndex(id => id !== currentUserId)
-              if (otherIndex !== -1) {
-                setChatUser({
-                  id: room.participantIds[otherIndex],
-                  name: room.participantNames[otherIndex],
-                  avatar: room.participantAvatars[otherIndex] || "/placeholder.svg",
+            const otherIndex = room.participantIds.findIndex(id => id !== currentUserId)
+            if (otherIndex !== -1) {
+              setChatUser({
+                id: room.participantIds[otherIndex],
+                name: room.participantNames[otherIndex],
+                avatar: room.participantAvatars[otherIndex] || "/placeholder.svg",
                   isOnline: false,
                   nameDict,
-                })
+              })
               }
             }
           } else {
@@ -266,9 +266,9 @@ export default function ChatDetail() {
 
   return (
     <>
-      <LoadingCard isLoading={messagesLoading}>
+    <LoadingCard isLoading={messagesLoading}>
 
-        <div className="min-h-[100%] bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
+      <div className="min-h-[100%] bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
         <div className="max-w-7xl mx-auto flex flex-col h-[calc(100vh-9rem)]">
           {/* Header */}
           <div className="bg-white/80 backdrop-blur-md border-b border-orange-100 p-4 flex items-center justify-between sticky top-0 z-10 relative">
@@ -297,8 +297,8 @@ export default function ChatDetail() {
                     size="sm"
                     className="hover:bg-orange-100"
                   >
-                    <MoreVertical className="w-5 h-5" />
-                  </Button>
+                <MoreVertical className="w-5 h-5" />
+              </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
@@ -462,7 +462,7 @@ export default function ChatDetail() {
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
         </div>
       </div>
-      </LoadingCard>
+    </LoadingCard>
 
       <Dialog open={isMembersOpen} onOpenChange={setIsMembersOpen}>
         <DialogContent className="max-w-md">

@@ -28,7 +28,6 @@ export default function AssignJurySection({ activityId }) {
     deleteJury,
     ramdomAssignJury,
     deleteRandomAssign,
-    assignJuryToSubmission,
   } = useJuryApi();
   const toast = useToast();
 
@@ -52,7 +51,6 @@ export default function AssignJurySection({ activityId }) {
   const [openAssignDialog, setOpenAssignDialog] = useState(false);
   const [currentSubmissionId, setCurrentSubmissionId] = useState(null);
   const [checkedJuryIds, setCheckedJuryIds] = useState([]);
-  const [assignedJuryUsers, setAssignedJuryUsers] = useState([]);
   // Loading state
   const [loadingJury, setLoadingJury] = useState(true);
   const [loadingSubmission, setLoadingSubmission] = useState(true);
@@ -85,16 +83,19 @@ export default function AssignJurySection({ activityId }) {
       setSubmission(data);
       setTotalCount(total);
       setTotalPages(Math.ceil(total / pageSize));
-    } catch {
-      toast.showError("Không thể tải danh sách bài nộp");
+    } catch (error) {
+      const errorMessage = error?.message || error?.data?.message || "Không thể tải danh sách bài nộp";
+      // toast.showError(errorMessage);
     } finally {
       setLoadingSubmission(false);
     }
   };
 
   useEffect(() => {
-  handleLoadJury();
-}, []);
+    if (activityId) {
+      handleLoadJury();
+    }
+  }, [activityId, searchTerm]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -108,12 +109,12 @@ export default function AssignJurySection({ activityId }) {
       await ramdomAssignJury({ activityId, numberOfJury });
       toast.showSuccess("Phân công ngẫu nhiên thành công!");
       handleLoadSubmission();
+      handleLoadJury(); // Reload danh sách giám khảo để cập nhật số lượng assigned
     } catch (error) {
       if(error.statusCode == 400){
-      toast.showError(error.message)
-      }else{
-      toast.showError("Phân công thất bại");
-
+        toast.showError(error.message)
+      } else {
+        toast.showError("Phân công thất bại");
       }
     }
   };
@@ -123,6 +124,7 @@ export default function AssignJurySection({ activityId }) {
       await deleteRandomAssign(activityId);
       toast.showSuccess("Xóa phân công thành công");
       handleLoadSubmission();
+      handleLoadJury(); // Reload danh sách giám khảo để cập nhật số lượng assigned
     } catch {
       toast.showError("Xóa thất bại");
     }
@@ -131,46 +133,23 @@ export default function AssignJurySection({ activityId }) {
   const handleDeleteJury = async (jId) => {
     try {
       await deleteJury(jId);
-      console.log(jId)
       toast.showSuccess("Xóa giám khảo thành công");
+      // Reload danh sách giám khảo sau khi xóa thành công
+      handleLoadJury();
     } catch(err) {
       if(err.statusCode === 400){
-      toast.showError(err.message)
-      }else{
-      toast.showError("Xóa giám khảo thất bại");
+        toast.showError(err.message)
+      } else {
+        toast.showError("Xóa giám khảo thất bại");
       }
     }
   };
 
   const openDialogForSubmission = (submissionItem) => {
-  setCurrentSubmissionId(submissionItem.id);
-  const assignedIds = submissionItem.users || [];
-  setCheckedJuryIds(assignedIds);
-  const assignedUsers = jury
-    .filter(j => assignedIds.includes(j.userId))
-    .map(j => ({
-      userId: j.userId,
-      userFullName: j.userFullName,
-      assigned: j.assigned,
-    }));
-  setAssignedJuryUsers(assignedUsers);
-  setOpenAssignDialog(true);
-};
-
-
-  const handleConfirmAssign = async () => {
-    try {
-      await assignJuryToSubmission({
-        submissionId: currentSubmissionId,
-        juryIds: checkedJuryIds,
-      });
-      toast.showSuccess("Phân công giám khảo thành công");
-      setOpenAssignDialog(false);
-      handleLoadSubmission();
-      handleLoadJury();
-    } catch {
-      toast.showError("Phân công thất bại");
-    }
+    setCurrentSubmissionId(submissionItem.id);
+    const assignedIds = submissionItem.users || [];
+    setCheckedJuryIds(assignedIds);
+    setOpenAssignDialog(true);
   };
 
   return (
@@ -335,17 +314,23 @@ export default function AssignJurySection({ activityId }) {
         isOpen={isOpenAddJury}
         onClose={() => setIsOpenAddJury(false)}
         jury={jury}
+        activityId={activityId}
+        onSuccess={handleLoadJury}
       />
       <AssignDialog
-  isOpen={openAssignDialog}
-  onClose={() => setOpenAssignDialog(false)}
-  juryList={jury}
-  assignedJuryIds={checkedJuryIds}
-  setAssignedJuryIds={setCheckedJuryIds}
-  submissionId={currentSubmissionId} // 👈 thêm
-  refreshSubmissionList={handleLoadSubmission} // 👈 thêm
-  refreshJuryList={handleLoadJury} // 👈 thêm
-/>
+        isOpen={openAssignDialog}
+        onClose={() => {
+          setOpenAssignDialog(false);
+          setCurrentSubmissionId(null);
+          setCheckedJuryIds([]);
+        }}
+        juryList={jury}
+        assignedJuryIds={checkedJuryIds}
+        setAssignedJuryIds={setCheckedJuryIds}
+        submissionId={currentSubmissionId}
+        refreshSubmissionList={handleLoadSubmission}
+        refreshJuryList={handleLoadJury}
+      />
       <RandomAssignDialog
         isOpen={openRandomDialog}
         onClose={() => setOpenRandomDialog(false)}

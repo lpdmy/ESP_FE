@@ -137,13 +137,36 @@ hanldeLoadJurySubmissionNotGrade()
               <CardTitle>Tác phẩm</CardTitle>
             </CardHeader>
             <CardContent>
-              <img
-                src={
-                  submissions[currentSubmission]?.fileUrl || "/placeholder.svg"
-                }
-                alt={submissions[currentSubmission]?.submission?.title}
-                className="w-full h-96 object-contain bg-gray-100 rounded-lg mb-4"
-              />
+              {submissions[currentSubmission]?.submission?.attachments?.length > 0 ? (
+                <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-4">
+                  {submissions[currentSubmission].submission.attachments[0].fileType === "image" ? (
+                    <img
+                      src={submissions[currentSubmission].submission.attachments[0].url}
+                      alt={submissions[currentSubmission].submission.attachments[0].fileName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <a
+                      href={submissions[currentSubmission].submission.attachments[0].url}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center justify-center w-full h-full bg-orange-50 border border-orange-200 rounded-lg p-4 hover:bg-orange-100"
+                    >
+                      <span className="text-orange-700 font-medium">
+                        {submissions[currentSubmission].submission.attachments[0].fileName}
+                      </span>
+                      <span className="text-xs text-gray-500 mt-1">
+                        Tải xuống ({submissions[currentSubmission].submission.attachments[0].fileType})
+                      </span>
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div className="w-full h-96 bg-gray-100 rounded-lg mb-4 flex items-center justify-center">
+                  <p className="text-gray-400">Không có file đính kèm</p>
+                </div>
+              )}
               <h3 className="font-bold text-xl mb-1">
                 {submissions[currentSubmission]?.submission?.title ||
                   "Không rõ"}
