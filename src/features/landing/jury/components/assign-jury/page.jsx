@@ -184,7 +184,7 @@ export default function AssignJurySection({ activityId }) {
               <Button
                 variant="outline"
                 size="sm"
-                className="ml-auto"
+                className="ml-auto border !border-gray-300"
                 onClick={() => setOpenRandomDialog(true)}
               >
                 <Shuffle className="w-4 h-4 mr-2" />
@@ -193,7 +193,8 @@ export default function AssignJurySection({ activityId }) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setOpenDeleteRandomDialog(true)}
+                onClick={() => setOpenDeleteRandomDialog(true)} 
+                className="border !border-gray-300"
               >
                 <Trash className="w-4 h-4 mr-2" />
                 Xóa phân công
@@ -214,7 +215,7 @@ export default function AssignJurySection({ activityId }) {
               submission.map((s) => (
                 <div
                   key={s.id}
-                  className="flex justify-between items-center p-3 border rounded bg-white"
+                  className="flex justify-between items-center p-3 border !border-gray-300 rounded bg-white"
                 >
                   <div>
                     <p className="font-medium">{s.title}</p>
@@ -226,7 +227,7 @@ export default function AssignJurySection({ activityId }) {
                     <span className="text-sm text-gray-700">
                       {s.numberJurys} giám khảo
                     </span>
-                    <Button variant="outline" size="sm" onClick={() => openDialogForSubmission(s)}>
+                    <Button className=" border !border-blue-400" variant="outline" size="sm" onClick={() => openDialogForSubmission(s)}>
                       Phân công
                     </Button>
                   </div>
@@ -279,7 +280,7 @@ export default function AssignJurySection({ activityId }) {
               <Button
                 variant="outline"
                 size="sm"
-                className="ml-auto"
+                className="ml-auto border !border-gray-300"
                 onClick={() => setIsOpenAddJury(true)}
               >
                 <UserPlus className="w-4 h-4 mr-2" />
@@ -307,7 +308,7 @@ export default function AssignJurySection({ activityId }) {
               jury.map((j) => (
                 <div
                   key={j.id}
-                  className="flex justify-between items-center p-3 bg-gray-50 rounded border"
+                  className="flex justify-between items-center p-3 bg-gray-50 rounded border !border-gray-300"
                 >
                   <div>
                     <p className="font-semibold">{j.userFullName}</p>
