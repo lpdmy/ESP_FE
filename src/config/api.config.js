@@ -244,6 +244,8 @@ export const API_CONFIG = {
     APPLY_TOURNAMENT_SCHEDULE: "/activity/{id}/apply-schedule",
     TRAIN_SCHEDULE_MODEL: "/activity/train-schedule-model",
     MY_ACTIVITIES: "/my-activities",
+    STATISTICS: "/activity/statistics",
+
   },
 
   ACTIVITY_MATCH: {

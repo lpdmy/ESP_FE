@@ -37,6 +37,10 @@ export default function CreateActivity() {
   const [editingSpeakerIndex, setEditingSpeakerIndex] = useState(null)
   const [editingProgramIndex, setEditingProgramIndex] = useState(null)
   const [speakerForm, setSpeakerForm] = useState({ name: "", title: "", bio: "", image: "" })
+  const [speakerImageFile, setSpeakerImageFile] = useState(null)
+  const [speakerImagePreview, setSpeakerImagePreview] = useState("")
+  const [isUploadingSpeakerImage, setIsUploadingSpeakerImage] = useState(false)
+  const speakerImageInputRef = useRef(null)
   const [programForm, setProgramForm] = useState({ title: "", time: "", description: "" })
   const [customSportInput, setCustomSportInput] = useState("")
   const [thumbnailFile, setThumbnailFile] = useState(null) // Lưu file object chưa upload
@@ -135,6 +139,54 @@ export default function CreateActivity() {
     "Bóng chuyền",
     "Bóng rổ",
   ]
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const savedData = localStorage.getItem("createActivity_draft")
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData)
+        if (parsed.formData) {
+          setFormData(parsed.formData)
+        }
+        if (parsed.gradingEnabled !== undefined) {
+          setGradingEnabled(parsed.gradingEnabled)
+        }
+        if (parsed.gradingCriteria) {
+          setGradingCriteria(parsed.gradingCriteria)
+        }
+        if (parsed.onlyTeacherCanRegister !== undefined) {
+          setOnlyTeacherCanRegister(parsed.onlyTeacherCanRegister)
+        }
+        if (parsed.currentStep) {
+          setCurrentStep(parsed.currentStep)
+        }
+        // Load thumbnail preview if exists
+        if (parsed.formData?.thumbnail) {
+          setThumbnailPreview(parsed.formData.thumbnail)
+        }
+        toast.info("Đã khôi phục dữ liệu đã lưu tạm")
+      } catch (error) {
+        console.error("Error loading draft:", error)
+      }
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save to localStorage whenever formData changes (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const dataToSave = {
+        formData,
+        gradingEnabled,
+        gradingCriteria,
+        onlyTeacherCanRegister,
+        currentStep,
+      }
+      localStorage.setItem("createActivity_draft", JSON.stringify(dataToSave))
+    }, 1000) // Debounce 1 second
+
+    return () => clearTimeout(timer)
+  }, [formData, gradingEnabled, gradingCriteria, onlyTeacherCanRegister, currentStep])
 
   const handleNext = () => {
     if (currentStep < 5) {
@@ -271,30 +323,96 @@ export default function CreateActivity() {
   const handleOpenSpeakerDialog = (index = null) => {
     if (index !== null) {
       setEditingSpeakerIndex(index)
-      setSpeakerForm({ ...formData.speakers[index] })
+      const speaker = formData.speakers[index]
+      setSpeakerForm({ ...speaker })
+      setSpeakerImagePreview(speaker.image || "")
+      setSpeakerImageFile(null)
     } else {
       setEditingSpeakerIndex(null)
       setSpeakerForm({ name: "", title: "", bio: "", image: "" })
+      setSpeakerImagePreview("")
+      setSpeakerImageFile(null)
     }
     setIsSpeakerDialogOpen(true)
   }
 
-  const handleSaveSpeaker = () => {
+  const handleSpeakerImageChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh")
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Kích thước file không được vượt quá 5MB")
+      return
+    }
+
+    setSpeakerImageFile(file)
+    const previewUrl = URL.createObjectURL(file)
+    setSpeakerImagePreview(previewUrl)
+  }
+
+  const handleSaveSpeaker = async () => {
     if (!speakerForm.name.trim()) {
       toast.error("Vui lòng nhập tên diễn giả")
       return
     }
-    const newSpeakers = [...formData.speakers]
-    if (editingSpeakerIndex !== null) {
-      newSpeakers[editingSpeakerIndex] = { ...speakerForm }
-    } else {
-      newSpeakers.push({ ...speakerForm })
+
+    try {
+      let imageUrl = speakerForm.image
+
+      // Upload ảnh nếu có file mới
+      if (speakerImageFile) {
+        setIsUploadingSpeakerImage(true)
+        try {
+          imageUrl = await uploadImage(speakerImageFile)
+          if (!imageUrl) {
+            toast.error("Không thể upload ảnh. Vui lòng thử lại.")
+            setIsUploadingSpeakerImage(false)
+            return
+          }
+          // Cleanup preview URL sau khi upload thành công
+          if (speakerImagePreview && speakerImagePreview.startsWith("blob:")) {
+            URL.revokeObjectURL(speakerImagePreview)
+          }
+          toast.success("Đã upload ảnh thành công")
+        } catch (error) {
+          console.error("Error uploading speaker image:", error)
+          toast.error(error.message || "Có lỗi xảy ra khi upload ảnh")
+          setIsUploadingSpeakerImage(false)
+          return
+        } finally {
+          setIsUploadingSpeakerImage(false)
+        }
+      }
+
+      const speakerData = {
+        ...speakerForm,
+        image: imageUrl,
+      }
+
+      const newSpeakers = [...formData.speakers]
+      if (editingSpeakerIndex !== null) {
+        newSpeakers[editingSpeakerIndex] = speakerData
+      } else {
+        newSpeakers.push(speakerData)
+      }
+      setFormData({ ...formData, speakers: newSpeakers })
+      setIsSpeakerDialogOpen(false)
+      setSpeakerForm({ name: "", title: "", bio: "", image: "" })
+      setSpeakerImagePreview("")
+      setSpeakerImageFile(null)
+      setEditingSpeakerIndex(null)
+      toast.success(editingSpeakerIndex !== null ? "Cập nhật diễn giả thành công" : "Thêm diễn giả thành công")
+    } catch (error) {
+      console.error("Error saving speaker:", error)
+      toast.error("Có lỗi xảy ra khi lưu diễn giả")
     }
-    setFormData({ ...formData, speakers: newSpeakers })
-    setIsSpeakerDialogOpen(false)
-    setSpeakerForm({ name: "", title: "", bio: "", image: "" })
-    setEditingSpeakerIndex(null)
-    toast.success(editingSpeakerIndex !== null ? "Cập nhật diễn giả thành công" : "Thêm diễn giả thành công")
   }
 
   const handleRemoveSpeaker = (index) => {
@@ -394,9 +512,13 @@ export default function CreateActivity() {
       toast.error("Vui lòng nhập thời gian đăng ký")
       return
     }
-    if (!formData.maxParticipants) {
-      toast.error("Vui lòng nhập số người tham gia tối đa")
-      return
+    // Validate maxParticipants (nếu có nhập thì phải > 0, không bắt buộc)
+    if (formData.maxParticipants && formData.maxParticipants.trim() !== "") {
+      const maxParticipantsNum = parseInt(formData.maxParticipants)
+      if (isNaN(maxParticipantsNum) || maxParticipantsNum <= 0) {
+        toast.error("Số người tham gia tối đa phải lớn hơn 0")
+        return
+      }
     }
     if (!formData.rules || formData.rules.length === 0 || formData.rules.every(r => !r.trim())) {
       toast.error("Vui lòng nhập ít nhất một quy định")
@@ -546,7 +668,10 @@ export default function CreateActivity() {
         endDate: formData.endDate ? vnTimeToUTC(formData.endDate) : null,
         registerDate: formData.registerDate ? vnTimeToUTC(formData.registerDate) : null,
         endRegisterDate: formData.endRegisterDate ? vnTimeToUTC(formData.endRegisterDate) : null,
-        maxParticipants: parseInt(formData.maxParticipants) || 0,
+        // maxParticipants: null = không giới hạn, có giá trị = giới hạn số người
+        maxParticipants: (formData.maxParticipants && formData.maxParticipants.trim() !== "") 
+          ? parseInt(formData.maxParticipants) 
+          : null,
         rules: formData.rules.filter(r => r.trim()),
         // SportsFestival fields
         sportsCategories: formData.subType === "SportsFestival" ? formData.sportsCategories : [],
@@ -603,6 +728,8 @@ export default function CreateActivity() {
       )
 
       if (response?.data) {
+        // Clear localStorage after successful submission
+        localStorage.removeItem("createActivity_draft")
         toast.success("Hoạt động mới đã được xuất bản thành công.")
         navigate("/admin/activities")
       }
@@ -744,7 +871,7 @@ export default function CreateActivity() {
                       currentStep === step.number
                         ? "bg-blue-600 text-white scale-110"
                         : currentStep > step.number
-                        ? "bg-green-500 text-white hover:bg-green-600"
+                        ? "bg-blue-500 text-white hover:bg-blue-600"
                         : "bg-gray-200 text-gray-600 hover:bg-gray-300"
                     }`}
                   >
@@ -764,7 +891,7 @@ export default function CreateActivity() {
                 {index < steps.length - 1 && (
                   <div
                     className={`h-1 flex-1 mx-2 cursor-pointer transition-colors ${
-                      currentStep > step.number ? "bg-green-500" : "bg-gray-200"
+                      currentStep > step.number ? "bg-blue-500" : "bg-gray-200"
                     }`}
                     onClick={() => {
                       // Click vào line cũng chuyển đến step tiếp theo
@@ -1245,9 +1372,9 @@ export default function CreateActivity() {
                             </Button>
                           </div>
                           {formData.problemFileUrl && (
-                            <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
-                              <CheckCircle className="w-4 h-4 text-green-600" />
-                              <span className="text-sm text-green-800">Đã upload file đề bài</span>
+                            <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                              <CheckCircle className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm text-blue-800">Đã upload file đề bài</span>
                               <a
                                 href={formData.problemFileUrl}
                                 target="_blank"
@@ -1622,15 +1749,18 @@ export default function CreateActivity() {
           {currentStep === 4 && (
             <div className="space-y-6">
               <div>
-                <Label htmlFor="maxParticipants">Số người tham gia tối đa *</Label>
+                <Label htmlFor="maxParticipants">Số người tham gia tối đa</Label>
                 <Input
                   id="maxParticipants"
                   type="number"
-                  placeholder="Ví dụ: 500"
+                  placeholder="Để trống = không giới hạn (ví dụ: 500)"
                   value={formData.maxParticipants}
                   onChange={(e) => setFormData({ ...formData, maxParticipants: e.target.value })}
                   className="mt-2"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Để trống nếu không muốn giới hạn số người tham gia
+                </p>
               </div>
 
               <div>
@@ -1694,8 +1824,8 @@ export default function CreateActivity() {
           {/* Step 5: Review */}
           {currentStep === 5 && (
             <div className="space-y-6">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center gap-2 text-green-800">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-2 text-blue-800">
                   <CheckCircle className="w-5 h-5" />
                   <p className="font-semibold">Hoàn tất! Kiểm tra lại thông tin trước khi xuất bản</p>
                 </div>
@@ -1859,7 +1989,7 @@ export default function CreateActivity() {
                       <p className="text-sm text-gray-600 mb-1">Điểm khi đăng ký tham gia:</p>
                       <p className="font-semibold text-lg">
                         {formData.starPointRewards.registration ? (
-                          <span className="text-green-600">{formData.starPointRewards.registration} điểm</span>
+                          <span className="text-blue-600">{formData.starPointRewards.registration} điểm</span>
                         ) : (
                           <span className="text-gray-400">Chưa cài đặt</span>
                         )}
@@ -1880,7 +2010,7 @@ export default function CreateActivity() {
                                   <p className="text-sm text-gray-600">{award.name || `Giải ${index + 1}`}</p>
                                   <p className="font-semibold">
                                     {award.points ? (
-                                      <span className="text-green-600">{award.points} điểm</span>
+                                      <span className="text-blue-600">{award.points} điểm</span>
                                     ) : (
                                       <span className="text-gray-400">Chưa cài đặt</span>
                                     )}
@@ -1982,7 +2112,7 @@ export default function CreateActivity() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <CheckCircle className="w-4 h-4 text-blue-600" />
                       <span className="text-sm text-gray-700">
                         Chỉ giáo viên chủ nhiệm mới được đăng ký đại diện lớp
                       </span>
@@ -2009,7 +2139,7 @@ export default function CreateActivity() {
             </div>
 
             {currentStep < 5 ? (
-              <Button onClick={handleNext} className="bg-green-600 hover:bg-green-700 text-white">
+              <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700 text-white">
                 Tiếp theo
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
@@ -2075,7 +2205,11 @@ export default function CreateActivity() {
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-600">Số người tham gia tối đa:</span>
-                          <span className="font-semibold text-sm">{formData.maxParticipants || "Chưa cài đặt"}</span>
+                          <span className="font-semibold text-sm">
+                            {formData.maxParticipants && formData.maxParticipants.trim() !== "" 
+                              ? formData.maxParticipants 
+                              : "Không giới hạn"}
+                          </span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-600">Thời gian đăng ký:</span>
@@ -2108,7 +2242,7 @@ export default function CreateActivity() {
                               {formData.starPointRewards.awards.map((award, index) => (
                                 <div key={index} className="flex justify-between items-center">
                                   <span className="text-sm text-gray-600">{award.name || `Giải ${index + 1}`}:</span>
-                                  <span className="font-bold text-green-600">
+                                  <span className="font-bold text-blue-600">
                                     {award.points ? `${award.points} điểm` : "0 điểm"}
                                   </span>
                                 </div>
@@ -2219,7 +2353,7 @@ export default function CreateActivity() {
                             <p className="font-semibold">Cài đặt đăng ký</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <CheckCircle className="w-4 h-4 text-blue-600" />
                             <span className="text-sm text-gray-700">
                               Chỉ giáo viên chủ nhiệm mới được đăng ký đại diện lớp
                             </span>
@@ -2232,7 +2366,7 @@ export default function CreateActivity() {
                         Đóng
                       </Button>
                       <Button
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
                         onClick={() => {
                           setIsPreviewOpen(false)
                           handlePublish()
@@ -2245,7 +2379,7 @@ export default function CreateActivity() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-                <Button onClick={handlePublish} className="bg-green-600 hover:bg-green-700 text-white" disabled={isSubmitting}>
+                <Button onClick={handlePublish} className="bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
                   <CheckCircle className="w-4 h-4 mr-2" />
                   {isSubmitting ? "Đang xuất bản..." : "Xuất bản"}
                 </Button>
@@ -2293,31 +2427,74 @@ export default function CreateActivity() {
               />
             </div>
             <div className="grid gap-2">
-              <Label>Ảnh đại diện (URL)</Label>
-              <Input
-                placeholder="https://example.com/avatar.jpg"
-                value={speakerForm.image}
-                onChange={(e) => setSpeakerForm({ ...speakerForm, image: e.target.value })}
+              <Label>Ảnh đại diện</Label>
+              <input
+                type="file"
+                ref={speakerImageInputRef}
+                accept="image/*"
+                onChange={handleSpeakerImageChange}
+                className="hidden"
               />
-              {speakerForm.image && (
-                <div className="mt-2">
-                  <img
-                    src={speakerForm.image}
-                    alt="Preview"
-                    className="w-20 h-20 rounded-full object-cover border border-gray-300"
-                    onError={(e) => {
-                      e.target.style.display = "none"
-                    }}
-                  />
+              <div className="flex items-center gap-4">
+                {(speakerImagePreview || speakerForm.image) && (
+                  <div className="relative">
+                    <img
+                      src={speakerImagePreview || speakerForm.image}
+                      alt="Preview"
+                      className="w-24 h-24 rounded-full object-cover border-2 border-gray-300"
+                      onError={(e) => {
+                        e.target.style.display = "none"
+                      }}
+                    />
+                    {speakerImageFile && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSpeakerImageFile(null)
+                          setSpeakerImagePreview(speakerForm.image || "")
+                          if (speakerImageInputRef.current) {
+                            speakerImageInputRef.current.value = ""
+                          }
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
+                <div className="flex-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => speakerImageInputRef.current?.click()}
+                    disabled={isUploadingSpeakerImage}
+                    className="w-full"
+                  >
+                    {isUploadingSpeakerImage ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2" />
+                        Đang upload...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        {speakerImagePreview || speakerForm.image ? "Thay đổi ảnh" : "Chọn ảnh"}
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Chọn file ảnh (JPG, PNG) - Tối đa 5MB
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSpeakerDialogOpen(false)}>
               Hủy
             </Button>
-            <Button onClick={handleSaveSpeaker} className="bg-green-600 hover:bg-green-700 text-white">
+            <Button onClick={handleSaveSpeaker} className="bg-blue-600 hover:bg-blue-700 text-white">
               {editingSpeakerIndex !== null ? "Cập nhật" : "Thêm"}
             </Button>
           </DialogFooter>
@@ -2366,7 +2543,7 @@ export default function CreateActivity() {
             <Button variant="outline" onClick={() => setIsProgramDialogOpen(false)}>
               Hủy
             </Button>
-            <Button onClick={handleSaveProgram} className="bg-green-600 hover:bg-green-700 text-white">
+            <Button onClick={handleSaveProgram} className="bg-blue-600 hover:bg-blue-700 text-white">
               {editingProgramIndex !== null ? "Cập nhật" : "Thêm"}
             </Button>
           </DialogFooter>

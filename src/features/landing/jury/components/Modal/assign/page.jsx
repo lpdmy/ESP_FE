@@ -75,7 +75,7 @@ export default function AssignDialog({
 
       toast.showSuccess("Phân công giám khảo thành công!");
       refreshSubmissionList?.(); // reload submissions
-      // refreshJuryList?.(); // reload juries nếu cần
+      refreshJuryList?.(); // reload juries để cập nhật số lượng assigned
 
       onClose();
     } catch (err) {
