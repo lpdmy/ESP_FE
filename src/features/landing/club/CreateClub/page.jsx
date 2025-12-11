@@ -39,6 +39,14 @@ import {
   TabsTrigger,
   TabsContent,
 } from "@/common/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/common/components/ui/dialog";
 import { useClubApi } from "../hooks/useClubApi";
 import { useToast } from "@/common/hooks/useToast";
 const categories = [
@@ -77,6 +85,9 @@ function CreateClub() {
   const coverInputRef = useRef(null);
   const [errors, setErrors] = useState({ email: "", phone: "" });
   const [error, setError] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState(null);
+  const [pendingFiles, setPendingFiles] = useState({ avatarFile: null, coverFile: null });
   const { createClub } = useClubApi();
   const toast = useToast();
   const handleAvatarUpload = async (e) => {
@@ -97,40 +108,62 @@ function CreateClub() {
       return;
     }
     setError("");
+    // Chỉ dựng payload nhẹ, chưa upload file để popup mở nhanh
+    const payload = {
+      description,
+      shortDescription,
+      clubName,
+      categoryId,
+      avatarUrl,
+      coverUrl,
+      requirements,
+      allowAutoJoin,
+      allowMembersToPost,
+      contactEmail,
+      contactPhone,
+    };
+    setPendingPayload(payload);
+    setPendingFiles({ avatarFile, coverFile });
+    setShowConfirm(true);
+  };
+
+  const handleConfirmCreate = async () => {
+    if (!pendingPayload) return;
     setLoading(true);
     try {
-      let uploadedAvatarUrl = avatarUrl;
-      let uploadedCoverUrl = coverUrl;
-      if (avatarFile) {
-        uploadedAvatarUrl = await uploadImage(avatarFile);
-        setAvatarUrl(uploadedAvatarUrl);
+      // Upload file tại bước xác nhận để tránh chậm lúc mở popup
+      let finalAvatarUrl = pendingPayload.avatarUrl;
+      let finalCoverUrl = pendingPayload.coverUrl;
+
+      if (pendingFiles.avatarFile) {
+        finalAvatarUrl = await uploadImage(pendingFiles.avatarFile);
+        setAvatarUrl(finalAvatarUrl);
       }
-      if (coverFile) {
-        uploadedCoverUrl = await uploadImage(coverFile);
-        setCoverUrl(uploadedCoverUrl);
+      if (pendingFiles.coverFile) {
+        finalCoverUrl = await uploadImage(pendingFiles.coverFile);
+        setCoverUrl(finalCoverUrl);
       }
-      const payload = {
-        description,
-        shortDescription,
-        clubName,
-        categoryId,
-        avatarUrl: uploadedAvatarUrl,
-        coverUrl: uploadedCoverUrl,
-        requirements,
-        allowAutoJoin,
-        allowMembersToPost,
-        contactEmail,
-        contactPhone,
-      };
-      const response = await createClub(payload);
-      handleAvatarUpload()
+
+      await createClub({
+        ...pendingPayload,
+        avatarUrl: finalAvatarUrl,
+        coverUrl: finalCoverUrl,
+      });
       toast.createClubSuccess();
+      setShowConfirm(false);
+      setPendingPayload(null);
+      setPendingFiles({ avatarFile: null, coverFile: null });
     } catch (error) {
       console.error("Lỗi khi tạo CLB:", error);
       toast.showError(error.message);
     } finally {
-    setLoading(false);
-  }
+      setLoading(false);
+    }
+  };
+
+  const handleCancelConfirm = () => {
+    setShowConfirm(false);
+    setPendingPayload(null);
   };
 
   const handleChooseAvatar = (e) => {
@@ -182,7 +215,8 @@ function CreateClub() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold gradient-text mb-2">Tạo câu lạc bộ</h1>
@@ -549,7 +583,38 @@ function CreateClub() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+      <Dialog open={showConfirm} onOpenChange={(open) => !open && handleCancelConfirm()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận tạo câu lạc bộ</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn gửi yêu cầu tạo câu lạc bộ này? Vui lòng kiểm tra lại thông tin trước khi xác nhận.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm text-gray-700">
+            <div><span className="font-medium">Tên CLB: </span>{clubName || "Chưa nhập"}</div>
+            <div><span className="font-medium">Mô tả ngắn: </span>{shortDescription || "Chưa nhập"}</div>
+            <div><span className="font-medium">Danh mục: </span>{categories.find((c) => c.value === categoryId)?.label || "Chưa chọn"}</div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelConfirm} disabled={loading}>
+              Hủy
+            </Button>
+            <Button className="btn-primary" onClick={handleConfirmCreate} disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Đang gửi...
+                </>
+              ) : (
+                "Xác nhận tạo"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 export default function CreateClubRequestPage() {

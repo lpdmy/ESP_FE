@@ -396,19 +396,19 @@ export default function CreateActivity() {
         image: imageUrl,
       }
 
-      const newSpeakers = [...formData.speakers]
-      if (editingSpeakerIndex !== null) {
+    const newSpeakers = [...formData.speakers]
+    if (editingSpeakerIndex !== null) {
         newSpeakers[editingSpeakerIndex] = speakerData
-      } else {
+    } else {
         newSpeakers.push(speakerData)
-      }
-      setFormData({ ...formData, speakers: newSpeakers })
-      setIsSpeakerDialogOpen(false)
-      setSpeakerForm({ name: "", title: "", bio: "", image: "" })
+    }
+    setFormData({ ...formData, speakers: newSpeakers })
+    setIsSpeakerDialogOpen(false)
+    setSpeakerForm({ name: "", title: "", bio: "", image: "" })
       setSpeakerImagePreview("")
       setSpeakerImageFile(null)
-      setEditingSpeakerIndex(null)
-      toast.success(editingSpeakerIndex !== null ? "Cập nhật diễn giả thành công" : "Thêm diễn giả thành công")
+    setEditingSpeakerIndex(null)
+    toast.success(editingSpeakerIndex !== null ? "Cập nhật diễn giả thành công" : "Thêm diễn giả thành công")
     } catch (error) {
       console.error("Error saving speaker:", error)
       toast.error("Có lỗi xảy ra khi lưu diễn giả")
@@ -517,7 +517,7 @@ export default function CreateActivity() {
       const maxParticipantsNum = parseInt(formData.maxParticipants)
       if (isNaN(maxParticipantsNum) || maxParticipantsNum <= 0) {
         toast.error("Số người tham gia tối đa phải lớn hơn 0")
-        return
+      return
       }
     }
     if (!formData.rules || formData.rules.length === 0 || formData.rules.every(r => !r.trim())) {
@@ -2438,14 +2438,14 @@ export default function CreateActivity() {
               <div className="flex items-center gap-4">
                 {(speakerImagePreview || speakerForm.image) && (
                   <div className="relative">
-                    <img
+                  <img
                       src={speakerImagePreview || speakerForm.image}
-                      alt="Preview"
+                    alt="Preview"
                       className="w-24 h-24 rounded-full object-cover border-2 border-gray-300"
-                      onError={(e) => {
-                        e.target.style.display = "none"
-                      }}
-                    />
+                    onError={(e) => {
+                      e.target.style.display = "none"
+                    }}
+                  />
                     {speakerImageFile && (
                       <button
                         type="button"
@@ -2461,8 +2461,8 @@ export default function CreateActivity() {
                         <X className="w-4 h-4" />
                       </button>
                     )}
-                  </div>
-                )}
+                </div>
+              )}
                 <div className="flex-1">
                   <Button
                     type="button"

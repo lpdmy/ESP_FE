@@ -9,6 +9,8 @@ import { useChatApi } from "./hooks/useChatApi"
 import { useChatStore } from "@/store/chat/useChatStore"
 import { LoadingCard, LoadingOverlay } from "@/common/components/ui/loading"
 import { useToast } from "@/common/hooks/useToast"
+import { useSelector } from "react-redux"
+import { getUserId } from "@/common/utils/userUtils"
 
 export default function ChatInbox() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -17,6 +19,7 @@ export default function ChatInbox() {
   const { rooms, setRooms, setLoading, setError } = useChatStore()
   const { showError } = useToast()
   const [activeTab, setActiveTab] = useState("personal") // 'personal' | 'group'
+  const user = useSelector((state) => state.user.user)
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -24,7 +27,7 @@ export default function ChatInbox() {
         setLoading("rooms", true);
         const response = await getUserRooms();
         if (response) {
-          const userId = Number(localStorage.getItem("userId")); // hoặc lấy từ context/store
+          const userId = getUserId(user);
 
           const mappedRooms = response.map((r) => {
             const index = r.participantIds.findIndex((id) => id !== userId);

@@ -18,6 +18,7 @@ import { useJuryApi } from "../../hooks/useJuryApi";
 import { useToast } from "@/common/hooks/useToast";
 import TeacherSearchDialog from "../add-jury/page";
 import RandomAssignDialog from "../Modal/auto-assign/page";
+import ImprovedRandomAssignDialog from "../Modal/improved-auto-assign/page";
 import ConfirmDeleteAssignDialog from "../Modal/delete/page";
 import AssignDialog from "../Modal/assign/page";
 
@@ -27,6 +28,7 @@ export default function AssignJurySection({ activityId }) {
     getSubmissionByAcitivty,
     deleteJury,
     ramdomAssignJury,
+    improvedRandomAssign,
     deleteRandomAssign,
   } = useJuryApi();
   const toast = useToast();
@@ -38,6 +40,7 @@ export default function AssignJurySection({ activityId }) {
   const [searchTerm, setSearchTerm] = useState("");
 
   const [openRandomDialog, setOpenRandomDialog] = useState(false);
+  const [openImprovedRandomDialog, setOpenImprovedRandomDialog] = useState(false);
   const [openDeleteRandomDialog, setOpenDeleteRandomDialog] = useState(false);
 
   // Pagination
@@ -119,6 +122,21 @@ export default function AssignJurySection({ activityId }) {
     }
   };
 
+  const handleImprovedRandomForAll = async (numberOfJury) => {
+    try {
+      await improvedRandomAssign({ activityId, numberOfJury });
+      toast.showSuccess("Phân công ngẫu nhiên (cải tiến) thành công!");
+      handleLoadSubmission();
+      handleLoadJury();
+    } catch (error) {
+      if(error.statusCode == 400){
+        toast.showError(error.message)
+      } else {
+        toast.showError("Phân công thất bại");
+      }
+    }
+  };
+
   const handleDeleteRandom = async () => {
     try {
       await deleteRandomAssign(activityId);
@@ -160,15 +178,17 @@ export default function AssignJurySection({ activityId }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Danh sách bài nộp ({totalCount})
-              <Button
-                variant="outline"
-                size="sm"
-                className="ml-auto border !border-gray-300"
-                onClick={() => setOpenRandomDialog(true)}
-              >
-                <Shuffle className="w-4 h-4 mr-2" />
-                Phân công ngẫu nhiên
-              </Button>
+              <div className="ml-auto flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border !border-blue-400 bg-blue-50 hover:bg-blue-100"
+                  onClick={() => setOpenImprovedRandomDialog(true)}
+                >
+                  <Shuffle className="w-4 h-4 mr-2" />
+                  Phân công ngẫu nhiên
+                </Button>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -199,7 +219,11 @@ export default function AssignJurySection({ activityId }) {
                   <div>
                     <p className="font-medium">{s.title}</p>
                     <p className="text-sm text-gray-500">
-                      {s.userFullName} - {s.class?.class}
+                      {s.submissionCode
+                        ? `Mã bài: ${s.submissionCode}`
+                        : s.orderNumber
+                        ? `Bài #${s.orderNumber}`
+                        : `Bài #${s.id}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -335,6 +359,11 @@ export default function AssignJurySection({ activityId }) {
         isOpen={openRandomDialog}
         onClose={() => setOpenRandomDialog(false)}
         onConfirm={handleRandomForAll}
+      />
+      <ImprovedRandomAssignDialog
+        isOpen={openImprovedRandomDialog}
+        onClose={() => setOpenImprovedRandomDialog(false)}
+        onConfirm={handleImprovedRandomForAll}
       />
       <ConfirmDeleteAssignDialog
         isOpen={openDeleteRandomDialog}

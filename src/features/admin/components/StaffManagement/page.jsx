@@ -64,53 +64,23 @@ import {
 import CreateEmployeeModal from "./CreateStaffModal/page"; // Mock data
 import { useStaffApi } from "../../hooks/useStaffApi";
 const availablePermissions = [
-  { label: "MANAGE_CLASS", name: "Quản lý lớp học", id: 1 },
+  { label: "VIEW_REPORT", name: "Xem báo cáo và Dashboard", id: 4 },
+  { label: "MANAGE_CLASSES", name: "Quản lý lớp học", id: 1 },
   { label: "MANAGE_USER", name: "Quản lý người dùng", id: 2 },
-  { label: "MANAGE_POST", name: "Quản lý bài đăng", id: 3 },
-  { label: "VIEW_REPORT", name: "Xem báo cáo", id: 4 },
-  { label: "MANAGE_COMMENTS", name: "Quản lý bình luận" },
-  { label: "MANAGE_EVENTS", name: "Quản lý sự kiện", id: 6 },
+  { label: "MANAGE_ACTIVITIES", name: "Quản lý hoạt động & Cuộc thi", id: 6 },
   { label: "MANAGE_CLUBS", name: "Quản lý câu lạc bộ", id: 7 },
   { label: "MANAGE_ANNOUNCEMENTS", name: "Quản lý thông báo", id: 8 },
-  { label: "MANAGE_REWARDS", name: "Quản lý phần thưởng", id: 10 },
+  { label: "MANAGE_REWARDS", name: "Quản lý điểm thưởng và Phần thưởng", id: 10 },
+  { label: "MANAGE_STAFF", name: "Quản lý nhân sự", id: 11 },
+  { label: "MODERATE_CONTENT", name: "Kiểm duyệt nội dung", id: 12 },
 ];
 import { useToast } from "@/common/hooks/useToast";
-const roleTemplates = [
-  {
-    name: "Moderator",
-    permissions: ["manage_posts", "manage_comments", "view_reports"],
-    description: "Kiểm duyệt nội dung và xử lý báo cáo",
-  },
-  {
-    name: "Content Manager",
-    permissions: ["manage_posts", "manage_events", "manage_announcements"],
-    description: "Quản lý nội dung và sự kiện",
-  },
-  {
-    name: "Event Coordinator",
-    permissions: ["manage_events", "manage_clubs", "view_analytics"],
-    description: "Điều phối sự kiện và hoạt động",
-  },
-  {
-    name: "Community Manager",
-    permissions: [
-      "manage_users",
-      "manage_clubs",
-      "manage_announcements",
-      "view_analytics",
-    ],
-    description: "Quản lý cộng đồng và người dùng",
-  },
-];
 
 export default function StaffManagement() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [createDiagOpen, setCreateDiagOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
-  const [isGrantDialogOpen, setIsGrantDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPermissions, setSelectedPermissions] = useState([]);
-  const [selectedRole, setSelectedRole] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const { getAllStaff, deleteStaff, recoveryStaff } = useStaffApi();
@@ -160,23 +130,7 @@ export default function StaffManagement() {
       }
     }
   };
-  const handleRoleSelect = (roleName) => {
-    const role = roleTemplates.find((r) => r.name === roleName);
-    if (role) {
-      setSelectedPermissions(role.permissions);
-      setSelectedRole(roleName);
-    }
-  };
-
-  const handlePermissionChange = (permissionId, checked) => {
-    if (checked) {
-      setSelectedPermissions([...selectedPermissions, permissionId]);
-    } else {
-      setSelectedPermissions(
-        selectedPermissions.filter((p) => p !== permissionId)
-      );
-    }
-  };
+  
   useEffect(() => {
     handleGetAllStaff();
   }, [pageNumber, searchTerm]);
