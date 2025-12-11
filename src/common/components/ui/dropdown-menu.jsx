@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronRight, Check, Circle } from 'lucide-react';
-
+import { createPortal } from "react-dom";
 export const DropdownMenu = ({ children, ...props }) => {
   return (
     <div className="relative inline-block text-left" {...props}>
@@ -20,7 +20,10 @@ export const DropdownMenuTrigger = ({ children, asChild, ...props }) => {
     </div>
   );
 };
-
+export const DropdownMenuPortal = ({ children }) => {
+  if (typeof window === "undefined") return null;
+  return createPortal(children, document.body);
+};
 export const DropdownMenuContent = ({ 
   children, 
   align = "start", 

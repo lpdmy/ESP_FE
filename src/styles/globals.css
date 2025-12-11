@@ -180,3 +180,133 @@
 [data-radix-tooltip-content] {
   transition: none !important;
 }
+
+/* Slide animations for CreatePostModal */
+@keyframes slide-in-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-left {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animation classes */
+.animate-slide-in-from-left {
+  animation: slide-in-from-left 0.3s ease-out !important;
+  transform: translateX(0) !important;
+}
+
+.animate-slide-in-from-right {
+  animation: slide-in-from-right 0.3s ease-out !important;
+  transform: translateX(0) !important;
+}
+
+.animate-slide-out-left {
+  animation: slide-out-left 0.3s ease-out !important;
+  transform: translateX(-100%) !important;
+}
+
+.animate-slide-out-right {
+  animation: slide-out-right 0.3s ease-out !important;
+  transform: translateX(100%) !important;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out !important;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out !important;
+}
+
+/* Force slide animations to work */
+.animate-slide-in-from-left,
+.animate-slide-in-from-right,
+.animate-slide-out-left,
+.animate-slide-out-right {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Optimized for 60fps */
+.modal-optimized {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000px;
+  -webkit-perspective: 1000px;
+}
+
+/* Tooltip animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}

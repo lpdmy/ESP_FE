@@ -1,0 +1,11 @@
+export const REWARD_CATEGORY = {
+  VOUCHER: 0,
+  BOOK: 2,
+  ELECTRONICS: 3,
+};
+
+export const REWARD_CATEGORY_LABELS = {
+  [REWARD_CATEGORY.VOUCHER]: "Voucher",
+  [REWARD_CATEGORY.BOOK]: "Sách",
+  [REWARD_CATEGORY.ELECTRONICS]: "Điện tử",
+};

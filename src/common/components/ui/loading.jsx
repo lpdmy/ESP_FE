@@ -87,11 +87,14 @@ export function LoadingButton({
   variant = "default",
   ...props 
 }) {
+  // Remove isLoading from props to prevent it from being passed to DOM
+  const { isLoading: _, ...buttonProps } = { isLoading, ...props };
+  
   return (
     <Button 
       className={`relative overflow-hidden transition-all duration-200 ${isLoading ? 'cursor-not-allowed' : ''} ${className}`}
       disabled={isLoading}
-      {...props}
+      {...buttonProps}
     >
       {isLoading && (
         <>
@@ -110,6 +113,59 @@ export function LoadingButton({
     </Button>
   )
 }
+export function LoadingAdmin({ isLoading, className = "" }) {
+  if (!isLoading) return null;
+
+  return (
+    <div
+      className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-white backdrop-blur-md z-50 ${className}`}
+    >
+      <div className="relative w-16 h-16">
+        <div className="absolute inset-0 rounded-full border-4 border-blue-300 border-t-blue-600 animate-spin"></div>
+      </div>
+    </div>
+  );
+}
+export function LoadingSubmission({ isLoading, className = "" }) {
+  if (!isLoading) return null;
+
+  return (
+    <div
+      className={`absolute inset-0 flex items-center justify-center bg-white/70 z-50 ${className}`}
+    >
+      <div className="relative w-12 h-12">
+        <div className="absolute inset-0 rounded-full border-4 border-blue-200 border-t-blue-500 animate-spin"></div>
+      </div>
+    </div>
+  );
+}
+
+export function LoadingSubmissions({ isLoading, className = "" }) {
+  if (!isLoading) return null;
+
+  return (
+    <div className={`w-full flex justify-center py-8 ${className}`}>
+      <div className="relative w-12 h-12">
+        <div className="absolute inset-0 rounded-full border-4 border-blue-200 border-t-blue-500 animate-spin"></div>
+      </div>
+    </div>
+  );
+}
+export function LoadingCollection({ 
+  isLoading, 
+  className = "",
+  variant = "default"
+}) {
+  if (!isLoading) return null;
+
+  return (
+    <div className={`absolute inset-0 bg-gradient-to-br from-orange-50 via-yellow-50 to-white flex items-center justify-center z-10 ${className}`}>
+     <div className="backdrop-blur-md  animate-in fade-in-0 zoom-in-95 duration-300">
+        <Loading size="lg" variant={variant} />
+      </div>
+    </div>
+  );
+}
 
 export function LoadingCard({ 
   isLoading, 
@@ -120,13 +176,16 @@ export function LoadingCard({
 }) {
   if (isLoading) {
     return (
-      <div className={`p-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200 ${className}`}>
+      <div
+        className={`p-8 rounded-2xl border shadow-sm flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm border-orange-200 ${className}`}
+      >
         <div className="animate-in fade-in-0 slide-in-from-top-2 duration-300">
           <Loading text={text} size="lg" variant={variant} />
         </div>
       </div>
-    )
+    );
   }
 
-  return children
+  return children;
 }
+

@@ -4,6 +4,17 @@ import { authRoutes } from "./AuthRoutes";
 import { adminRoutes } from "./AdminRoutes";
 import { profileRoutes } from "./UserProfileRoutes";
 import { onboardingRoutes } from "./OnboardingRoutes";
+import { collectionsRoutes} from "./CollectionRoutes";
+import { clubRoutes } from "./ClubRoutes";
+import { starPointRoutes } from "./StarPointRoutes";
+import { chatRoutes } from "./ChatRoutes";
+import { notificationRoutes } from "./NotificationRoutes";
+import { adminSystemNewsAndNoticesRoutes } from "./AdminSystemNewsAndNoticesRoutes";
+import { systemNewsAndNoticesRoutes } from "./SystemNewsAndNoticesRoutes";
+import { submissionRoutes } from "./SubmissionRoutes";
+import { juryRoutes } from "./JuryRoutes";
+
+import { activityRoutes } from "./ActivityRoutes";
 
 export default function AppRoutes() {
   return (
@@ -13,6 +24,17 @@ export default function AppRoutes() {
       {...adminRoutes}
       {...profileRoutes}
       {...onboardingRoutes}
+      {...collectionsRoutes}
+      {...clubRoutes}
+      {...starPointRoutes}
+      {...chatRoutes}
+      {...notificationRoutes}
+      {...adminSystemNewsAndNoticesRoutes}
+      {...systemNewsAndNoticesRoutes}
+      {...juryRoutes}
+      {...activityRoutes}
+      {...submissionRoutes}
+
     </Routes>
   );
 }

@@ -12,7 +12,10 @@ export class UserService extends ApiService {
   }
 
   async getStudentProfileById(id, token) {
-    return this.get(API_CONFIG.USER_PROFILE.PROFILE_BY_ID.replace('{id}', id), token);
+    return this.get(API_CONFIG.USER_PROFILE.PROFILE_BY_USER_ID.replace('{id}', id), token);
+  }
+  async getTeacherProfileById(id, token) {
+    return this.get(API_CONFIG.USER_PROFILE.TEACHER_PROFILE_BY_USER_ID.replace('{id}', id), token);
   }
 
   async createStudentProfile(profileData, token) {
@@ -43,6 +46,7 @@ export class UserService extends ApiService {
   async updateMyTeacherProfile(teacherProfileData, token) {
     return this.put(API_CONFIG.USER_PROFILE.UPDATE_TEACHER_PROFILE, teacherProfileData, token);
   }
+  
 }
 
 export const userService = new UserService();
