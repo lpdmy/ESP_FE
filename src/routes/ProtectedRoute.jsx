@@ -1,5 +1,5 @@
 import { useSelector } from "react-redux";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -7,24 +7,31 @@ import {
   DialogTitle,
 } from "@/common/components/ui/dialog";
 import { Button } from "@/common/components/ui/button";
+import { ROLE } from "@/common/constants/roles";
 import { useState } from "react";
 const ProtectedRoute = ({ allowedRoles = [], requiredPermissions = [] }) => {
   const user = useSelector((state) => state.user.user);
+  const location = useLocation();
   const [showModal, setShowModal] = useState(false);
   const [redirect, setRedirect] = useState(false);
   if (!user) {
     return <Navigate to="/auth/login" replace />;
   }
   const { role, permissions } = user;
+
+  // Admin không truy cập home/search landing
+  if (role === ROLE.ADMIN && (location.pathname === "/" || location.pathname === "/search")) {
+    return <Navigate to="/admin" replace />;
+  }
   if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
     return <Navigate to="/" replace />;
   }
 
-  if (role === 0) {
+  if (role === ROLE.ADMIN) {
     return <Outlet />;
   }
 
-  if (role === 1 && requiredPermissions.length > 0) {
+  if (role === ROLE.STAFF && requiredPermissions.length > 0) {
     const hasPermission = requiredPermissions.some((perm) =>
       permissions?.includes(perm)
     );

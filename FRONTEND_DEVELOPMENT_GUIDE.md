@@ -239,6 +239,79 @@ const handleSubmit = async (e) => {
 };
 ```
 
+### 9. Role-Based Access Control
+
+Hệ thống sử dụng 4 roles chính với permissions:
+
+```jsx
+import { ROLE } from '@/common/constants/roles';
+
+// Roles
+ROLE.ADMIN    // 0 - Quyền cao nhất
+ROLE.STAFF    // 1 - Quyền quản lý với permissions cụ thể
+ROLE.TEACHER  // 2 - Quyền quản lý hoạt động
+ROLE.STUDENT  // 4 - Quyền cơ bản
+```
+
+**Sử dụng trong Routes:**
+
+```jsx
+import { ROLE } from '@/common/constants/roles';
+import ProtectedRoute from '@/routes/ProtectedRoute';
+
+// Chỉ Admin và Staff có permission MANAGE_USER
+<Route
+  element={
+    <ProtectedRoute
+      allowedRoles={[ROLE.ADMIN, ROLE.STAFF]}
+      requiredPermissions={["MANAGE_USER"]}
+    />
+  }
+>
+  <Route path="/admin/users" element={<UserManagementPage />} />
+</Route>
+```
+
+**Sử dụng trong Components:**
+
+```jsx
+import { ROLE } from '@/common/constants/roles';
+import { useSelector } from 'react-redux';
+
+const MyComponent = () => {
+  const user = useSelector((state) => state.user.user);
+  const { role, permissions } = user;
+  
+  // ✅ Good - sử dụng ROLE constants
+  if (role === ROLE.ADMIN) {
+    return <AdminOnlyContent />;
+  }
+  
+  if (role === ROLE.STAFF && permissions?.includes("MANAGE_USER")) {
+    return <StaffWithPermissionContent />;
+  }
+  
+  // ❌ Avoid - hardcoded numbers
+  if (role === 0) {
+    return <AdminOnlyContent />;
+  }
+  
+  return <DefaultContent />;
+};
+```
+
+**Permissions cho Staff:**
+
+- `VIEW_REPORT`: Xem báo cáo và Dashboard
+- `MANAGE_USER`: Quản lý người dùng
+- `MANAGE_STAFF`: Quản lý nhân viên
+- `MANAGE_ACTIVITIES`: Quản lý hoạt động
+- `MANAGE_CLUBS`: Quản lý câu lạc bộ
+- `MANAGE_CLASSES`: Quản lý lớp học
+- `MANAGE_REWARDS`: Quản lý điểm thưởng
+- `MANAGE_ANNOUNCEMENTS`: Quản lý thông báo
+- `MODERATE_CONTENT`: Kiểm duyệt nội dung
+
 ## Best Practices
 
 ### 1. Component Naming
@@ -366,6 +439,9 @@ Centralized messages organized by module trong `src/common/constants/messages/`.
 - [ ] Error handling with toast notifications
 - [ ] Loading states implemented
 - [ ] No hardcoded strings (use messages)
+- [ ] No hardcoded role numbers (use ROLE constants)
+- [ ] Role checks use ROLE constants instead of numbers
+- [ ] Staff permissions are checked correctly
 - [ ] useEffect dependencies are correct
 - [ ] No infinite loops
 - [ ] Performance optimizations applied

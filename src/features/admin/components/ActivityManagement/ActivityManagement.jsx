@@ -28,6 +28,7 @@ import {
   Sparkles,
   Calendar,
   Users,
+  Lock,
   CheckCircle,
   Clock,
   XCircle,
@@ -46,6 +47,8 @@ import { ROUTES } from "@/common/constants/routes"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
 import { LoadingCard } from "@/common/components/ui/loading"
+import ActivitiesWithoutJury from "@/features/landing/jury/components/activities-without-jury/page"
+import { useJuryApi } from "@/features/landing/jury/hooks/useJuryApi"
 
 const parseRegistrationSettings = (settings) => {
   if (!settings) return null
@@ -68,6 +71,11 @@ export default function ActivityManagement() {
   const [deletingIds, setDeletingIds] = useState(new Set())
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [activityToDelete, setActivityToDelete] = useState(null)
+  
+  // Activities without jury widget state
+  const [activitiesWithoutJury, setActivitiesWithoutJury] = useState([])
+  const [showActivitiesWithoutJury, setShowActivitiesWithoutJury] = useState(true)
+  const { getActivitiesWithoutJury } = useJuryApi()
 
   // Pagination state
   const [pageNumber, setPageNumber] = useState(1)
@@ -177,6 +185,9 @@ export default function ActivityManagement() {
     // If now < startDate, it's upcoming
     return "Upcoming" // Sắp tới
   }
+
+  const isActivityLocked = (activity) =>
+    activity.status === "Active" || activity.status === "Ended"
 
   // Fetch activities from BE
   const fetchActivities = useCallback(async () => {
@@ -309,6 +320,20 @@ export default function ActivityManagement() {
   useEffect(() => {
     fetchStatistics()
   }, [fetchStatistics])
+
+  // Fetch activities without jury
+  const fetchActivitiesWithoutJury = useCallback(async () => {
+    try {
+      const response = await getActivitiesWithoutJury()
+      setActivitiesWithoutJury(response.data.data || [])
+    } catch (error) {
+      console.error("Error loading activities without jury:", error)
+    }
+  }, [getActivitiesWithoutJury])
+
+  useEffect(() => {
+    fetchActivitiesWithoutJury()
+  }, [fetchActivitiesWithoutJury])
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -829,21 +854,92 @@ export default function ActivityManagement() {
           ))
         ) : (
           stats.map((stat, index) => (
-            <Card key={index} className="hover-lift">
-              <CardContent>
-                <div className="flex items-start justify-between mb-3">
-                  <div className={`${stat.bgColor} p-3 rounded-lg`}>
-                    <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                  </div>
+          <Card key={index} className="hover-lift">
+            <CardContent>
+              <div className="flex items-start justify-between mb-3">
+                <div className={`${stat.bgColor} p-3 rounded-lg`}>
+                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
                 </div>
-                <div className="text-3xl font-bold mb-1">{stat.value}</div>
-                <div className="text-sm text-gray-600 mb-2">{stat.title}</div>
-                <div className="text-xs text-gray-500">{stat.trend}</div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="text-3xl font-bold mb-1">{stat.value}</div>
+              <div className="text-sm text-gray-600 mb-2">{stat.title}</div>
+              <div className="text-xs text-gray-500">{stat.trend}</div>
+            </CardContent>
+          </Card>
           ))
         )}
       </div>
+
+      {/* Activities Without Jury Widget - Highlighted for Admin & Staff */}
+      {showActivitiesWithoutJury && activitiesWithoutJury.length > 0 && (
+        <Card className="border-orange-300 bg-gradient-to-r from-orange-50 to-yellow-50 shadow-lg">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-6 w-6 text-orange-600" />
+                <div>
+                  <CardTitle className="text-xl font-bold text-orange-900">
+                    Sự kiện chưa có giám khảo ({activitiesWithoutJury.length})
+                  </CardTitle>
+                  <p className="text-sm text-orange-700 mt-1">
+                    Các hoạt động này cần được phân công giám khảo
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowActivitiesWithoutJury(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {activitiesWithoutJury.slice(0, 6).map((activity) => (
+                <div
+                  key={activity.id}
+                  className="p-3 bg-white rounded-lg border border-orange-200 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-semibold text-sm line-clamp-1 flex-1">
+                      {activity.title}
+                    </h4>
+                    {activity.hasSubmissions && (
+                      <Badge className="bg-orange-100 text-orange-700 text-xs">
+                        {activity.submissionCount} bài
+                      </Badge>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full mt-2 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white"
+                    onClick={() => {
+                      window.location.href = `/admin/activities/${activity.id}/assign-jury`
+                    }}
+                  >
+                    Phân công giám khảo
+                  </Button>
+                </div>
+              ))}
+            </div>
+            {activitiesWithoutJury.length > 6 && (
+              <div className="mt-4 text-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowActivitiesWithoutJury(false)
+                  }}
+                >
+                  Xem tất cả ({activitiesWithoutJury.length} sự kiện)
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters & Search */}
       <Card className="mb-6">
@@ -990,25 +1086,25 @@ export default function ActivityManagement() {
               </div>
             )}
             {error ? (
-              <div className="text-center py-8">
-                <p className="text-red-600 mb-4">{error}</p>
-                <Button onClick={fetchActivities} variant="outline">
-                  Thử lại
+            <div className="text-center py-8">
+              <p className="text-red-600 mb-4">{error}</p>
+              <Button onClick={fetchActivities} variant="outline">
+                Thử lại
+              </Button>
+            </div>
+          ) : filteredActivities.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Không tìm thấy hoạt động nào</p>
+              {hasActiveFilters() && (
+                <Button onClick={handleResetFilters} variant="outline" className="mt-4">
+                  Xóa bộ lọc
                 </Button>
-              </div>
-            ) : filteredActivities.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">Không tìm thấy hoạt động nào</p>
-                {hasActiveFilters() && (
-                  <Button onClick={handleResetFilters} variant="outline" className="mt-4">
-                    Xóa bộ lọc
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className=" rounded-lg overflow-hidden">
-                  <Table>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className=" rounded-lg overflow-hidden">
+                <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Tiêu đề</TableHead>
@@ -1050,14 +1146,14 @@ export default function ActivityManagement() {
                             }
                           </div>
                           {activity.maxParticipants != null && activity.maxParticipants > 0 && (
-                            <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">
-                              <div
-                                className="bg-green-600 h-1.5 rounded-full"
-                                style={{
+                          <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">
+                            <div
+                              className="bg-green-600 h-1.5 rounded-full"
+                              style={{
                                   width: `${Math.min((activity.participants / activity.maxParticipants) * 100, 100)}%`,
-                                }}
-                              />
-                            </div>
+                              }}
+                            />
+                          </div>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
@@ -1077,17 +1173,17 @@ export default function ActivityManagement() {
                               </Tooltip>
                             )}
                             <Tooltip content="Xem trước trang">
-                              <Button
-                                variant="ghost"
-                                size="icon"
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
                                 asChild
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <Link to={`${ROUTES.ACTIVITY.VIEW_ACTIVITY.replace(':id', String(activity.id))}?isPreview=true`}>
                                   <Eye className="w-4 h-4 text-blue-500" />
                                 </Link>
-                              </Button>
-                            </Tooltip>
+                                </Button>
+                              </Tooltip>
                             <Tooltip content="Giám khảo">
                               <Button
                                 variant="ghost"
@@ -1100,18 +1196,34 @@ export default function ActivityManagement() {
                                 </Link>
                               </Button>
                             </Tooltip>
-                            <Tooltip content="Chỉnh sửa">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                asChild
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Link to={ROUTES.ADMIN.EDIT_ACTIVITY.replace(':id', String(activity.id))}>
-                                  <Edit className="w-4 h-4" />
-                                </Link>
-                              </Button>
-                            </Tooltip>
+                            {isActivityLocked(activity) ? (
+                              <Tooltip content="Hoạt động đang diễn ra/đã kết thúc - không thể chỉnh sửa">
+                                <span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    disabled
+                                    className="opacity-60"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Lock className="w-4 h-4" />
+                                  </Button>
+                                </span>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip content="Chỉnh sửa">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  asChild
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Link to={ROUTES.ADMIN.EDIT_ACTIVITY.replace(':id', String(activity.id))}>
+                                    <Edit className="w-4 h-4" />
+                                  </Link>
+                                </Button>
+                              </Tooltip>
+                            )}
                             <Tooltip content="Xóa sự kiện">
                               <Button
                                 variant="ghost"
@@ -1200,7 +1312,7 @@ export default function ActivityManagement() {
                 </div>
               )}
             </>
-            )}
+          )}
           </div>
         </CardContent>
       </Card>

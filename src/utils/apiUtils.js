@@ -72,7 +72,16 @@ export const executeApiCall = async (endpoint, options = {}) => {
       }
 
       if (!response.ok) {
-         // Handle error responses
+         // Handle unauthorized: clear session and redirect to login
+         if (response.status === 401) {
+            toast.warn("Phiên làm việc của bạn đã hết hạn. Vui lòng đăng nhập lại.");
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            // Force redirect to login
+            window.location.replace('/auth/login');
+            return;
+         }
+
          const errorMessage = data?.message || data || `HTTP ${response.status}: ${response.statusText}`;
          throw new Error(errorMessage);
       }

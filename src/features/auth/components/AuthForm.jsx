@@ -29,11 +29,11 @@ export default function AuthForm() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 const PERMISSION_ROUTE_MAP = {
+  VIEW_REPORT: "/admin",
   MANAGE_USER: "/admin/users",
-  MANAGE_EVENTS: "/admin/activities",
+  MANAGE_ACTIVITIES: "/admin/activities",
   MANAGE_CLUBS: "/admin/clubs",
   MANAGE_CLASSES: "/admin/classes",
-  MANAGE_POSTS: "/admin/posts",
   MANAGE_REWARDS: "/admin/rewards",
   MANAGE_STAFF: "/admin/staff",
   MANAGE_ANNOUNCEMENTS: "/admin/system-news-and-notices",
@@ -80,6 +80,9 @@ const PERMISSION_ROUTE_MAP = {
           navigate(ROUTES.ADMIN.MAIN);
         }
       } 
+      else if (resultUser?.data.role === ROLE.TEACHER) {
+        navigate("/my-classes");
+      }
       else {
         navigate(ROUTES.LANDING.HOME);
       }

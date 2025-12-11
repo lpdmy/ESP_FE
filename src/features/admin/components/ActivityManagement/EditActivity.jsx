@@ -140,6 +140,19 @@ export default function EditActivity() {
     "Bóng rổ",
   ];
 
+  // Trạng thái khóa chỉnh sửa (đang diễn ra hoặc đã kết thúc)
+  const getValidDate = (value) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+  const startDateValue = getValidDate(formData.startDate);
+  const endDateValue = getValidDate(formData.endDate);
+  const now = new Date();
+  const hasStarted = startDateValue ? now >= startDateValue : false;
+  const hasEnded = endDateValue ? now > endDateValue : false;
+  const isActivityLocked = hasStarted || hasEnded;
+
   // Load activity data
   useEffect(() => {
     const loadActivityData = async () => {
@@ -529,6 +542,12 @@ export default function EditActivity() {
   };
 
   const handleSave = async () => {
+    if (isActivityLocked) {
+      toast.error(
+        "Hoạt động đang diễn ra hoặc đã kết thúc, không thể cập nhật."
+      );
+      return;
+    }
     // Validate required fields
     if (!formData.title?.trim()) {
       toast.error("Vui lòng nhập tiêu đề hoạt động");
@@ -1843,6 +1862,11 @@ export default function EditActivity() {
       {/* Action Buttons - Fixed at bottom */}
       <Card>
         <CardContent className="p-6">
+      {isActivityLocked && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          Hoạt động đang diễn ra hoặc đã kết thúc nên không thể chỉnh sửa.
+        </div>
+      )}
           <div className="flex items-center justify-between">
             <Button
               variant="outline"
@@ -2142,7 +2166,7 @@ export default function EditActivity() {
                         setIsPreviewOpen(false);
                         handleSave();
                       }}
-                      disabled={isSaving}
+                      disabled={isSaving || isActivityLocked}
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       {isSaving ? "Đang lưu..." : "Xác nhận lưu"}
@@ -2152,8 +2176,8 @@ export default function EditActivity() {
               </Dialog>
               <Button
                 onClick={handleSave}
-                className="bg-green-600 hover:bg-green-700 text-white"
-                disabled={isSaving}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={isSaving || isActivityLocked}
               >
                 <Save className="w-4 h-4 mr-2" />
                 {isSaving ? "Đang lưu..." : "Lưu thay đổi"}

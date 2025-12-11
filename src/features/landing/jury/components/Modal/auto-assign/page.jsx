@@ -49,7 +49,7 @@ export default function RandomAssignDialog({ isOpen, onClose, onConfirm }) {
             Hủy
           </Button>
           <Button
-            className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white"
+            className="bg-gradient-to-r from-blue-500 to-blue-500 text-white"
             onClick={handleConfirm}
           >
             Xác nhận

@@ -6,7 +6,7 @@ import AdminSystemAnnouncementDetailPage from "@/pages/Admin/NewsAndNotices/Admi
 import { ROUTES } from "@/common/constants/routes";
 
 export const adminSystemNewsAndNoticesRoutes = [
-  <Route element={<ProtectedRoute allowedRoles={[ROLE.ADMIN]} />}>
+  <Route element={<ProtectedRoute allowedRoles={[ROLE.ADMIN, ROLE.STAFF]} requiredPermissions={["MANAGE_ANNOUNCEMENTS"]} />}>
     <Route key="admin-system-news-and-notices" path={ROUTES.ADMIN.SYSTEM_NEWS_AND_NOTICES} element={<AdminSystemAnnouncementsPage />} />
     <Route key="admin-system-news-and-notice-detail" path={ROUTES.ADMIN.SYSTEM_NEWS_AND_NOTICES_DETAIL} element={<AdminSystemAnnouncementDetailPage />} />
   </Route>

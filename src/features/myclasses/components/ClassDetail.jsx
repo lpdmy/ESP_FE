@@ -22,6 +22,7 @@ import { useToast } from "@/common/hooks/useToast"
 import TeacherPosts from "./TeacherPosts"
 import ClassStats from "./ClassStats"
 import SimpleClassScheduleView from "@/features/admin/components/ClassManagement/SimpleClassScheduleView"
+import { ROUTES } from "@/common/constants/routes"
 
 // Loading state component
 const LoadingSpinner = () => (
@@ -95,7 +96,7 @@ export default function ClassDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-100">
+      <div className="min-h-screen">
         <div className="container mx-auto px-4 py-6">
           <LoadingSpinner />
         </div>
@@ -105,7 +106,7 @@ export default function ClassDetail() {
 
   if (!classData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-100">
+      <div className="min-h-screen">
         <div className="container mx-auto px-4 py-6">
           <div className="text-center py-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Không tìm thấy lớp học</h2>
@@ -120,8 +121,10 @@ export default function ClassDetail() {
     )
   }
 
+  const showSidebar = userRole !== 'Teacher'
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-100">
+    <div className="min-h-screen">
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
@@ -131,9 +134,9 @@ export default function ClassDetail() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={`grid grid-cols-1 ${showSidebar ? 'lg:grid-cols-3' : ''} gap-6`}>
           {/* Main Content */}
-          <div className="lg:col-span-2">
+          <div className={showSidebar ? "lg:col-span-2" : "lg:col-span-3"}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="posts">Bài đăng của giáo viên</TabsTrigger>
@@ -159,7 +162,20 @@ export default function ClassDetail() {
                   <CardContent>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {students.map((student) => (
-                        <div key={student.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                        <div
+                          key={student.id}
+                          className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                          onClick={() => navigate(ROUTES.USER_PROFILE.PROFILEId.replace(":id", student.id))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              navigate(ROUTES.USER_PROFILE.PROFILEId.replace(":id", student.id))
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`Xem hồ sơ của ${student.firstName} ${student.lastName}`}
+                        >
                           <Avatar className="h-10 w-10">
                             <AvatarImage src={student.avatarUrl} />
                             <AvatarFallback>{student.firstName?.charAt(0) || 'S'}</AvatarFallback>
@@ -177,56 +193,58 @@ export default function ClassDetail() {
             </Tabs>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Class Info */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle>Thông tin lớp học</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={classData.homeroomTeacher?.avatarUrl} />
-                    <AvatarFallback>GV</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold text-gray-900">
-                      {classData.homeroomTeacher?.firstName} {classData.homeroomTeacher?.lastName}
-                    </p>
-                    <p className="text-sm text-gray-600">Giáo viên chủ nhiệm</p>
-                    <p className="text-sm text-gray-500">{classData.homeroomTeacher?.email}</p>
+          {/* Sidebar - hidden for teacher role (no redeem/rewards) */}
+          {showSidebar && (
+            <div className="space-y-6">
+              {/* Class Info */}
+              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle>Thông tin lớp học</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={classData.homeroomTeacher?.avatarUrl} />
+                      <AvatarFallback>GV</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold text-gray-900">
+                        {classData.homeroomTeacher?.firstName} {classData.homeroomTeacher?.lastName}
+                      </p>
+                      <p className="text-sm text-gray-600">Giáo viên chủ nhiệm</p>
+                      <p className="text-sm text-gray-500">{classData.homeroomTeacher?.email}</p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-3 pt-4">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-700">{classData.studentCount} học sinh</span>
+                  <div className="space-y-3 pt-4">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm text-gray-700">{classData.studentCount} học sinh</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm text-gray-700">Khối {classData.grade}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-700">Khối {classData.grade}</span>
-                  </div>
-                </div>
 
-                {userRole === 'Student' && (
-                  <Button 
-                    className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600"
-                    onClick={() => alert('Chức năng liên hệ giáo viên đang phát triển')}
-                  >
-                    Liên hệ giáo viên
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+                  {userRole === 'Student' && (
+                    <Button 
+                      className="text-white w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600"
+                      onClick={() => alert('Chức năng liên hệ giáo viên đang phát triển')}
+                    >
+                      Liên hệ giáo viên
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
 
-            {/* Thời khóa biểu */}
-            <SimpleClassScheduleView schedules={classData?.schedules ?? []} />
+              {/* Thời khóa biểu */}
+              <SimpleClassScheduleView schedules={classData?.schedules ?? []} />
 
-            {/* Quick Stats */}
-            <ClassStats posts={posts} />
-          </div>
+              {/* Quick Stats */}
+              <ClassStats posts={posts} />
+            </div>
+          )}
         </div>
       </div>
     </div>

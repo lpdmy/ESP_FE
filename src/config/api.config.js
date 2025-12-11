@@ -1,3 +1,5 @@
+import { toast } from "react-toastify";
+
 // API Configuration
 export const API_CONFIG = {
   // Base URLs
@@ -275,14 +277,19 @@ export const API_CONFIG = {
     JURY_DASHBOARD: "/jury/dashboard",
     JURY_SUBMISSION: "/jury/submission/:id",
     JURY_GRADE: "/jury/grade",
+    GET_ACTIVITIES_WITHOUT_JURY: "/jury/activities-without-jury",
+    IMPROVED_RANDOM_ASSIGN: "/jury/improved-random-assign",
     RANDOM_ASSIGN: "/jury/random-assign",
     DELETE_RANDOM_ASSIGN: "/jury/delete-assign-activity",
     GET_ASSIGN_USER: "/jury/assign/user",
     GET_ASSIGN_USER_NOT_GRADE: "/jury/assign-not-grading/user",
     GET_ASSIGN_USER_GRADE: "/jury/assign-grading/user",
+    GET_ASSIGN_USER_NOT_GRADE_ALL: "/jury/assign-not-grading/user",
+    GET_ASSIGN_USER_GRADE_ALL: "/jury/assign-grading/user",
     JURY_ACTIVITY: "/jury/activity",
     JURY_ASSIGN: "/jury/assign",
     GRADING: "/jury/grade-submission",
+    IS_ASSIGNED: "/jury/is-assigned",
   },
   // Submission endpoints
   SUBMISSION: {
@@ -312,6 +319,15 @@ export async function handleApiResponse(response) {
 
   const contentType = response.headers.get("content-type");
   if (!response.ok) {
+    if (response.status === 401) {
+      // Phiên hết hạn: thông báo + xóa phiên + điều hướng login
+      toast.warn("Phiên làm việc của bạn đã hết hạn. Vui lòng đăng nhập lại.");
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      window.location.replace("/auth/login");
+      throw new Error("Unauthorized");
+    }
+
     console.log("API Error - Status:", response.status);
     // Nếu là JSON thì parse, không thì trả về text
     if (contentType && contentType.includes("application/json")) {
