@@ -13,7 +13,7 @@ export default function ModerationModal({ open, onClose,data }) {
     violator: {
       name: "Nguyễn Văn A",
       studentId: "SV20231234",
-      className: "SE1612",
+      className: "11B4",
     },
     violation: {
       type: "Hành vi không phù hợp",
@@ -26,6 +26,20 @@ export default function ModerationModal({ open, onClose,data }) {
   useEffect(()=>{
     console.log(data)
   },[data])
+  function formatDate(dateString, format = "dd/MM/yyyy") {
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+
+  if (format === "dd/MM/yyyy HH:mm") {
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  }
+
+  return `${day}/${month}/${year}`;
+}
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <Card className="w-full max-w-xl rounded-2xl shadow-xl animate-in fade-in zoom-in">
@@ -56,7 +70,7 @@ export default function ModerationModal({ open, onClose,data }) {
               </h3>
               <p className="text-sm">Nội dung: {data.contentText}</p>
               <p className="text-sm flex items-center gap-1">
-                <Calendar size={14} /> {data.reportedAt}
+                <Calendar size={14} /> {formatDate(data.reportedAt)}
               </p>
             </div>
           </div>
