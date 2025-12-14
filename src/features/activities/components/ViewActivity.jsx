@@ -63,6 +63,7 @@ import { useSearchApi } from "@/common/hooks/useSearchApi";
 import { useSubmissionApi } from "@/features/landing/submission/hooks/useSubmissionApi";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { BracketTree as AdminBracketTree } from "@/features/admin/components/ActivityManagement/BracketTree";
+import { formatDateFromAPI } from "@/common/utils/dateUtils";
 
 // Custom BracketTree với kẻ ngang và card lớn hơn
 const CustomBracketTree = memo(
@@ -939,35 +940,42 @@ const handleFetchSubmissionRank = async () =>{
         return;
       }
       console.log(activityData)
-      const now = new Date();
-      const startDate = activityData.startDate
-        ? new Date(activityData.startDate)
-        : null;
-      const endDate = activityData.endDate
-        ? new Date(activityData.endDate)
-        : null;
-      const registerDate = activityData.registerDate
-        ? new Date(activityData.registerDate)
-        : null;
-      const endRegisterDate = activityData.endRegisterDate
-        ? new Date(activityData.endRegisterDate)
-        : null;
+      const nowUTC = new Date();
+      // Convert now sang VN time để so sánh
+      const nowVN = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000);
+      
+      // Helper để parse date string từ API
+      // API trả về date string đã là VN time rồi, parse trực tiếp (không convert thêm)
+      const parseDateFromAPI = (dateStr) => {
+        if (!dateStr) return null;
+        // Parse như local time (VN time) vì API đã trả về VN time
+        const date = new Date(dateStr);
+        return isNaN(date.getTime()) ? null : date;
+      };
+      
+      // Parse dates từ API (đã là VN time rồi, không cần convert thêm)
+      const startDateVN = parseDateFromAPI(activityData.startDate);
+      const endDateVN = parseDateFromAPI(activityData.endDate);
+      const registerDateVN = parseDateFromAPI(activityData.registerDate);
+      const endRegisterDateVN = parseDateFromAPI(activityData.endRegisterDate);
 
       let status = "Đang đăng ký";
-      if (startDate && endDate) {
-        if (now >= startDate && now <= endDate) {
+      if (startDateVN && endDateVN) {
+        if (nowVN >= startDateVN && nowVN <= endDateVN) {
           status = "Đang diễn ra";
-        } else if (now > endDate) {
+        } else if (nowVN > endDateVN) {
           status = "Đã kết thúc";
-        } else if (now >= registerDate && now < startDate) {
+        } else if (registerDateVN && nowVN >= registerDateVN && nowVN < startDateVN) {
           status = "Sắp tới";
         }
       }
 
       const getTimelineStatus = (date) => {
         if (!date) return "upcoming";
-        const dateObj = new Date(date);
-        return now >= dateObj ? "completed" : "upcoming";
+        // Parse date từ API (đã là VN time rồi, không cần convert thêm)
+        const dateVN = parseDateFromAPI(date);
+        if (!dateVN) return "upcoming";
+        return nowVN >= dateVN ? "completed" : "upcoming";
       };
 
       const normalizedParticipants = normalizeParticipants(
@@ -1004,16 +1012,16 @@ const handleFetchSubmissionRank = async () =>{
         subType: activityData?.subType || "",
         thumbnail: activityData?.thumbnailUrl || "",
         startDate: activityData?.startDate
-          ? new Date(activityData.startDate).toISOString().split("T")[0]
+          ? formatDateFromAPI(activityData.startDate, false)
           : "",
         endDate: activityData?.endDate
-          ? new Date(activityData.endDate).toISOString().split("T")[0]
+          ? formatDateFromAPI(activityData.endDate, false)
           : "",
         registerDate: activityData?.registerDate
-          ? new Date(activityData.registerDate).toISOString().split("T")[0]
+          ? formatDateFromAPI(activityData.registerDate, false)
           : "",
         endRegisterDate: activityData?.endRegisterDate
-          ? new Date(activityData.endRegisterDate).toISOString().split("T")[0]
+          ? formatDateFromAPI(activityData.endRegisterDate, false)
           : "",
         location: activityData?.location || "",
         organizer: activityData?.organizer || "",
@@ -1851,7 +1859,80 @@ const handleFetchSubmissionRank = async () =>{
     });
   };
 
+  // Helper để parse date string từ API
+  // API trả về date string đã là VN time (không phải UTC)
+  // Ví dụ: "2025-12-15T00:00:00" → parse như local time (VN time)
+  const parseDateFromAPI = useCallback((dateStr) => {
+    if (!dateStr) return null;
+    
+    // API trả về date string không có timezone, nhưng đã là VN time rồi
+    // Parse như local time (không thêm 'Z' vì không phải UTC)
+    // Ví dụ: "2025-12-15T00:00:00" → parse như local timezone (VN)
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      console.error('❌ Invalid date string in parseDateFromAPI:', dateStr);
+      return null;
+    }
+    return date;
+  }, []);
+
+  // Kiểm tra có thể đăng ký hay không (trong thời hạn đăng ký)
+  // Logic: now (VN time) >= registerDate (VN time) && now (VN time) <= endRegisterDate (VN time)
+  // API trả về date string đã là VN time rồi, không cần convert thêm
+  const isRegistrationOpen = useMemo(() => {
+    if (!activity?.endRegisterDate) {
+      console.log("🟢 isRegistrationOpen: true (không có endRegisterDate)");
+      return true; // Nếu không có end date, cho phép đăng ký
+    }
+    
+    const nowUTC = new Date();
+    const nowVN = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000); // Convert now sang VN time
+    
+    // API trả về date string đã là VN time rồi, parse trực tiếp (không convert thêm)
+    const registerDateVN = activity?.registerDate ? parseDateFromAPI(activity.registerDate) : null;
+    const endRegisterDateVN = parseDateFromAPI(activity.endRegisterDate);
+    
+    if (!endRegisterDateVN) {
+      console.log("🟢 isRegistrationOpen: true (không parse được endRegisterDate)");
+      return true;
+    }
+    
+    console.log("🟢 isRegistrationOpen - Debug:", {
+      nowUTC: nowUTC.toISOString(),
+      nowVN: nowVN.toISOString(),
+      nowVNLocal: nowVN.toString(),
+      registerDateRaw: activity?.registerDate,
+      registerDateVN: registerDateVN?.toISOString(),
+      registerDateVNLocal: registerDateVN?.toString(),
+      endRegisterDateRaw: activity?.endRegisterDate,
+      endRegisterDateVN: endRegisterDateVN.toISOString(),
+      endRegisterDateVNLocal: endRegisterDateVN.toString(),
+    });
+    
+    // Nếu có registerDate, phải >= registerDate (so sánh trong VN time)
+    if (registerDateVN && nowVN < registerDateVN) {
+      console.log("🟢 isRegistrationOpen: false (chưa đến ngày bắt đầu đăng ký)", {
+        nowVN: nowVN.toISOString(),
+        registerDateVN: registerDateVN.toISOString(),
+        diff: registerDateVN.getTime() - nowVN.getTime(),
+      });
+      return false;
+    }
+    
+    // Phải <= endRegisterDate (so sánh trong VN time)
+    const isOpen = nowVN <= endRegisterDateVN;
+    console.log("🟢 isRegistrationOpen:", isOpen, {
+      nowVN: nowVN.toISOString(),
+      endRegisterDateVN: endRegisterDateVN.toISOString(),
+      diff: endRegisterDateVN.getTime() - nowVN.getTime(),
+      diffHours: (endRegisterDateVN.getTime() - nowVN.getTime()) / (1000 * 60 * 60),
+    });
+    return isOpen;
+  }, [activity?.registerDate, activity?.endRegisterDate, parseDateFromAPI]);
+
   // Kiểm tra có thể hủy đăng ký không (trước thời hạn đăng ký)
+  // Logic: now (VN time) <= endRegisterDate (VN time) - có thể hủy trước khi hết hạn đăng ký
+  // API trả về date string đã là VN time rồi, không cần convert thêm
   const canCancelRegistration = useMemo(() => {
     if (!activity?.endRegisterDate || !isRegistered) {
       console.log("🔵 canCancelRegistration: false", {
@@ -1861,15 +1942,23 @@ const handleFetchSubmissionRank = async () =>{
       });
       return false;
     }
-    const now = new Date();
-    const endRegisterDate = new Date(activity.endRegisterDate);
-    const canCancel = now <= endRegisterDate;
+    const nowUTC = new Date();
+    const nowVN = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000); // Convert now sang VN time
+    
+    // API trả về date string đã là VN time rồi, parse trực tiếp (không convert thêm)
+    const endRegisterDateVN = parseDateFromAPI(activity.endRegisterDate);
+    if (!endRegisterDateVN) return false;
+    
+    // Có thể hủy nếu hiện tại <= endRegisterDate (so sánh trong VN time)
+    const canCancel = nowVN <= endRegisterDateVN;
     console.log("🔵 canCancelRegistration:", canCancel, {
-      now: now.toISOString(),
-      endDate: endRegisterDate.toISOString(),
+      nowVN: nowVN.toISOString(),
+      nowVNLocal: nowVN.toString(),
+      endRegisterDateVN: endRegisterDateVN.toISOString(),
+      endRegisterDateVNLocal: endRegisterDateVN.toString(),
     });
     return canCancel;
-  }, [activity?.endRegisterDate, isRegistered]);
+  }, [activity?.endRegisterDate, isRegistered, parseDateFromAPI]);
 
   const handleShare = () => {
     handleAction(() => {
@@ -1913,7 +2002,14 @@ const handleFetchSubmissionRank = async () =>{
 
     return (
       <div className="space-y-3">
-        {!canRegister && (
+        {!isRegistrationOpen && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800 font-medium">
+              Đã hết thời hạn đăng ký
+            </p>
+          </div>
+        )}
+        {!canRegister && isRegistrationOpen && (
           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800">
               {currentUser?.role?.toLowerCase() === "teacher" ||
@@ -2002,7 +2098,14 @@ const handleFetchSubmissionRank = async () =>{
 
     return (
       <div className="space-y-3">
-        {!canRegister && (
+        {!isRegistrationOpen && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800 font-medium">
+              Đã hết thời hạn đăng ký
+            </p>
+          </div>
+        )}
+        {!canRegister && isRegistrationOpen && (
           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800">
               {currentUser?.role?.toLowerCase() === "teacher" ||
@@ -2063,7 +2166,14 @@ const handleFetchSubmissionRank = async () =>{
 
     return (
       <div className="space-y-4">
-        {!canRegister && (
+        {!isRegistrationOpen && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800 font-medium">
+              Đã hết thời hạn đăng ký
+            </p>
+          </div>
+        )}
+        {!canRegister && isRegistrationOpen && (
           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800">
               {currentUser?.role?.toLowerCase() === "teacher" ||
@@ -2157,7 +2267,14 @@ const handleFetchSubmissionRank = async () =>{
 
     return (
       <div className="space-y-3">
-        {!canRegister && (
+        {!isRegistrationOpen && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800 font-medium">
+              Đã hết thời hạn đăng ký
+            </p>
+          </div>
+        )}
+        {!canRegister && isRegistrationOpen && (
           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800">
               {currentUser?.role?.toLowerCase() === "teacher" ||
@@ -2471,7 +2588,13 @@ const handleFetchSubmissionRank = async () =>{
       : 0;
 
   // Kiểm tra quyền đăng ký: Giáo viên chỉ được đăng ký hội thao, Học sinh chỉ được đăng ký các hoạt động khác
+  // Và kiểm tra xem còn trong thời hạn đăng ký không
   const canRegister = useMemo(() => {
+    // Kiểm tra thời hạn đăng ký trước
+    if (!isRegistrationOpen) {
+      return false;
+    }
+    
     if (!currentUser?.role || !activity) return true; // Default allow if no role info
     const userRole = currentUser.role.toLowerCase();
     const isTeacher = userRole === "teacher" || userRole === "admin";
@@ -2486,7 +2609,7 @@ const handleFetchSubmissionRank = async () =>{
       return !isSportsFestival;
     }
     return true; // Default allow for other roles
-  }, [currentUser?.role, activity, isSportsFestival]);
+  }, [currentUser?.role, activity, isSportsFestival, isRegistrationOpen]);
 
   const groupRegistrations = useMemo(() => {
     if (!activity?.participants) return [];

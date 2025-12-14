@@ -1,22 +1,39 @@
 // Placeholder image as data URI to avoid 404 errors
 const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23e5e7eb' width='400' height='300'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='18' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3EẢnh hoạt động%3C/text%3E%3C/svg%3E"
 
-// Helper function to convert UTC to VN time (UTC+7) for display
+// Helper function to format date for display
+// API trả về date string đã là VN time rồi, không cần convert thêm
 const formatDate = (dateString) => {
   if (!dateString) return "Đang cập nhật"
   try {
-    const date = new Date(dateString) // Parse UTC date from BE
-    if (isNaN(date.getTime())) return dateString
-    
-    // Convert UTC to VN time (UTC+7) by adding 7 hours
-    const vnTime = new Date(date.getTime() + (7 * 60 * 60 * 1000))
-    
-    return vnTime.toLocaleDateString("vi-VN", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
+    // Parse date string từ API (đã là VN time)
+    // Nếu date string không có timezone, parse như local time
+    let normalized = dateString
+    if (typeof normalized === 'string' && normalized.includes('T') && 
+        !normalized.endsWith('Z') && 
+        !/[+-]\d{2}:\d{2}$/.test(normalized) && 
+        !/[+-]\d{4}$/.test(normalized)) {
+      // Date string không có timezone, parse như local time (VN time)
+      const date = new Date(normalized)
+      if (isNaN(date.getTime())) return dateString
+      
+      return date.toLocaleDateString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+    } else {
+      // Date string có timezone, parse và format
+      const date = new Date(normalized)
+      if (isNaN(date.getTime())) return dateString
+      
+      return date.toLocaleDateString("vi-VN", {
+        timeZone: "Asia/Ho_Chi_Minh",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+    }
   } catch {
     return dateString
   }
