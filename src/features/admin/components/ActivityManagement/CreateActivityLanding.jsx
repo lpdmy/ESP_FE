@@ -5,19 +5,14 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card";
 import { Button } from "@/common/components/ui/button";
 import {
-  Upload,
   ArrowRight,
   CheckCircle2,
   Clock,
   Users,
   FileText,
-  Copy,
   Save,
   List,
 } from "lucide-react";
-import CreateActivityImport from "./CreateActivityImport";
-import CreateActivityImportAdvanced from "./CreateActivityImportAdvanced";
-import CreateActivityDuplicate from "./CreateActivityDuplicate";
 import { ROUTES } from "@/common/constants/routes";
 
 export default function CreateActivityLanding() {
@@ -30,10 +25,10 @@ export default function CreateActivityLanding() {
       title: "Tạo hoạt động mới",
       subtitle: "Bắt đầu từ đầu",
       icon: FileText,
-      description: "Tạo hoạt động mới với form đầy đủ tính năng, tự động lưu nháp",
+      description: "Tạo hoạt động mới với form đầy đủ tính năng, có thể lưu làm mẫu",
       features: [
         "Form wizard 5 bước với thanh tiến độ",
-        "Tự động lưu nháp khi chỉnh sửa",
+        "Lưu làm mẫu để tái sử dụng",
         "Validation thông minh",
         "Preview trước khi lưu",
       ],
@@ -41,49 +36,19 @@ export default function CreateActivityLanding() {
       action: () => navigate(`${ROUTES.ADMIN.CREATE_ACTIVITY}?fromLanding=true`),
     },
     {
-      id: "duplicate",
-      title: "Copy từ hoạt động có sẵn",
-      subtitle: "Nhân bản hoạt động",
-      icon: Copy,
-      description: "Chọn một hoạt động đã có để nhân bản, tất cả thông tin sẽ được sao chép",
+      id: "templates",
+      title: "Sử dụng mẫu",
+      subtitle: "Tạo từ mẫu có sẵn",
+      icon: Save,
+      description: "Chọn mẫu hoạt động đã lưu để tạo hoạt động mới nhanh chóng",
       features: [
-        "Sao chép toàn bộ thông tin",
-        "Giữ nguyên cấu trúc và settings",
-        "Chỉnh sửa trước khi lưu",
-        "Tiết kiệm thời gian nhập liệu",
-      ],
-      color: "orange",
-      action: () => setSelectedMethod("duplicate"),
-    },
-    {
-      id: "drafts",
-      title: "Xem bản nháp",
-      subtitle: "Tiếp tục chỉnh sửa",
-      icon: List,
-      description: "Xem và tiếp tục chỉnh sửa các bản nháp đã lưu",
-      features: [
-        "Danh sách tất cả bản nháp",
-        "Tìm kiếm và lọc nhanh",
-        "Tiếp tục chỉnh sửa",
-        "Xóa bản nháp không cần",
+        "Danh sách tất cả mẫu",
+        "Tìm kiếm và lọc theo loại",
+        "Áp dụng mẫu và chỉnh sửa",
+        "Xem số lần sử dụng",
       ],
       color: "purple",
-      action: () => navigate("/admin/activities/drafts"),
-    },
-    {
-      id: "import",
-      title: "Import từ File",
-      subtitle: "Tải lên Excel/CSV",
-      icon: Upload,
-      description: "Tải lên file Excel/CSV với ánh xạ cột linh hoạt, hỗ trợ đầy đủ 4 loại hoạt động",
-      features: [
-        "Ánh xạ cột tự động hoặc thủ công",
-        "Hỗ trợ đầy đủ 4 loại hoạt động",
-        "Form điền thông tin bổ sung",
-        "Preview và validation chi tiết",
-      ],
-      color: "green",
-      action: () => setSelectedMethod("import"),
+      action: () => navigate(`${ROUTES.ADMIN.CREATE_ACTIVITY}?mode=template`),
     },
   ];
 
@@ -96,13 +61,6 @@ export default function CreateActivityLanding() {
         button: "bg-blue-600 hover:bg-blue-700",
         icon: "text-blue-600",
       },
-      orange: {
-        bg: "bg-orange-50",
-        border: "border-orange-200",
-        text: "text-orange-700",
-        button: "bg-orange-600 hover:bg-orange-700",
-        icon: "text-orange-600",
-      },
       purple: {
         bg: "bg-purple-50",
         border: "border-purple-200",
@@ -110,24 +68,10 @@ export default function CreateActivityLanding() {
         button: "bg-purple-600 hover:bg-purple-700",
         icon: "text-purple-600",
       },
-      green: {
-        bg: "bg-green-50",
-        border: "border-green-200",
-        text: "text-green-700",
-        button: "bg-green-600 hover:bg-green-700",
-        icon: "text-green-600",
-      },
     };
     return colors[color] || colors.blue;
   };
 
-  if (selectedMethod === "import") {
-    return <CreateActivityImportAdvanced onBack={() => setSelectedMethod(null)} />;
-  }
-
-  if (selectedMethod === "duplicate") {
-    return <CreateActivityDuplicate onBack={() => setSelectedMethod(null)} />;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
@@ -144,7 +88,7 @@ export default function CreateActivityLanding() {
         </div>
 
         {/* Methods Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
           {methods.map((method) => {
             const colors = getColorClasses(method.color);
             const Icon = method.icon;
@@ -191,10 +135,8 @@ export default function CreateActivityLanding() {
                   >
                     {method.id === "new" 
                       ? "Tạo mới" 
-                      : method.id === "duplicate" 
-                      ? "Chọn hoạt động" 
-                      : method.id === "drafts" 
-                      ? "Xem bản nháp" 
+                      : method.id === "templates" 
+                      ? "Chọn mẫu" 
                       : "Chọn phương thức này"}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
@@ -205,7 +147,7 @@ export default function CreateActivityLanding() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid md:grid-cols-4 gap-4 mt-12">
+        <div className="grid md:grid-cols-3 gap-4 mt-12">
           <Card className="bg-white">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -241,26 +183,13 @@ export default function CreateActivityLanding() {
                   <Save className="w-6 h-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">Tự động</p>
-                  <p className="text-sm text-gray-600">Lưu nháp</p>
+                  <p className="text-2xl font-bold text-gray-900">Tái sử dụng</p>
+                  <p className="text-sm text-gray-600">Lưu mẫu</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-orange-100 p-3 rounded-lg">
-                  <Upload className="w-6 h-6 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">Không giới hạn</p>
-                  <p className="text-sm text-gray-600">Số lượng import</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

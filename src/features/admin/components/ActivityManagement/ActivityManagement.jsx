@@ -25,7 +25,6 @@ import {
   Eye,
   Edit,
   Trash2,
-  Copy,
   Sparkles,
   Calendar,
   Users,
@@ -48,8 +47,6 @@ import { ROUTES } from "@/common/constants/routes"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
 import { LoadingCard } from "@/common/components/ui/loading"
-import ActivitiesWithoutJury from "@/features/landing/jury/components/activities-without-jury/page"
-import { useJuryApi } from "@/features/landing/jury/hooks/useJuryApi"
 
 const parseRegistrationSettings = (settings) => {
   if (!settings) return null
@@ -73,10 +70,6 @@ export default function ActivityManagement() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [activityToDelete, setActivityToDelete] = useState(null)
   
-  // Activities without jury widget state
-  const [activitiesWithoutJury, setActivitiesWithoutJury] = useState([])
-  const [showActivitiesWithoutJury, setShowActivitiesWithoutJury] = useState(true)
-  const { getActivitiesWithoutJury } = useJuryApi()
 
   // Pagination state
   const [pageNumber, setPageNumber] = useState(1)
@@ -192,6 +185,7 @@ export default function ActivityManagement() {
 
   // Fetch activities from BE
   const fetchActivities = useCallback(async () => {
+    // Đảm bảo set loading ngay lập tức, không phụ thuộc vào executeApiCall
     setLoading(true)
     setError(null)
 
@@ -199,40 +193,64 @@ export default function ActivityManagement() {
       const token = localStorage.getItem("token")
       const search = searchDebounce.trim() || null
 
+      // Không truyền setLoading vào executeApiCall để tránh conflict
+      // Chúng ta tự quản lý loading state
       const response = await executeApiCall(
         activityService.getAllActivities.bind(activityService),
         [pageNumber, pageSize, search, token],
-        { setLoading, setError }
+        { setLoading: () => {}, setError }
       )
 
       if (response?.data) {
         const paginationData = response.data
         const activitiesData = paginationData.data || []
 
-        // Map BE data to FE format
-        const mappedActivities = activitiesData.map(activity => ({
-          id: activity.id,
-          thumbnail: activity.thumbnailUrl || "",
-          title: activity.title || "",
-          category: activity.category === 1 ? "Activity" : "Event",
-          subType: activity.subType || "",
-          startDate: activity.startDate ? new Date(activity.startDate).toISOString().split("T")[0] : "",
-          endDate: activity.endDate ? new Date(activity.endDate).toISOString().split("T")[0] : "",
-          registerDate: activity.registerDate ? new Date(activity.registerDate).toISOString().split("T")[0] : "",
-          endRegisterDate: activity.endRegisterDate ? new Date(activity.endRegisterDate).toISOString().split("T")[0] : "",
-          status: getActivityStatus(activity),
-          participants: activity.numberOfParticipants || 0,
-          maxParticipants: activity.maxParticipants ?? null,
-          location: activity.location || "",
-          organizer: activity.organizer || "",
-          description: activity.description || "",
-          onlyTeacherCanRegister: activity.onlyTeacherCanRegister || false,
-          gradingSettings: activity.gradingSettings || null,
-          registrationSettings: parseRegistrationSettings(activity.registrationSettings),
-          sports: activity.sports || [],
-          participantDetails: activity.participants || [],
-          isDeleted: activity.isDeleted || false,
-        }))
+        // Map BE data to FE format - optimize performance
+        // Tính toán status inline thay vì gọi function để tăng tốc
+        const now = new Date()
+        const mappedActivities = activitiesData.map(activity => {
+          // Tính status một lần thay vì gọi function
+          let status = "Upcoming"
+          if (activity.startDate && activity.endDate) {
+            const startDate = new Date(activity.startDate)
+            const endDate = new Date(activity.endDate)
+            if (now >= startDate && now <= endDate) {
+              status = "Active"
+            } else if (now > endDate) {
+              status = "Ended"
+            }
+          }
+          
+          // Parse dates một lần và tái sử dụng
+          const startDate = activity.startDate ? new Date(activity.startDate) : null
+          const endDate = activity.endDate ? new Date(activity.endDate) : null
+          const registerDate = activity.registerDate ? new Date(activity.registerDate) : null
+          const endRegisterDate = activity.endRegisterDate ? new Date(activity.endRegisterDate) : null
+          
+          return {
+            id: activity.id,
+            thumbnail: activity.thumbnailUrl || "",
+            title: activity.title || "",
+            category: activity.category === 1 ? "Activity" : "Event",
+            subType: activity.subType || "",
+            startDate: startDate ? startDate.toISOString().split("T")[0] : "",
+            endDate: endDate ? endDate.toISOString().split("T")[0] : "",
+            registerDate: registerDate ? registerDate.toISOString().split("T")[0] : "",
+            endRegisterDate: endRegisterDate ? endRegisterDate.toISOString().split("T")[0] : "",
+            status: status,
+            participants: activity.numberOfParticipants || 0,
+            maxParticipants: activity.maxParticipants ?? null,
+            location: activity.location || "",
+            organizer: activity.organizer || "",
+            description: activity.description || "",
+            onlyTeacherCanRegister: activity.onlyTeacherCanRegister || false,
+            gradingSettings: activity.gradingSettings || null,
+            registrationSettings: parseRegistrationSettings(activity.registrationSettings),
+            sports: activity.sports || [],
+            participantDetails: activity.participants || [],
+            isDeleted: activity.isDeleted || false,
+          }
+        })
 
         setActivities(mappedActivities)
         setTotalCount(paginationData.totalCount || 0)
@@ -322,19 +340,6 @@ export default function ActivityManagement() {
     fetchStatistics()
   }, [fetchStatistics])
 
-  // Fetch activities without jury
-  const fetchActivitiesWithoutJury = useCallback(async () => {
-    try {
-      const response = await getActivitiesWithoutJury()
-      setActivitiesWithoutJury(response.data.data || [])
-    } catch (error) {
-      console.error("Error loading activities without jury:", error)
-    }
-  }, [getActivitiesWithoutJury])
-
-  useEffect(() => {
-    fetchActivitiesWithoutJury()
-  }, [fetchActivitiesWithoutJury])
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -505,7 +510,8 @@ export default function ActivityManagement() {
 
   // Filter activities on client side (since BE only supports search by title)
   // Note: Search is done on BE, but other filters are done on client side
-  const filteredActivities = activities.filter(activity => {
+  // Optimize với useMemo để tránh re-filter mỗi lần render
+  const filteredActivities = useMemo(() => activities.filter(activity => {
     // Soft delete filter - only show activities that are not deleted
     // Hide activities where isDeleted is explicitly true
     if (activity.isDeleted === true || activity.isDeleted === "true") return false
@@ -545,7 +551,7 @@ export default function ActivityManagement() {
     if (organizerFilter && activity.organizer && !activity.organizer.toLowerCase().includes(organizerFilter.toLowerCase())) return false
 
     return true
-  })
+  }), [activities, categoryFilter, statusFilter, subTypeFilter, dateFromFilter, dateToFilter, minParticipantsFilter, maxParticipantsFilter, organizerFilter])
 
   function getGroupRegistrations(activity) {
     if (!activity || !activity.participantDetails) return []
@@ -597,17 +603,23 @@ export default function ActivityManagement() {
     }))
   }
 
-  // Handle pagination
+  // Handle pagination với loading state
   const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) {
+    if (newPage >= 1 && newPage <= totalPages && !loading) {
+      // Set loading ngay lập tức khi user click paging
+      setLoading(true)
       setPageNumber(newPage)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
   const handlePageSizeChange = (newSize) => {
-    setPageSize(newSize)
-    setPageNumber(1)
+    if (!loading) {
+      // Set loading ngay lập tức khi user thay đổi page size
+      setLoading(true)
+      setPageSize(newSize)
+      setPageNumber(1)
+    }
   }
 
   return (
@@ -871,77 +883,6 @@ export default function ActivityManagement() {
         )}
       </div>
 
-      {/* Activities Without Jury Widget - Highlighted for Admin & Staff */}
-      {showActivitiesWithoutJury && activitiesWithoutJury.length > 0 && (
-        <Card className="border-orange-300 bg-gradient-to-r from-orange-50 to-yellow-50 shadow-lg">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-6 w-6 text-orange-600" />
-                <div>
-                  <CardTitle className="text-xl font-bold text-orange-900">
-                    Sự kiện chưa có giám khảo ({activitiesWithoutJury.length})
-                  </CardTitle>
-                  <p className="text-sm text-orange-700 mt-1">
-                    Các hoạt động này cần được phân công giám khảo
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowActivitiesWithoutJury(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {activitiesWithoutJury.slice(0, 6).map((activity) => (
-                <div
-                  key={activity.id}
-                  className="p-3 bg-white rounded-lg border border-orange-200 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <h4 className="font-semibold text-sm line-clamp-1 flex-1">
-                      {activity.title}
-                    </h4>
-                    {activity.hasSubmissions && (
-                      <Badge className="bg-orange-100 text-orange-700 text-xs">
-                        {activity.submissionCount} bài
-                      </Badge>
-                    )}
-                  </div>
-                  <Button
-                    size="sm"
-                    className="w-full mt-2 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white"
-                    onClick={() => {
-                      window.location.href = `/admin/activities/${activity.id}/assign-jury`
-                    }}
-                  >
-                    Phân công giám khảo
-                  </Button>
-                </div>
-              ))}
-            </div>
-            {activitiesWithoutJury.length > 6 && (
-              <div className="mt-4 text-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setShowActivitiesWithoutJury(false)
-                  }}
-                >
-                  Xem tất cả ({activitiesWithoutJury.length} sự kiện)
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Filters & Search */}
       <Card className="mb-6">
         <CardContent className="p-6">
@@ -1075,9 +1016,10 @@ export default function ActivityManagement() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="relative">
+          <div className="relative min-h-[400px]">
+            {/* Loading overlay với backdrop blur - hiển thị khi loading */}
             {loading && (
-              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
+              <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center z-20 rounded-lg">
                 <div className="flex flex-col items-center gap-3">
                   <div className="relative w-12 h-12">
                     <div className="absolute inset-0 rounded-full border-4 border-orange-200 border-t-orange-500 animate-spin"></div>
@@ -1086,6 +1028,9 @@ export default function ActivityManagement() {
                 </div>
               </div>
             )}
+            
+            {/* Ẩn hoặc làm mờ nội dung cũ khi đang loading */}
+            <div className={loading ? "opacity-30 pointer-events-none transition-opacity duration-200" : "opacity-100 transition-opacity duration-200"}>
             {error ? (
             <div className="text-center py-8">
               <p className="text-red-600 mb-4">{error}</p>
@@ -1104,7 +1049,8 @@ export default function ActivityManagement() {
             </div>
           ) : (
             <>
-              <div className=" rounded-lg overflow-hidden">
+              {/* Làm mờ table khi loading */}
+              <div className={`rounded-lg overflow-hidden transition-opacity duration-200 ${loading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1237,30 +1183,6 @@ export default function ActivityManagement() {
                                 </Button>
                               </Tooltip>
                             )}
-                            <Tooltip content="Nhân bản hoạt động">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={async (e) => {
-                                  e.stopPropagation()
-                                  try {
-                                    const token = localStorage.getItem("token")
-                                    await executeApiCall(
-                                      activityService.duplicateActivity.bind(activityService),
-                                      [activity.id, token],
-                                      { setLoading: () => {}, setError: () => {} }
-                                    )
-                                    toast.success("Đã nhân bản hoạt động thành công")
-                                    fetchActivities()
-                                  } catch (error) {
-                                    console.error("Error duplicating activity:", error)
-                                    toast.error("Không thể nhân bản hoạt động")
-                                  }
-                                }}
-                              >
-                                <Copy className="w-4 h-4 text-blue-500" />
-                              </Button>
-                            </Tooltip>
                             <Tooltip content="Xóa sự kiện">
                               <Button
                                 variant="ghost"
@@ -1296,6 +1218,7 @@ export default function ActivityManagement() {
                         { value: "100", label: "100" },
                       ]}
                       className="w-20"
+                      disabled={loading}
                     />
                     <span className="text-sm text-gray-600">mục mỗi trang</span>
                   </div>
@@ -1305,7 +1228,7 @@ export default function ActivityManagement() {
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(pageNumber - 1)}
-                      disabled={pageNumber === 1}
+                      disabled={pageNumber === 1 || loading}
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
@@ -1330,6 +1253,7 @@ export default function ActivityManagement() {
                             size="sm"
                             onClick={() => handlePageChange(pageNum)}
                             className="min-w-[40px]"
+                            disabled={loading}
                           >
                             {pageNum}
                           </Button>
@@ -1341,7 +1265,7 @@ export default function ActivityManagement() {
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(pageNumber + 1)}
-                      disabled={pageNumber === totalPages}
+                      disabled={pageNumber === totalPages || loading}
                     >
                       <ChevronRight className="w-4 h-4" />
                     </Button>
@@ -1350,6 +1274,7 @@ export default function ActivityManagement() {
               )}
             </>
           )}
+            </div>
           </div>
         </CardContent>
       </Card>

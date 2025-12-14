@@ -126,7 +126,7 @@ export default function StaffManagement() {
       if (error.statusCode == 400) {
         toast.showError(error.message);
       } else {
-        toast.recoveryStaffFail;
+        toast.recoveryStaffFail();
       }
     }
   };
