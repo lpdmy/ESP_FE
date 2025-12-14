@@ -139,15 +139,6 @@ const getJuryAssign = async (id, search, pageSize, pageNumber) => {
     );
   };
   
-  const getActivitiesWithoutJury = async () => {
-    const token = localStorage.getItem("token");
-    return executeApiCall(
-      juryService.getActivitiesWithoutJury.bind(juryService),
-      [token],
-      { setLoading: setSaveLoading, setError }
-    );
-  };
-  
   const improvedRandomAssign = useRef(async (payload) => {
     const token = localStorage.getItem("token");
     return executeApiCall(
@@ -175,6 +166,5 @@ const getJuryAssign = async (id, search, pageSize, pageNumber) => {
     getJuryAssignGradeAll,
     isAssignedToGrade,
     RankByActivityId,
-    getActivitiesWithoutJury,
   };
 }

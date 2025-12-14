@@ -5,13 +5,13 @@ import AdminPageLayout from "@/features/admin/components/AdminPageLayout";
 
 export default function CreateActivityPage() {
   const [searchParams] = useSearchParams();
-  const draftId = searchParams.get("draftId");
   const fromLanding = searchParams.get("fromLanding");
+  const mode = searchParams.get("mode"); // "manual" or "template"
 
-  // If draftId is specified, show the form with draft data
   // If fromLanding is true, show the form for creating new activity
+  // If mode is specified (template or manual), show the form
   // Otherwise show the landing page with options
-  if (draftId || fromLanding === "true") {
+  if (fromLanding === "true" || mode) {
   return (
     <AdminPageLayout>
       <CreateActivity />

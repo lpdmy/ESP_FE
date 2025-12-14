@@ -248,24 +248,13 @@ export const API_CONFIG = {
     TRAIN_SCHEDULE_MODEL: "/activity/train-schedule-model",
     MY_ACTIVITIES: "/my-activities",
     STATISTICS: "/activity/statistics",
-    IMPORT: "/activity/import",
-    BULK_CREATE: "/activity/bulk-create",
-    DUPLICATE: "/activity/{id}/duplicate",
   },
-  ACTIVITY_DRAFT: {
-    GET_ALL: "/activity-drafts",
-    GET_BY_ID: "/activity-drafts/{id}",
-    CREATE: "/activity-drafts",
-    UPDATE: "/activity-drafts/{id}",
-    DELETE: "/activity-drafts/{id}",
-    CONVERT_TO_ACTIVITY: "/activity-drafts/{id}/convert-to-activity",
-  },
-
   ACTIVITY_TEMPLATE: {
     GET_ALL: "/activity-template",
     GET_BY_ID: "/activity-template/{id}",
     GET_BY_SUBTYPE: "/activity-template/subtype",
     CREATE: "/activity-template",
+    SAVE_FROM_FORM: "/activity-template/save-from-form",
     UPDATE: "/activity-template",
     DELETE: "/activity-template/{id}",
     INCREMENT_USAGE: "/activity-template/{id}/increment-usage",
@@ -298,7 +287,6 @@ export const API_CONFIG = {
     JURY_DASHBOARD: "/jury/dashboard",
     JURY_SUBMISSION: "/jury/submission/:id",
     JURY_GRADE: "/jury/grade",
-    GET_ACTIVITIES_WITHOUT_JURY: "/jury/activities-without-jury",
     IMPROVED_RANDOM_ASSIGN: "/jury/improved-random-assign",
     RANDOM_ASSIGN: "/jury/random-assign",
     DELETE_RANDOM_ASSIGN: "/jury/delete-assign-activity",
@@ -325,6 +313,12 @@ export const API_CONFIG = {
     GET_SUBMISSION_ACTIVITY: "/submission/activity",
     GET_MY_SUBMISSION: "/submission/activity/user",
     GET_SUBMISSION_DETAIL: "/submission",
+  },
+  MODERATION:{
+    GET_ALL_MODERATION:'/moderation/report',
+    GET_USER_STAT : '/moderation/user-violations',
+    CREATE_NOTIFICATION: '/moderation/alert',
+    UPDATE_STATUS :'/moderation/update-status',
   },
 };
 // HTTP Headers

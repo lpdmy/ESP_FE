@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui
 import { Input } from "@/common/components/ui/input"
 import { Label } from "@/common/components/ui/label"
 import { Textarea } from "@/common/components/ui/textarea"
+import { Badge } from "@/common/components/ui/badge"
 import { SimpleSelect } from "@/common/components/ui/select"
 import { Checkbox } from "@/common/components/ui/checkbox"
 import { Switch } from "@/common/components/ui/switch"
@@ -18,13 +19,14 @@ import {
   DialogTrigger,
 } from "@/common/components/ui/dialog"
 import { toast } from "react-toastify"
-import { ArrowLeft, ArrowRight, Save, Upload, Plus, X, CheckCircle, Star, Trophy, Eye, Calendar, MapPin, Users, User, Clock, Edit2, Trash2, Info } from "lucide-react"
+import { ArrowLeft, ArrowRight, Save, Upload, Plus, X, CheckCircle, Star, Trophy, Eye, Calendar, MapPin, Users, User, Clock, Edit2, Trash2, Info, FileText } from "lucide-react"
 import { ROUTES } from "@/common/constants/routes"
 import { uploadImage } from "@/common/utils/upload"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
 import { GradingCriteriaSection } from "./GradingCriteriaSection"
 import { vnTimeToUTC } from "@/common/utils/dateUtils"
+import { LoadingCard, LoadingOverlay } from "@/common/components/ui/loading"
 
 export default function CreateActivity() {
   const navigate = useNavigate()
@@ -143,9 +145,28 @@ export default function CreateActivity() {
     "Bóng rổ",
   ]
 
-  // State for current draft ID (if editing existing draft)
-  const [currentDraftId, setCurrentDraftId] = useState(null)
-  const [isLoadingDraft, setIsLoadingDraft] = useState(false)
+  // State for save as template dialog
+  const [isSaveTemplateDialogOpen, setIsSaveTemplateDialogOpen] = useState(false)
+  const [templateName, setTemplateName] = useState("")
+  const [templateDescription, setTemplateDescription] = useState("")
+  const [templateChecklistItems, setTemplateChecklistItems] = useState([""])
+
+  // State for template selection (when mode=template)
+  const [templates, setTemplates] = useState([])
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [showTemplateList, setShowTemplateList] = useState(mode === "template") // Show list if mode=template
+
+  // Helper: Get SubType label
+  const getSubTypeLabel = (subType) => {
+    const subTypeMap = {
+      SportsFestival: "Hội thao",
+      CreativeContest: "Cuộc thi sáng tạo",
+      SeminarWorkshop: "Hội thảo",
+      Other: "Khác"
+    }
+    return subTypeMap[subType] || subType
+  }
 
   // Helper: Deep merge objects recursively
   const deepMerge = (target, source) => {
@@ -174,415 +195,116 @@ export default function CreateActivity() {
     return output
   }
 
-  // Helper: Convert formData to draft DTO
-  const formDataToDraftDto = () => {
+  // Helper: Convert formData to template DTO
+  const formDataToTemplateDto = (templateName, templateDescription, checklist, formDataOverride = null) => {
+    // Sử dụng formDataOverride nếu được truyền vào (để dùng formData đã cập nhật thumbnail)
+    const dataToUse = formDataOverride || formData
+    
     // Convert category string to enum number: "activity" -> 1 (Activity), "event" -> 2 (Event)
     const categoryMap = {
       "activity": 1, // ActivityType.Activity
       "event": 2    // ActivityType.Event
     };
-    const categoryValue = categoryMap[formData.category] || 1; // Default to Activity (1)
+    const categoryValue = categoryMap[dataToUse.category] || 1; // Default to Activity (1)
     
     return {
-      title: formData.title,
-      description: formData.description,
+      templateName: templateName || dataToUse.title || "Mẫu hoạt động",
+      templateDescription: templateDescription || dataToUse.description || null,
+      subType: dataToUse.subType,
+      title: dataToUse.title,
+      description: dataToUse.description,
       category: categoryValue,
-      subType: formData.subType,
-      location: formData.location,
-      organizer: formData.organizer,
-      thumbnailUrl: formData.thumbnail,
-      startDate: formData.startDate || null,
-      endDate: formData.endDate || null,
-      registerDate: formData.registerDate || null,
-      endRegisterDate: formData.endRegisterDate || null,
-      maxParticipants: formData.maxParticipants || null,
-      competitionType: formData.competitionType || null,
-      theme: formData.theme || null,
-      genre: formData.genre || null,
-      paperSize: formData.paperSize || null,
-      drawingMedium: formData.drawingMedium || null,
-      timeLimit: formData.timeLimit || null,
-      submissionFormat: formData.submissionFormat || null,
-      problemText: formData.problemText || null,
-      problemFileUrl: formData.problemFileUrl || null,
-      submissionDeadline: formData.submissionDeadline || null,
+      location: dataToUse.location,
+      organizer: dataToUse.organizer,
+      thumbnailUrl: dataToUse.thumbnail,
+      startDate: dataToUse.startDate || null,
+      endDate: dataToUse.endDate || null,
+      registerDate: dataToUse.registerDate || null,
+      endRegisterDate: dataToUse.endRegisterDate || null,
+      maxParticipants: dataToUse.maxParticipants || null,
+      competitionType: dataToUse.competitionType || null,
+      theme: dataToUse.theme || null,
+      genre: dataToUse.genre || null,
+      paperSize: dataToUse.paperSize || null,
+      drawingMedium: dataToUse.drawingMedium || null,
+      timeLimit: dataToUse.timeLimit || null,
+      submissionFormat: dataToUse.submissionFormat || null,
+      problemText: dataToUse.problemText || null,
+      problemFileUrl: dataToUse.problemFileUrl || null,
+      submissionDeadline: dataToUse.submissionDeadline || null,
       isGrade: gradingEnabled,
       gradingSettings: gradingEnabled && gradingCriteria.length > 0
         ? JSON.stringify({ criteria: gradingCriteria })
         : null,
-      registrationSettings: formData.registrationSettings
-        ? JSON.stringify(formData.registrationSettings)
+      registrationSettings: dataToUse.registrationSettings
+        ? JSON.stringify(dataToUse.registrationSettings)
         : null,
       onlyTeacherCanRegister: onlyTeacherCanRegister,
-      starPointRewards: formData.starPointRewards
-        ? JSON.stringify(formData.starPointRewards)
+      starPointRewards: dataToUse.starPointRewards
+        ? JSON.stringify(dataToUse.starPointRewards)
         : null,
-      rules: formData.rules?.filter(r => r && r.trim()) || [],
-      sportsCategories: formData.sportsCategories || [],
-      sportsConfigurations: formData.sportsConfigurations || [],
-      speakers: formData.speakers || [],
-      programItems: formData.programItems || [],
+      rules: dataToUse.rules?.filter(r => r && r.trim()) || [],
+      sportsCategories: dataToUse.sportsCategories || [],
+      sportsConfigurations: dataToUse.sportsConfigurations || [],
+      speakers: dataToUse.speakers || [],
+      programItems: dataToUse.programItems || [],
+      checklist: checklist?.filter(c => c && c.trim()) || [],
     }
   }
 
-  // Load draft from API if draftId is in URL, or load prefilled data if duplicate or import
+  // Load templates when mode=template
   useEffect(() => {
-    const draftId = searchParams.get("draftId")
-    const isDuplicate = searchParams.get("duplicate") === "true"
-    const isImport = searchParams.get("import") === "true"
-    
-    // Load imported activities
-    if (isImport) {
-      try {
-        const importedDataStr = sessionStorage.getItem("importedActivities")
-        if (importedDataStr) {
-          const importedActivities = JSON.parse(importedDataStr)
-          if (importedActivities && importedActivities.length > 0) {
-            // Show dialog to select which activity to create first
-            // For now, load the first one
-            const firstActivity = importedActivities[0]
-            
-            // Map imported activity data to formData
-        setFormData(prevFormData => {
-              const merged = deepMerge(prevFormData, {
-                title: firstActivity.title || "",
-                description: firstActivity.description || "",
-                category: firstActivity.category === 1 ? "activity" : "event",
-                subType: firstActivity.subType || "",
-                location: firstActivity.location || "",
-                organizer: firstActivity.organizer || "",
-                thumbnail: firstActivity.thumbnailUrl || "",
-                startDate: firstActivity.startDate || "",
-                endDate: firstActivity.endDate || "",
-                registerDate: firstActivity.registerDate || "",
-                endRegisterDate: firstActivity.endRegisterDate || "",
-                maxParticipants: firstActivity.maxParticipants || "",
-                competitionType: firstActivity.competitionType || "",
-                theme: firstActivity.theme || "",
-                genre: firstActivity.genre || "",
-                paperSize: firstActivity.paperSize || "",
-                drawingMedium: firstActivity.drawingMedium || "",
-                timeLimit: firstActivity.timeLimit || "",
-                submissionFormat: firstActivity.submissionFormat || "",
-                problemText: firstActivity.problemText || "",
-                problemFileUrl: firstActivity.problemFileUrl || "",
-                submissionDeadline: firstActivity.submissionDeadline || "",
-                wordLimit: firstActivity.wordLimit || "",
-                writingFormat: firstActivity.writingFormat || "",
-                rules: firstActivity.rules && firstActivity.rules.length > 0 ? firstActivity.rules : [""],
-                sportsCategories: firstActivity.sportsCategories || [],
-                sportsConfigurations: firstActivity.sportsConfigurations || [],
-                speakers: firstActivity.speakers || [],
-                programItems: firstActivity.programItems || [],
-                registrationSettings: firstActivity.registrationSettings || prevFormData.registrationSettings,
-                starPointRewards: firstActivity.starPointRewards || prevFormData.starPointRewards,
-              })
-              return merged
-            })
-            
-            // Set other states
-            if (firstActivity.isGrade !== undefined) {
-              setGradingEnabled(firstActivity.isGrade)
-            }
-            if (firstActivity.gradingSettings) {
-              try {
-                const gradingSettings = typeof firstActivity.gradingSettings === 'string'
-                  ? JSON.parse(firstActivity.gradingSettings)
-                  : firstActivity.gradingSettings
-                if (gradingSettings?.criteria) {
-                  setGradingCriteria(gradingSettings.criteria)
-                }
-              } catch (e) {
-                console.error("Error parsing grading settings:", e)
-              }
-            }
-            if (firstActivity.onlyTeacherCanRegister !== undefined) {
-              setOnlyTeacherCanRegister(firstActivity.onlyTeacherCanRegister)
-            }
-            if (firstActivity.thumbnailUrl) {
-              setThumbnailPreview(firstActivity.thumbnailUrl)
-            }
-            
-            toast.success(`Đã tải hoạt động 1/${importedActivities.length} từ file import`)
-            // Store remaining activities for next
-            if (importedActivities.length > 1) {
-              sessionStorage.setItem("importedActivities", JSON.stringify(importedActivities.slice(1)))
-            } else {
-              sessionStorage.removeItem("importedActivities")
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error loading imported activities:", error)
-        toast.error("Không thể tải dữ liệu từ file import")
-      }
-      return
-    }
-    
-    // Load prefilled activity data from duplicate
-    if (isDuplicate) {
-      try {
-        const prefilledDataStr = sessionStorage.getItem("prefilledActivityData")
-        if (prefilledDataStr) {
-          const prefilledData = JSON.parse(prefilledDataStr)
-          
-          // Map activity data to formData
-          setFormData(prevFormData => {
-            const merged = deepMerge(prevFormData, {
-              title: (prefilledData.title || "") + " (Bản sao)",
-              description: prefilledData.description || "",
-              category: prefilledData.category === 1 ? "activity" : "event",
-              subType: prefilledData.subType || "",
-              location: prefilledData.location || "",
-              organizer: prefilledData.organizer || "",
-              thumbnail: prefilledData.thumbnailUrl || "",
-              startDate: prefilledData.startDate || "",
-              endDate: prefilledData.endDate || "",
-              registerDate: prefilledData.registerDate || "",
-              endRegisterDate: prefilledData.endRegisterDate || "",
-              maxParticipants: prefilledData.maxParticipants || "",
-              competitionType: prefilledData.competitionType || "",
-              theme: prefilledData.theme || "",
-              genre: prefilledData.genre || "",
-              paperSize: prefilledData.paperSize || "",
-              drawingMedium: prefilledData.drawingMedium || "",
-              timeLimit: prefilledData.timeLimit || "",
-              submissionFormat: prefilledData.submissionFormat || "",
-              problemText: prefilledData.problemText || "",
-              problemFileUrl: prefilledData.problemFileUrl || "",
-              submissionDeadline: prefilledData.submissionDeadline || "",
-              rules: prefilledData.rules || [""],
-              sportsCategories: prefilledData.sportsCategories || [],
-              sportsConfigurations: prefilledData.sportsConfigurations || [],
-              speakers: prefilledData.speakers || [],
-              programItems: prefilledData.programItems || [],
-              registrationSettings: prefilledData.registrationSettings || prevFormData.registrationSettings,
-              starPointRewards: prefilledData.starPointRewards || prevFormData.starPointRewards,
-            })
-            return merged
-          })
-          
-          // Set other states
-          if (prefilledData.isGrade !== undefined) {
-            setGradingEnabled(prefilledData.isGrade)
-          }
-          if (prefilledData.gradingSettings) {
-            try {
-              const gradingSettings = typeof prefilledData.gradingSettings === 'string'
-                ? JSON.parse(prefilledData.gradingSettings)
-                : prefilledData.gradingSettings
-              if (gradingSettings?.criteria) {
-                setGradingCriteria(gradingSettings.criteria)
-              }
-            } catch (e) {
-              console.error("Error parsing grading settings:", e)
-            }
-          }
-          if (prefilledData.onlyTeacherCanRegister !== undefined) {
-            setOnlyTeacherCanRegister(prefilledData.onlyTeacherCanRegister)
-        }
-          if (prefilledData.thumbnailUrl) {
-            setThumbnailPreview(prefilledData.thumbnailUrl)
-          }
-          
-          toast.success("Đã tải dữ liệu hoạt động, bạn có thể chỉnh sửa và tạo mới")
-          // Clear prefilled data after loading
-        sessionStorage.removeItem("prefilledActivityData")
-        }
-      } catch (error) {
-        console.error("Error loading prefilled activity data:", error)
-        toast.error("Không thể tải dữ liệu hoạt động")
-      }
-      return
-    }
-    
-    if (draftId) {
-      setIsLoadingDraft(true)
-      const loadDraftFromAPI = async () => {
+    if (mode === "template") {
+      const loadTemplates = async () => {
+        setIsLoadingTemplates(true)
         try {
           const token = localStorage.getItem("token")
           const response = await executeApiCall(
-            activityService.getDraftById.bind(activityService),
-            [parseInt(draftId), token],
-            { setLoading: setIsLoadingDraft, setError: () => {} }
+            activityService.getTemplates.bind(activityService),
+            [token],
+            { setLoading: setIsLoadingTemplates, setError: () => {} }
           )
-
-          if (response?.data?.data) {
-            const draft = response.data.data
-            console.log("Loaded draft data:", draft)
-            setCurrentDraftId(draft.id)
-            
-            // Map draft data to formData
-            setFormData(prevFormData => {
-              const merged = deepMerge(prevFormData, {
-                title: draft.title || "",
-                description: draft.description || "",
-                category: draft.category === 1 ? "activity" : "event",
-                subType: draft.subType || "",
-                location: draft.location || "",
-                organizer: draft.organizer || "",
-                thumbnail: draft.thumbnailUrl || "",
-                startDate: draft.startDate || "",
-                endDate: draft.endDate || "",
-                registerDate: draft.registerDate || "",
-                endRegisterDate: draft.endRegisterDate || "",
-                maxParticipants: draft.maxParticipants || "",
-                competitionType: draft.competitionType || "",
-                theme: draft.theme || "",
-                genre: draft.genre || "",
-                paperSize: draft.paperSize || "",
-                drawingMedium: draft.drawingMedium || "",
-                timeLimit: draft.timeLimit || "",
-                submissionFormat: draft.submissionFormat || "",
-                problemText: draft.problemText || "",
-                problemFileUrl: draft.problemFileUrl || "",
-                submissionDeadline: draft.submissionDeadline || "",
-                rules: draft.rules && draft.rules.length > 0 ? draft.rules : [""],
-                sportsCategories: draft.sportsCategories || [],
-                sportsConfigurations: draft.sportsConfigurations 
-                  ? (Array.isArray(draft.sportsConfigurations) 
-                      ? draft.sportsConfigurations 
-                      : typeof draft.sportsConfigurations === 'string'
-                        ? (() => {
-      try {
-                              return JSON.parse(draft.sportsConfigurations)
-                            } catch (e) {
-                              console.error("Error parsing sportsConfigurations:", e)
-                              return []
-                            }
-                          })()
-                        : [])
-                  : [],
-                speakers: draft.speakers 
-                  ? (Array.isArray(draft.speakers) 
-                      ? draft.speakers 
-                      : typeof draft.speakers === 'string'
-                        ? (() => {
-                            try {
-                              return JSON.parse(draft.speakers)
-                            } catch (e) {
-                              console.error("Error parsing speakers:", e)
-                              return []
-                            }
-                          })()
-                        : [])
-                  : [],
-                programItems: draft.programItems 
-                  ? (Array.isArray(draft.programItems) 
-                      ? draft.programItems 
-                      : typeof draft.programItems === 'string'
-                        ? (() => {
-                            try {
-                              return JSON.parse(draft.programItems)
-                            } catch (e) {
-                              console.error("Error parsing programItems:", e)
-                              return []
-                            }
-                          })()
-                        : [])
-                  : [],
-                registrationSettings: draft.registrationSettings
-                  ? (typeof draft.registrationSettings === 'string' 
-                      ? JSON.parse(draft.registrationSettings) 
-                      : draft.registrationSettings)
-                  : prevFormData.registrationSettings,
-                starPointRewards: draft.starPointRewards
-                  ? (typeof draft.starPointRewards === 'string'
-                      ? JSON.parse(draft.starPointRewards)
-                      : draft.starPointRewards)
-                  : prevFormData.starPointRewards,
-              })
-              return merged
-            })
-
-            // Set other states
-            if (draft.isGrade !== undefined) {
-              setGradingEnabled(draft.isGrade)
-            }
-            if (draft.gradingSettings) {
-              try {
-                const gradingSettings = typeof draft.gradingSettings === 'string'
-                  ? JSON.parse(draft.gradingSettings)
-                  : draft.gradingSettings
-                if (gradingSettings?.criteria) {
-                  setGradingCriteria(gradingSettings.criteria)
-        }
-              } catch (e) {
-                console.error("Error parsing grading settings:", e)
-              }
-            }
-            if (draft.onlyTeacherCanRegister !== undefined) {
-              setOnlyTeacherCanRegister(draft.onlyTeacherCanRegister)
-        }
-            if (draft.thumbnailUrl) {
-              setThumbnailPreview(draft.thumbnailUrl)
-        }
-
-            toast.success("Đã tải bản nháp thành công")
+          console.log("Templates response:", response)
+          console.log("Response type:", typeof response)
+          console.log("Response.data:", response?.data)
+          console.log("Response.data is array:", Array.isArray(response?.data))
+          
+          // Response format từ handleApiResponse: { statusCode: 200, message: "...", data: [...] }
+          // handleApiResponse trả về response.json() nên response là object trực tiếp
+          let templatesData = []
+          
+          if (response?.data && Array.isArray(response.data)) {
+            // Case 1: response.data is the array (đúng format)
+            templatesData = response.data
+          } else if (response?.data?.data && Array.isArray(response.data.data)) {
+            // Case 2: response.data.data is the array (nếu wrap thêm một lớp)
+            templatesData = response.data.data
+          } else if (Array.isArray(response)) {
+            // Case 3: response is directly the array
+            templatesData = response
+          } else {
+            console.warn("Unexpected response format:", response)
+            console.warn("Response keys:", response ? Object.keys(response) : "null")
           }
+          
+          console.log("Templates data extracted:", templatesData)
+          console.log("Templates count:", templatesData.length)
+          setTemplates(templatesData)
+          setShowTemplateList(true)
+          setSelectedTemplate(null) // Ensure no template is selected initially
       } catch (error) {
-        console.error("Error loading draft:", error)
-          toast.error("Không thể tải bản nháp")
+          console.error("Error loading templates:", error)
+          toast.error(error?.message || "Không thể tải danh sách mẫu. Vui lòng thử lại.")
+          setTemplates([])
+          setShowTemplateList(true)
         } finally {
-          setIsLoadingDraft(false)
-      }
-      }
-
-      loadDraftFromAPI()
-    }
-    // eslint-disable-line react-hooks/exhaustive-deps
-  }, []) // Run once on mount
-
-  // Auto-save draft to API with debounce
-  const handleAutoSave = useRef(null)
-  
-  useEffect(() => {
-    // Clear previous timer
-    if (handleAutoSave.current) {
-      clearTimeout(handleAutoSave.current)
-    }
-    
-    // Set new timer for debounce (2 seconds)
-    handleAutoSave.current = setTimeout(async () => {
-      try {
-        const token = localStorage.getItem("token")
-        const draftDto = formDataToDraftDto()
-        
-        if (currentDraftId) {
-          // Update existing draft
-          await executeApiCall(
-            activityService.updateDraft.bind(activityService),
-            [currentDraftId, draftDto, token],
-            { setLoading: () => {}, setError: () => {} }
-          )
-          console.log("💾 Auto-updated draft:", currentDraftId)
-        } else {
-          // Create new draft only if form has some data
-          if (formData.title || formData.subType || formData.description) {
-            const response = await executeApiCall(
-              activityService.createDraft.bind(activityService),
-              [draftDto, token],
-              { setLoading: () => {}, setError: () => {} }
-            )
-            
-            if (response?.data?.data?.id) {
-              setCurrentDraftId(response.data.data.id)
-              console.log("💾 Auto-created draft:", response.data.data.id)
-            }
-          }
+          setIsLoadingTemplates(false)
         }
-      } catch (error) {
-        console.error("Error auto-saving draft:", error)
-        // Silent fail for auto-save
       }
-    }, 2000) // Debounce 2 seconds
-
-    return () => {
-      if (handleAutoSave.current) {
-        clearTimeout(handleAutoSave.current)
-      }
+      loadTemplates()
     }
-  }, [formData, gradingEnabled, gradingCriteria, onlyTeacherCanRegister, currentDraftId])
+  }, [mode])
+
 
   const handleNext = () => {
     if (currentStep < 5) {
@@ -1124,23 +846,6 @@ export default function CreateActivity() {
       )
 
       if (response?.data) {
-        // Delete draft if exists
-        if (currentDraftId) {
-          try {
-            const token = localStorage.getItem("token")
-            await executeApiCall(
-              activityService.deleteDraft.bind(activityService),
-              [currentDraftId, token],
-              { setLoading: () => {}, setError: () => {} }
-            )
-          } catch (error) {
-            console.error("Error deleting draft:", error)
-            // Continue even if draft deletion fails
-          }
-        }
-        
-        // Clear all storage after successful submission
-        clearAllStorage()
         toast.success("Hoạt động mới đã được xuất bản thành công.")
         navigate("/admin/activities")
       }
@@ -1152,46 +857,100 @@ export default function CreateActivity() {
     }
   }
 
-  // Clear all storage (prefilled data)
-  const clearAllStorage = () => {
-    try {
-      // Clear prefilled data from sessionStorage
-      sessionStorage.removeItem("prefilledActivityData")
-      console.log("🧹 Cleared session storage")
-    } catch (error) {
-      console.error("Error clearing storage:", error)
-    }
-  }
 
-  const handleSaveDraft = async () => {
+  const handleSaveAsTemplate = async () => {
     try {
-      const token = localStorage.getItem("token")
-      const draftDto = formDataToDraftDto()
+      if (!templateName.trim()) {
+        toast.error("Vui lòng nhập tên mẫu")
+        return
+      }
+
+      if (!formData.subType) {
+        toast.error("Vui lòng chọn phân loại hoạt động trước khi lưu mẫu")
+        return
+      }
+
+      setIsSubmitting(true)
       
-      if (currentDraftId) {
-        // Update existing draft
-        await executeApiCall(
-          activityService.updateDraft.bind(activityService),
-          [currentDraftId, draftDto, token],
-          { setLoading: setIsSubmitting, setError: () => {} }
-        )
-        toast.success("Đã cập nhật bản nháp thành công")
-      } else {
-        // Create new draft
+      // Upload thumbnail nếu có file mới được chọn (chưa upload)
+      let thumbnailUrl = formData.thumbnail // Giữ URL cũ nếu đã có
+      
+      if (thumbnailFile) {
+        try {
+          thumbnailUrl = await uploadImage(thumbnailFile)
+          if (!thumbnailUrl) {
+            toast.error("Không thể upload ảnh. Vui lòng thử lại.")
+            setIsSubmitting(false)
+            return
+          }
+          // Cleanup preview URL sau khi upload thành công
+          if (thumbnailPreview) {
+            URL.revokeObjectURL(thumbnailPreview)
+            setThumbnailPreview("")
+          }
+          setThumbnailFile(null)
+          // Cập nhật formData với URL mới
+          setFormData(prevFormData => ({ ...prevFormData, thumbnail: thumbnailUrl }))
+        } catch (error) {
+          console.error("Error uploading image:", error)
+          toast.error(error.message || "Có lỗi xảy ra khi upload ảnh")
+          setIsSubmitting(false)
+          return
+        }
+      }
+      
+      // Đảm bảo formData.thumbnail được cập nhật với URL mới nhất
+      const finalFormData = { ...formData, thumbnail: thumbnailUrl }
+      
+      const token = localStorage.getItem("token")
+      const templateDto = formDataToTemplateDto(
+        templateName.trim(),
+        templateDescription.trim() || null,
+        templateChecklistItems,
+        finalFormData // Pass finalFormData với thumbnail đã upload
+      )
+      
+      console.log("Saving template with data:", templateDto)
+      
         const response = await executeApiCall(
-          activityService.createDraft.bind(activityService),
-          [draftDto, token],
+        activityService.saveAsTemplate.bind(activityService),
+        [templateDto, token],
           { setLoading: setIsSubmitting, setError: () => {} }
         )
         
-        if (response?.data?.data?.id) {
-          setCurrentDraftId(response.data.data.id)
-          toast.success("Đã lưu bản nháp thành công. Bạn có thể tiếp tục chỉnh sửa sau.")
-        }
+      console.log("Save template response:", response)
+      
+      // Response format từ handleApiResponse: { statusCode: 200, message: "...", data: {...} }
+      // Hoặc có thể wrap: { data: { statusCode: 200, message: "...", data: {...} } }
+      // Check if response is successful (statusCode 200)
+      const isSuccess = response?.statusCode === 200 || 
+                       (response?.data && response?.data?.statusCode === 200) ||
+                       (response?.data && response?.data?.data) // Fallback: có data thì coi là success
+      
+      if (isSuccess) {
+        // Success - show success toast (màu xanh)
+        const successMessage = response?.message || 
+                              response?.data?.message || 
+                              "Đã lưu mẫu hoạt động thành công. Bạn có thể sử dụng lại sau."
+        toast.success(successMessage)
+        
+        // Close dialog and reset form
+        setIsSaveTemplateDialogOpen(false)
+        setTemplateName("")
+        setTemplateDescription("")
+        setTemplateChecklistItems([""])
+      } else {
+        // Error case
+        const errorMessage = response?.message || 
+                            response?.data?.message || 
+                            "Không thể lưu mẫu. Vui lòng thử lại."
+        toast.error(errorMessage)
       }
     } catch (error) {
-      console.error("Error saving draft:", error)
-      toast.error("Không thể lưu bản nháp. Vui lòng thử lại.")
+      console.error("Error saving template:", error)
+      toast.error(error?.message || error?.data?.message || "Không thể lưu mẫu. Vui lòng thử lại.")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -1290,8 +1049,219 @@ export default function CreateActivity() {
   }, [thumbnailPreview])
 
 
+  // Apply template to form
+  const handleApplyTemplate = async (template) => {
+    try {
+      if (!template.prefillData) {
+        toast.error("Mẫu này không có dữ liệu để áp dụng")
+        return
+      }
+
+      const prefillData = template.prefillData
+      
+      // Parse starPointRewards và registrationSettings nếu là string (JSON)
+      let starPointRewards = null
+      if (prefillData.starPointRewards) {
+        try {
+          starPointRewards = typeof prefillData.starPointRewards === 'string'
+            ? JSON.parse(prefillData.starPointRewards)
+            : prefillData.starPointRewards
+        } catch (e) {
+          console.error("Error parsing starPointRewards:", e)
+          starPointRewards = null
+        }
+      }
+
+      let registrationSettings = null
+      if (prefillData.registrationSettings) {
+        try {
+          registrationSettings = typeof prefillData.registrationSettings === 'string'
+            ? JSON.parse(prefillData.registrationSettings)
+            : prefillData.registrationSettings
+        } catch (e) {
+          console.error("Error parsing registrationSettings:", e)
+          registrationSettings = null
+        }
+      }
+
+      // Apply prefill data to form
+      setFormData(prevFormData => {
+        const merged = deepMerge(prevFormData, {
+          title: prefillData.title || "",
+          description: prefillData.description || "",
+          category: prefillData.category === 1 ? "activity" : "event",
+          subType: template.subType || "",
+          location: prefillData.location || "",
+          organizer: prefillData.organizer || "",
+          thumbnail: prefillData.thumbnailUrl || "",
+          startDate: prefillData.startDate || "",
+          endDate: prefillData.endDate || "",
+          registerDate: prefillData.registerDate || "",
+          endRegisterDate: prefillData.endRegisterDate || "",
+          maxParticipants: prefillData.maxParticipants || "",
+          competitionType: prefillData.competitionType || "",
+          theme: prefillData.theme || "",
+          genre: prefillData.genre || "",
+          paperSize: prefillData.paperSize || "",
+          drawingMedium: prefillData.drawingMedium || "",
+          timeLimit: prefillData.timeLimit || "",
+          submissionFormat: prefillData.submissionFormat || "",
+          problemText: prefillData.problemText || "",
+          problemFileUrl: prefillData.problemFileUrl || "",
+          submissionDeadline: prefillData.submissionDeadline || "",
+          rules: prefillData.rules && Array.isArray(prefillData.rules) ? prefillData.rules : [""],
+          sportsCategories: prefillData.sportsCategories || [],
+          sportsConfigurations: prefillData.sportsConfigurations || [],
+          speakers: prefillData.speakers || [],
+          programItems: prefillData.programItems || [],
+          // Map starPointRewards và registrationSettings
+          starPointRewards: starPointRewards || prevFormData.starPointRewards,
+          registrationSettings: registrationSettings || prevFormData.registrationSettings,
+        })
+        return merged
+      })
+
+      // Set other states
+      if (prefillData.isGrade !== undefined) {
+        setGradingEnabled(prefillData.isGrade)
+      }
+      if (prefillData.gradingSettings) {
+        try {
+          const gradingSettings = typeof prefillData.gradingSettings === 'string'
+            ? JSON.parse(prefillData.gradingSettings)
+            : prefillData.gradingSettings
+          if (gradingSettings?.criteria) {
+            setGradingCriteria(gradingSettings.criteria)
+          }
+        } catch (e) {
+          console.error("Error parsing grading settings:", e)
+        }
+      }
+      if (prefillData.onlyTeacherCanRegister !== undefined) {
+        setOnlyTeacherCanRegister(prefillData.onlyTeacherCanRegister)
+      }
+      // Load thumbnail khi apply template
+      if (prefillData.thumbnailUrl) {
+        setThumbnailPreview(prefillData.thumbnailUrl)
+        // Cập nhật vào formData.thumbnail để lưu vào form
+        setFormData(prevFormData => ({
+          ...prevFormData,
+          thumbnail: prefillData.thumbnailUrl
+        }))
+      }
+
+      // Apply checklist if available
+      if (template.checklist && Array.isArray(template.checklist)) {
+        setTemplateChecklist(template.checklist)
+      }
+
+      // Increment usage count
+      try {
+        const token = localStorage.getItem("token")
+        await executeApiCall(
+          activityService.incrementTemplateUsage.bind(activityService),
+          [template.id, token],
+          { setLoading: () => {}, setError: () => {} }
+        )
+      } catch (error) {
+        console.error("Error incrementing template usage:", error)
+      }
+
+      setSelectedTemplate(template)
+      setShowTemplateList(false)
+      toast.success(`Đã áp dụng mẫu "${template.name}" thành công`)
+    } catch (error) {
+      console.error("Error applying template:", error)
+      toast.error("Không thể áp dụng mẫu. Vui lòng thử lại.")
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {/* Loading Overlay for Publishing */}
+      <LoadingOverlay isLoading={isSubmitting} text="Đang xuất bản hoạt động..." />
+
+      {/* Template Selection UI (when mode=template and showTemplateList=true) */}
+      {mode === "template" && showTemplateList && !selectedTemplate && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Chọn mẫu hoạt động</h2>
+                <p className="text-gray-600 mt-1">Chọn một mẫu để tạo hoạt động mới nhanh chóng</p>
+              </div>
+              <Button variant="outline" onClick={() => navigate(ROUTES.ADMIN.ACTIVITIES)}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Quay lại
+              </Button>
+            </div>
+
+            {isLoadingTemplates ? (
+              <LoadingCard isLoading={true} text="Đang tải danh sách mẫu..." />
+            ) : templates.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 text-lg">Chưa có mẫu nào</p>
+                <p className="text-gray-500 text-sm mt-2">Bạn có thể tạo mẫu mới sau khi tạo hoạt động</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => {
+                    navigate(`${ROUTES.ADMIN.CREATE_ACTIVITY}?fromLanding=true`)
+                  }}
+                >
+                  Tạo hoạt động mới
+                </Button>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {templates.map((template) => (
+                  <Card 
+                    key={template.id}
+                    className="hover:shadow-lg transition-shadow cursor-pointer"
+                    onClick={() => handleApplyTemplate(template)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-semibold text-lg text-gray-900">{template.name}</h3>
+                        {template.isSystemTemplate && (
+                          <Badge variant="secondary" className="text-xs">Hệ thống</Badge>
+                        )}
+                      </div>
+                      {template.description && (
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{template.description}</p>
+                      )}
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <div className="flex items-center gap-1">
+                          <FileText className="w-4 h-4" />
+                          <span>{getSubTypeLabel(template.subType)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4" />
+                          <span>Đã dùng {template.usageCount || 0} lần</span>
+                        </div>
+                      </div>
+                      <Button 
+                        className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleApplyTemplate(template)
+                        }}
+                      >
+                        Sử dụng mẫu này
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Show form only if template is selected or mode is not template */}
+      {(mode !== "template" || selectedTemplate) && (
+        <>
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -1305,6 +1275,33 @@ export default function CreateActivity() {
           <p className="text-gray-600 mt-1">Tạo hoạt động ngoại khóa, sự kiện hoặc cuộc thi cho học sinh</p>
         </div>
       </div>
+
+      {/* Template Checklist - Hiển thị ở đầu form */}
+      {templateChecklist.length > 0 && (
+        <Card className="bg-purple-50 border-purple-200">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <Label className="text-base font-semibold text-purple-900 mb-2 block">
+                  Checklist từ mẫu đã được áp dụng:
+                </Label>
+                <ul className="space-y-2">
+                  {templateChecklist.map((item, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm text-purple-800">
+                      <span className="text-purple-600 mt-0.5">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-purple-700 mt-2 italic">
+                  Checklist này được áp dụng từ mẫu "{selectedTemplate?.name}". Bạn có thể tiếp tục điền thông tin hoạt động bên dưới.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Progress Steps */}
       <Card>
@@ -2219,30 +2216,6 @@ export default function CreateActivity() {
           {/* Step 4: Rules */}
           {currentStep === 4 && (
             <div className="space-y-6">
-              {/* Template Checklist Info */}
-              {templateChecklist.length > 0 && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <Label className="text-base font-semibold text-purple-900 mb-2">
-                        Checklist từ mẫu đã được áp dụng:
-                      </Label>
-                      <ul className="space-y-1">
-                        {templateChecklist.map((item, index) => (
-                          <li key={index} className="flex items-start gap-2 text-sm text-purple-800">
-                            <span className="text-purple-600 mt-0.5">•</span>
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <p className="text-xs text-purple-700 mt-2">
-                        Bạn có thể chỉnh sửa hoặc thêm quy định mới bên dưới.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div>
                 <Label htmlFor="maxParticipants">Số người tham gia tối đa</Label>
@@ -2628,9 +2601,9 @@ export default function CreateActivity() {
                   Quay lại
                 </Button>
               )}
-              <Button variant="outline" onClick={handleSaveDraft}>
+              <Button variant="outline" onClick={() => setIsSaveTemplateDialogOpen(true)}>
                 <Save className="w-4 h-4 mr-2" />
-                Lưu nháp
+                Lưu làm mẫu
               </Button>
             </div>
 
@@ -2885,6 +2858,89 @@ export default function CreateActivity() {
         </CardContent>
       </Card>
 
+      {/* Dialog Lưu làm mẫu */}
+      <Dialog open={isSaveTemplateDialogOpen} onOpenChange={setIsSaveTemplateDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Lưu làm mẫu hoạt động</DialogTitle>
+            <DialogDescription>
+              Lưu mẫu này để bạn có thể tái sử dụng sau này khi tạo hoạt động mới.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="templateName">Tên mẫu *</Label>
+              <Input
+                id="templateName"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Ví dụ: Hội thao mùa xuân 2024"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="templateDescription">Mô tả mẫu</Label>
+              <Textarea
+                id="templateDescription"
+                value={templateDescription}
+                onChange={(e) => setTemplateDescription(e.target.value)}
+                placeholder="Mô tả ngắn gọn về mẫu này..."
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label>Checklist (tùy chọn)</Label>
+              <div className="space-y-2 mt-1">
+                {templateChecklistItems.map((item, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      value={item}
+                      onChange={(e) => {
+                        const newItems = [...templateChecklistItems]
+                        newItems[index] = e.target.value
+                        setTemplateChecklistItems(newItems)
+                      }}
+                      placeholder={`Mục ${index + 1}`}
+                    />
+                    {templateChecklistItems.length > 1 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setTemplateChecklistItems(
+                            templateChecklistItems.filter((_, i) => i !== index)
+                          )
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTemplateChecklistItems([...templateChecklistItems, ""])}
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Thêm mục checklist
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSaveTemplateDialogOpen(false)}>
+              Hủy
+            </Button>
+            <Button onClick={handleSaveAsTemplate} disabled={isSubmitting || !templateName.trim()}>
+              {isSubmitting ? "Đang lưu..." : "Lưu mẫu"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Dialog thêm/sửa Diễn giả */}
       <Dialog open={isSpeakerDialogOpen} onOpenChange={setIsSpeakerDialogOpen}>
         <DialogContent className="max-w-2xl">
@@ -3045,7 +3101,8 @@ export default function CreateActivity() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
+        </>
+      )}
     </div>
   )
 }

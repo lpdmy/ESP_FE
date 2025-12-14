@@ -220,107 +220,15 @@ export class ActivityService extends ApiService {
     );
   }
 
-  /**
-   * Import activities from CSV/Excel file
-   * @param {FormData} formData - FormData containing the file
-   * @param {string} token - Authentication token
-   * @returns {Promise} Response with validation result
-   */
-  async importActivities(formData, token) {
-    return this.postFormData(API_CONFIG.ACTIVITY.IMPORT, formData, token);
-  }
 
   /**
-   * Bulk create activities
-   * @param {Object} bulkCreateDto - BulkCreateActivitiesDto with activities array
+   * Save activity form data as template
+   * @param {Object} templateData - Template data (CreateActivityTemplateFromFormDto)
    * @param {string} token - Authentication token
-   * @returns {Promise} Response with created activities
+   * @returns {Promise} Response with created template
    */
-  async bulkCreateActivities(bulkCreateDto, token) {
-    return this.post(API_CONFIG.ACTIVITY.BULK_CREATE, bulkCreateDto, token);
-  }
-
-  /**
-   * Duplicate an activity
-   * @param {number} activityId - Activity ID to duplicate
-   * @param {string} token - Authentication token
-   * @returns {Promise} Response with duplicated activity
-   */
-  async duplicateActivity(activityId, token) {
-    return this.post(API_CONFIG.ACTIVITY.DUPLICATE.replace('{id}', activityId), {}, token);
-  }
-
-  // Activity Draft methods
-  /**
-   * Get all activity drafts for current user
-   * @param {Object} filters - Filter parameters
-   * @param {number} filters.pageNumber - Page number (default: 1)
-   * @param {number} filters.pageSize - Page size (default: 10)
-   * @param {string} filters.search - Search query (optional)
-   * @param {string} filters.sortBy - Sort field (default: "UpdatedAt")
-   * @param {boolean} filters.sortDescending - Sort descending (default: true)
-   * @param {string} token - Authentication token
-   * @returns {Promise} Response with paginated drafts
-   */
-  async getDrafts(filters = {}, token) {
-    const params = new URLSearchParams();
-    if (filters.pageNumber) params.append('pageNumber', filters.pageNumber);
-    if (filters.pageSize) params.append('pageSize', filters.pageSize);
-    if (filters.search) params.append('search', filters.search);
-    if (filters.sortBy) params.append('sortBy', filters.sortBy);
-    if (filters.sortDescending !== undefined) params.append('sortDescending', filters.sortDescending);
-    return this.get(`${API_CONFIG.ACTIVITY_DRAFT.GET_ALL}?${params.toString()}`, token);
-  }
-
-  /**
-   * Get activity draft by ID
-   * @param {number} draftId - Draft ID
-   * @param {string} token - Authentication token
-   * @returns {Promise} Response with draft data
-   */
-  async getDraftById(draftId, token) {
-    return this.get(API_CONFIG.ACTIVITY_DRAFT.GET_BY_ID.replace('{id}', draftId), token);
-  }
-
-  /**
-   * Create activity draft
-   * @param {Object} draftData - Draft data
-   * @param {string} token - Authentication token
-   * @returns {Promise} Response with created draft
-   */
-  async createDraft(draftData, token) {
-    return this.post(API_CONFIG.ACTIVITY_DRAFT.CREATE, draftData, token);
-  }
-
-  /**
-   * Update activity draft
-   * @param {number} draftId - Draft ID
-   * @param {Object} draftData - Draft data
-   * @param {string} token - Authentication token
-   * @returns {Promise} Response with updated draft
-   */
-  async updateDraft(draftId, draftData, token) {
-    return this.put(API_CONFIG.ACTIVITY_DRAFT.UPDATE.replace('{id}', draftId), draftData, token);
-  }
-
-  /**
-   * Delete activity draft
-   * @param {number} draftId - Draft ID
-   * @param {string} token - Authentication token
-   * @returns {Promise} Response
-   */
-  async deleteDraft(draftId, token) {
-    return this.delete(API_CONFIG.ACTIVITY_DRAFT.DELETE.replace('{id}', draftId), token);
-  }
-
-  /**
-   * Convert draft to activity
-   * @param {number} draftId - Draft ID
-   * @param {string} token - Authentication token
-   * @returns {Promise} Response with created activity
-   */
-  async convertDraftToActivity(draftId, token) {
-    return this.post(API_CONFIG.ACTIVITY_DRAFT.CONVERT_TO_ACTIVITY.replace('{id}', draftId), {}, token);
+  async saveAsTemplate(templateData, token) {
+    return this.post(API_CONFIG.ACTIVITY_TEMPLATE.SAVE_FROM_FORM, templateData, token);
   }
 }
 
