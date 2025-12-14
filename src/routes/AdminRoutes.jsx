@@ -13,7 +13,6 @@ import CreateActivityPage from "@/pages/Admin/Activities/CreateActivityPage";
 import ActivityManagementPage from "@/pages/Admin/Activities/ActivityManagementPage";
 import EditActivityPage from "@/pages/Admin/Activities/EditActivityPage";
 import AISchedulePage from "@/pages/Admin/Activities/AISchedulePage";
-import ActivityDraftsList from "@/features/admin/components/ActivityManagement/ActivityDraftsList";
 import ClassDetailPage from "@/pages/Admin/ClassDetailPage";
 import ModerationManagementPage from "@/pages/Admin/ModerationPage";
 export const adminRoutes = [
@@ -159,11 +158,6 @@ export const adminRoutes = [
       key="activity-ai-schedule"
       path={ROUTES.ADMIN.AI_SCHEDULE}
       element={<AISchedulePage />}
-    />
-    <Route
-      key="activity-drafts"
-      path="/admin/activities/drafts"
-      element={<ActivityDraftsList />}
     />
     <Route
       key="moderation"

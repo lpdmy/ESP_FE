@@ -25,6 +25,6 @@ export class StaffService extends ApiService{
     }
     async recoveryStaff(token,id){
         let url = `${API_CONFIG.STAFF.LINK}/${id}`
-        return this.put(url,token)
+        return this.put(url, null, token)
     }
 }
