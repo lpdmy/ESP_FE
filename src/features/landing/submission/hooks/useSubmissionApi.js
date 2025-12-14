@@ -22,9 +22,17 @@ export function useSubmissionApi() {
       { setLoading: setSaveLoading, setError }
     );
   };
-
+  const getSubmissionRank = async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      submissionService.getSubmissionRank.bind(submissionService),
+      [token, id],
+      { setLoading: setSaveLoading, setError }
+    );
+  };
   return {
     getSubmissionByUser,
-    getSubmissionDetail
+    getSubmissionDetail,
+    getSubmissionRank
   };
 }
