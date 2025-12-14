@@ -313,6 +313,7 @@ export const API_CONFIG = {
     GET_SUBMISSION_ACTIVITY: "/submission/activity",
     GET_MY_SUBMISSION: "/submission/activity/user",
     GET_SUBMISSION_DETAIL: "/submission",
+    GET_ACTITY_RANK: "/submission/activity",
   },
   MODERATION:{
     GET_ALL_MODERATION:'/moderation/report',

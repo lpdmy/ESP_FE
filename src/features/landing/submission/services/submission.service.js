@@ -12,4 +12,8 @@ export class SubmissionService extends ApiService {
     let url = `${API_CONFIG.SUBMISSION.GET_SUBMISSION_DETAIL}/${id}`;
     return this.get(url, token);
   }
+  async getSubmissionRank(token,id){
+    let url = `${API_CONFIG.SUBMISSION.GET_ACTITY_RANK}/${id}/rank`;
+    return this.get(url, token);
+  }
 }
