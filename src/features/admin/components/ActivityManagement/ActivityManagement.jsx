@@ -159,20 +159,24 @@ export default function ActivityManagement() {
   const [statsLoading, setStatsLoading] = useState(true)
 
   // Calculate activity status based on dates
+  // API trả về date string đã là VN time rồi, so sánh trong cùng timezone (VN time)
   const getActivityStatus = (activity) => {
-    const now = new Date()
+    const nowUTC = new Date()
+    const nowVN = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000) // Convert now sang VN time
+    
+    // Parse date string từ API (đã là VN time)
     const startDate = activity.startDate ? new Date(activity.startDate) : null
     const endDate = activity.endDate ? new Date(activity.endDate) : null
 
     // If missing dates, consider as Upcoming (not Pending)
-    if (!startDate || !endDate) return "Upcoming"
+    if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return "Upcoming"
 
-    // Check current status based on dates
-    if (now >= startDate && now <= endDate) {
+    // Check current status based on dates (so sánh trong VN time)
+    if (nowVN >= startDate && nowVN <= endDate) {
       return "Active" // Đang diễn ra
     }
 
-    if (now > endDate) {
+    if (nowVN > endDate) {
       return "Ended" // Đã kết thúc
     }
 
@@ -207,25 +211,38 @@ export default function ActivityManagement() {
 
         // Map BE data to FE format - optimize performance
         // Tính toán status inline thay vì gọi function để tăng tốc
-        const now = new Date()
+        // API trả về date string đã là VN time rồi, so sánh trong cùng timezone (VN time)
+        const nowUTC = new Date()
+        const nowVN = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000) // Convert now sang VN time
+        
         const mappedActivities = activitiesData.map(activity => {
           // Tính status một lần thay vì gọi function
           let status = "Upcoming"
           if (activity.startDate && activity.endDate) {
-            const startDate = new Date(activity.startDate)
-            const endDate = new Date(activity.endDate)
-            if (now >= startDate && now <= endDate) {
+            const startDate = new Date(activity.startDate) // Parse từ API (đã là VN time)
+            const endDate = new Date(activity.endDate) // Parse từ API (đã là VN time)
+            if (nowVN >= startDate && nowVN <= endDate) {
               status = "Active"
-            } else if (now > endDate) {
+            } else if (nowVN > endDate) {
               status = "Ended"
             }
           }
           
           // Parse dates một lần và tái sử dụng
+          // API trả về date string đã là VN time rồi, parse trực tiếp
           const startDate = activity.startDate ? new Date(activity.startDate) : null
           const endDate = activity.endDate ? new Date(activity.endDate) : null
           const registerDate = activity.registerDate ? new Date(activity.registerDate) : null
           const endRegisterDate = activity.endRegisterDate ? new Date(activity.endRegisterDate) : null
+          
+          // Helper để format date từ Date object (đã là VN time) sang YYYY-MM-DD
+          const formatDateForDisplay = (date) => {
+            if (!date || isNaN(date.getTime())) return ""
+            const year = date.getFullYear()
+            const month = String(date.getMonth() + 1).padStart(2, '0')
+            const day = String(date.getDate()).padStart(2, '0')
+            return `${year}-${month}-${day}`
+          }
           
           return {
           id: activity.id,
@@ -233,10 +250,10 @@ export default function ActivityManagement() {
           title: activity.title || "",
           category: activity.category === 1 ? "Activity" : "Event",
           subType: activity.subType || "",
-            startDate: startDate ? startDate.toISOString().split("T")[0] : "",
-            endDate: endDate ? endDate.toISOString().split("T")[0] : "",
-            registerDate: registerDate ? registerDate.toISOString().split("T")[0] : "",
-            endRegisterDate: endRegisterDate ? endRegisterDate.toISOString().split("T")[0] : "",
+            startDate: formatDateForDisplay(startDate),
+            endDate: formatDateForDisplay(endDate),
+            registerDate: formatDateForDisplay(registerDate),
+            endRegisterDate: formatDateForDisplay(endRegisterDate),
             status: status,
           participants: activity.numberOfParticipants || 0,
           maxParticipants: activity.maxParticipants ?? null,

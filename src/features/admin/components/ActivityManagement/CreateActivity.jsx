@@ -865,10 +865,11 @@ export default function CreateActivity() {
         organizer: formData.organizer,
         thumbnailUrl: thumbnailUrl,
         // Convert VN time (UTC+7) to UTC before sending to BE
-        startDate: formData.startDate ? vnTimeToUTC(formData.startDate) : null,
-        endDate: formData.endDate ? vnTimeToUTC(formData.endDate) : null,
-        registerDate: formData.registerDate ? vnTimeToUTC(formData.registerDate) : null,
-        endRegisterDate: formData.endRegisterDate ? vnTimeToUTC(formData.endRegisterDate) : null,
+        // Start dates: 00:00:00 UTC, End dates: 23:59:59 UTC
+        startDate: formData.startDate ? vnTimeToUTC(formData.startDate, false) : null,
+        endDate: formData.endDate ? vnTimeToUTC(formData.endDate, true) : null,
+        registerDate: formData.registerDate ? vnTimeToUTC(formData.registerDate, false) : null,
+        endRegisterDate: formData.endRegisterDate ? vnTimeToUTC(formData.endRegisterDate, true) : null,
         // maxParticipants: null = không giới hạn, có giá trị = giới hạn số người
         maxParticipants: (formData.maxParticipants && formData.maxParticipants.trim() !== "") 
           ? parseInt(formData.maxParticipants) 
@@ -889,7 +890,7 @@ export default function CreateActivity() {
         problemText: formData.subType === "CreativeContest" ? formData.problemText : null,
         problemFileUrl: formData.subType === "CreativeContest" ? formData.problemFileUrl : null,
         submissionDeadline: formData.subType === "CreativeContest" && formData.submissionDeadline 
-          ? vnTimeToUTC(formData.submissionDeadline) 
+          ? vnTimeToUTC(formData.submissionDeadline, true) 
           : null,
         // SeminarWorkshop fields
         speakers: formData.subType === "SeminarWorkshop" ? formData.speakers.map((s, index) => ({
