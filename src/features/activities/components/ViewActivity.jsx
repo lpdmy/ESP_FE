@@ -487,6 +487,7 @@ import {
   Minus,
   Maximize2,
   RotateCcw,
+  Infinity,
 } from "lucide-react";
 
 // FilterSelect component giống ActivitiesList.jsx
@@ -2846,10 +2847,21 @@ const handleFetchSubmissionRank = async () =>{
                             <p className="text-sm text-gray-600">
                               Người tham gia
                             </p>
-                            <p className="font-semibold text-sm">
-                              {activity.currentParticipants}/
-                              {activity.maxParticipants === null ? "Không giới hạn" : activity.maxParticipants}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-sm">
+                                {activity.currentParticipants}/
+                              </p>
+                              {activity.maxParticipants && activity.maxParticipants > 0 ? (
+                                <p className="font-semibold text-sm">
+                                  {activity.maxParticipants}
+                                </p>
+                              ) : (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
+                                  <Users className="w-3 h-3" />
+                                  <span className="font-semibold">Không giới hạn</span>
+                                </Badge>
+                              )}
+                            </div>
                           </>
                         )}
                       </div>
@@ -2910,19 +2922,32 @@ const handleFetchSubmissionRank = async () =>{
                     </div>
                   ) : (
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-orange-600 mb-1">
-                        {activity.currentParticipants}/
-                        {activity.maxParticipants ?? "∞"}
+                      <div className="text-3xl font-bold text-orange-600 mb-1 flex items-center justify-center gap-1">
+                        <span>{activity.currentParticipants}/</span>
+                        {activity.maxParticipants && activity.maxParticipants > 0 ? (
+                          <span>{activity.maxParticipants}</span>
+                        ) : (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-2xl px-2 py-1 flex items-center gap-1">
+                            <Infinity className="w-5 h-5" />
+                            <span className="font-semibold">Không giới hạn</span>
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-gray-600">Người tham gia</p>
-                      <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-                        <div
-                          className="bg-orange-500 h-2 rounded-full"
-                          style={{
-                            width: `${participantProgress}%`,
-                          }}
-                        />
-                      </div>
+                      {activity.maxParticipants && activity.maxParticipants > 0 ? (
+                        <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+                          <div
+                            className="bg-orange-500 h-2 rounded-full"
+                            style={{
+                              width: `${participantProgress}%`,
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+                          <div className="bg-green-500 h-2 rounded-full w-full" />
+                        </div>
+                      )}
                     </div>
                   )}
 

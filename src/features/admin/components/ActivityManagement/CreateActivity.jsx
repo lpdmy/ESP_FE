@@ -27,6 +27,7 @@ import { activityService } from "@/features/activities/services/activity.service
 import { GradingCriteriaSection } from "./GradingCriteriaSection"
 import { vnTimeToUTC } from "@/common/utils/dateUtils"
 import { LoadingCard, LoadingOverlay } from "@/common/components/ui/loading"
+import dayjs from "dayjs"
 
 export default function CreateActivity() {
   const navigate = useNavigate()
@@ -575,29 +576,105 @@ export default function CreateActivity() {
     toast.success("Đã xóa mục chương trình")
   }
 
+  // Validate dates with proper order: Now ≤ RegisterDate ≤ EndRegisterDate ≤ StartDate ≤ EndDate
+  const validateDates = (dates) => {
+    const errors = {
+      registerDate: "",
+      endRegisterDate: "",
+      startDate: "",
+      endDate: "",
+    }
+
+    const now = dayjs().startOf("day")
+    const registerDate = dates.registerDate ? dayjs(dates.registerDate) : null
+    const endRegisterDate = dates.endRegisterDate ? dayjs(dates.endRegisterDate) : null
+    const startDate = dates.startDate ? dayjs(dates.startDate) : null
+    const endDate = dates.endDate ? dayjs(dates.endDate) : null
+
+    // Rule 1: Now ≤ RegisterDate
+    if (registerDate && registerDate.isBefore(now, "day")) {
+      errors.registerDate = "Ngày mở đăng ký không được trước ngày hiện tại"
+    }
+
+    // Rule 2: RegisterDate ≤ EndRegisterDate
+    if (registerDate && endRegisterDate && endRegisterDate.isBefore(registerDate, "day")) {
+      errors.endRegisterDate = "Ngày đóng đăng ký không được trước ngày mở đăng ký"
+    }
+
+    // Rule 3: EndRegisterDate ≤ StartDate
+    if (endRegisterDate && startDate && startDate.isBefore(endRegisterDate, "day")) {
+      errors.startDate = "Ngày bắt đầu hoạt động không được trước ngày đóng đăng ký"
+    }
+
+    // Rule 4: StartDate ≤ EndDate
+    if (startDate && endDate && endDate.isBefore(startDate, "day")) {
+      errors.endDate = "Ngày kết thúc hoạt động không được trước ngày bắt đầu hoạt động"
+    }
+
+    return errors
+  }
+
+  // Get min date for each field based on chain
+  const getMinDate = (field) => {
+    const now = dayjs().startOf("day").format("YYYY-MM-DD")
+    
+    switch (field) {
+      case "registerDate":
+        return now // Can't be before today
+      case "endRegisterDate":
+        return formData.registerDate || now // Can't be before registerDate
+      case "startDate":
+        return formData.endRegisterDate || formData.registerDate || now // Can't be before endRegisterDate
+      case "endDate":
+        return formData.startDate || formData.endRegisterDate || formData.registerDate || now // Can't be before startDate
+      default:
+        return now
+    }
+  }
+
   const handleDateChange = (field, label) => (e) => {
     const value = e.target.value
-    let errorMessage = ""
 
-    if (value) {
-      const dateValue = new Date(value)
-      if (!Number.isNaN(dateValue.getTime())) {
-        const now = new Date()
-        if (dateValue <= now) {
-          errorMessage = `${label} phải lớn hơn thời điểm hiện tại`
-        }
+    // Update form data
+    const updatedFormData = {
+      ...formData,
+      [field]: value,
+    }
+
+    // Auto-reset dates in the chain that become invalid
+    if (field === "registerDate" && value) {
+      // If registerDate changes, reset endRegisterDate, startDate, endDate if they become invalid
+      const newRegisterDate = dayjs(value)
+      if (formData.endRegisterDate && dayjs(formData.endRegisterDate).isBefore(newRegisterDate, "day")) {
+        updatedFormData.endRegisterDate = ""
+      }
+      if (formData.startDate && dayjs(formData.startDate).isBefore(newRegisterDate, "day")) {
+        updatedFormData.startDate = ""
+      }
+      if (formData.endDate && dayjs(formData.endDate).isBefore(newRegisterDate, "day")) {
+        updatedFormData.endDate = ""
+      }
+    } else if (field === "endRegisterDate" && value) {
+      // If endRegisterDate changes, reset startDate, endDate if they become invalid
+      const newEndRegisterDate = dayjs(value)
+      if (formData.startDate && dayjs(formData.startDate).isBefore(newEndRegisterDate, "day")) {
+        updatedFormData.startDate = ""
+      }
+      if (formData.endDate && dayjs(formData.endDate).isBefore(newEndRegisterDate, "day")) {
+        updatedFormData.endDate = ""
+      }
+    } else if (field === "startDate" && value) {
+      // If startDate changes, reset endDate if it becomes invalid
+      const newStartDate = dayjs(value)
+      if (formData.endDate && dayjs(formData.endDate).isBefore(newStartDate, "day")) {
+        updatedFormData.endDate = ""
       }
     }
 
-    setDateErrors((prev) => ({
-      ...prev,
-      [field]: errorMessage,
-    }))
-
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
+    // Validate all dates
+    const errors = validateDates(updatedFormData)
+    setDateErrors(errors)
+    setFormData(updatedFormData)
   }
 
   const handlePublish = async () => {
@@ -630,6 +707,18 @@ export default function CreateActivity() {
       toast.error("Vui lòng nhập thời gian đăng ký")
       return
     }
+    
+    // Validate date order before publishing
+    const dateValidationErrors = validateDates(formData)
+    const hasDateErrors = Object.values(dateValidationErrors).some(error => error !== "")
+    if (hasDateErrors) {
+      // Show first error found
+      const firstError = Object.values(dateValidationErrors).find(error => error !== "")
+      toast.error(firstError || "Vui lòng kiểm tra lại thứ tự các ngày")
+      setDateErrors(dateValidationErrors)
+      return
+    }
+    
     // Validate maxParticipants (nếu có nhập thì phải > 0, không bắt buộc)
     if (formData.maxParticipants && formData.maxParticipants.trim() !== "") {
       const maxParticipantsNum = parseInt(formData.maxParticipants)
@@ -646,25 +735,19 @@ export default function CreateActivity() {
       toast.error("Hội thao cần có ít nhất một môn thi đấu")
       return
     }
-    const now = new Date()
-    const futureDateChecks = [
-      { value: formData.startDate, label: "Ngày bắt đầu" },
-      { value: formData.endDate, label: "Ngày kết thúc" },
-      { value: formData.registerDate, label: "Ngày mở đăng ký" },
-      { value: formData.endRegisterDate, label: "Ngày đóng đăng ký" },
-      {
-        value: formData.submissionDeadline,
-        label: "Hạn cuối nộp bài",
-        enabled: formData.subType === "CreativeContest"
+    // Date order validation is already done above with validateDates()
+    // Only validate submissionDeadline if needed
+    if (formData.subType === "CreativeContest" && formData.submissionDeadline) {
+      const submissionDeadline = dayjs(formData.submissionDeadline)
+      const startDate = dayjs(formData.startDate)
+      const endDate = dayjs(formData.endDate)
+      
+      if (submissionDeadline.isBefore(startDate, "day")) {
+        toast.error("Hạn cuối nộp bài phải sau hoặc bằng ngày bắt đầu hoạt động")
+        return
       }
-    ]
-    for (const check of futureDateChecks) {
-      if (check.enabled === false) continue
-      if (!check.value) continue
-      const dateValue = new Date(check.value)
-      if (Number.isNaN(dateValue.getTime())) continue
-      if (dateValue <= now) {
-        toast.error(`${check.label} phải lớn hơn thời điểm hiện tại`)
+      if (submissionDeadline.isAfter(endDate, "day")) {
+        toast.error("Hạn cuối nộp bài phải trước hoặc bằng ngày kết thúc hoạt động")
         return
       }
     }
@@ -876,7 +959,7 @@ export default function CreateActivity() {
       let thumbnailUrl = formData.thumbnail // Giữ URL cũ nếu đã có
       
       if (thumbnailFile) {
-        try {
+    try {
           thumbnailUrl = await uploadImage(thumbnailFile)
           if (!thumbnailUrl) {
             toast.error("Không thể upload ảnh. Vui lòng thử lại.")
@@ -891,7 +974,7 @@ export default function CreateActivity() {
           setThumbnailFile(null)
           // Cập nhật formData với URL mới
           setFormData(prevFormData => ({ ...prevFormData, thumbnail: thumbnailUrl }))
-        } catch (error) {
+    } catch (error) {
           console.error("Error uploading image:", error)
           toast.error(error.message || "Có lỗi xảy ra khi upload ảnh")
           setIsSubmitting(false)
@@ -1508,32 +1591,13 @@ export default function CreateActivity() {
             <div className="grid gap-6">
               <div className="grid md:grid-cols-2 gap-4">
                 <InputField
-                  label="Ngày bắt đầu"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={handleDateChange("startDate", "Ngày bắt đầu")}
-                  error={dateErrors.startDate}
-                  required
-                />
-
-                <InputField
-                  label="Ngày kết thúc"
-                  type="date"
-                  value={formData.endDate}
-                  onChange={handleDateChange("endDate", "Ngày kết thúc")}
-                  error={dateErrors.endDate}
-                  required
-                />
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <InputField
                   label="Mở đăng ký"
                   type="date"
                   value={formData.registerDate}
                   onChange={handleDateChange("registerDate", "Ngày mở đăng ký")}
                   error={dateErrors.registerDate}
                   required
+                  min={getMinDate("registerDate")}
                 />
 
                 <InputField
@@ -1543,13 +1607,35 @@ export default function CreateActivity() {
                   onChange={handleDateChange("endRegisterDate", "Ngày đóng đăng ký")}
                   error={dateErrors.endRegisterDate}
                   required
+                  min={getMinDate("endRegisterDate")}
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <InputField
+                  label="Ngày bắt đầu hoạt động"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={handleDateChange("startDate", "Ngày bắt đầu hoạt động")}
+                  error={dateErrors.startDate}
+                  required
+                  min={getMinDate("startDate")}
+                />
+
+                <InputField
+                  label="Ngày kết thúc hoạt động"
+                  type="date"
+                  value={formData.endDate}
+                  onChange={handleDateChange("endDate", "Ngày kết thúc hoạt động")}
+                  error={dateErrors.endDate}
+                  required
+                  min={getMinDate("endDate")}
                 />
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Lưu ý:</strong> Ngày kết thúc phải sau ngày bắt đầu. Ngày đóng đăng ký phải trước ngày bắt
-                  đầu hoạt động.
+                  <strong>Lưu ý:</strong> Thứ tự ngày phải đúng: Ngày hiện tại ≤ Mở đăng ký ≤ Đóng đăng ký ≤ Bắt đầu hoạt động ≤ Kết thúc hoạt động.
                 </p>
               </div>
             </div>
@@ -3108,7 +3194,7 @@ export default function CreateActivity() {
 }
 
 // InputField helper component - tương tự RewardManagement
-function InputField({ label, placeholder, type = "text", value, onChange, className = "", required = false, error }) {
+function InputField({ label, placeholder, type = "text", value, onChange, className = "", required = false, error, min }) {
   return (
     <div className="grid gap-2">
       <Label>
@@ -3120,6 +3206,7 @@ function InputField({ label, placeholder, type = "text", value, onChange, classN
         value={value}
         onChange={onChange}
         className={className}
+        min={min}
       />
       {error && (
         <p className="text-xs text-red-500 mt-1">
