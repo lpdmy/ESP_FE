@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/common/components/ui/select";
+import ModerationModal from "./ModerationDetailModal/page";
 import {
   Tabs,
   TabsContent,
@@ -141,7 +142,6 @@ export default function ModerationCenter() {
     const triggerRef = useRef(null);
 
     const selectedOption = options.find((o) => o.value === value);
-
     const openDropdown = () => {
       if (triggerRef.current) {
         const rect = triggerRef.current.getBoundingClientRect();
@@ -214,7 +214,7 @@ export default function ModerationCenter() {
       </>
     );
   }
-
+  const [openModalDetail, setOpenModalDetail] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [isPenaltyDialogOpen, setIsPenaltyDialogOpen] = useState(false);
   const [selectedPenalty, setSelectedPenalty] = useState("");
@@ -284,6 +284,11 @@ export default function ModerationCenter() {
       setIsLoading(false);
     }
   };
+  const handleOpenDetaiModal = (data) =>{
+    setOpenModalDetail(true)
+    setSelectedReport(data)
+
+  }
   const statusOptions = [
     { value: "all", label: "Tất cả" },
     { value: "Pending", label: "Chờ xử lý" },
@@ -464,6 +469,7 @@ export default function ModerationCenter() {
                               variant="outline"
                               size="sm"
                               className="text-blue-600 border-blue-200 hover:bg-blue-50 bg-transparent"
+                              onClick={()=> handleOpenDetaiModal(report)}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -649,8 +655,7 @@ export default function ModerationCenter() {
                     >
                       <ChevronLeft className="h-4 w-4" />
                       Trước
-                    </Button>
-
+                    </Button> 
                     <div className="flex gap-1">
                       {Array.from(
                         { length: Math.min(5, totalPagesStat) },
@@ -700,6 +705,11 @@ export default function ModerationCenter() {
         open={openModal}
         onClose={() => setOpenModal(false)}
         selectedUser={selectedUser}
+      />
+       <ModerationModal
+        open={openModalDetail}
+        onClose={() => setOpenModalDetail(false)}
+        data={selectedReport}
       />
     </div>
   );

@@ -326,6 +326,12 @@ export const API_CONFIG = {
     GET_MY_SUBMISSION: "/submission/activity/user",
     GET_SUBMISSION_DETAIL: "/submission",
   },
+  MODERATION:{
+    GET_ALL_MODERATION:'/moderation/report',
+    GET_USER_STAT : '/moderation/user-violations',
+    CREATE_NOTIFICATION: '/moderation/alert',
+    UPDATE_STATUS :'/moderation/update-status',
+  },
 };
 // HTTP Headers
 export const getAuthHeaders = (token) => ({

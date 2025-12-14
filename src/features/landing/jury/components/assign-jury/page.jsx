@@ -7,13 +7,7 @@ import {
 } from "@/common/components/ui/card";
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
-import {
-  Users,
-  UserMinus,
-  UserPlus,
-  Shuffle,
-  Trash,
-} from "lucide-react";
+import { Users, UserMinus, UserPlus, Shuffle, Trash } from "lucide-react";
 import { useJuryApi } from "../../hooks/useJuryApi";
 import { useToast } from "@/common/hooks/useToast";
 import TeacherSearchDialog from "../add-jury/page";
@@ -80,7 +74,7 @@ export default function AssignJurySection({ activityId }) {
         pageNumber
       );
       const data = response.data.data || [];
-      console.log(data)
+      console.log(data);
 
       const total = response.data.totalCount || data.length;
       setSubmission(data);
@@ -192,7 +186,7 @@ export default function AssignJurySection({ activityId }) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setOpenDeleteRandomDialog(true)} 
+                onClick={() => setOpenDeleteRandomDialog(true)}
                 className="border !border-gray-300"
               >
                 <Trash className="w-4 h-4 mr-2" />
@@ -241,14 +235,16 @@ export default function AssignJurySection({ activityId }) {
             {/* Pagination */}
             {!loadingSubmission && totalPages > 1 && (
               <div className="flex items-center justify-between mt-4">
-                <span className="text-sm">Trang {pageNumber} / {totalPages}</span>
+                <span className="text-sm">
+                  Trang {pageNumber} / {totalPages}
+                </span>
 
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setPageNumber(p => Math.max(1, p - 1));
+                      setPageNumber((p) => Math.max(1, p - 1));
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                     disabled={pageNumber === 1}
@@ -259,7 +255,7 @@ export default function AssignJurySection({ activityId }) {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setPageNumber(p => Math.min(totalPages, p + 1));
+                      setPageNumber((p) => Math.min(totalPages, p + 1));
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                     disabled={pageNumber === totalPages}
@@ -300,35 +296,36 @@ export default function AssignJurySection({ activityId }) {
             />
 
             {/* Jury Skeleton */}
-            {loadingJury ? (
-              [...Array(5)].map((_, i) => (
-                <div key={i} className="flex justify-between items-center p-3 border rounded bg-gray-100 animate-pulse">
-                  <div className="w-24 h-4 bg-gray-300 rounded"></div>
-                  <div className="w-10 h-4 bg-gray-300 rounded"></div>
-                </div>
-              ))
-            ) : (
-              jury.map((j) => (
-                <div
-                  key={j.id}
-                  className="flex justify-between items-center p-3 bg-gray-50 rounded border !border-gray-300"
-                >
-                  <div>
-                    <p className="font-semibold">{j.userFullName}</p>
-                    <p className="text-sm text-gray-500">
-                      Đã phân công: {j.assigned}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleDeleteJury(j.id)}
+            {loadingJury
+              ? [...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex justify-between items-center p-3 border rounded bg-gray-100 animate-pulse"
                   >
-                    <UserMinus className="w-4 h-4 text-red-500" />
-                  </Button>
-                </div>
-              ))
-            )}
+                    <div className="w-24 h-4 bg-gray-300 rounded"></div>
+                    <div className="w-10 h-4 bg-gray-300 rounded"></div>
+                  </div>
+                ))
+              : jury.map((j) => (
+                  <div
+                    key={j.id}
+                    className="flex justify-between items-center p-3 bg-gray-50 rounded border !border-gray-300"
+                  >
+                    <div>
+                      <p className="font-semibold">{j.userFullName}</p>
+                      <p className="text-sm text-gray-500">
+                        Đã phân công: {j.assigned}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleDeleteJury(j.id)}
+                    >
+                      <UserMinus className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </div>
+                ))}
           </CardContent>
         </Card>
       </div>
