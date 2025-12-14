@@ -242,12 +242,33 @@ export const API_CONFIG = {
     UPDATE: "/activity",
     DELETE: "/activity/{id}",
     RANK_BY_ID: "/submission/activity/{id}/rank",
+    RECENT_INPUTS: "/activity/recent-inputs",
     GENERATE_TOURNAMENT_SCHEDULE: "/activity/{id}/generate-schedule",
     APPLY_TOURNAMENT_SCHEDULE: "/activity/{id}/apply-schedule",
     TRAIN_SCHEDULE_MODEL: "/activity/train-schedule-model",
     MY_ACTIVITIES: "/my-activities",
     STATISTICS: "/activity/statistics",
+    IMPORT: "/activity/import",
+    BULK_CREATE: "/activity/bulk-create",
+    DUPLICATE: "/activity/{id}/duplicate",
+  },
+  ACTIVITY_DRAFT: {
+    GET_ALL: "/activity-drafts",
+    GET_BY_ID: "/activity-drafts/{id}",
+    CREATE: "/activity-drafts",
+    UPDATE: "/activity-drafts/{id}",
+    DELETE: "/activity-drafts/{id}",
+    CONVERT_TO_ACTIVITY: "/activity-drafts/{id}/convert-to-activity",
+  },
 
+  ACTIVITY_TEMPLATE: {
+    GET_ALL: "/activity-template",
+    GET_BY_ID: "/activity-template/{id}",
+    GET_BY_SUBTYPE: "/activity-template/subtype",
+    CREATE: "/activity-template",
+    UPDATE: "/activity-template",
+    DELETE: "/activity-template/{id}",
+    INCREMENT_USAGE: "/activity-template/{id}/increment-usage",
   },
 
   ACTIVITY_MATCH: {

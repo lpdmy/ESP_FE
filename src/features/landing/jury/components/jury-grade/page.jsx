@@ -95,7 +95,7 @@ export default function Grading() {
   // Refresh dữ liệu khi vào trang hoặc khi activityId thay đổi
   useEffect(()=>{
     if(params.id) {
-      syncAssignments();
+    syncAssignments();
     }
   },[params.id])
   //  Chuyển tiêu chí lấy từ backend thành dạng có key

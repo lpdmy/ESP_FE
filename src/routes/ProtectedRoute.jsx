@@ -14,20 +14,30 @@ const ProtectedRoute = ({ allowedRoles = [], requiredPermissions = [] }) => {
   const location = useLocation();
   const [showModal, setShowModal] = useState(false);
   const [redirect, setRedirect] = useState(false);
+  
   if (!user) {
     return <Navigate to="/auth/login" replace />;
   }
+  
   const { role, permissions } = user;
 
   // Admin không truy cập home/search landing
   if (role === ROLE.ADMIN && (location.pathname === "/" || location.pathname === "/search")) {
     return <Navigate to="/admin" replace />;
   }
+  
+  // Admin luôn có quyền truy cập (bypass allowedRoles check)
+  if (role === ROLE.ADMIN) {
+    return <Outlet />;
+  }
+  
+  // Kiểm tra allowedRoles sau khi đã check ADMIN
   if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
     return <Navigate to="/" replace />;
   }
 
-  if (role === ROLE.ADMIN) {
+  // Teacher có quyền truy cập mà không cần permission (theo BE: Teacher,Staff,Admin)
+  if (role === ROLE.TEACHER) {
     return <Outlet />;
   }
 
