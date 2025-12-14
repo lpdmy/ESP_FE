@@ -112,7 +112,7 @@ const penaltyTypes = [
   },
 ];
 
-// ❌ Loại bỏ type annotation version TypeScript
+// ❌ Loại bỏ type annotation version TypeScripts
 function formatDate(dateString, format = "dd/MM/yyyy") {
   const date = new Date(dateString);
   const day = String(date.getDate()).padStart(2, "0");

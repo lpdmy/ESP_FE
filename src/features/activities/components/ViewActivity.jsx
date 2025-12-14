@@ -3810,26 +3810,6 @@ export default function ViewActivity() {
                   </div>
                 </CardContent>
               </Card>
-
-              <Card className="glass !bg-white">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageCircle className="w-5 h-5 text-orange-500" />
-                    Liên hệ
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start bg-transparent"
-                    onClick={handleMessage}
-                    disabled={isPreview}
-                  >
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Gửi tin nhắn
-                  </Button>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>
