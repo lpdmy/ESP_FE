@@ -228,27 +228,27 @@ export default function ActivityManagement() {
           const endRegisterDate = activity.endRegisterDate ? new Date(activity.endRegisterDate) : null
           
           return {
-            id: activity.id,
-            thumbnail: activity.thumbnailUrl || "",
-            title: activity.title || "",
-            category: activity.category === 1 ? "Activity" : "Event",
-            subType: activity.subType || "",
+          id: activity.id,
+          thumbnail: activity.thumbnailUrl || "",
+          title: activity.title || "",
+          category: activity.category === 1 ? "Activity" : "Event",
+          subType: activity.subType || "",
             startDate: startDate ? startDate.toISOString().split("T")[0] : "",
             endDate: endDate ? endDate.toISOString().split("T")[0] : "",
             registerDate: registerDate ? registerDate.toISOString().split("T")[0] : "",
             endRegisterDate: endRegisterDate ? endRegisterDate.toISOString().split("T")[0] : "",
             status: status,
-            participants: activity.numberOfParticipants || 0,
-            maxParticipants: activity.maxParticipants ?? null,
-            location: activity.location || "",
-            organizer: activity.organizer || "",
-            description: activity.description || "",
-            onlyTeacherCanRegister: activity.onlyTeacherCanRegister || false,
-            gradingSettings: activity.gradingSettings || null,
-            registrationSettings: parseRegistrationSettings(activity.registrationSettings),
-            sports: activity.sports || [],
-            participantDetails: activity.participants || [],
-            isDeleted: activity.isDeleted || false,
+          participants: activity.numberOfParticipants || 0,
+          maxParticipants: activity.maxParticipants ?? null,
+          location: activity.location || "",
+          organizer: activity.organizer || "",
+          description: activity.description || "",
+          onlyTeacherCanRegister: activity.onlyTeacherCanRegister || false,
+          gradingSettings: activity.gradingSettings || null,
+          registrationSettings: parseRegistrationSettings(activity.registrationSettings),
+          sports: activity.sports || [],
+          participantDetails: activity.participants || [],
+          isDeleted: activity.isDeleted || false,
           }
         })
 
@@ -331,14 +331,17 @@ export default function ActivityManagement() {
   }, [])
 
   // Fetch activities when filters change
+  // FIX: Depend directly on values instead of function to avoid infinite loops
   useEffect(() => {
     fetchActivities()
-  }, [fetchActivities])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageNumber, pageSize, searchDebounce])
 
-  // Fetch statistics on component mount
+  // Fetch statistics on component mount (only once)
   useEffect(() => {
     fetchStatistics()
-  }, [fetchStatistics])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
 
   const getStatusBadge = (status) => {
@@ -617,8 +620,8 @@ export default function ActivityManagement() {
     if (!loading) {
       // Set loading ngay lập tức khi user thay đổi page size
       setLoading(true)
-      setPageSize(newSize)
-      setPageNumber(1)
+    setPageSize(newSize)
+    setPageNumber(1)
     }
   }
 
