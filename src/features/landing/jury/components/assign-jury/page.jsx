@@ -12,6 +12,7 @@ import { useJuryApi } from "../../hooks/useJuryApi";
 import { useToast } from "@/common/hooks/useToast";
 import TeacherSearchDialog from "../add-jury/page";
 import RandomAssignDialog from "../Modal/auto-assign/page";
+import ImprovedRandomAssignDialog from "../Modal/improved-auto-assign/page";
 import ConfirmDeleteAssignDialog from "../Modal/delete/page";
 import AssignDialog from "../Modal/assign/page";
 
@@ -21,8 +22,8 @@ export default function AssignJurySection({ activityId }) {
     getSubmissionByAcitivty,
     deleteJury,
     ramdomAssignJury,
+    improvedRandomAssign,
     deleteRandomAssign,
-    assignJuryToSubmission,
   } = useJuryApi();
   const toast = useToast();
 
@@ -33,6 +34,7 @@ export default function AssignJurySection({ activityId }) {
   const [searchTerm, setSearchTerm] = useState("");
 
   const [openRandomDialog, setOpenRandomDialog] = useState(false);
+  const [openImprovedRandomDialog, setOpenImprovedRandomDialog] = useState(false);
   const [openDeleteRandomDialog, setOpenDeleteRandomDialog] = useState(false);
 
   // Pagination
@@ -46,7 +48,6 @@ export default function AssignJurySection({ activityId }) {
   const [openAssignDialog, setOpenAssignDialog] = useState(false);
   const [currentSubmissionId, setCurrentSubmissionId] = useState(null);
   const [checkedJuryIds, setCheckedJuryIds] = useState([]);
-  const [assignedJuryUsers, setAssignedJuryUsers] = useState([]);
   // Loading state
   const [loadingJury, setLoadingJury] = useState(true);
   const [loadingSubmission, setLoadingSubmission] = useState(true);
@@ -79,16 +80,19 @@ export default function AssignJurySection({ activityId }) {
       setSubmission(data);
       setTotalCount(total);
       setTotalPages(Math.ceil(total / pageSize));
-    } catch {
-      toast.showError("Không thể tải danh sách bài nộp");
+    } catch (error) {
+      const errorMessage = error?.message || error?.data?.message || "Không thể tải danh sách bài nộp";
+      // toast.showError(errorMessage);
     } finally {
       setLoadingSubmission(false);
     }
   };
 
   useEffect(() => {
-    handleLoadJury();
-  }, []);
+    if (activityId) {
+      handleLoadJury();
+    }
+  }, [activityId, searchTerm]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -102,9 +106,25 @@ export default function AssignJurySection({ activityId }) {
       await ramdomAssignJury({ activityId, numberOfJury });
       toast.showSuccess("Phân công ngẫu nhiên thành công!");
       handleLoadSubmission();
+      handleLoadJury(); // Reload danh sách giám khảo để cập nhật số lượng assigned
     } catch (error) {
-      if (error.statusCode == 400) {
-        toast.showError(error.message);
+      if(error.statusCode == 400){
+        toast.showError(error.message)
+      } else {
+        toast.showError("Phân công thất bại");
+      }
+    }
+  };
+
+  const handleImprovedRandomForAll = async (numberOfJury) => {
+    try {
+      await improvedRandomAssign({ activityId, numberOfJury });
+      toast.showSuccess("Phân công ngẫu nhiên (cải tiến) thành công!");
+      handleLoadSubmission();
+      handleLoadJury();
+    } catch (error) {
+      if(error.statusCode == 400){
+        toast.showError(error.message)
       } else {
         toast.showError("Phân công thất bại");
       }
@@ -116,6 +136,7 @@ export default function AssignJurySection({ activityId }) {
       await deleteRandomAssign(activityId);
       toast.showSuccess("Xóa phân công thành công");
       handleLoadSubmission();
+      handleLoadJury(); // Reload danh sách giám khảo để cập nhật số lượng assigned
     } catch {
       toast.showError("Xóa thất bại");
     }
@@ -124,11 +145,12 @@ export default function AssignJurySection({ activityId }) {
   const handleDeleteJury = async (jId) => {
     try {
       await deleteJury(jId);
-      console.log(jId);
       toast.showSuccess("Xóa giám khảo thành công");
-    } catch (err) {
-      if (err.statusCode === 400) {
-        toast.showError(err.message);
+      // Reload danh sách giám khảo sau khi xóa thành công
+      handleLoadJury();
+    } catch(err) {
+      if(err.statusCode === 400){
+        toast.showError(err.message)
       } else {
         toast.showError("Xóa giám khảo thất bại");
       }
@@ -139,29 +161,7 @@ export default function AssignJurySection({ activityId }) {
     setCurrentSubmissionId(submissionItem.id);
     const assignedIds = submissionItem.users || [];
     setCheckedJuryIds(assignedIds);
-    const assignedUsers = jury
-      .filter((j) => assignedIds.includes(j.userId))
-      .map((j) => ({
-        userId: j.userId,
-        userFullName: j.userFullName,
-        assigned: j.assigned,
-      }));
-    setAssignedJuryUsers(assignedUsers);
     setOpenAssignDialog(true);
-  };
-  const handleConfirmAssign = async () => {
-    try {
-      await assignJuryToSubmission({
-        submissionId: currentSubmissionId,
-        juryIds: checkedJuryIds,
-      });
-      toast.showSuccess("Phân công giám khảo thành công");
-      setOpenAssignDialog(false);
-      handleLoadSubmission();
-      handleLoadJury();
-    } catch {
-      toast.showError("Phân công thất bại");
-    }
   };
 
   return (
@@ -172,15 +172,17 @@ export default function AssignJurySection({ activityId }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Danh sách bài nộp ({totalCount})
-              <Button
-                variant="outline"
-                size="sm"
-                className="ml-auto border !border-gray-300"
-                onClick={() => setOpenRandomDialog(true)}
-              >
-                <Shuffle className="w-4 h-4 mr-2" />
-                Phân công ngẫu nhiên
-              </Button>
+              <div className="ml-auto flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border !border-blue-400 bg-blue-50 hover:bg-blue-100"
+                  onClick={() => setOpenImprovedRandomDialog(true)}
+                >
+                  <Shuffle className="w-4 h-4 mr-2" />
+                  Phân công ngẫu nhiên
+                </Button>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -195,42 +197,40 @@ export default function AssignJurySection({ activityId }) {
 
           <CardContent className="space-y-2">
             {/* Submission Skeleton */}
-            {loadingSubmission
-              ? [...Array(7)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="animate-pulse p-3 border rounded bg-gray-100"
-                  >
-                    <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            {loadingSubmission ? (
+              [...Array(7)].map((_, i) => (
+                <div key={i} className="animate-pulse p-3 border rounded bg-gray-100">
+                  <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              ))
+            ) : (
+              submission.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex justify-between items-center p-3 border !border-gray-300 rounded bg-white"
+                >
+                  <div>
+                    <p className="font-medium">{s.title}</p>
+                    <p className="text-sm text-gray-500">
+                      {s.submissionCode
+                        ? `Mã bài: ${s.submissionCode}`
+                        : s.orderNumber
+                        ? `Bài #${s.orderNumber}`
+                        : `Bài #${s.id}`}
+                    </p>
                   </div>
-                ))
-              : submission.map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex justify-between items-center p-3 border !border-gray-300 rounded bg-white"
-                  >
-                    <div>
-                      <p className="font-medium">{s.title}</p>
-                      <p className="text-sm text-gray-500">
-                        {s.userFullName} - {s.class?.class}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-700">
-                        {s.numberJurys} giám khảo
-                      </span>
-                      <Button
-                        className=" border !border-blue-400"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDialogForSubmission(s)}
-                      >
-                        Phân công
-                      </Button>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700">
+                      {s.numberJurys} giám khảo
+                    </span>
+                    <Button className=" border !border-blue-400" variant="outline" size="sm" onClick={() => openDialogForSubmission(s)}>
+                      Phân công
+                    </Button>
                   </div>
-                ))}
+                </div>
+              ))
+            )}
 
             {/* Pagination */}
             {!loadingSubmission && totalPages > 1 && (
@@ -335,21 +335,32 @@ export default function AssignJurySection({ activityId }) {
         isOpen={isOpenAddJury}
         onClose={() => setIsOpenAddJury(false)}
         jury={jury}
+        activityId={activityId}
+        onSuccess={handleLoadJury}
       />
       <AssignDialog
         isOpen={openAssignDialog}
-        onClose={() => setOpenAssignDialog(false)}
+        onClose={() => {
+          setOpenAssignDialog(false);
+          setCurrentSubmissionId(null);
+          setCheckedJuryIds([]);
+        }}
         juryList={jury}
         assignedJuryIds={checkedJuryIds}
         setAssignedJuryIds={setCheckedJuryIds}
-        submissionId={currentSubmissionId} // 👈 thêm
-        refreshSubmissionList={handleLoadSubmission} // 👈 thêm
-        refreshJuryList={handleLoadJury} // 👈 thêm
+        submissionId={currentSubmissionId}
+        refreshSubmissionList={handleLoadSubmission}
+        refreshJuryList={handleLoadJury}
       />
       <RandomAssignDialog
         isOpen={openRandomDialog}
         onClose={() => setOpenRandomDialog(false)}
         onConfirm={handleRandomForAll}
+      />
+      <ImprovedRandomAssignDialog
+        isOpen={openImprovedRandomDialog}
+        onClose={() => setOpenImprovedRandomDialog(false)}
+        onConfirm={handleImprovedRandomForAll}
       />
       <ConfirmDeleteAssignDialog
         isOpen={openDeleteRandomDialog}

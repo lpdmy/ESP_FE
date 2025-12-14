@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/common/components/ui/button";
 import {
@@ -47,6 +47,10 @@ export default function EditActivity() {
     bio: "",
     image: "",
   });
+  const [speakerImageFile, setSpeakerImageFile] = useState(null);
+  const [speakerImagePreview, setSpeakerImagePreview] = useState("");
+  const [isUploadingSpeakerImage, setIsUploadingSpeakerImage] = useState(false);
+  const speakerImageInputRef = useRef(null);
   const [programForm, setProgramForm] = useState({
     title: "",
     time: "",
@@ -58,6 +62,12 @@ export default function EditActivity() {
   const [gradingEnabled, setGradingEnabled] = useState(false);
   const [gradingCriteria, setGradingCriteria] = useState([]);
   const [onlyTeacherCanRegister, setOnlyTeacherCanRegister] = useState(false);
+  const [dateErrors, setDateErrors] = useState({
+    startDate: "",
+    endDate: "",
+    registerDate: "",
+    endRegisterDate: "",
+  });
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -98,13 +108,17 @@ export default function EditActivity() {
     },
   })
 
-  const sections = [
+  const sections = useMemo(() => [
     { id: "basic", title: "Thông tin cơ bản", icon: Info },
     { id: "schedule", title: "Lịch trình", icon: Calendar },
     { id: "details", title: "Chi tiết hoạt động", icon: Edit2 },
     { id: "rules", title: "Quy định", icon: Users },
-    { id: "assign-jury", title: "Phân công giám khảo", icon: UserCheck },
-  ];
+    // Chỉ hiển thị section "Phân công giám khảo" cho cuộc thi sáng tạo
+    ...(formData.subType === "CreativeContest" 
+      ? [{ id: "assign-jury", title: "Phân công giám khảo", icon: UserCheck }]
+      : []
+    ),
+  ], [formData.subType]);
 
   const subTypes = [
     { value: "SportsFestival", label: "Hội thao" },
@@ -129,6 +143,19 @@ export default function EditActivity() {
     "Bóng chuyền",
     "Bóng rổ",
   ];
+
+  // Trạng thái khóa chỉnh sửa (đang diễn ra hoặc đã kết thúc)
+  const getValidDate = (value) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+  const startDateValue = getValidDate(formData.startDate);
+  const endDateValue = getValidDate(formData.endDate);
+  const now = new Date();
+  const hasStarted = startDateValue ? now >= startDateValue : false;
+  const hasEnded = endDateValue ? now > endDateValue : false;
+  const isActivityLocked = hasStarted || hasEnded;
 
   // Load activity data
   useEffect(() => {
@@ -334,34 +361,100 @@ export default function EditActivity() {
   const handleOpenSpeakerDialog = (index = null) => {
     if (index !== null) {
       setEditingSpeakerIndex(index);
-      setSpeakerForm({ ...formData.speakers[index] });
+      const speaker = formData.speakers[index];
+      setSpeakerForm({ ...speaker });
+      setSpeakerImagePreview(speaker.image || "");
+      setSpeakerImageFile(null);
     } else {
       setEditingSpeakerIndex(null);
       setSpeakerForm({ name: "", title: "", bio: "", image: "" });
+      setSpeakerImagePreview("");
+      setSpeakerImageFile(null);
     }
     setIsSpeakerDialogOpen(true);
   };
 
-  const handleSaveSpeaker = () => {
+  const handleSpeakerImageChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Kích thước file không được vượt quá 5MB");
+      return;
+    }
+
+    setSpeakerImageFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setSpeakerImagePreview(previewUrl);
+  };
+
+  const handleSaveSpeaker = async () => {
     if (!speakerForm.name.trim()) {
       toast.error("Vui lòng nhập tên diễn giả");
       return;
     }
+
+    try {
+      let imageUrl = speakerForm.image;
+
+      // Upload ảnh nếu có file mới
+      if (speakerImageFile) {
+        setIsUploadingSpeakerImage(true);
+        try {
+          imageUrl = await uploadImage(speakerImageFile);
+          if (!imageUrl) {
+            toast.error("Không thể upload ảnh. Vui lòng thử lại.");
+            setIsUploadingSpeakerImage(false);
+            return;
+          }
+          // Cleanup preview URL sau khi upload thành công
+          if (speakerImagePreview && speakerImagePreview.startsWith("blob:")) {
+            URL.revokeObjectURL(speakerImagePreview);
+          }
+          toast.success("Đã upload ảnh thành công");
+        } catch (error) {
+          console.error("Error uploading speaker image:", error);
+          toast.error(error.message || "Có lỗi xảy ra khi upload ảnh");
+          setIsUploadingSpeakerImage(false);
+          return;
+        } finally {
+          setIsUploadingSpeakerImage(false);
+        }
+      }
+
+      const speakerData = {
+        ...speakerForm,
+        image: imageUrl,
+      };
+
     const newSpeakers = [...formData.speakers];
     if (editingSpeakerIndex !== null) {
-      newSpeakers[editingSpeakerIndex] = { ...speakerForm };
+        newSpeakers[editingSpeakerIndex] = speakerData;
     } else {
-      newSpeakers.push({ ...speakerForm });
+        newSpeakers.push(speakerData);
     }
     setFormData({ ...formData, speakers: newSpeakers });
     setIsSpeakerDialogOpen(false);
     setSpeakerForm({ name: "", title: "", bio: "", image: "" });
+      setSpeakerImagePreview("");
+      setSpeakerImageFile(null);
     setEditingSpeakerIndex(null);
     toast.success(
       editingSpeakerIndex !== null
         ? "Cập nhật diễn giả thành công"
         : "Thêm diễn giả thành công"
     );
+    } catch (error) {
+      console.error("Error saving speaker:", error);
+      toast.error("Có lỗi xảy ra khi lưu diễn giả");
+    }
   };
 
   const handleRemoveSpeaker = (index) => {
@@ -410,7 +503,55 @@ export default function EditActivity() {
     toast.success("Đã xóa mục chương trình");
   };
 
+  // Kiểm tra xem ngày đã qua chưa (ngày hôm nay cũng được coi là đã qua)
+  const isDatePassed = (dateString) => {
+    if (!dateString) return false;
+    const dateValue = new Date(dateString);
+    if (Number.isNaN(dateValue.getTime())) return false;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    dateValue.setHours(0, 0, 0, 0);
+    return dateValue <= now;
+  };
+
+  const handleDateChange = (field, label) => (e) => {
+    const value = e.target.value;
+    let errorMessage = "";
+
+    // Nếu ngày hiện tại đã qua, không cho phép thay đổi
+    const currentDate = formData[field];
+    if (isDatePassed(currentDate)) {
+      return; // Không cho phép thay đổi nếu ngày đã qua
+    }
+
+    if (value) {
+      const dateValue = new Date(value);
+      if (!Number.isNaN(dateValue.getTime())) {
+        const now = new Date();
+        if (dateValue <= now) {
+          errorMessage = `${label} phải lớn hơn thời điểm hiện tại`;
+        }
+      }
+    }
+
+    setDateErrors((prev) => ({
+      ...prev,
+      [field]: errorMessage,
+    }));
+
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
   const handleSave = async () => {
+    if (isActivityLocked) {
+      toast.error(
+        "Hoạt động đang diễn ra hoặc đã kết thúc, không thể cập nhật."
+      );
+      return;
+    }
     // Validate required fields
     if (!formData.title?.trim()) {
       toast.error("Vui lòng nhập tiêu đề hoạt động");
@@ -440,9 +581,13 @@ export default function EditActivity() {
       toast.error("Vui lòng nhập thời gian đăng ký");
       return;
     }
-    if (!formData.maxParticipants) {
-      toast.error("Vui lòng nhập số người tham gia tối đa");
+    // Validate maxParticipants (nếu có nhập thì phải > 0, không bắt buộc)
+    if (formData.maxParticipants && formData.maxParticipants.trim() !== "") {
+      const maxParticipantsNum = parseInt(formData.maxParticipants);
+      if (isNaN(maxParticipantsNum) || maxParticipantsNum <= 0) {
+        toast.error("Số người tham gia tối đa phải lớn hơn 0");
       return;
+      }
     }
     if (
       !formData.rules ||
@@ -451,6 +596,34 @@ export default function EditActivity() {
     ) {
       toast.error("Vui lòng nhập ít nhất một quy định");
       return;
+    }
+    // Chỉ validate ngày nếu ngày chưa qua
+    const now = new Date();
+    const futureDateChecks = [
+      { value: formData.startDate, label: "Ngày bắt đầu", field: "startDate" },
+      { value: formData.endDate, label: "Ngày kết thúc", field: "endDate" },
+      { value: formData.registerDate, label: "Ngày mở đăng ký", field: "registerDate" },
+      { value: formData.endRegisterDate, label: "Ngày đóng đăng ký", field: "endRegisterDate" },
+      {
+        value: formData.submissionDeadline,
+        label: "Hạn cuối nộp bài",
+        field: "submissionDeadline",
+        enabled: formData.subType === "CreativeContest",
+      },
+    ];
+    for (const check of futureDateChecks) {
+      if (check.enabled === false) continue;
+      if (!check.value) continue;
+      
+      // Nếu ngày đã qua, bỏ qua validation
+      if (isDatePassed(check.value)) continue;
+      
+      const dateValue = new Date(check.value);
+      if (Number.isNaN(dateValue.getTime())) continue;
+      if (dateValue <= now) {
+        toast.error(`${check.label} phải lớn hơn thời điểm hiện tại`);
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -472,7 +645,10 @@ export default function EditActivity() {
         endDate: formData.endDate ? vnTimeToUTC(formData.endDate) : null,
         registerDate: formData.registerDate ? vnTimeToUTC(formData.registerDate) : null,
         endRegisterDate: formData.endRegisterDate ? vnTimeToUTC(formData.endRegisterDate) : null,
-        maxParticipants: parseInt(formData.maxParticipants) || 0,
+        // maxParticipants: null = không giới hạn, có giá trị = giới hạn số người
+        maxParticipants: (formData.maxParticipants && formData.maxParticipants.trim() !== "") 
+          ? parseInt(formData.maxParticipants) 
+          : null,
         rules: formData.rules.filter((r) => r.trim()),
         // SportsFestival fields
         sportsCategories:
@@ -556,7 +732,6 @@ export default function EditActivity() {
 
       if (response?.data) {
         toast.success("Hoạt động đã được cập nhật thành công.");
-        navigate(`/activities/${params.id}`);
       }
     } catch (error) {
       console.error("Error saving activity:", error);
@@ -870,20 +1045,20 @@ export default function EditActivity() {
                   label="Ngày bắt đầu"
                   type="date"
                   value={formData.startDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, startDate: e.target.value })
-                  }
+                  onChange={handleDateChange("startDate", "Ngày bắt đầu")}
+                  error={dateErrors.startDate}
                   required
+                  disabled={isDatePassed(formData.startDate)}
                 />
 
                 <InputField
                   label="Ngày kết thúc"
                   type="date"
                   value={formData.endDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, endDate: e.target.value })
-                  }
+                  onChange={handleDateChange("endDate", "Ngày kết thúc")}
+                  error={dateErrors.endDate}
                   required
+                  disabled={isDatePassed(formData.endDate)}
                 />
               </div>
 
@@ -892,23 +1067,20 @@ export default function EditActivity() {
                   label="Mở đăng ký"
                   type="date"
                   value={formData.registerDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, registerDate: e.target.value })
-                  }
+                  onChange={handleDateChange("registerDate", "Ngày mở đăng ký")}
+                  error={dateErrors.registerDate}
                   required
+                  disabled={isDatePassed(formData.registerDate)}
                 />
 
                 <InputField
                   label="Đóng đăng ký"
                   type="date"
                   value={formData.endRegisterDate}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      endRegisterDate: e.target.value,
-                    })
-                  }
+                  onChange={handleDateChange("endRegisterDate", "Ngày đóng đăng ký")}
+                  error={dateErrors.endRegisterDate}
                   required
+                  disabled={isDatePassed(formData.endRegisterDate)}
                 />
               </div>
 
@@ -1503,12 +1675,12 @@ export default function EditActivity() {
             <div className="space-y-6">
               <div>
                 <Label htmlFor="maxParticipants">
-                  Số người tham gia tối đa *
+                  Số người tham gia tối đa
                 </Label>
                 <Input
                   id="maxParticipants"
                   type="number"
-                  placeholder="Ví dụ: 500"
+                  placeholder="Để trống = không giới hạn (ví dụ: 500)"
                   value={formData.maxParticipants}
                   onChange={(e) =>
                     setFormData({
@@ -1518,6 +1690,9 @@ export default function EditActivity() {
                   }
                   className="mt-2"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Để trống nếu không muốn giới hạn số người tham gia
+                </p>
               </div>
 
               <div>
@@ -1674,23 +1849,30 @@ export default function EditActivity() {
             </div>
           </CardContent>
         </Card>
-        {/* Section 4: Assign-jury */}
-        <Card id="section-assign-jury">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-blue-600" />
-              Phân công giám khảo
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AssignJurySection activityId={params.id} />
-          </CardContent>
-        </Card>
+        {/* Section 4: Assign-jury - Chỉ hiển thị cho cuộc thi sáng tạo */}
+        {formData.subType === "CreativeContest" && (
+          <Card id="section-assign-jury">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-blue-600" />
+                Phân công giám khảo
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AssignJurySection activityId={params.id} />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Action Buttons - Fixed at bottom */}
       <Card>
         <CardContent className="p-6">
+      {isActivityLocked && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          Hoạt động đang diễn ra hoặc đã kết thúc nên không thể chỉnh sửa.
+        </div>
+      )}
           <div className="flex items-center justify-between">
             <Button
               variant="outline"
@@ -1774,7 +1956,9 @@ export default function EditActivity() {
                           Số người tham gia tối đa:
                         </span>
                         <span className="font-semibold text-sm">
-                          {formData.maxParticipants || "Chưa cài đặt"}
+                          {formData.maxParticipants && formData.maxParticipants.trim() !== "" 
+                            ? formData.maxParticipants 
+                            : "Không giới hạn"}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
@@ -1988,7 +2172,7 @@ export default function EditActivity() {
                         setIsPreviewOpen(false);
                         handleSave();
                       }}
-                      disabled={isSaving}
+                      disabled={isSaving || isActivityLocked}
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       {isSaving ? "Đang lưu..." : "Xác nhận lưu"}
@@ -1998,8 +2182,8 @@ export default function EditActivity() {
               </Dialog>
               <Button
                 onClick={handleSave}
-                className="bg-green-600 hover:bg-green-700 text-white"
-                disabled={isSaving}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={isSaving || isActivityLocked}
               >
                 <Save className="w-4 h-4 mr-2" />
                 {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
@@ -2059,26 +2243,67 @@ export default function EditActivity() {
               />
             </div>
             <div className="grid gap-2">
-              <Label>Ảnh đại diện (URL)</Label>
-              <Input
-                placeholder="https://example.com/avatar.jpg"
-                value={speakerForm.image}
-                onChange={(e) =>
-                  setSpeakerForm({ ...speakerForm, image: e.target.value })
-                }
+              <Label>Ảnh đại diện</Label>
+              <input
+                type="file"
+                ref={speakerImageInputRef}
+                accept="image/*"
+                onChange={handleSpeakerImageChange}
+                className="hidden"
               />
-              {speakerForm.image && (
-                <div className="mt-2">
+              <div className="flex items-center gap-4">
+                {(speakerImagePreview || speakerForm.image) && (
+                  <div className="relative">
                   <img
-                    src={speakerForm.image}
+                      src={speakerImagePreview || speakerForm.image}
                     alt="Preview"
-                    className="w-20 h-20 rounded-full object-cover border border-gray-300"
+                      className="w-24 h-24 rounded-full object-cover border-2 border-gray-300"
                     onError={(e) => {
                       e.target.style.display = "none";
                     }}
                   />
+                    {speakerImageFile && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSpeakerImageFile(null);
+                          setSpeakerImagePreview(speakerForm.image || "");
+                          if (speakerImageInputRef.current) {
+                            speakerImageInputRef.current.value = "";
+                          }
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                 </div>
               )}
+                <div className="flex-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => speakerImageInputRef.current?.click()}
+                    disabled={isUploadingSpeakerImage}
+                    className="w-full"
+                  >
+                    {isUploadingSpeakerImage ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2" />
+                        Đang upload...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        {speakerImagePreview || speakerForm.image ? "Thay đổi ảnh" : "Chọn ảnh"}
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Chọn file ảnh (JPG, PNG) - Tối đa 5MB
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -2180,11 +2405,16 @@ function InputField({
   onChange,
   className = "",
   required = false,
+  error,
+  disabled = false,
 }) {
   return (
     <div className="grid gap-2">
       <Label>
         {label} {required && <span className="text-red-500">*</span>}
+        {disabled && (
+          <span className="text-xs text-gray-500 ml-2">(Đã qua - không thể chỉnh sửa)</span>
+        )}
       </Label>
       <Input
         type={type}
@@ -2192,7 +2422,13 @@ function InputField({
         value={value}
         onChange={onChange}
         className={className}
+        disabled={disabled}
       />
+      {error && (
+        <p className="text-xs text-red-500 mt-1">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

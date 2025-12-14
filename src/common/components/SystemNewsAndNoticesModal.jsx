@@ -323,14 +323,14 @@ export default function SystemNewsAndNoticesModal({ isOpen, onClose }) {
               {currentAnnouncementIndex < unviewedAnnouncements.length - 1 ? (
                 <Button
                   onClick={handleNext}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
                 >
                   Tiếp theo
                 </Button>
               ) : (
                 <Button
                   onClick={handleClose}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
                 >
                   Đóng
                 </Button>

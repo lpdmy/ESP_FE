@@ -30,7 +30,6 @@ import { ROUTES } from "@/common/constants/routes";
 
 const categoryIcons = {
   [REWARD_CATEGORY.VOUCHER]: Gift,
-  [REWARD_CATEGORY.MERCHANDISE]: ShoppingBag,
   [REWARD_CATEGORY.BOOK]: BookOpen,
   [REWARD_CATEGORY.ELECTRONICS]: Smartphone,
 };
@@ -161,7 +160,7 @@ export default function RewardStore() {
         <Card className="mb-8">
           <CardContent className="p-6">
             <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-              <TabsList className="grid grid-cols-5 w-full">
+              <TabsList className="grid grid-cols-4 w-full">
                 {categories.map((category) => {
                   const IconComponent = category.icon;
                   return (

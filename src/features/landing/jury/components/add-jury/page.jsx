@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useClubApi } from "@/features/landing/club/hooks/useClubApi";
 import { useJuryApi } from "../../hooks/useJuryApi";
 import { useToast } from "@/common/hooks/useToast";
-export default function TeacherSearchDialog({ isOpen, onClose, jury }) {
+export default function TeacherSearchDialog({ isOpen, onClose, jury, activityId, onSuccess }) {
   const toast = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [results, setResults] = useState([]);
@@ -24,16 +24,31 @@ export default function TeacherSearchDialog({ isOpen, onClose, jury }) {
     }
   };
   const handleAddJury = async () => {
+    if (selectedTeachers.length === 0) {
+      toast.showError("Vui lòng chọn ít nhất một giám khảo");
+      return;
+    }
+    
+    if (!activityId) {
+      toast.showError("Không tìm thấy ID hoạt động");
+      return;
+    }
+
     try {
-      const payload = { juryId: selectedTeachers, activityId: 6 };
-      toast.addJurySuccess();
+      const payload = { juryId: selectedTeachers, activityId: activityId };
       await createJury(payload);
+      toast.showSuccess("Thêm giám khảo thành công");
+      setSelectedTeachers([]);
+      setSearchTerm("");
+      setResults([]);
+      onSuccess?.(); // Reload danh sách giám khảo
+      onClose();
     } catch (err) {
       console.log(err);
       if (err.statusCode == 400) {
         toast.showError(err.message);
       } else {
-        toast.addJuryFail();
+        toast.showError("Thêm giám khảo thất bại");
       }
     }
   };

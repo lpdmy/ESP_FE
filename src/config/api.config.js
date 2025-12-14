@@ -1,3 +1,5 @@
+import { toast } from "react-toastify";
+
 // API Configuration
 export const API_CONFIG = {
   // Base URLs
@@ -61,17 +63,17 @@ export const API_CONFIG = {
 
   // UserProfile endpoints
   USER_PROFILE: {
-    MY_PROFILE: '/userprofile/my-profile',
-    MY_TEACHER_PROFILE: '/userprofile/my-teacher-profile',
-    ALL_PROFILES: '/userprofile/all',
-    PROFILE_BY_ID: '/userprofile/{id}',
-    PROFILE_BY_USER_ID: '/userprofile/user/{id}',
-    TEACHER_PROFILE_BY_USER_ID: '/userprofile/teachers/user/{id}',
-    CREATE_PROFILE: '/userprofile',
-    UPDATE_PROFILE: '/userprofile/{id}',
-    UPDATE_TEACHER_PROFILE: '/userprofile/my-teacher-profile',
-    DELETE_PROFILE: '/userprofile/{id}',
-    CHECK_PROFILE_EXISTS: '/userprofile/{id}/exists'
+    MY_PROFILE: "/userprofile/my-profile",
+    MY_TEACHER_PROFILE: "/userprofile/my-teacher-profile",
+    ALL_PROFILES: "/userprofile/all",
+    PROFILE_BY_ID: "/userprofile/{id}",
+    PROFILE_BY_USER_ID: "/userprofile/user/{id}",
+    TEACHER_PROFILE_BY_USER_ID: "/userprofile/teachers/user/{id}",
+    CREATE_PROFILE: "/userprofile",
+    UPDATE_PROFILE: "/userprofile/{id}",
+    UPDATE_TEACHER_PROFILE: "/userprofile/my-teacher-profile",
+    DELETE_PROFILE: "/userprofile/{id}",
+    CHECK_PROFILE_EXISTS: "/userprofile/{id}/exists",
   },
 
   // Course endpoints (khi bạn thêm CourseController)
@@ -89,30 +91,30 @@ export const API_CONFIG = {
   },
   // Search endpoints
   SEARCH: {
-    GLOBAL: '/search',
-    USERS: '/search/users',
-    USER_BY_EMAIL: '/search/users/by-email',
-    POSTS: '/search/posts',
-    ACTIVITIES: '/search/activities',
-    CLUBS: '/search/clubs',
-    HASHTAGS: '/search/hashtags',
-    ADVANCED: '/search/advanced',
-    SUGGESTIONS: '/search/suggestions',
-    TRENDING: '/search/trending',
-    HISTORY: '/search/history',
+    GLOBAL: "/search",
+    USERS: "/search/users",
+    USER_BY_EMAIL: "/search/users/by-email",
+    POSTS: "/search/posts",
+    ACTIVITIES: "/search/activities",
+    CLUBS: "/search/clubs",
+    HASHTAGS: "/search/hashtags",
+    ADVANCED: "/search/advanced",
+    SUGGESTIONS: "/search/suggestions",
+    TRENDING: "/search/trending",
+    HISTORY: "/search/history",
   },
   POST: {
-    CREATE_POST: '/post',
-    USER_POST: '/post/user',
-    DELETE_POST: '/post',
-    UPDATE_POST: '/post',
-    LIKE_POST: '/post/like',
-    CLUB_PENDING_POST: '/post/club/pending',
-    APPROVE_POST: '/post/approve/{id}',
-    CLUB_POST: '/post/club',
-    REJECT_POST: '/post/reject',
-    GET_POSTS_BY_CLASS_GROUP: '/post/classgroup/{id}',
-    GET_ALL_POSTS: '/post',
+    CREATE_POST: "/post",
+    USER_POST: "/post/user",
+    DELETE_POST: "/post",
+    UPDATE_POST: "/post",
+    LIKE_POST: "/post/like",
+    CLUB_PENDING_POST: "/post/club/pending",
+    APPROVE_POST: "/post/approve/{id}",
+    CLUB_POST: "/post/club",
+    REJECT_POST: "/post/reject",
+    GET_POSTS_BY_CLASS_GROUP: "/post/classgroup/{id}",
+    GET_ALL_POSTS: "/post",
   },
   COLLECTION: {
     CREATE_COLLECTION: "/collection",
@@ -143,35 +145,15 @@ export const API_CONFIG = {
     CLUB_GET_INVITATION: "/join-request/user",
     CLUB_CHANGE_ROLE: "/club-member/change-role",
     CLUB_DELETE: "/club",
-  },
-  CLUB: {
-    CREATE_CLUB: '/club-creation-request',
-    LIST_CLUB: '/club',
-    CLUB_CATEGORY: '/club/categories',
-    CLUB_DETAIL: '/club/{id}',
-    CLUB_JOIN_REQUEST: '/join-request/club',
-    CLUB_CREATE_JOIN_REQUES: '/join-request',
-    CLUB_CANCEL_JOIN_REQUES: '/join-request/{id}',
-    CLUB_APPROVE_JOIN_REQUEST: '/join-request/approve/{id}',
-    CLUB_REJECT_JOIN_REQUEST: '/join-request/reject/{id}',
-    USER_CLUB: '/club-member/user',
-    UPDATE_CLUB: '/club',
-    LEAVE_CLUB: '/club-member/{id}',
-    KICK_CLUB: '/club-member',
-    CLUB_CREATION_REQUEST: '/club-creation-request',
-    CLUB_APPROVE_CREATION_REQUEST: '/club-creation-request/approve/{id}',
-    CLUB_REJECT_CREATION_REQUEST: '/club-creation-request/reject',
-    CLUB_SEARCH_USER: '/club/search-users',
-    CLUB_INVITE_MENTOR: '/join-request/invite-mentor',
-    CLUB_GET_INVITATION: '/join-request/user',
-    CLUB_CHANGE_ROLE: '/club-member/change-role',
-    CLUB_DELETE: '/club',
+    CLUB_MENTOR_INVITATION: "/clubjoinrequest/mentorinvitation/{id}",
+    DELETE_CLUB_MENTOR_INVITATION:
+      "/clubjoinrequest/cancelmentorinvitation/{id}",
   },
   COMMENT: {
-    CREATE_COMMENT: '/comment',
-    GET_BY_POST: '/comment/post',
-    GET_BY_COMMENT: '/comment/comment',
-    DELETE_COMMENT: '/comment/{id}'
+    CREATE_COMMENT: "/comment",
+    GET_BY_POST: "/comment/post",
+    GET_BY_COMMENT: "/comment/comment",
+    DELETE_COMMENT: "/comment/{id}",
   },
 
   // Student Import endpoints
@@ -203,7 +185,7 @@ export const API_CONFIG = {
 
   STAFF: {
     LINK: "/staff",
-    CREATE: "/auth/create-staff"
+    CREATE: "/auth/create-staff",
   },
 
   NOTIFICATION: {
@@ -216,10 +198,10 @@ export const API_CONFIG = {
 
   // Chat endpoints
   CHAT: {
-    ROOMS: '/chat/rooms',
-    MESSAGES: '/chat/messages',
-    GET_MESSAGES: '/chat/messages/{roomId}',
-    MARK_AS_READ: '/chat/messages/{roomId}/read',
+    ROOMS: "/chat/rooms",
+    MESSAGES: "/chat/messages",
+    GET_MESSAGES: "/chat/messages/{roomId}",
+    MARK_AS_READ: "/chat/messages/{roomId}/read",
   },
   // Class Group endpoints
   CLASS_GROUP: {
@@ -253,75 +235,103 @@ export const API_CONFIG = {
     GET_CURRENT_CLASS: "/classgroup/current-class",
   },
   ACTIVITY: {
-    GET_ALL: '/activity',
-    GET_BY_ID: '/activity/{id}',
-    GET_LIST_ITEMS: '/activity/list-items',
-    CREATE: '/activity',
-    UPDATE: '/activity',
-    DELETE: '/activity/{id}',
-    RANK_BY_ID:'/submission/activity/{id}/rank',
-    GENERATE_TOURNAMENT_SCHEDULE: '/activity/{id}/generate-schedule',
-    APPLY_TOURNAMENT_SCHEDULE: '/activity/{id}/apply-schedule',
-    TRAIN_SCHEDULE_MODEL: '/activity/train-schedule-model',
+    GET_ALL: "/activity",
+    GET_BY_ID: "/activity/{id}",
+    GET_LIST_ITEMS: "/activity/list-items",
+    CREATE: "/activity",
+    UPDATE: "/activity",
+    DELETE: "/activity/{id}",
+    RANK_BY_ID: "/submission/activity/{id}/rank",
+    RECENT_INPUTS: "/activity/recent-inputs",
+    GENERATE_TOURNAMENT_SCHEDULE: "/activity/{id}/generate-schedule",
+    APPLY_TOURNAMENT_SCHEDULE: "/activity/{id}/apply-schedule",
+    TRAIN_SCHEDULE_MODEL: "/activity/train-schedule-model",
     MY_ACTIVITIES: "/my-activities",
+    STATISTICS: "/activity/statistics",
+    IMPORT: "/activity/import",
+    BULK_CREATE: "/activity/bulk-create",
+    DUPLICATE: "/activity/{id}/duplicate",
+  },
+  ACTIVITY_DRAFT: {
+    GET_ALL: "/activity-drafts",
+    GET_BY_ID: "/activity-drafts/{id}",
+    CREATE: "/activity-drafts",
+    UPDATE: "/activity-drafts/{id}",
+    DELETE: "/activity-drafts/{id}",
+    CONVERT_TO_ACTIVITY: "/activity-drafts/{id}/convert-to-activity",
+  },
 
+  ACTIVITY_TEMPLATE: {
+    GET_ALL: "/activity-template",
+    GET_BY_ID: "/activity-template/{id}",
+    GET_BY_SUBTYPE: "/activity-template/subtype",
+    CREATE: "/activity-template",
+    UPDATE: "/activity-template",
+    DELETE: "/activity-template/{id}",
+    INCREMENT_USAGE: "/activity-template/{id}/increment-usage",
   },
 
   ACTIVITY_MATCH: {
-    GET_BRACKET: '/activity-match/bracket',
-    UPDATE_MATCH_RESULT: '/activity-match/{id}/result',
+    GET_BRACKET: "/activity-match/bracket",
+    UPDATE_MATCH_RESULT: "/activity-match/{id}/result",
   },
 
   // Activity Participant endpoints
   ACTIVITY_PARTICIPANT: {
-    CANCEL_REGISTRATION: '/activityparticipant/cancel/{activityId}',
-    ADD: '/activityparticipant',
-    REMOVE: '/activityparticipant',
-    GROUP: '/activityparticipant/group',
-    SPORT: '/activityparticipant/sport',
-    GET_SPORT_ROSTERS: '/activityparticipant/sport-rosters',
+    CANCEL_REGISTRATION: "/activityparticipant/cancel/{activityId}",
+    ADD: "/activityparticipant",
+    REMOVE: "/activityparticipant",
+    GROUP: "/activityparticipant/group",
+    SPORT: "/activityparticipant/sport",
+    GET_SPORT_ROSTERS: "/activityparticipant/sport-rosters",
   },
 
   // Timetable endpoints
   TIMETABLE: {
-    IMPORT: '/timetable/import',
-    GET_BY_CLASS_GROUP: '/timetable/classgroup/{classGroupId}',
-    DELETE_BY_CLASS_GROUP: '/timetable/classgroup/{classGroupId}',
+    IMPORT: "/timetable/import",
+    GET_BY_CLASS_GROUP: "/timetable/classgroup/{classGroupId}",
+    DELETE_BY_CLASS_GROUP: "/timetable/classgroup/{classGroupId}",
   },
-   JURY:{
-    JURY_API:"/jury",
-    ASSIGN_JURY:"/jury/assign-jury/:id",
-    JURY_DASHBOARD:"/jury/dashboard",
-    JURY_SUBMISSION:"/jury/submission/:id",
-    JURY_GRADE :"/jury/grade",
-    RANDOM_ASSIGN:"/jury/random-assign",
-    DELETE_RANDOM_ASSIGN:"/jury/delete-assign-activity",
-    GET_ASSIGN_USER:"/jury/assign/user",
-    GET_ASSIGN_USER_NOT_GRADE:"/jury/assign-not-grading/user",
-    GET_ASSIGN_USER_GRADE:"/jury/assign-grading/user",
+  JURY: {
+    JURY_API: "/jury",
+    ASSIGN_JURY: "/jury/assign-jury/:id",
+    JURY_DASHBOARD: "/jury/dashboard",
+    JURY_SUBMISSION: "/jury/submission/:id",
+    JURY_GRADE: "/jury/grade",
+    GET_ACTIVITIES_WITHOUT_JURY: "/jury/activities-without-jury",
+    IMPROVED_RANDOM_ASSIGN: "/jury/improved-random-assign",
+    RANDOM_ASSIGN: "/jury/random-assign",
+    DELETE_RANDOM_ASSIGN: "/jury/delete-assign-activity",
+    GET_ASSIGN_USER: "/jury/assign/user",
+    GET_ASSIGN_USER_NOT_GRADE: "/jury/assign-not-grading/user",
+    GET_ASSIGN_USER_GRADE: "/jury/assign-grading/user",
+    GET_ASSIGN_USER_NOT_GRADE_ALL: "/jury/assign-not-grading/user",
+    GET_ASSIGN_USER_GRADE_ALL: "/jury/assign-grading/user",
     JURY_ACTIVITY: "/jury/activity",
-    JURY_ASSIGN:"/jury/assign",
-    GRADING:"/jury/grade-submission"
+    JURY_ASSIGN: "/jury/assign",
+    GRADING: "/jury/grade-submission",
+    IS_ASSIGNED: "/jury/is-assigned",
   },
-   // Submission endpoints
-   SUBMISSION: {
+  // Submission endpoints
+  SUBMISSION: {
     GET_ALL_BY_ACTIVITY_ID: "/submission/activity/{Id}",
     CREATE: "/submission",
     GET_BY_ID: "/submission/{id}",
     GET_MY_SUBMISSIONS: "/submission/my-submissions",
-    GET_MY_SUBMISSION_BY_ACTIVITY_ID: "/submission/activity/{activityId}/my-submission",
+    GET_MY_SUBMISSION_BY_ACTIVITY_ID:
+      "/submission/activity/{activityId}/my-submission",
     UPDATE: "/submission/{id}",
     DELETE: "/submission/{id}",
-    GET_SUBMISSION_ACTIVITY:"/submission/activity",
-    GET_MY_SUBMISSION:"/submission/activity/user",
-    GET_SUBMISSION_DETAIL:"/submission",
+    GET_SUBMISSION_ACTIVITY: "/submission/activity",
+    GET_MY_SUBMISSION: "/submission/activity/user",
+    GET_SUBMISSION_DETAIL: "/submission",
   },
   MODERATION:{
     GET_ALL_MODERATION:'/moderation/report',
     GET_USER_STAT : '/moderation/user-violations',
     CREATE_NOTIFICATION: '/moderation/alert',
     UPDATE_STATUS :'/moderation/update-status',
-  }
+  },
 };
 // HTTP Headers
 export const getAuthHeaders = (token) => ({
@@ -336,6 +346,15 @@ export async function handleApiResponse(response) {
 
   const contentType = response.headers.get("content-type");
   if (!response.ok) {
+    if (response.status === 401) {
+      // Phiên hết hạn: thông báo + xóa phiên + điều hướng login
+      toast.warn("Phiên làm việc của bạn đã hết hạn. Vui lòng đăng nhập lại.");
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      window.location.replace("/auth/login");
+      throw new Error("Unauthorized");
+    }
+
     console.log("API Error - Status:", response.status);
     // Nếu là JSON thì parse, không thì trả về text
     if (contentType && contentType.includes("application/json")) {

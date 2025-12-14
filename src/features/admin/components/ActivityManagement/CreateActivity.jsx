@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { useNavigate, Link } from "react-router-dom"
+import { useNavigate, Link, useSearchParams } from "react-router-dom"
 import { Button } from "@/common/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
 import { Input } from "@/common/components/ui/input"
@@ -28,7 +28,10 @@ import { vnTimeToUTC } from "@/common/utils/dateUtils"
 
 export default function CreateActivity() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const mode = searchParams.get("mode") // "manual" or "template"
   const [currentStep, setCurrentStep] = useState(1)
+  const [templateChecklist, setTemplateChecklist] = useState([]) // Checklist from template
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isSpeakerDialogOpen, setIsSpeakerDialogOpen] = useState(false)
   const [isProgramDialogOpen, setIsProgramDialogOpen] = useState(false)
@@ -37,6 +40,10 @@ export default function CreateActivity() {
   const [editingSpeakerIndex, setEditingSpeakerIndex] = useState(null)
   const [editingProgramIndex, setEditingProgramIndex] = useState(null)
   const [speakerForm, setSpeakerForm] = useState({ name: "", title: "", bio: "", image: "" })
+  const [speakerImageFile, setSpeakerImageFile] = useState(null)
+  const [speakerImagePreview, setSpeakerImagePreview] = useState("")
+  const [isUploadingSpeakerImage, setIsUploadingSpeakerImage] = useState(false)
+  const speakerImageInputRef = useRef(null)
   const [programForm, setProgramForm] = useState({ title: "", time: "", description: "" })
   const [customSportInput, setCustomSportInput] = useState("")
   const [thumbnailFile, setThumbnailFile] = useState(null) // Lưu file object chưa upload
@@ -44,6 +51,13 @@ export default function CreateActivity() {
   const [gradingEnabled, setGradingEnabled] = useState(false) // Bật/tắt chấm điểm
   const [gradingCriteria, setGradingCriteria] = useState([]) // Danh sách tiêu chí chấm điểm
   const [onlyTeacherCanRegister, setOnlyTeacherCanRegister] = useState(false) // Chỉ giáo viên mới được đăng ký
+  const [dateErrors, setDateErrors] = useState({
+    startDate: "",
+    endDate: "",
+    registerDate: "",
+    endRegisterDate: "",
+    submissionDeadline: "",
+  })
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -128,6 +142,447 @@ export default function CreateActivity() {
     "Bóng chuyền",
     "Bóng rổ",
   ]
+
+  // State for current draft ID (if editing existing draft)
+  const [currentDraftId, setCurrentDraftId] = useState(null)
+  const [isLoadingDraft, setIsLoadingDraft] = useState(false)
+
+  // Helper: Deep merge objects recursively
+  const deepMerge = (target, source) => {
+    if (!source || typeof source !== 'object') return target
+    if (!target || typeof target !== 'object') return source
+
+    const output = { ...target }
+    
+    Object.keys(source).forEach(key => {
+      const sourceValue = source[key]
+      const targetValue = target[key]
+      
+      if (Array.isArray(sourceValue)) {
+        // Arrays: replace entirely (no merge)
+        output[key] = [...sourceValue]
+      } else if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
+        // Nested objects: recursive merge
+        output[key] = deepMerge(targetValue || {}, sourceValue)
+      } else if (sourceValue !== undefined && sourceValue !== null) {
+        // Primitives: replace
+        output[key] = sourceValue
+      }
+      // If sourceValue is null/undefined, keep target value
+    })
+    
+    return output
+  }
+
+  // Helper: Convert formData to draft DTO
+  const formDataToDraftDto = () => {
+    // Convert category string to enum number: "activity" -> 1 (Activity), "event" -> 2 (Event)
+    const categoryMap = {
+      "activity": 1, // ActivityType.Activity
+      "event": 2    // ActivityType.Event
+    };
+    const categoryValue = categoryMap[formData.category] || 1; // Default to Activity (1)
+    
+    return {
+      title: formData.title,
+      description: formData.description,
+      category: categoryValue,
+      subType: formData.subType,
+      location: formData.location,
+      organizer: formData.organizer,
+      thumbnailUrl: formData.thumbnail,
+      startDate: formData.startDate || null,
+      endDate: formData.endDate || null,
+      registerDate: formData.registerDate || null,
+      endRegisterDate: formData.endRegisterDate || null,
+      maxParticipants: formData.maxParticipants || null,
+      competitionType: formData.competitionType || null,
+      theme: formData.theme || null,
+      genre: formData.genre || null,
+      paperSize: formData.paperSize || null,
+      drawingMedium: formData.drawingMedium || null,
+      timeLimit: formData.timeLimit || null,
+      submissionFormat: formData.submissionFormat || null,
+      problemText: formData.problemText || null,
+      problemFileUrl: formData.problemFileUrl || null,
+      submissionDeadline: formData.submissionDeadline || null,
+      isGrade: gradingEnabled,
+      gradingSettings: gradingEnabled && gradingCriteria.length > 0
+        ? JSON.stringify({ criteria: gradingCriteria })
+        : null,
+      registrationSettings: formData.registrationSettings
+        ? JSON.stringify(formData.registrationSettings)
+        : null,
+      onlyTeacherCanRegister: onlyTeacherCanRegister,
+      starPointRewards: formData.starPointRewards
+        ? JSON.stringify(formData.starPointRewards)
+        : null,
+      rules: formData.rules?.filter(r => r && r.trim()) || [],
+      sportsCategories: formData.sportsCategories || [],
+      sportsConfigurations: formData.sportsConfigurations || [],
+      speakers: formData.speakers || [],
+      programItems: formData.programItems || [],
+    }
+  }
+
+  // Load draft from API if draftId is in URL, or load prefilled data if duplicate or import
+  useEffect(() => {
+    const draftId = searchParams.get("draftId")
+    const isDuplicate = searchParams.get("duplicate") === "true"
+    const isImport = searchParams.get("import") === "true"
+    
+    // Load imported activities
+    if (isImport) {
+      try {
+        const importedDataStr = sessionStorage.getItem("importedActivities")
+        if (importedDataStr) {
+          const importedActivities = JSON.parse(importedDataStr)
+          if (importedActivities && importedActivities.length > 0) {
+            // Show dialog to select which activity to create first
+            // For now, load the first one
+            const firstActivity = importedActivities[0]
+            
+            // Map imported activity data to formData
+        setFormData(prevFormData => {
+              const merged = deepMerge(prevFormData, {
+                title: firstActivity.title || "",
+                description: firstActivity.description || "",
+                category: firstActivity.category === 1 ? "activity" : "event",
+                subType: firstActivity.subType || "",
+                location: firstActivity.location || "",
+                organizer: firstActivity.organizer || "",
+                thumbnail: firstActivity.thumbnailUrl || "",
+                startDate: firstActivity.startDate || "",
+                endDate: firstActivity.endDate || "",
+                registerDate: firstActivity.registerDate || "",
+                endRegisterDate: firstActivity.endRegisterDate || "",
+                maxParticipants: firstActivity.maxParticipants || "",
+                competitionType: firstActivity.competitionType || "",
+                theme: firstActivity.theme || "",
+                genre: firstActivity.genre || "",
+                paperSize: firstActivity.paperSize || "",
+                drawingMedium: firstActivity.drawingMedium || "",
+                timeLimit: firstActivity.timeLimit || "",
+                submissionFormat: firstActivity.submissionFormat || "",
+                problemText: firstActivity.problemText || "",
+                problemFileUrl: firstActivity.problemFileUrl || "",
+                submissionDeadline: firstActivity.submissionDeadline || "",
+                wordLimit: firstActivity.wordLimit || "",
+                writingFormat: firstActivity.writingFormat || "",
+                rules: firstActivity.rules && firstActivity.rules.length > 0 ? firstActivity.rules : [""],
+                sportsCategories: firstActivity.sportsCategories || [],
+                sportsConfigurations: firstActivity.sportsConfigurations || [],
+                speakers: firstActivity.speakers || [],
+                programItems: firstActivity.programItems || [],
+                registrationSettings: firstActivity.registrationSettings || prevFormData.registrationSettings,
+                starPointRewards: firstActivity.starPointRewards || prevFormData.starPointRewards,
+              })
+              return merged
+            })
+            
+            // Set other states
+            if (firstActivity.isGrade !== undefined) {
+              setGradingEnabled(firstActivity.isGrade)
+            }
+            if (firstActivity.gradingSettings) {
+              try {
+                const gradingSettings = typeof firstActivity.gradingSettings === 'string'
+                  ? JSON.parse(firstActivity.gradingSettings)
+                  : firstActivity.gradingSettings
+                if (gradingSettings?.criteria) {
+                  setGradingCriteria(gradingSettings.criteria)
+                }
+              } catch (e) {
+                console.error("Error parsing grading settings:", e)
+              }
+            }
+            if (firstActivity.onlyTeacherCanRegister !== undefined) {
+              setOnlyTeacherCanRegister(firstActivity.onlyTeacherCanRegister)
+            }
+            if (firstActivity.thumbnailUrl) {
+              setThumbnailPreview(firstActivity.thumbnailUrl)
+            }
+            
+            toast.success(`Đã tải hoạt động 1/${importedActivities.length} từ file import`)
+            // Store remaining activities for next
+            if (importedActivities.length > 1) {
+              sessionStorage.setItem("importedActivities", JSON.stringify(importedActivities.slice(1)))
+            } else {
+              sessionStorage.removeItem("importedActivities")
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error loading imported activities:", error)
+        toast.error("Không thể tải dữ liệu từ file import")
+      }
+      return
+    }
+    
+    // Load prefilled activity data from duplicate
+    if (isDuplicate) {
+      try {
+        const prefilledDataStr = sessionStorage.getItem("prefilledActivityData")
+        if (prefilledDataStr) {
+          const prefilledData = JSON.parse(prefilledDataStr)
+          
+          // Map activity data to formData
+          setFormData(prevFormData => {
+            const merged = deepMerge(prevFormData, {
+              title: (prefilledData.title || "") + " (Bản sao)",
+              description: prefilledData.description || "",
+              category: prefilledData.category === 1 ? "activity" : "event",
+              subType: prefilledData.subType || "",
+              location: prefilledData.location || "",
+              organizer: prefilledData.organizer || "",
+              thumbnail: prefilledData.thumbnailUrl || "",
+              startDate: prefilledData.startDate || "",
+              endDate: prefilledData.endDate || "",
+              registerDate: prefilledData.registerDate || "",
+              endRegisterDate: prefilledData.endRegisterDate || "",
+              maxParticipants: prefilledData.maxParticipants || "",
+              competitionType: prefilledData.competitionType || "",
+              theme: prefilledData.theme || "",
+              genre: prefilledData.genre || "",
+              paperSize: prefilledData.paperSize || "",
+              drawingMedium: prefilledData.drawingMedium || "",
+              timeLimit: prefilledData.timeLimit || "",
+              submissionFormat: prefilledData.submissionFormat || "",
+              problemText: prefilledData.problemText || "",
+              problemFileUrl: prefilledData.problemFileUrl || "",
+              submissionDeadline: prefilledData.submissionDeadline || "",
+              rules: prefilledData.rules || [""],
+              sportsCategories: prefilledData.sportsCategories || [],
+              sportsConfigurations: prefilledData.sportsConfigurations || [],
+              speakers: prefilledData.speakers || [],
+              programItems: prefilledData.programItems || [],
+              registrationSettings: prefilledData.registrationSettings || prevFormData.registrationSettings,
+              starPointRewards: prefilledData.starPointRewards || prevFormData.starPointRewards,
+            })
+            return merged
+          })
+          
+          // Set other states
+          if (prefilledData.isGrade !== undefined) {
+            setGradingEnabled(prefilledData.isGrade)
+          }
+          if (prefilledData.gradingSettings) {
+            try {
+              const gradingSettings = typeof prefilledData.gradingSettings === 'string'
+                ? JSON.parse(prefilledData.gradingSettings)
+                : prefilledData.gradingSettings
+              if (gradingSettings?.criteria) {
+                setGradingCriteria(gradingSettings.criteria)
+              }
+            } catch (e) {
+              console.error("Error parsing grading settings:", e)
+            }
+          }
+          if (prefilledData.onlyTeacherCanRegister !== undefined) {
+            setOnlyTeacherCanRegister(prefilledData.onlyTeacherCanRegister)
+        }
+          if (prefilledData.thumbnailUrl) {
+            setThumbnailPreview(prefilledData.thumbnailUrl)
+          }
+          
+          toast.success("Đã tải dữ liệu hoạt động, bạn có thể chỉnh sửa và tạo mới")
+          // Clear prefilled data after loading
+        sessionStorage.removeItem("prefilledActivityData")
+        }
+      } catch (error) {
+        console.error("Error loading prefilled activity data:", error)
+        toast.error("Không thể tải dữ liệu hoạt động")
+      }
+      return
+    }
+    
+    if (draftId) {
+      setIsLoadingDraft(true)
+      const loadDraftFromAPI = async () => {
+        try {
+          const token = localStorage.getItem("token")
+          const response = await executeApiCall(
+            activityService.getDraftById.bind(activityService),
+            [parseInt(draftId), token],
+            { setLoading: setIsLoadingDraft, setError: () => {} }
+          )
+
+          if (response?.data?.data) {
+            const draft = response.data.data
+            console.log("Loaded draft data:", draft)
+            setCurrentDraftId(draft.id)
+            
+            // Map draft data to formData
+            setFormData(prevFormData => {
+              const merged = deepMerge(prevFormData, {
+                title: draft.title || "",
+                description: draft.description || "",
+                category: draft.category === 1 ? "activity" : "event",
+                subType: draft.subType || "",
+                location: draft.location || "",
+                organizer: draft.organizer || "",
+                thumbnail: draft.thumbnailUrl || "",
+                startDate: draft.startDate || "",
+                endDate: draft.endDate || "",
+                registerDate: draft.registerDate || "",
+                endRegisterDate: draft.endRegisterDate || "",
+                maxParticipants: draft.maxParticipants || "",
+                competitionType: draft.competitionType || "",
+                theme: draft.theme || "",
+                genre: draft.genre || "",
+                paperSize: draft.paperSize || "",
+                drawingMedium: draft.drawingMedium || "",
+                timeLimit: draft.timeLimit || "",
+                submissionFormat: draft.submissionFormat || "",
+                problemText: draft.problemText || "",
+                problemFileUrl: draft.problemFileUrl || "",
+                submissionDeadline: draft.submissionDeadline || "",
+                rules: draft.rules && draft.rules.length > 0 ? draft.rules : [""],
+                sportsCategories: draft.sportsCategories || [],
+                sportsConfigurations: draft.sportsConfigurations 
+                  ? (Array.isArray(draft.sportsConfigurations) 
+                      ? draft.sportsConfigurations 
+                      : typeof draft.sportsConfigurations === 'string'
+                        ? (() => {
+      try {
+                              return JSON.parse(draft.sportsConfigurations)
+                            } catch (e) {
+                              console.error("Error parsing sportsConfigurations:", e)
+                              return []
+                            }
+                          })()
+                        : [])
+                  : [],
+                speakers: draft.speakers 
+                  ? (Array.isArray(draft.speakers) 
+                      ? draft.speakers 
+                      : typeof draft.speakers === 'string'
+                        ? (() => {
+                            try {
+                              return JSON.parse(draft.speakers)
+                            } catch (e) {
+                              console.error("Error parsing speakers:", e)
+                              return []
+                            }
+                          })()
+                        : [])
+                  : [],
+                programItems: draft.programItems 
+                  ? (Array.isArray(draft.programItems) 
+                      ? draft.programItems 
+                      : typeof draft.programItems === 'string'
+                        ? (() => {
+                            try {
+                              return JSON.parse(draft.programItems)
+                            } catch (e) {
+                              console.error("Error parsing programItems:", e)
+                              return []
+                            }
+                          })()
+                        : [])
+                  : [],
+                registrationSettings: draft.registrationSettings
+                  ? (typeof draft.registrationSettings === 'string' 
+                      ? JSON.parse(draft.registrationSettings) 
+                      : draft.registrationSettings)
+                  : prevFormData.registrationSettings,
+                starPointRewards: draft.starPointRewards
+                  ? (typeof draft.starPointRewards === 'string'
+                      ? JSON.parse(draft.starPointRewards)
+                      : draft.starPointRewards)
+                  : prevFormData.starPointRewards,
+              })
+              return merged
+            })
+
+            // Set other states
+            if (draft.isGrade !== undefined) {
+              setGradingEnabled(draft.isGrade)
+            }
+            if (draft.gradingSettings) {
+              try {
+                const gradingSettings = typeof draft.gradingSettings === 'string'
+                  ? JSON.parse(draft.gradingSettings)
+                  : draft.gradingSettings
+                if (gradingSettings?.criteria) {
+                  setGradingCriteria(gradingSettings.criteria)
+        }
+              } catch (e) {
+                console.error("Error parsing grading settings:", e)
+              }
+            }
+            if (draft.onlyTeacherCanRegister !== undefined) {
+              setOnlyTeacherCanRegister(draft.onlyTeacherCanRegister)
+        }
+            if (draft.thumbnailUrl) {
+              setThumbnailPreview(draft.thumbnailUrl)
+        }
+
+            toast.success("Đã tải bản nháp thành công")
+          }
+      } catch (error) {
+        console.error("Error loading draft:", error)
+          toast.error("Không thể tải bản nháp")
+        } finally {
+          setIsLoadingDraft(false)
+      }
+      }
+
+      loadDraftFromAPI()
+    }
+    // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // Run once on mount
+
+  // Auto-save draft to API with debounce
+  const handleAutoSave = useRef(null)
+  
+  useEffect(() => {
+    // Clear previous timer
+    if (handleAutoSave.current) {
+      clearTimeout(handleAutoSave.current)
+    }
+    
+    // Set new timer for debounce (2 seconds)
+    handleAutoSave.current = setTimeout(async () => {
+      try {
+        const token = localStorage.getItem("token")
+        const draftDto = formDataToDraftDto()
+        
+        if (currentDraftId) {
+          // Update existing draft
+          await executeApiCall(
+            activityService.updateDraft.bind(activityService),
+            [currentDraftId, draftDto, token],
+            { setLoading: () => {}, setError: () => {} }
+          )
+          console.log("💾 Auto-updated draft:", currentDraftId)
+        } else {
+          // Create new draft only if form has some data
+          if (formData.title || formData.subType || formData.description) {
+            const response = await executeApiCall(
+              activityService.createDraft.bind(activityService),
+              [draftDto, token],
+              { setLoading: () => {}, setError: () => {} }
+            )
+            
+            if (response?.data?.data?.id) {
+              setCurrentDraftId(response.data.data.id)
+              console.log("💾 Auto-created draft:", response.data.data.id)
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error auto-saving draft:", error)
+        // Silent fail for auto-save
+      }
+    }, 2000) // Debounce 2 seconds
+
+    return () => {
+      if (handleAutoSave.current) {
+        clearTimeout(handleAutoSave.current)
+      }
+    }
+  }, [formData, gradingEnabled, gradingCriteria, onlyTeacherCanRegister, currentDraftId])
 
   const handleNext = () => {
     if (currentStep < 5) {
@@ -264,30 +719,96 @@ export default function CreateActivity() {
   const handleOpenSpeakerDialog = (index = null) => {
     if (index !== null) {
       setEditingSpeakerIndex(index)
-      setSpeakerForm({ ...formData.speakers[index] })
+      const speaker = formData.speakers[index]
+      setSpeakerForm({ ...speaker })
+      setSpeakerImagePreview(speaker.image || "")
+      setSpeakerImageFile(null)
     } else {
       setEditingSpeakerIndex(null)
       setSpeakerForm({ name: "", title: "", bio: "", image: "" })
+      setSpeakerImagePreview("")
+      setSpeakerImageFile(null)
     }
     setIsSpeakerDialogOpen(true)
   }
 
-  const handleSaveSpeaker = () => {
+  const handleSpeakerImageChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh")
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Kích thước file không được vượt quá 5MB")
+      return
+    }
+
+    setSpeakerImageFile(file)
+    const previewUrl = URL.createObjectURL(file)
+    setSpeakerImagePreview(previewUrl)
+  }
+
+  const handleSaveSpeaker = async () => {
     if (!speakerForm.name.trim()) {
       toast.error("Vui lòng nhập tên diễn giả")
       return
     }
+
+    try {
+      let imageUrl = speakerForm.image
+
+      // Upload ảnh nếu có file mới
+      if (speakerImageFile) {
+        setIsUploadingSpeakerImage(true)
+        try {
+          imageUrl = await uploadImage(speakerImageFile)
+          if (!imageUrl) {
+            toast.error("Không thể upload ảnh. Vui lòng thử lại.")
+            setIsUploadingSpeakerImage(false)
+            return
+          }
+          // Cleanup preview URL sau khi upload thành công
+          if (speakerImagePreview && speakerImagePreview.startsWith("blob:")) {
+            URL.revokeObjectURL(speakerImagePreview)
+          }
+          toast.success("Đã upload ảnh thành công")
+        } catch (error) {
+          console.error("Error uploading speaker image:", error)
+          toast.error(error.message || "Có lỗi xảy ra khi upload ảnh")
+          setIsUploadingSpeakerImage(false)
+          return
+        } finally {
+          setIsUploadingSpeakerImage(false)
+        }
+      }
+
+      const speakerData = {
+        ...speakerForm,
+        image: imageUrl,
+      }
+
     const newSpeakers = [...formData.speakers]
     if (editingSpeakerIndex !== null) {
-      newSpeakers[editingSpeakerIndex] = { ...speakerForm }
+        newSpeakers[editingSpeakerIndex] = speakerData
     } else {
-      newSpeakers.push({ ...speakerForm })
+        newSpeakers.push(speakerData)
     }
     setFormData({ ...formData, speakers: newSpeakers })
     setIsSpeakerDialogOpen(false)
     setSpeakerForm({ name: "", title: "", bio: "", image: "" })
+      setSpeakerImagePreview("")
+      setSpeakerImageFile(null)
     setEditingSpeakerIndex(null)
     toast.success(editingSpeakerIndex !== null ? "Cập nhật diễn giả thành công" : "Thêm diễn giả thành công")
+    } catch (error) {
+      console.error("Error saving speaker:", error)
+      toast.error("Có lỗi xảy ra khi lưu diễn giả")
+    }
   }
 
   const handleRemoveSpeaker = (index) => {
@@ -332,6 +853,31 @@ export default function CreateActivity() {
     toast.success("Đã xóa mục chương trình")
   }
 
+  const handleDateChange = (field, label) => (e) => {
+    const value = e.target.value
+    let errorMessage = ""
+
+    if (value) {
+      const dateValue = new Date(value)
+      if (!Number.isNaN(dateValue.getTime())) {
+        const now = new Date()
+        if (dateValue <= now) {
+          errorMessage = `${label} phải lớn hơn thời điểm hiện tại`
+        }
+      }
+    }
+
+    setDateErrors((prev) => ({
+      ...prev,
+      [field]: errorMessage,
+    }))
+
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+  }
+
   const handlePublish = async () => {
     // Validate required fields
     if (!formData.title?.trim()) {
@@ -362,9 +908,13 @@ export default function CreateActivity() {
       toast.error("Vui lòng nhập thời gian đăng ký")
       return
     }
-    if (!formData.maxParticipants) {
-      toast.error("Vui lòng nhập số người tham gia tối đa")
+    // Validate maxParticipants (nếu có nhập thì phải > 0, không bắt buộc)
+    if (formData.maxParticipants && formData.maxParticipants.trim() !== "") {
+      const maxParticipantsNum = parseInt(formData.maxParticipants)
+      if (isNaN(maxParticipantsNum) || maxParticipantsNum <= 0) {
+        toast.error("Số người tham gia tối đa phải lớn hơn 0")
       return
+      }
     }
     if (!formData.rules || formData.rules.length === 0 || formData.rules.every(r => !r.trim())) {
       toast.error("Vui lòng nhập ít nhất một quy định")
@@ -373,6 +923,28 @@ export default function CreateActivity() {
     if (formData.subType === "SportsFestival" && formData.sportsCategories.length === 0) {
       toast.error("Hội thao cần có ít nhất một môn thi đấu")
       return
+    }
+    const now = new Date()
+    const futureDateChecks = [
+      { value: formData.startDate, label: "Ngày bắt đầu" },
+      { value: formData.endDate, label: "Ngày kết thúc" },
+      { value: formData.registerDate, label: "Ngày mở đăng ký" },
+      { value: formData.endRegisterDate, label: "Ngày đóng đăng ký" },
+      {
+        value: formData.submissionDeadline,
+        label: "Hạn cuối nộp bài",
+        enabled: formData.subType === "CreativeContest"
+      }
+    ]
+    for (const check of futureDateChecks) {
+      if (check.enabled === false) continue
+      if (!check.value) continue
+      const dateValue = new Date(check.value)
+      if (Number.isNaN(dateValue.getTime())) continue
+      if (dateValue <= now) {
+        toast.error(`${check.label} phải lớn hơn thời điểm hiện tại`)
+        return
+      }
     }
     
     // Validate grading settings if enabled
@@ -492,7 +1064,10 @@ export default function CreateActivity() {
         endDate: formData.endDate ? vnTimeToUTC(formData.endDate) : null,
         registerDate: formData.registerDate ? vnTimeToUTC(formData.registerDate) : null,
         endRegisterDate: formData.endRegisterDate ? vnTimeToUTC(formData.endRegisterDate) : null,
-        maxParticipants: parseInt(formData.maxParticipants) || 0,
+        // maxParticipants: null = không giới hạn, có giá trị = giới hạn số người
+        maxParticipants: (formData.maxParticipants && formData.maxParticipants.trim() !== "") 
+          ? parseInt(formData.maxParticipants) 
+          : null,
         rules: formData.rules.filter(r => r.trim()),
         // SportsFestival fields
         sportsCategories: formData.subType === "SportsFestival" ? formData.sportsCategories : [],
@@ -549,6 +1124,23 @@ export default function CreateActivity() {
       )
 
       if (response?.data) {
+        // Delete draft if exists
+        if (currentDraftId) {
+          try {
+            const token = localStorage.getItem("token")
+            await executeApiCall(
+              activityService.deleteDraft.bind(activityService),
+              [currentDraftId, token],
+              { setLoading: () => {}, setError: () => {} }
+            )
+          } catch (error) {
+            console.error("Error deleting draft:", error)
+            // Continue even if draft deletion fails
+          }
+        }
+        
+        // Clear all storage after successful submission
+        clearAllStorage()
         toast.success("Hoạt động mới đã được xuất bản thành công.")
         navigate("/admin/activities")
       }
@@ -560,8 +1152,47 @@ export default function CreateActivity() {
     }
   }
 
-  const handleSaveDraft = () => {
-    toast.info("Bạn có thể tiếp tục chỉnh sửa sau.")
+  // Clear all storage (prefilled data)
+  const clearAllStorage = () => {
+    try {
+      // Clear prefilled data from sessionStorage
+      sessionStorage.removeItem("prefilledActivityData")
+      console.log("🧹 Cleared session storage")
+    } catch (error) {
+      console.error("Error clearing storage:", error)
+    }
+  }
+
+  const handleSaveDraft = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const draftDto = formDataToDraftDto()
+      
+      if (currentDraftId) {
+        // Update existing draft
+        await executeApiCall(
+          activityService.updateDraft.bind(activityService),
+          [currentDraftId, draftDto, token],
+          { setLoading: setIsSubmitting, setError: () => {} }
+        )
+        toast.success("Đã cập nhật bản nháp thành công")
+      } else {
+        // Create new draft
+        const response = await executeApiCall(
+          activityService.createDraft.bind(activityService),
+          [draftDto, token],
+          { setLoading: setIsSubmitting, setError: () => {} }
+        )
+        
+        if (response?.data?.data?.id) {
+          setCurrentDraftId(response.data.data.id)
+          toast.success("Đã lưu bản nháp thành công. Bạn có thể tiếp tục chỉnh sửa sau.")
+        }
+      }
+    } catch (error) {
+      console.error("Error saving draft:", error)
+      toast.error("Không thể lưu bản nháp. Vui lòng thử lại.")
+    }
   }
 
   // File upload handlers
@@ -678,19 +1309,25 @@ export default function CreateActivity() {
       {/* Progress Steps */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center justify-between">
+          {/* Step Indicators */}
+          <div className="flex items-center justify-between mb-4">
             {steps.map((step, index) => (
               <div key={step.number} className="flex items-center flex-1">
                 <div
                   className="flex flex-col items-center flex-1 cursor-pointer"
-                  onClick={() => setCurrentStep(step.number)}
+                  onClick={() => {
+                    // Allow clicking on completed steps or current step
+                    if (currentStep >= step.number || currentStep === step.number) {
+                      setCurrentStep(step.number)
+                    }
+                  }}
                 >
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
                       currentStep === step.number
-                        ? "bg-blue-600 text-white scale-110"
+                        ? "bg-blue-600 text-white scale-110 shadow-lg"
                         : currentStep > step.number
-                        ? "bg-green-500 text-white hover:bg-green-600"
+                        ? "bg-blue-500 text-white hover:bg-blue-600"
                         : "bg-gray-200 text-gray-600 hover:bg-gray-300"
                     }`}
                   >
@@ -710,7 +1347,7 @@ export default function CreateActivity() {
                 {index < steps.length - 1 && (
                   <div
                     className={`h-1 flex-1 mx-2 cursor-pointer transition-colors ${
-                      currentStep > step.number ? "bg-green-500" : "bg-gray-200"
+                      currentStep > step.number ? "bg-blue-500" : "bg-gray-200"
                     }`}
                     onClick={() => {
                       // Click vào line cũng chuyển đến step tiếp theo
@@ -724,6 +1361,21 @@ export default function CreateActivity() {
                 )}
               </div>
             ))}
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div
+              className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+            />
+          </div>
+          
+          {/* Current Step Info */}
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-600">
+              Bước <span className="font-semibold text-blue-600">{currentStep}</span> / {steps.length}: {steps[currentStep - 1].title}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -862,7 +1514,8 @@ export default function CreateActivity() {
                   label="Ngày bắt đầu"
                   type="date"
                   value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  onChange={handleDateChange("startDate", "Ngày bắt đầu")}
+                  error={dateErrors.startDate}
                   required
                 />
 
@@ -870,7 +1523,8 @@ export default function CreateActivity() {
                   label="Ngày kết thúc"
                   type="date"
                   value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  onChange={handleDateChange("endDate", "Ngày kết thúc")}
+                  error={dateErrors.endDate}
                   required
                 />
               </div>
@@ -880,7 +1534,8 @@ export default function CreateActivity() {
                   label="Mở đăng ký"
                   type="date"
                   value={formData.registerDate}
-                  onChange={(e) => setFormData({ ...formData, registerDate: e.target.value })}
+                  onChange={handleDateChange("registerDate", "Ngày mở đăng ký")}
+                  error={dateErrors.registerDate}
                   required
                 />
 
@@ -888,7 +1543,8 @@ export default function CreateActivity() {
                   label="Đóng đăng ký"
                   type="date"
                   value={formData.endRegisterDate}
-                  onChange={(e) => setFormData({ ...formData, endRegisterDate: e.target.value })}
+                  onChange={handleDateChange("endRegisterDate", "Ngày đóng đăng ký")}
+                  error={dateErrors.endRegisterDate}
                   required
                 />
               </div>
@@ -1187,9 +1843,9 @@ export default function CreateActivity() {
                             </Button>
                           </div>
                           {formData.problemFileUrl && (
-                            <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
-                              <CheckCircle className="w-4 h-4 text-green-600" />
-                              <span className="text-sm text-green-800">Đã upload file đề bài</span>
+                            <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                              <CheckCircle className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm text-blue-800">Đã upload file đề bài</span>
                               <a
                                 href={formData.problemFileUrl}
                                 target="_blank"
@@ -1211,10 +1867,15 @@ export default function CreateActivity() {
                         <Input
                           type="datetime-local"
                           value={formData.submissionDeadline}
-                          onChange={(e) => setFormData({ ...formData, submissionDeadline: e.target.value })}
+                        onChange={handleDateChange("submissionDeadline", "Hạn cuối nộp bài")}
                           min={formData.startDate || ""}
                           max={formData.endDate || ""}
                         />
+                      {dateErrors.submissionDeadline && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {dateErrors.submissionDeadline}
+                        </p>
+                      )}
                         <p className="text-xs text-gray-500">
                           Hạn cuối nộp bài phải sau thời điểm bắt đầu (StartDate) và trước thời điểm kết thúc (EndDate).
                         </p>
@@ -1558,16 +2219,44 @@ export default function CreateActivity() {
           {/* Step 4: Rules */}
           {currentStep === 4 && (
             <div className="space-y-6">
+              {/* Template Checklist Info */}
+              {templateChecklist.length > 0 && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <Label className="text-base font-semibold text-purple-900 mb-2">
+                        Checklist từ mẫu đã được áp dụng:
+                      </Label>
+                      <ul className="space-y-1">
+                        {templateChecklist.map((item, index) => (
+                          <li key={index} className="flex items-start gap-2 text-sm text-purple-800">
+                            <span className="text-purple-600 mt-0.5">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-xs text-purple-700 mt-2">
+                        Bạn có thể chỉnh sửa hoặc thêm quy định mới bên dưới.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div>
-                <Label htmlFor="maxParticipants">Số người tham gia tối đa *</Label>
+                <Label htmlFor="maxParticipants">Số người tham gia tối đa</Label>
                 <Input
                   id="maxParticipants"
                   type="number"
-                  placeholder="Ví dụ: 500"
+                  placeholder="Để trống = không giới hạn (ví dụ: 500)"
                   value={formData.maxParticipants}
                   onChange={(e) => setFormData({ ...formData, maxParticipants: e.target.value })}
                   className="mt-2"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Để trống nếu không muốn giới hạn số người tham gia
+                </p>
               </div>
 
               <div>
@@ -1631,8 +2320,8 @@ export default function CreateActivity() {
           {/* Step 5: Review */}
           {currentStep === 5 && (
             <div className="space-y-6">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center gap-2 text-green-800">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-2 text-blue-800">
                   <CheckCircle className="w-5 h-5" />
                   <p className="font-semibold">Hoàn tất! Kiểm tra lại thông tin trước khi xuất bản</p>
                 </div>
@@ -1796,7 +2485,7 @@ export default function CreateActivity() {
                       <p className="text-sm text-gray-600 mb-1">Điểm khi đăng ký tham gia:</p>
                       <p className="font-semibold text-lg">
                         {formData.starPointRewards.registration ? (
-                          <span className="text-green-600">{formData.starPointRewards.registration} điểm</span>
+                          <span className="text-blue-600">{formData.starPointRewards.registration} điểm</span>
                         ) : (
                           <span className="text-gray-400">Chưa cài đặt</span>
                         )}
@@ -1817,7 +2506,7 @@ export default function CreateActivity() {
                                   <p className="text-sm text-gray-600">{award.name || `Giải ${index + 1}`}</p>
                                   <p className="font-semibold">
                                     {award.points ? (
-                                      <span className="text-green-600">{award.points} điểm</span>
+                                      <span className="text-blue-600">{award.points} điểm</span>
                                     ) : (
                                       <span className="text-gray-400">Chưa cài đặt</span>
                                     )}
@@ -1919,7 +2608,7 @@ export default function CreateActivity() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <CheckCircle className="w-4 h-4 text-blue-600" />
                       <span className="text-sm text-gray-700">
                         Chỉ giáo viên chủ nhiệm mới được đăng ký đại diện lớp
                       </span>
@@ -1946,7 +2635,7 @@ export default function CreateActivity() {
             </div>
 
             {currentStep < 5 ? (
-              <Button onClick={handleNext} className="bg-green-600 hover:bg-green-700 text-white">
+              <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700 text-white">
                 Tiếp theo
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
@@ -2012,7 +2701,11 @@ export default function CreateActivity() {
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-600">Số người tham gia tối đa:</span>
-                          <span className="font-semibold text-sm">{formData.maxParticipants || "Chưa cài đặt"}</span>
+                          <span className="font-semibold text-sm">
+                            {formData.maxParticipants && formData.maxParticipants.trim() !== "" 
+                              ? formData.maxParticipants 
+                              : "Không giới hạn"}
+                          </span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-600">Thời gian đăng ký:</span>
@@ -2045,7 +2738,7 @@ export default function CreateActivity() {
                               {formData.starPointRewards.awards.map((award, index) => (
                                 <div key={index} className="flex justify-between items-center">
                                   <span className="text-sm text-gray-600">{award.name || `Giải ${index + 1}`}:</span>
-                                  <span className="font-bold text-green-600">
+                                  <span className="font-bold text-blue-600">
                                     {award.points ? `${award.points} điểm` : "0 điểm"}
                                   </span>
                                 </div>
@@ -2156,7 +2849,7 @@ export default function CreateActivity() {
                             <p className="font-semibold">Cài đặt đăng ký</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <CheckCircle className="w-4 h-4 text-blue-600" />
                             <span className="text-sm text-gray-700">
                               Chỉ giáo viên chủ nhiệm mới được đăng ký đại diện lớp
                             </span>
@@ -2169,7 +2862,7 @@ export default function CreateActivity() {
                         Đóng
                       </Button>
                       <Button
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
                         onClick={() => {
                           setIsPreviewOpen(false)
                           handlePublish()
@@ -2182,7 +2875,7 @@ export default function CreateActivity() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-                <Button onClick={handlePublish} className="bg-green-600 hover:bg-green-700 text-white" disabled={isSubmitting}>
+                <Button onClick={handlePublish} className="bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
                   <CheckCircle className="w-4 h-4 mr-2" />
                   {isSubmitting ? "Đang xuất bản..." : "Xuất bản"}
                 </Button>
@@ -2230,31 +2923,74 @@ export default function CreateActivity() {
               />
             </div>
             <div className="grid gap-2">
-              <Label>Ảnh đại diện (URL)</Label>
-              <Input
-                placeholder="https://example.com/avatar.jpg"
-                value={speakerForm.image}
-                onChange={(e) => setSpeakerForm({ ...speakerForm, image: e.target.value })}
+              <Label>Ảnh đại diện</Label>
+              <input
+                type="file"
+                ref={speakerImageInputRef}
+                accept="image/*"
+                onChange={handleSpeakerImageChange}
+                className="hidden"
               />
-              {speakerForm.image && (
-                <div className="mt-2">
+              <div className="flex items-center gap-4">
+                {(speakerImagePreview || speakerForm.image) && (
+                  <div className="relative">
                   <img
-                    src={speakerForm.image}
+                      src={speakerImagePreview || speakerForm.image}
                     alt="Preview"
-                    className="w-20 h-20 rounded-full object-cover border border-gray-300"
+                      className="w-24 h-24 rounded-full object-cover border-2 border-gray-300"
                     onError={(e) => {
                       e.target.style.display = "none"
                     }}
                   />
+                    {speakerImageFile && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSpeakerImageFile(null)
+                          setSpeakerImagePreview(speakerForm.image || "")
+                          if (speakerImageInputRef.current) {
+                            speakerImageInputRef.current.value = ""
+                          }
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                 </div>
               )}
+                <div className="flex-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => speakerImageInputRef.current?.click()}
+                    disabled={isUploadingSpeakerImage}
+                    className="w-full"
+                  >
+                    {isUploadingSpeakerImage ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2" />
+                        Đang upload...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        {speakerImagePreview || speakerForm.image ? "Thay đổi ảnh" : "Chọn ảnh"}
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Chọn file ảnh (JPG, PNG) - Tối đa 5MB
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSpeakerDialogOpen(false)}>
               Hủy
             </Button>
-            <Button onClick={handleSaveSpeaker} className="bg-green-600 hover:bg-green-700 text-white">
+            <Button onClick={handleSaveSpeaker} className="bg-blue-600 hover:bg-blue-700 text-white">
               {editingSpeakerIndex !== null ? "Cập nhật" : "Thêm"}
             </Button>
           </DialogFooter>
@@ -2303,7 +3039,7 @@ export default function CreateActivity() {
             <Button variant="outline" onClick={() => setIsProgramDialogOpen(false)}>
               Hủy
             </Button>
-            <Button onClick={handleSaveProgram} className="bg-green-600 hover:bg-green-700 text-white">
+            <Button onClick={handleSaveProgram} className="bg-blue-600 hover:bg-blue-700 text-white">
               {editingProgramIndex !== null ? "Cập nhật" : "Thêm"}
             </Button>
           </DialogFooter>
@@ -2315,7 +3051,7 @@ export default function CreateActivity() {
 }
 
 // InputField helper component - tương tự RewardManagement
-function InputField({ label, placeholder, type = "text", value, onChange, className = "", required = false }) {
+function InputField({ label, placeholder, type = "text", value, onChange, className = "", required = false, error }) {
   return (
     <div className="grid gap-2">
       <Label>
@@ -2328,6 +3064,11 @@ function InputField({ label, placeholder, type = "text", value, onChange, classN
         onChange={onChange}
         className={className}
       />
+      {error && (
+        <p className="text-xs text-red-500 mt-1">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

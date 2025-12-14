@@ -9,6 +9,8 @@ import { useChatApi } from "./hooks/useChatApi"
 import { useChatStore } from "@/store/chat/useChatStore"
 import { LoadingCard, LoadingOverlay } from "@/common/components/ui/loading"
 import { useToast } from "@/common/hooks/useToast"
+import { useSelector } from "react-redux"
+import { getUserId } from "@/common/utils/userUtils"
 
 export default function ChatInbox() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -16,6 +18,8 @@ export default function ChatInbox() {
   const { roomsLoading, getUserRooms, error } = useChatApi()
   const { rooms, setRooms, setLoading, setError } = useChatStore()
   const { showError } = useToast()
+  const [activeTab, setActiveTab] = useState("personal") // 'personal' | 'group'
+  const user = useSelector((state) => state.user.user)
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -23,17 +27,30 @@ export default function ChatInbox() {
         setLoading("rooms", true);
         const response = await getUserRooms();
         if (response) {
-          const userId = Number(localStorage.getItem("userId")); // hoặc lấy từ context/store
+          const userId = getUserId(user);
 
           const mappedRooms = response.map((r) => {
             const index = r.participantIds.findIndex((id) => id !== userId);
-            const displayName =
-              index !== -1 ? r.participantNames[index] : r.participantNames?.[0] || "Unknown";
+            const isGroup = r.roomType === "class" || r.roomType === "club";
+
+            const displayName = isGroup
+              ? r.name || (r.roomType === "class" ? "Nhóm lớp" : "Nhóm CLB")
+              : index !== -1
+                ? r.participantNames[index]
+                : r.participantNames?.[0] || "Unknown";
+
+            const subtitle = isGroup
+              ? r.roomType === "class"
+                ? "Nhóm lớp"
+                : "Nhóm CLB"
+              : r.roomType || "Chat";
 
             return {
               id: r.id,
               name: displayName,
-              avatar: r.participantAvatars?.[index] || "/placeholder.svg",
+              avatar: isGroup
+                ? "/logo.svg"
+                : r.participantAvatars?.[index] || "/placeholder.svg",
               lastMessage: r.lastMessage || "Chưa có tin nhắn",
               timestamp: r.updatedAt
                 ? new Date(r.updatedAt).toLocaleTimeString("vi-VN", {
@@ -42,6 +59,8 @@ export default function ChatInbox() {
                 })
                 : "—",
               unreadCount: r.unreadCount || 0,
+              roomType: r.roomType,
+              subtitle,
             };
           });
 
@@ -63,7 +82,16 @@ export default function ChatInbox() {
   }, []);
 
 
-  const filteredChats = rooms.filter((chat) =>
+  const personalRooms = rooms.filter(
+    (chat) => chat.roomType !== "class" && chat.roomType !== "club"
+  )
+  const groupRooms = rooms.filter(
+    (chat) => chat.roomType === "class" || chat.roomType === "club"
+  )
+
+  const baseRooms = activeTab === "group" ? groupRooms : personalRooms
+
+  const filteredChats = baseRooms.filter((chat) =>
     chat.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     chat.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -73,15 +101,37 @@ export default function ChatInbox() {
       <div className="max-w-7xl mx-auto">
         <Card className="p-6 glass ">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold gradient-text">Hộp thư</h1>
-              <p className="text-gray-600">Trò chuyện với bạn bè của bạn</p>
+              <p className="text-gray-600">Trò chuyện với bạn bè, lớp học và CLB</p>
             </div>
-            {/* <Button className="btn-primary">
-              <Plus className="w-4 h-4 mr-2" />
-              Tin nhắn mới
-            </Button> */}
+          </div>
+
+          {/* Tabs: Cá nhân / Nhóm */}
+          <div className="flex gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => setActiveTab("personal")}
+              className={`px-4 py-2 text-sm font-medium rounded-full border transition-colors ${
+                activeTab === "personal"
+                  ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              Cá nhân
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("group")}
+              className={`px-4 py-2 text-sm font-medium rounded-full border transition-colors ${
+                activeTab === "group"
+                  ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              Nhóm (Lớp & CLB)
+            </button>
           </div>
 
           {/* Search */}
@@ -127,7 +177,9 @@ export default function ChatInbox() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-semibold text-gray-800 truncate">{chat.name || "Unknown User"}</h3>
-                        <p className="text-sm text-gray-500">{chat.class || chat.roomType || "Chat"}</p>
+                        <p className="text-sm text-gray-500">
+                          {chat.subtitle || "Chat"}
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-gray-400">{chat.timestamp || chat.lastMessageTime || "Unknown"}</p>

@@ -9,6 +9,7 @@ import { LayoutDashboard, Users, Users2, MessageSquare, ChevronLeft, Trophy, Gra
 import { Button } from "@/common/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ROUTES } from "@/common/constants/routes"
+import { ROLE } from "@/common/constants/roles"
 import { useSelector } from "react-redux";
 import { useEffect } from "react"
 const navigation = [
@@ -17,6 +18,7 @@ const navigation = [
     href: "/admin",
     icon: LayoutDashboard,
     allowedRoles: [0],
+    requiredPermissions: ["VIEW_REPORT"],
   },
   {
     name: "Quản lý người dùng",
@@ -28,7 +30,7 @@ const navigation = [
     name: "Hoạt động & Cuộc thi",
     href: "/admin/activities",
     icon: Trophy,
-    requiredPermissions: ["MANAGE_EVENTS"],
+    requiredPermissions: ["MANAGE_ACTIVITIES"],
   },
   {
     name: "Câu lạc bộ",
@@ -41,12 +43,6 @@ const navigation = [
     href: "/admin/classes",
     icon: GraduationCap,
     requiredPermissions: ["MANAGE_CLASSES"],
-  },
-  {
-    name: "Bài viết & Bình luận",
-    href: "/admin/posts",
-    icon: MessageSquare,
-    requiredPermissions: ["MANAGE_POSTS"],
   },
   {
     name: "Điểm thưởng và Phần thưởng",
@@ -80,16 +76,31 @@ export default function AdminSidebar({ isOpen, onClose }) {
   const user = useSelector((state) => state.user.user);
   const {permissions} = user  
   const visibleNavigation = navigation.filter((item) => {
-    if (item.allowedRoles && item.allowedRoles.length > 0) {
-    return item.allowedRoles.includes(user?.role);
-  }
-    if (user?.role === 0) return true;
-    if (user?.role === 1) {
-      if (!item.requiredPermissions?.length) return true;
-      return item.requiredPermissions.some((perm) =>
-        permissions?.includes(perm)
-      );
+    // Admin thấy tất cả items
+    if (user?.role === ROLE.ADMIN) {
+      return true;
     }
+    
+    // Staff chỉ thấy items có permissions phù hợp
+    if (user?.role === ROLE.STAFF) {
+      // Nếu item có cả allowedRoles và requiredPermissions
+      // Check requiredPermissions trước (ưu tiên hơn)
+      if (item.requiredPermissions && item.requiredPermissions.length > 0) {
+        return item.requiredPermissions.some((perm) =>
+          permissions?.includes(perm)
+        );
+      }
+      
+      // Nếu chỉ có allowedRoles, check xem Staff có trong đó không
+      if (item.allowedRoles && item.allowedRoles.length > 0) {
+        return item.allowedRoles.includes(ROLE.STAFF);
+      }
+      
+      // Nếu không có requiredPermissions và allowedRoles, không hiển thị cho Staff
+      return false;
+    }
+    
+    // Các role khác không thấy sidebar này
     return false;
   });
   return (
@@ -142,7 +153,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
               className="w-full justify-start text-gray-600 hover:text-gray-900"
             >
               <ChevronLeft className="h-4 w-4" />
-              {isOpen && <span className="ml-2">Collapse</span>}
+              {isOpen && <span className="ml-2">Thu gọn</span>}
             </Button>
           </div>
         </div>

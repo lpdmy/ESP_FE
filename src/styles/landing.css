@@ -2,12 +2,15 @@
 
 /* Hover effects */
 .hover-lift {
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transform: translate3d(0, 0, 0);
+  transform-origin: 50% 50%;
+  will-change: transform, box-shadow;
 }
 
 .hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transform: translate3d(0, -4px, 0);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
 }
 
 /* Card shine effect */
