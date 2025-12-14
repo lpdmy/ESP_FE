@@ -136,12 +136,12 @@ export default function JurySubmissions() {
   const handleNavigateGrade = async () => {
     try {
       // Load tất cả submissions chưa chấm để đảm bảo có dữ liệu
-      const allSubmissions = await loadAllJurySubmissionsNotGrade();
+    const allSubmissions = await loadAllJurySubmissionsNotGrade();
       console.log("📌 Đã load submissions chưa chấm:", allSubmissions.length);
       
       // Navigate đến trang chấm điểm
       // Trang grade sẽ tự động load lại dữ liệu từ API
-      navigate(`/jury/grade/${id}`);
+    navigate(`/jury/grade/${id}`);
     } catch (error) {
       console.error("❌ Lỗi khi navigate đến trang chấm điểm:", error);
       // Vẫn navigate để user có thể thấy trang, trang sẽ tự load
@@ -1109,7 +1109,7 @@ export default function JurySubmissions() {
                           {attachment.fileName && (
                             <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
                               {attachment.fileName} - Click để xem full size
-                            </div>
+          </div>
                           )}
                         </div>
                       ) : attachment.fileType === "video" ? (

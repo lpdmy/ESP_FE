@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { useNavigate, Link } from "react-router-dom"
+import { useNavigate, Link, useSearchParams } from "react-router-dom"
 import { Button } from "@/common/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card"
 import { Input } from "@/common/components/ui/input"
@@ -28,7 +28,10 @@ import { vnTimeToUTC } from "@/common/utils/dateUtils"
 
 export default function CreateActivity() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const mode = searchParams.get("mode") // "manual" or "template"
   const [currentStep, setCurrentStep] = useState(1)
+  const [templateChecklist, setTemplateChecklist] = useState([]) // Checklist from template
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isSpeakerDialogOpen, setIsSpeakerDialogOpen] = useState(false)
   const [isProgramDialogOpen, setIsProgramDialogOpen] = useState(false)
@@ -140,53 +143,446 @@ export default function CreateActivity() {
     "Bóng rổ",
   ]
 
-  // Load from localStorage on mount
+  // State for current draft ID (if editing existing draft)
+  const [currentDraftId, setCurrentDraftId] = useState(null)
+  const [isLoadingDraft, setIsLoadingDraft] = useState(false)
+
+  // Helper: Deep merge objects recursively
+  const deepMerge = (target, source) => {
+    if (!source || typeof source !== 'object') return target
+    if (!target || typeof target !== 'object') return source
+
+    const output = { ...target }
+    
+    Object.keys(source).forEach(key => {
+      const sourceValue = source[key]
+      const targetValue = target[key]
+      
+      if (Array.isArray(sourceValue)) {
+        // Arrays: replace entirely (no merge)
+        output[key] = [...sourceValue]
+      } else if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
+        // Nested objects: recursive merge
+        output[key] = deepMerge(targetValue || {}, sourceValue)
+      } else if (sourceValue !== undefined && sourceValue !== null) {
+        // Primitives: replace
+        output[key] = sourceValue
+      }
+      // If sourceValue is null/undefined, keep target value
+    })
+    
+    return output
+  }
+
+  // Helper: Convert formData to draft DTO
+  const formDataToDraftDto = () => {
+    // Convert category string to enum number: "activity" -> 1 (Activity), "event" -> 2 (Event)
+    const categoryMap = {
+      "activity": 1, // ActivityType.Activity
+      "event": 2    // ActivityType.Event
+    };
+    const categoryValue = categoryMap[formData.category] || 1; // Default to Activity (1)
+    
+    return {
+      title: formData.title,
+      description: formData.description,
+      category: categoryValue,
+      subType: formData.subType,
+      location: formData.location,
+      organizer: formData.organizer,
+      thumbnailUrl: formData.thumbnail,
+      startDate: formData.startDate || null,
+      endDate: formData.endDate || null,
+      registerDate: formData.registerDate || null,
+      endRegisterDate: formData.endRegisterDate || null,
+      maxParticipants: formData.maxParticipants || null,
+      competitionType: formData.competitionType || null,
+      theme: formData.theme || null,
+      genre: formData.genre || null,
+      paperSize: formData.paperSize || null,
+      drawingMedium: formData.drawingMedium || null,
+      timeLimit: formData.timeLimit || null,
+      submissionFormat: formData.submissionFormat || null,
+      problemText: formData.problemText || null,
+      problemFileUrl: formData.problemFileUrl || null,
+      submissionDeadline: formData.submissionDeadline || null,
+      isGrade: gradingEnabled,
+      gradingSettings: gradingEnabled && gradingCriteria.length > 0
+        ? JSON.stringify({ criteria: gradingCriteria })
+        : null,
+      registrationSettings: formData.registrationSettings
+        ? JSON.stringify(formData.registrationSettings)
+        : null,
+      onlyTeacherCanRegister: onlyTeacherCanRegister,
+      starPointRewards: formData.starPointRewards
+        ? JSON.stringify(formData.starPointRewards)
+        : null,
+      rules: formData.rules?.filter(r => r && r.trim()) || [],
+      sportsCategories: formData.sportsCategories || [],
+      sportsConfigurations: formData.sportsConfigurations || [],
+      speakers: formData.speakers || [],
+      programItems: formData.programItems || [],
+    }
+  }
+
+  // Load draft from API if draftId is in URL, or load prefilled data if duplicate or import
   useEffect(() => {
-    const savedData = localStorage.getItem("createActivity_draft")
-    if (savedData) {
+    const draftId = searchParams.get("draftId")
+    const isDuplicate = searchParams.get("duplicate") === "true"
+    const isImport = searchParams.get("import") === "true"
+    
+    // Load imported activities
+    if (isImport) {
       try {
-        const parsed = JSON.parse(savedData)
-        if (parsed.formData) {
-          setFormData(parsed.formData)
+        const importedDataStr = sessionStorage.getItem("importedActivities")
+        if (importedDataStr) {
+          const importedActivities = JSON.parse(importedDataStr)
+          if (importedActivities && importedActivities.length > 0) {
+            // Show dialog to select which activity to create first
+            // For now, load the first one
+            const firstActivity = importedActivities[0]
+            
+            // Map imported activity data to formData
+        setFormData(prevFormData => {
+              const merged = deepMerge(prevFormData, {
+                title: firstActivity.title || "",
+                description: firstActivity.description || "",
+                category: firstActivity.category === 1 ? "activity" : "event",
+                subType: firstActivity.subType || "",
+                location: firstActivity.location || "",
+                organizer: firstActivity.organizer || "",
+                thumbnail: firstActivity.thumbnailUrl || "",
+                startDate: firstActivity.startDate || "",
+                endDate: firstActivity.endDate || "",
+                registerDate: firstActivity.registerDate || "",
+                endRegisterDate: firstActivity.endRegisterDate || "",
+                maxParticipants: firstActivity.maxParticipants || "",
+                competitionType: firstActivity.competitionType || "",
+                theme: firstActivity.theme || "",
+                genre: firstActivity.genre || "",
+                paperSize: firstActivity.paperSize || "",
+                drawingMedium: firstActivity.drawingMedium || "",
+                timeLimit: firstActivity.timeLimit || "",
+                submissionFormat: firstActivity.submissionFormat || "",
+                problemText: firstActivity.problemText || "",
+                problemFileUrl: firstActivity.problemFileUrl || "",
+                submissionDeadline: firstActivity.submissionDeadline || "",
+                wordLimit: firstActivity.wordLimit || "",
+                writingFormat: firstActivity.writingFormat || "",
+                rules: firstActivity.rules && firstActivity.rules.length > 0 ? firstActivity.rules : [""],
+                sportsCategories: firstActivity.sportsCategories || [],
+                sportsConfigurations: firstActivity.sportsConfigurations || [],
+                speakers: firstActivity.speakers || [],
+                programItems: firstActivity.programItems || [],
+                registrationSettings: firstActivity.registrationSettings || prevFormData.registrationSettings,
+                starPointRewards: firstActivity.starPointRewards || prevFormData.starPointRewards,
+              })
+              return merged
+            })
+            
+            // Set other states
+            if (firstActivity.isGrade !== undefined) {
+              setGradingEnabled(firstActivity.isGrade)
+            }
+            if (firstActivity.gradingSettings) {
+              try {
+                const gradingSettings = typeof firstActivity.gradingSettings === 'string'
+                  ? JSON.parse(firstActivity.gradingSettings)
+                  : firstActivity.gradingSettings
+                if (gradingSettings?.criteria) {
+                  setGradingCriteria(gradingSettings.criteria)
+                }
+              } catch (e) {
+                console.error("Error parsing grading settings:", e)
+              }
+            }
+            if (firstActivity.onlyTeacherCanRegister !== undefined) {
+              setOnlyTeacherCanRegister(firstActivity.onlyTeacherCanRegister)
+            }
+            if (firstActivity.thumbnailUrl) {
+              setThumbnailPreview(firstActivity.thumbnailUrl)
+            }
+            
+            toast.success(`Đã tải hoạt động 1/${importedActivities.length} từ file import`)
+            // Store remaining activities for next
+            if (importedActivities.length > 1) {
+              sessionStorage.setItem("importedActivities", JSON.stringify(importedActivities.slice(1)))
+            } else {
+              sessionStorage.removeItem("importedActivities")
+            }
+          }
         }
-        if (parsed.gradingEnabled !== undefined) {
-          setGradingEnabled(parsed.gradingEnabled)
+      } catch (error) {
+        console.error("Error loading imported activities:", error)
+        toast.error("Không thể tải dữ liệu từ file import")
+      }
+      return
+    }
+    
+    // Load prefilled activity data from duplicate
+    if (isDuplicate) {
+      try {
+        const prefilledDataStr = sessionStorage.getItem("prefilledActivityData")
+        if (prefilledDataStr) {
+          const prefilledData = JSON.parse(prefilledDataStr)
+          
+          // Map activity data to formData
+          setFormData(prevFormData => {
+            const merged = deepMerge(prevFormData, {
+              title: (prefilledData.title || "") + " (Bản sao)",
+              description: prefilledData.description || "",
+              category: prefilledData.category === 1 ? "activity" : "event",
+              subType: prefilledData.subType || "",
+              location: prefilledData.location || "",
+              organizer: prefilledData.organizer || "",
+              thumbnail: prefilledData.thumbnailUrl || "",
+              startDate: prefilledData.startDate || "",
+              endDate: prefilledData.endDate || "",
+              registerDate: prefilledData.registerDate || "",
+              endRegisterDate: prefilledData.endRegisterDate || "",
+              maxParticipants: prefilledData.maxParticipants || "",
+              competitionType: prefilledData.competitionType || "",
+              theme: prefilledData.theme || "",
+              genre: prefilledData.genre || "",
+              paperSize: prefilledData.paperSize || "",
+              drawingMedium: prefilledData.drawingMedium || "",
+              timeLimit: prefilledData.timeLimit || "",
+              submissionFormat: prefilledData.submissionFormat || "",
+              problemText: prefilledData.problemText || "",
+              problemFileUrl: prefilledData.problemFileUrl || "",
+              submissionDeadline: prefilledData.submissionDeadline || "",
+              rules: prefilledData.rules || [""],
+              sportsCategories: prefilledData.sportsCategories || [],
+              sportsConfigurations: prefilledData.sportsConfigurations || [],
+              speakers: prefilledData.speakers || [],
+              programItems: prefilledData.programItems || [],
+              registrationSettings: prefilledData.registrationSettings || prevFormData.registrationSettings,
+              starPointRewards: prefilledData.starPointRewards || prevFormData.starPointRewards,
+            })
+            return merged
+          })
+          
+          // Set other states
+          if (prefilledData.isGrade !== undefined) {
+            setGradingEnabled(prefilledData.isGrade)
+          }
+          if (prefilledData.gradingSettings) {
+            try {
+              const gradingSettings = typeof prefilledData.gradingSettings === 'string'
+                ? JSON.parse(prefilledData.gradingSettings)
+                : prefilledData.gradingSettings
+              if (gradingSettings?.criteria) {
+                setGradingCriteria(gradingSettings.criteria)
+              }
+            } catch (e) {
+              console.error("Error parsing grading settings:", e)
+            }
+          }
+          if (prefilledData.onlyTeacherCanRegister !== undefined) {
+            setOnlyTeacherCanRegister(prefilledData.onlyTeacherCanRegister)
         }
-        if (parsed.gradingCriteria) {
-          setGradingCriteria(parsed.gradingCriteria)
+          if (prefilledData.thumbnailUrl) {
+            setThumbnailPreview(prefilledData.thumbnailUrl)
+          }
+          
+          toast.success("Đã tải dữ liệu hoạt động, bạn có thể chỉnh sửa và tạo mới")
+          // Clear prefilled data after loading
+        sessionStorage.removeItem("prefilledActivityData")
         }
-        if (parsed.onlyTeacherCanRegister !== undefined) {
-          setOnlyTeacherCanRegister(parsed.onlyTeacherCanRegister)
+      } catch (error) {
+        console.error("Error loading prefilled activity data:", error)
+        toast.error("Không thể tải dữ liệu hoạt động")
+      }
+      return
+    }
+    
+    if (draftId) {
+      setIsLoadingDraft(true)
+      const loadDraftFromAPI = async () => {
+        try {
+          const token = localStorage.getItem("token")
+          const response = await executeApiCall(
+            activityService.getDraftById.bind(activityService),
+            [parseInt(draftId), token],
+            { setLoading: setIsLoadingDraft, setError: () => {} }
+          )
+
+          if (response?.data?.data) {
+            const draft = response.data.data
+            console.log("Loaded draft data:", draft)
+            setCurrentDraftId(draft.id)
+            
+            // Map draft data to formData
+            setFormData(prevFormData => {
+              const merged = deepMerge(prevFormData, {
+                title: draft.title || "",
+                description: draft.description || "",
+                category: draft.category === 1 ? "activity" : "event",
+                subType: draft.subType || "",
+                location: draft.location || "",
+                organizer: draft.organizer || "",
+                thumbnail: draft.thumbnailUrl || "",
+                startDate: draft.startDate || "",
+                endDate: draft.endDate || "",
+                registerDate: draft.registerDate || "",
+                endRegisterDate: draft.endRegisterDate || "",
+                maxParticipants: draft.maxParticipants || "",
+                competitionType: draft.competitionType || "",
+                theme: draft.theme || "",
+                genre: draft.genre || "",
+                paperSize: draft.paperSize || "",
+                drawingMedium: draft.drawingMedium || "",
+                timeLimit: draft.timeLimit || "",
+                submissionFormat: draft.submissionFormat || "",
+                problemText: draft.problemText || "",
+                problemFileUrl: draft.problemFileUrl || "",
+                submissionDeadline: draft.submissionDeadline || "",
+                rules: draft.rules && draft.rules.length > 0 ? draft.rules : [""],
+                sportsCategories: draft.sportsCategories || [],
+                sportsConfigurations: draft.sportsConfigurations 
+                  ? (Array.isArray(draft.sportsConfigurations) 
+                      ? draft.sportsConfigurations 
+                      : typeof draft.sportsConfigurations === 'string'
+                        ? (() => {
+      try {
+                              return JSON.parse(draft.sportsConfigurations)
+                            } catch (e) {
+                              console.error("Error parsing sportsConfigurations:", e)
+                              return []
+                            }
+                          })()
+                        : [])
+                  : [],
+                speakers: draft.speakers 
+                  ? (Array.isArray(draft.speakers) 
+                      ? draft.speakers 
+                      : typeof draft.speakers === 'string'
+                        ? (() => {
+                            try {
+                              return JSON.parse(draft.speakers)
+                            } catch (e) {
+                              console.error("Error parsing speakers:", e)
+                              return []
+                            }
+                          })()
+                        : [])
+                  : [],
+                programItems: draft.programItems 
+                  ? (Array.isArray(draft.programItems) 
+                      ? draft.programItems 
+                      : typeof draft.programItems === 'string'
+                        ? (() => {
+                            try {
+                              return JSON.parse(draft.programItems)
+                            } catch (e) {
+                              console.error("Error parsing programItems:", e)
+                              return []
+                            }
+                          })()
+                        : [])
+                  : [],
+                registrationSettings: draft.registrationSettings
+                  ? (typeof draft.registrationSettings === 'string' 
+                      ? JSON.parse(draft.registrationSettings) 
+                      : draft.registrationSettings)
+                  : prevFormData.registrationSettings,
+                starPointRewards: draft.starPointRewards
+                  ? (typeof draft.starPointRewards === 'string'
+                      ? JSON.parse(draft.starPointRewards)
+                      : draft.starPointRewards)
+                  : prevFormData.starPointRewards,
+              })
+              return merged
+            })
+
+            // Set other states
+            if (draft.isGrade !== undefined) {
+              setGradingEnabled(draft.isGrade)
+            }
+            if (draft.gradingSettings) {
+              try {
+                const gradingSettings = typeof draft.gradingSettings === 'string'
+                  ? JSON.parse(draft.gradingSettings)
+                  : draft.gradingSettings
+                if (gradingSettings?.criteria) {
+                  setGradingCriteria(gradingSettings.criteria)
         }
-        if (parsed.currentStep) {
-          setCurrentStep(parsed.currentStep)
+              } catch (e) {
+                console.error("Error parsing grading settings:", e)
+              }
+            }
+            if (draft.onlyTeacherCanRegister !== undefined) {
+              setOnlyTeacherCanRegister(draft.onlyTeacherCanRegister)
         }
-        // Load thumbnail preview if exists
-        if (parsed.formData?.thumbnail) {
-          setThumbnailPreview(parsed.formData.thumbnail)
+            if (draft.thumbnailUrl) {
+              setThumbnailPreview(draft.thumbnailUrl)
         }
-        toast.info("Đã khôi phục dữ liệu đã lưu tạm")
+
+            toast.success("Đã tải bản nháp thành công")
+          }
       } catch (error) {
         console.error("Error loading draft:", error)
+          toast.error("Không thể tải bản nháp")
+        } finally {
+          setIsLoadingDraft(false)
+      }
+      }
+
+      loadDraftFromAPI()
+    }
+    // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // Run once on mount
+
+  // Auto-save draft to API with debounce
+  const handleAutoSave = useRef(null)
+  
+  useEffect(() => {
+    // Clear previous timer
+    if (handleAutoSave.current) {
+      clearTimeout(handleAutoSave.current)
+    }
+    
+    // Set new timer for debounce (2 seconds)
+    handleAutoSave.current = setTimeout(async () => {
+      try {
+        const token = localStorage.getItem("token")
+        const draftDto = formDataToDraftDto()
+        
+        if (currentDraftId) {
+          // Update existing draft
+          await executeApiCall(
+            activityService.updateDraft.bind(activityService),
+            [currentDraftId, draftDto, token],
+            { setLoading: () => {}, setError: () => {} }
+          )
+          console.log("💾 Auto-updated draft:", currentDraftId)
+        } else {
+          // Create new draft only if form has some data
+          if (formData.title || formData.subType || formData.description) {
+            const response = await executeApiCall(
+              activityService.createDraft.bind(activityService),
+              [draftDto, token],
+              { setLoading: () => {}, setError: () => {} }
+            )
+            
+            if (response?.data?.data?.id) {
+              setCurrentDraftId(response.data.data.id)
+              console.log("💾 Auto-created draft:", response.data.data.id)
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error auto-saving draft:", error)
+        // Silent fail for auto-save
+      }
+    }, 2000) // Debounce 2 seconds
+
+    return () => {
+      if (handleAutoSave.current) {
+        clearTimeout(handleAutoSave.current)
       }
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Save to localStorage whenever formData changes (debounced)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const dataToSave = {
-        formData,
-        gradingEnabled,
-        gradingCriteria,
-        onlyTeacherCanRegister,
-        currentStep,
-      }
-      localStorage.setItem("createActivity_draft", JSON.stringify(dataToSave))
-    }, 1000) // Debounce 1 second
-
-    return () => clearTimeout(timer)
-  }, [formData, gradingEnabled, gradingCriteria, onlyTeacherCanRegister, currentStep])
+  }, [formData, gradingEnabled, gradingCriteria, onlyTeacherCanRegister, currentDraftId])
 
   const handleNext = () => {
     if (currentStep < 5) {
@@ -728,8 +1124,23 @@ export default function CreateActivity() {
       )
 
       if (response?.data) {
-        // Clear localStorage after successful submission
-        localStorage.removeItem("createActivity_draft")
+        // Delete draft if exists
+        if (currentDraftId) {
+          try {
+            const token = localStorage.getItem("token")
+            await executeApiCall(
+              activityService.deleteDraft.bind(activityService),
+              [currentDraftId, token],
+              { setLoading: () => {}, setError: () => {} }
+            )
+          } catch (error) {
+            console.error("Error deleting draft:", error)
+            // Continue even if draft deletion fails
+          }
+        }
+        
+        // Clear all storage after successful submission
+        clearAllStorage()
         toast.success("Hoạt động mới đã được xuất bản thành công.")
         navigate("/admin/activities")
       }
@@ -741,8 +1152,47 @@ export default function CreateActivity() {
     }
   }
 
-  const handleSaveDraft = () => {
-    toast.info("Bạn có thể tiếp tục chỉnh sửa sau.")
+  // Clear all storage (prefilled data)
+  const clearAllStorage = () => {
+    try {
+      // Clear prefilled data from sessionStorage
+      sessionStorage.removeItem("prefilledActivityData")
+      console.log("🧹 Cleared session storage")
+    } catch (error) {
+      console.error("Error clearing storage:", error)
+    }
+  }
+
+  const handleSaveDraft = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const draftDto = formDataToDraftDto()
+      
+      if (currentDraftId) {
+        // Update existing draft
+        await executeApiCall(
+          activityService.updateDraft.bind(activityService),
+          [currentDraftId, draftDto, token],
+          { setLoading: setIsSubmitting, setError: () => {} }
+        )
+        toast.success("Đã cập nhật bản nháp thành công")
+      } else {
+        // Create new draft
+        const response = await executeApiCall(
+          activityService.createDraft.bind(activityService),
+          [draftDto, token],
+          { setLoading: setIsSubmitting, setError: () => {} }
+        )
+        
+        if (response?.data?.data?.id) {
+          setCurrentDraftId(response.data.data.id)
+          toast.success("Đã lưu bản nháp thành công. Bạn có thể tiếp tục chỉnh sửa sau.")
+        }
+      }
+    } catch (error) {
+      console.error("Error saving draft:", error)
+      toast.error("Không thể lưu bản nháp. Vui lòng thử lại.")
+    }
   }
 
   // File upload handlers
@@ -859,17 +1309,23 @@ export default function CreateActivity() {
       {/* Progress Steps */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center justify-between">
+          {/* Step Indicators */}
+          <div className="flex items-center justify-between mb-4">
             {steps.map((step, index) => (
               <div key={step.number} className="flex items-center flex-1">
                 <div
                   className="flex flex-col items-center flex-1 cursor-pointer"
-                  onClick={() => setCurrentStep(step.number)}
+                  onClick={() => {
+                    // Allow clicking on completed steps or current step
+                    if (currentStep >= step.number || currentStep === step.number) {
+                      setCurrentStep(step.number)
+                    }
+                  }}
                 >
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
                       currentStep === step.number
-                        ? "bg-blue-600 text-white scale-110"
+                        ? "bg-blue-600 text-white scale-110 shadow-lg"
                         : currentStep > step.number
                         ? "bg-blue-500 text-white hover:bg-blue-600"
                         : "bg-gray-200 text-gray-600 hover:bg-gray-300"
@@ -905,6 +1361,21 @@ export default function CreateActivity() {
                 )}
               </div>
             ))}
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div
+              className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+            />
+          </div>
+          
+          {/* Current Step Info */}
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-600">
+              Bước <span className="font-semibold text-blue-600">{currentStep}</span> / {steps.length}: {steps[currentStep - 1].title}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -1748,6 +2219,31 @@ export default function CreateActivity() {
           {/* Step 4: Rules */}
           {currentStep === 4 && (
             <div className="space-y-6">
+              {/* Template Checklist Info */}
+              {templateChecklist.length > 0 && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <Label className="text-base font-semibold text-purple-900 mb-2">
+                        Checklist từ mẫu đã được áp dụng:
+                      </Label>
+                      <ul className="space-y-1">
+                        {templateChecklist.map((item, index) => (
+                          <li key={index} className="flex items-start gap-2 text-sm text-purple-800">
+                            <span className="text-purple-600 mt-0.5">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-xs text-purple-700 mt-2">
+                        Bạn có thể chỉnh sửa hoặc thêm quy định mới bên dưới.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <Label htmlFor="maxParticipants">Số người tham gia tối đa</Label>
                 <Input

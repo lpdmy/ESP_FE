@@ -25,6 +25,7 @@ import {
   Eye,
   Edit,
   Trash2,
+  Copy,
   Sparkles,
   Calendar,
   Users,
@@ -1184,17 +1185,29 @@ export default function ActivityManagement() {
                                 </Link>
                                 </Button>
                               </Tooltip>
-                            <Tooltip content="Giám khảo">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                asChild
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Link to={ROUTES.JURY.ASSIGN_JURY.replace(':id', String(activity.id))}>
-                                  <Trophy className="w-4 h-4 text-yellow-500" />
-                                </Link>
-                              </Button>
+                            <Tooltip content={activity.subType === "CreativeContest" ? "Giám khảo" : "Chỉ cuộc thi sáng tạo mới có giám khảo"}>
+                              {activity.subType === "CreativeContest" ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  asChild
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Link to={ROUTES.JURY.ASSIGN_JURY.replace(':id', String(activity.id))}>
+                                    <Trophy className="w-4 h-4 text-yellow-500" />
+                                  </Link>
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled
+                                  className="opacity-50 cursor-not-allowed"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Trophy className="w-4 h-4 text-gray-400" />
+                                </Button>
+                              )}
                             </Tooltip>
                             {isActivityLocked(activity) ? (
                               <Tooltip content="Hoạt động đang diễn ra/đã kết thúc - không thể chỉnh sửa">
@@ -1224,6 +1237,30 @@ export default function ActivityManagement() {
                                 </Button>
                               </Tooltip>
                             )}
+                            <Tooltip content="Nhân bản hoạt động">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={async (e) => {
+                                  e.stopPropagation()
+                                  try {
+                                    const token = localStorage.getItem("token")
+                                    await executeApiCall(
+                                      activityService.duplicateActivity.bind(activityService),
+                                      [activity.id, token],
+                                      { setLoading: () => {}, setError: () => {} }
+                                    )
+                                    toast.success("Đã nhân bản hoạt động thành công")
+                                    fetchActivities()
+                                  } catch (error) {
+                                    console.error("Error duplicating activity:", error)
+                                    toast.error("Không thể nhân bản hoạt động")
+                                  }
+                                }}
+                              >
+                                <Copy className="w-4 h-4 text-blue-500" />
+                              </Button>
+                            </Tooltip>
                             <Tooltip content="Xóa sự kiện">
                               <Button
                                 variant="ghost"
