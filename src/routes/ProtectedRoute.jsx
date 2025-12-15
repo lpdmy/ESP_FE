@@ -20,28 +20,42 @@ const ProtectedRoute = ({ allowedRoles = [], requiredPermissions = [] }) => {
   }
   
   const { role, permissions } = user;
+  // Chuẩn hóa role để hỗ trợ cả dạng number và string từ BE
+  const roleValue = typeof role === "string" ? role.toUpperCase() : role;
+  const isAdminRole = roleValue === ROLE.ADMIN || roleValue === "ADMIN";
+  const isTeacherRole = roleValue === ROLE.TEACHER || roleValue === "TEACHER";
+  const isStaffRole = roleValue === ROLE.STAFF || roleValue === "STAFF";
 
-  // Admin không truy cập home/search landing
-  if (role === ROLE.ADMIN && (location.pathname === "/" || location.pathname === "/search")) {
+  const isAdminRoute =
+    location.pathname.startsWith("/admin") ||
+    allowedRoles.includes(ROLE.ADMIN) ||
+    allowedRoles.includes("ADMIN");
+
+  // Chặn admin đi vào các trang thường (không dành cho admin)
+  if (isAdminRole && !isAdminRoute) {
     return <Navigate to="/admin" replace />;
   }
-  
-  // Admin luôn có quyền truy cập (bypass allowedRoles check)
-  if (role === ROLE.ADMIN) {
+
+  // Admin được phép truy cập các route dành cho admin hoặc được chỉ định rõ
+  if (isAdminRole) {
     return <Outlet />;
   }
   
   // Kiểm tra allowedRoles sau khi đã check ADMIN
-  if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+  if (
+    allowedRoles.length > 0 &&
+    !allowedRoles.includes(roleValue) &&
+    !allowedRoles.map((r) => (typeof r === "string" ? r.toUpperCase() : r)).includes(roleValue)
+  ) {
     return <Navigate to="/" replace />;
   }
 
   // Teacher có quyền truy cập mà không cần permission (theo BE: Teacher,Staff,Admin)
-  if (role === ROLE.TEACHER) {
+  if (isTeacherRole) {
     return <Outlet />;
   }
 
-  if (role === ROLE.STAFF && requiredPermissions.length > 0) {
+  if (isStaffRole && requiredPermissions.length > 0) {
     const hasPermission = requiredPermissions.some((perm) =>
       permissions?.includes(perm)
     );
