@@ -302,16 +302,6 @@ export default function PostCard({
                   <>
                     <DropdownMenuItem
                       onClick={() => {
-                        onEdit();
-                        setIsDropdownOpen(false);
-                      }}
-                      className="flex items-center space-x-2 text-blue-600 hover:bg-blue-50 cursor-pointer"
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span>Chỉnh sửa bài đăng</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
                         onDelete();
                         setIsDropdownOpen(false);
                       }}
