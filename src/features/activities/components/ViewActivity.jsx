@@ -564,7 +564,7 @@ function SportFilterSelect({
 }
 
 export default function ViewActivity() {
-  const {getSubmissionRank} = useSubmissionApi()
+  const { getSubmissionRank } = useSubmissionApi();
   const params = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -631,7 +631,7 @@ export default function ViewActivity() {
       status: "Chưa hoàn thành",
     },
   ];
-  
+
   // Helper function để convert category và subType sang tiếng Việt
   const getCategoryLabel = useCallback((category) => {
     if (category === "Activity") return "Hoạt động";
@@ -670,7 +670,7 @@ export default function ViewActivity() {
     memberIds: [],
     leaderId: null,
   });
-  const [ranking, setRanking] = useState([])
+  const [ranking, setRanking] = useState([]);
   const [groupSubmitting, setGroupSubmitting] = useState(false);
   const [selectedSportId, setSelectedSportId] = useState(null);
   const [selectedSportMembers, setSelectedSportMembers] = useState([]);
@@ -753,14 +753,13 @@ export default function ViewActivity() {
     }
     return settings;
   };
-const handleFetchSubmissionRank = async () =>{
- try{
-    const response = await getSubmissionRank(params.id)
-    setRanking(response.data)
-    console.log(response.data)
- }catch(err){
- }
-}
+  const handleFetchSubmissionRank = async () => {
+    try {
+      const response = await getSubmissionRank(params.id);
+      setRanking(response.data);
+      console.log(response.data);
+    } catch (err) {}
+  };
   // Helper function to get group settings with defaults
   const getGroupSettings = (registrationSettings) => {
     const parsed = parseRegistrationSettings(registrationSettings);
@@ -908,9 +907,9 @@ const handleFetchSubmissionRank = async () =>{
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [dropdownOpen]);
-  useEffect(()=>{
-    handleFetchSubmissionRank()
-  },[params])
+  useEffect(() => {
+    handleFetchSubmissionRank();
+  }, [params]);
   const fetchActivity = useCallback(async () => {
     if (!params.id) {
       setError("Không tìm thấy hoạt động để hiển thị");
@@ -939,11 +938,11 @@ const handleFetchSubmissionRank = async () =>{
         setLoading(false);
         return;
       }
-      console.log(activityData)
+      console.log(activityData);
       const nowUTC = new Date();
       // Convert now sang VN time để so sánh
       const nowVN = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000);
-      
+
       // Helper để parse date string từ API
       // API trả về date string đã là VN time rồi, parse trực tiếp (không convert thêm)
       const parseDateFromAPI = (dateStr) => {
@@ -952,7 +951,7 @@ const handleFetchSubmissionRank = async () =>{
         const date = new Date(dateStr);
         return isNaN(date.getTime()) ? null : date;
       };
-      
+
       // Parse dates từ API (đã là VN time rồi, không cần convert thêm)
       const startDateVN = parseDateFromAPI(activityData.startDate);
       const endDateVN = parseDateFromAPI(activityData.endDate);
@@ -965,7 +964,11 @@ const handleFetchSubmissionRank = async () =>{
           status = "Đang diễn ra";
         } else if (nowVN > endDateVN) {
           status = "Đã kết thúc";
-        } else if (registerDateVN && nowVN >= registerDateVN && nowVN < startDateVN) {
+        } else if (
+          registerDateVN &&
+          nowVN >= registerDateVN &&
+          nowVN < startDateVN
+        ) {
           status = "Sắp tới";
         }
       }
@@ -1864,13 +1867,13 @@ const handleFetchSubmissionRank = async () =>{
   // Ví dụ: "2025-12-15T00:00:00" → parse như local time (VN time)
   const parseDateFromAPI = useCallback((dateStr) => {
     if (!dateStr) return null;
-    
+
     // API trả về date string không có timezone, nhưng đã là VN time rồi
     // Parse như local time (không thêm 'Z' vì không phải UTC)
     // Ví dụ: "2025-12-15T00:00:00" → parse như local timezone (VN)
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) {
-      console.error('❌ Invalid date string in parseDateFromAPI:', dateStr);
+      console.error("❌ Invalid date string in parseDateFromAPI:", dateStr);
       return null;
     }
     return date;
@@ -1884,19 +1887,23 @@ const handleFetchSubmissionRank = async () =>{
       console.log("🟢 isRegistrationOpen: true (không có endRegisterDate)");
       return true; // Nếu không có end date, cho phép đăng ký
     }
-    
+
     const nowUTC = new Date();
     const nowVN = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000); // Convert now sang VN time
-    
+
     // API trả về date string đã là VN time rồi, parse trực tiếp (không convert thêm)
-    const registerDateVN = activity?.registerDate ? parseDateFromAPI(activity.registerDate) : null;
+    const registerDateVN = activity?.registerDate
+      ? parseDateFromAPI(activity.registerDate)
+      : null;
     const endRegisterDateVN = parseDateFromAPI(activity.endRegisterDate);
-    
+
     if (!endRegisterDateVN) {
-      console.log("🟢 isRegistrationOpen: true (không parse được endRegisterDate)");
+      console.log(
+        "🟢 isRegistrationOpen: true (không parse được endRegisterDate)"
+      );
       return true;
     }
-    
+
     console.log("🟢 isRegistrationOpen - Debug:", {
       nowUTC: nowUTC.toISOString(),
       nowVN: nowVN.toISOString(),
@@ -1908,24 +1915,28 @@ const handleFetchSubmissionRank = async () =>{
       endRegisterDateVN: endRegisterDateVN.toISOString(),
       endRegisterDateVNLocal: endRegisterDateVN.toString(),
     });
-    
+
     // Nếu có registerDate, phải >= registerDate (so sánh trong VN time)
     if (registerDateVN && nowVN < registerDateVN) {
-      console.log("🟢 isRegistrationOpen: false (chưa đến ngày bắt đầu đăng ký)", {
-        nowVN: nowVN.toISOString(),
-        registerDateVN: registerDateVN.toISOString(),
-        diff: registerDateVN.getTime() - nowVN.getTime(),
-      });
+      console.log(
+        "🟢 isRegistrationOpen: false (chưa đến ngày bắt đầu đăng ký)",
+        {
+          nowVN: nowVN.toISOString(),
+          registerDateVN: registerDateVN.toISOString(),
+          diff: registerDateVN.getTime() - nowVN.getTime(),
+        }
+      );
       return false;
     }
-    
+
     // Phải <= endRegisterDate (so sánh trong VN time)
     const isOpen = nowVN <= endRegisterDateVN;
     console.log("🟢 isRegistrationOpen:", isOpen, {
       nowVN: nowVN.toISOString(),
       endRegisterDateVN: endRegisterDateVN.toISOString(),
       diff: endRegisterDateVN.getTime() - nowVN.getTime(),
-      diffHours: (endRegisterDateVN.getTime() - nowVN.getTime()) / (1000 * 60 * 60),
+      diffHours:
+        (endRegisterDateVN.getTime() - nowVN.getTime()) / (1000 * 60 * 60),
     });
     return isOpen;
   }, [activity?.registerDate, activity?.endRegisterDate, parseDateFromAPI]);
@@ -1944,11 +1955,11 @@ const handleFetchSubmissionRank = async () =>{
     }
     const nowUTC = new Date();
     const nowVN = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000); // Convert now sang VN time
-    
+
     // API trả về date string đã là VN time rồi, parse trực tiếp (không convert thêm)
     const endRegisterDateVN = parseDateFromAPI(activity.endRegisterDate);
     if (!endRegisterDateVN) return false;
-    
+
     // Có thể hủy nếu hiện tại <= endRegisterDate (so sánh trong VN time)
     const canCancel = nowVN <= endRegisterDateVN;
     console.log("🔵 canCancelRegistration:", canCancel, {
@@ -2594,7 +2605,7 @@ const handleFetchSubmissionRank = async () =>{
     if (!isRegistrationOpen) {
       return false;
     }
-    
+
     if (!currentUser?.role || !activity) return true; // Default allow if no role info
     const userRole = currentUser.role.toLowerCase();
     const isTeacher = userRole === "teacher" || userRole === "admin";
@@ -2974,14 +2985,20 @@ const handleFetchSubmissionRank = async () =>{
                               <p className="font-semibold text-sm">
                                 {activity.currentParticipants}/
                               </p>
-                              {activity.maxParticipants && activity.maxParticipants > 0 ? (
+                              {activity.maxParticipants &&
+                              activity.maxParticipants > 0 ? (
                                 <p className="font-semibold text-sm">
                                   {activity.maxParticipants}
                                 </p>
                               ) : (
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
+                                <Badge
+                                  variant="outline"
+                                  className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1"
+                                >
                                   <Users className="w-3 h-3" />
-                                  <span className="font-semibold">Không giới hạn</span>
+                                  <span className="font-semibold">
+                                    Không giới hạn
+                                  </span>
                                 </Badge>
                               )}
                             </div>
@@ -3047,17 +3064,24 @@ const handleFetchSubmissionRank = async () =>{
                     <div className="text-center">
                       <div className="text-3xl font-bold text-orange-600 mb-1 flex items-center justify-center gap-1">
                         <span>{activity.currentParticipants}/</span>
-                        {activity.maxParticipants && activity.maxParticipants > 0 ? (
+                        {activity.maxParticipants &&
+                        activity.maxParticipants > 0 ? (
                           <span>{activity.maxParticipants}</span>
                         ) : (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-2xl px-2 py-1 flex items-center gap-1">
+                          <Badge
+                            variant="outline"
+                            className="bg-green-50 text-green-700 border-green-200 text-2xl px-2 py-1 flex items-center gap-1"
+                          >
                             <Infinity className="w-5 h-5" />
-                            <span className="font-semibold">Không giới hạn</span>
+                            <span className="font-semibold">
+                              Không giới hạn
+                            </span>
                           </Badge>
                         )}
                       </div>
                       <p className="text-sm text-gray-600">Người tham gia</p>
-                      {activity.maxParticipants && activity.maxParticipants > 0 ? (
+                      {activity.maxParticipants &&
+                      activity.maxParticipants > 0 ? (
                         <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
                           <div
                             className="bg-orange-500 h-2 rounded-full"
@@ -4379,9 +4403,9 @@ const handleFetchSubmissionRank = async () =>{
                               <p className="font-semibold">
                                 {participant.fullName}
                               </p>
-                              <p className="text-sm text-gray-600">
+                              {/* <p className="text-sm text-gray-600">
                                 {participant.className || "Chờ kết quả"}
-                              </p>
+                              </p> */}
                               {participant.groupCode && (
                                 <p className="text-xs text-orange-600">
                                   Nhóm:{" "}
@@ -4763,47 +4787,49 @@ const handleFetchSubmissionRank = async () =>{
                   </div>
                 </CardContent>
               </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Bảng xếp hạng</CardTitle>
-                </CardHeader>
+              {}
+              {activity.subType === "CreativeContest" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Bảng xếp hạng</CardTitle>
+                  </CardHeader>
 
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-20">Hạng</TableHead>
-                        <TableHead>Học sinh</TableHead>
-                        <TableHead className="text-right">Điểm</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-20">Hạng</TableHead>
+                          <TableHead>Học sinh</TableHead>
+                          <TableHead className="text-right">Điểm</TableHead>
+                        </TableRow>
+                      </TableHeader>
 
-                    <TableBody>
-                      {ranking.map((item, index) => (
-  <TableRow
-    key={item.id}
-    className={index < 3 ? "bg-orange-50" : ""}
-  >
-    <TableCell className="font-semibold">
-      #{index + 1}
-    </TableCell>
+                      <TableBody>
+                        {ranking.map((item, index) => (
+                          <TableRow
+                            key={item.id}
+                            className={index < 3 ? "bg-orange-50" : ""}
+                          >
+                            <TableCell className="font-semibold">
+                              #{index + 1}
+                            </TableCell>
 
-    <TableCell>
-      <div className="flex items-center gap-2">
-        <span>{item.userFullName}</span>
-      </div>
-    </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span>{item.userFullName}</span>
+                              </div>
+                            </TableCell>
 
-    <TableCell className="text-right font-bold text-orange-600">
-      {item.score.toFixed(2)}
-    </TableCell>
-  </TableRow>
-))}
-
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+                            <TableCell className="text-right font-bold text-orange-600">
+                              {item.score.toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </div>
