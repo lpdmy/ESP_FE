@@ -1216,7 +1216,7 @@ export default function ActivityRegisterForm() {
     setShowConfirmModal(false)
       return
     }
-
+   const currentParticipants = activity.numberOfParticipants || 0
     setShowConfirmModal(false)
 
     const token = localStorage.getItem("token")
