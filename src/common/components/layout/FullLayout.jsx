@@ -6,7 +6,8 @@ import { ROLE } from "@/common/constants/roles";
 
 export default function FullLayout({ children }) {
   const user = useSelector((state) => state.user.user);
-  const isStudent = user?.role === ROLE.STUDENT;
+  const roleValue = typeof user?.role === "string" ? user.role.toUpperCase() : user?.role;
+  const isStudent = roleValue === ROLE.STUDENT || roleValue === "STUDENT";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">

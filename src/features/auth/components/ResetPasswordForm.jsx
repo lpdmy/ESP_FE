@@ -91,7 +91,8 @@ export default function ResetPasswordForm() {
                 initGlobalNotification(resultUser?.data.id);
                 
                 dispatch(setUser(resultUser?.data));
-                if (resultUser?.data.role == ROLE.ADMIN) {
+                const roleValue = typeof resultUser?.data.role === "string" ? resultUser.data.role.toUpperCase() : resultUser?.data.role;
+                if (roleValue === ROLE.ADMIN || roleValue === "ADMIN") {
                     navigate(ROUTES.ADMIN.USER_MANAGEMENT);
                 } else {
                     navigate(ROUTES.LANDING.HOME);

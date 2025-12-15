@@ -371,12 +371,12 @@ export default function ClubDetail() {
                   </div>
                 </CardContent>
               </Card>
-              {(user?.role === 2 && clubDetail.isMentorInvite) ||
-              (user?.role === 4 && !isJoined) ? (
+              {((user?.role === 2 || user?.role === "TEACHER") && clubDetail.isMentorInvite) ||
+              ((user?.role === 4 || user?.role === "STUDENT") && !isJoined) ? (
                 <Card className="glass sticky bottom-6 !bg-white">
                   <CardContent>
                     <div className="flex flex-col gap-2">
-                      {user?.role === 2 && clubDetail.isMentorInvite ? (
+                      {(user?.role === 2 || user?.role === "TEACHER") && clubDetail.isMentorInvite ? (
                         <Button
                           className="w-full bg-orange-400 hover:bg-orange-600 text-white flex items-center gap-2"
                           onClick={handleAcceptMentorInvite}
