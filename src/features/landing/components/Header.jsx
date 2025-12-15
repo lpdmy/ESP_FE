@@ -21,6 +21,8 @@ export default function Header() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.user.user);
+  const roleValue = typeof user?.role === "string" ? user.role.toUpperCase() : user?.role;
+  const isTeacher = roleValue === ROLE.TEACHER || roleValue === "TEACHER";
   const { isOpen, openMenu, closeMenu, toggleMenu } = useDropdownMenu(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationCount = useSelector(state => state.notifications.count);
@@ -34,7 +36,7 @@ export default function Header() {
   };
 
   const getProfileRoute = () => {
-    if (user?.role === ROLE.TEACHER) {
+    if (isTeacher) {
       return ROUTES.USER_PROFILE.TEACHER_PROFILE;
     }
     return ROUTES.USER_PROFILE.PROFILE;

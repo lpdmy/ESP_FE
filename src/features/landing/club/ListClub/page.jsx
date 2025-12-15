@@ -31,7 +31,10 @@ export default function ClubList() {
   const allCategories = [{ id: 0, name: "Tất cả" }, ...clubCategory];
   const toast = useToast();
   const user = useSelector((state) => state.user.user);
-  const userRole = user?.role;
+  // Chuẩn hóa role để hỗ trợ cả dạng number và string
+  const roleValue = typeof user?.role === "string" ? user.role.toUpperCase() : user?.role;
+  const isStudent = roleValue === 4 || roleValue === "STUDENT";
+  const isTeacher = roleValue === 2 || roleValue === "TEACHER";
   const handleCategoryClick = (name) => {
     setSelectedCategory(name);
   };
@@ -112,7 +115,7 @@ export default function ClubList() {
                 Khám phá và tham gia các câu lạc bộ phù hợp với sở thích của bạn
               </p>
             </div>
-            {userRole === 4 && (
+            {isStudent && (
               <a href="/club/create-club-creation">
                 <Button className="btn-primary flex items-center gap-2">
                   <Plus className="w-4 h-4" />
@@ -120,7 +123,7 @@ export default function ClubList() {
                 </Button>
               </a>
             )}
-            {userRole === 2 && (
+            {isTeacher && (
                 <Button className="btn-primary flex items-center gap-2"
                 onClick={() => setIsModalOpen(true)}
                 >

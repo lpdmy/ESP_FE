@@ -20,16 +20,28 @@ const ProtectedRoute = ({ allowedRoles = [], requiredPermissions = [] }) => {
   }
   
   const { role, permissions } = user;
-  // Chuẩn hóa role để hỗ trợ cả dạng number và string từ BE
-  const roleValue = typeof role === "string" ? role.toUpperCase() : role;
-  const isAdminRole = roleValue === ROLE.ADMIN || roleValue === "ADMIN";
-  const isTeacherRole = roleValue === ROLE.TEACHER || roleValue === "TEACHER";
-  const isStaffRole = roleValue === ROLE.STAFF || roleValue === "STAFF";
+
+  // Chuẩn hóa role: hỗ trợ cả dạng number và string, so sánh bằng key
+  const ROLE_KEY = {
+    [ROLE.ADMIN]: "ADMIN",
+    [ROLE.STAFF]: "STAFF",
+    [ROLE.TEACHER]: "TEACHER",
+    [ROLE.STUDENT]: "STUDENT",
+  };
+  const toRoleKey = (val) => {
+    if (typeof val === "string") return val.toUpperCase();
+    return ROLE_KEY[val] ?? val;
+  };
+
+  const roleKey = toRoleKey(role);
+  const allowedRoleKeys = allowedRoles.map(toRoleKey);
+
+  const isAdminRole = roleKey === "ADMIN";
+  const isTeacherRole = roleKey === "TEACHER";
+  const isStaffRole = roleKey === "STAFF";
 
   const isAdminRoute =
-    location.pathname.startsWith("/admin") ||
-    allowedRoles.includes(ROLE.ADMIN) ||
-    allowedRoles.includes("ADMIN");
+    location.pathname.startsWith("/admin") || allowedRoleKeys.includes("ADMIN");
 
   // Chặn admin đi vào các trang thường (không dành cho admin)
   if (isAdminRole && !isAdminRoute) {
@@ -42,11 +54,7 @@ const ProtectedRoute = ({ allowedRoles = [], requiredPermissions = [] }) => {
   }
   
   // Kiểm tra allowedRoles sau khi đã check ADMIN
-  if (
-    allowedRoles.length > 0 &&
-    !allowedRoles.includes(roleValue) &&
-    !allowedRoles.map((r) => (typeof r === "string" ? r.toUpperCase() : r)).includes(roleValue)
-  ) {
+  if (allowedRoles.length > 0 && !allowedRoleKeys.includes(roleKey)) {
     return <Navigate to="/" replace />;
   }
 

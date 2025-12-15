@@ -66,10 +66,11 @@ const PERMISSION_ROUTE_MAP = {
         const resp = await starPointService.getUserPoints(resultUser?.data.id);
         dispatch(setPoints(resp.data.points ?? 0));
         initGlobalNotification(resultUser?.data.id, dispatch);
-        if (resultUser?.data.role === ROLE.ADMIN) {
+        const roleValue = typeof resultUser?.data.role === "string" ? resultUser.data.role.toUpperCase() : resultUser?.data.role;
+        if (roleValue === ROLE.ADMIN || roleValue === "ADMIN") {
         navigate(ROUTES.ADMIN.MAIN);
       } 
-      else if (resultUser?.data.role === ROLE.STAFF) {
+      else if (roleValue === ROLE.STAFF || roleValue === "STAFF") {
         const userPermissions = decoded.Permission || [];
         const firstAllowedRoute = Object.entries(PERMISSION_ROUTE_MAP).find(
           ([perm]) => userPermissions.includes(perm)
@@ -80,7 +81,7 @@ const PERMISSION_ROUTE_MAP = {
           navigate(ROUTES.ADMIN.MAIN);
         }
       } 
-      else if (resultUser?.data.role === ROLE.TEACHER) {
+      else if (roleValue === ROLE.TEACHER || roleValue === "TEACHER") {
         navigate("/my-classes");
       }
       else {
