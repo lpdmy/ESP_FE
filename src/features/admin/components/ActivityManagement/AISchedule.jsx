@@ -8,6 +8,13 @@ import { Textarea } from "@/common/components/ui/textarea"
 import { Badge } from "@/common/components/ui/badge"
 import { Checkbox } from "@/common/components/ui/checkbox"
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/common/components/ui/dialog"
+import {
   ArrowLeft,
   Sparkles,
   Calendar,
@@ -40,7 +47,7 @@ import { BracketTree } from "./BracketTree"
 
 // Viewer riêng cho bracket chính thức, được memo hóa để tránh re-render không cần thiết
 const OfficialBracketViewer = memo(
-  ({ matches, official, onMatchClick }) => {
+  ({ matches, official, onMatchClick, getClassNameById }) => {
     if (!matches || !matches.length) {
       return (
         <div className="flex flex-col items-center justify-center h-64 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
@@ -69,7 +76,7 @@ const OfficialBracketViewer = memo(
           velocityAnimation={{ animationTime: 0 }}
         >
           {({ zoomIn, zoomOut, resetTransform, centerView }) => (
-            <>
+            <div className="relative w-full h-full">
               <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 bg-white shadow-md border border-slate-200 rounded-lg p-1.5">
                 <Button size="icon" variant="ghost" onClick={() => zoomIn(0.12)}>
                   <Plus className="w-4 h-4" />
@@ -95,16 +102,20 @@ const OfficialBracketViewer = memo(
                 contentStyle={{
                   width: "100%",
                   height: "100%",
-                  willChange: "transform",
-                  transformOrigin: "center center",
-                  backfaceVisibility: "hidden",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "24px",
                 }}
               >
-                <div className="min-w-[100vw] min-h-[100vh] flex items-center justify-center p-20">
-                  <BracketTree matches={matches} official={official} onMatchClick={onMatchClick} />
-                </div>
+                <BracketTree
+                  matches={matches}
+                  official={official}
+                  onMatchClick={onMatchClick}
+                  getClassNameById={getClassNameById}
+                />
               </TransformComponent>
-            </>
+            </div>
           )}
         </TransformWrapper>
       </div>
@@ -121,7 +132,7 @@ export default function AISchedule() {
   const [loading, setLoading] = useState(false)
   const [classGroups, setClassGroups] = useState([])
   const [loadingClasses, setLoadingClasses] = useState(false)
-  const [viewMode, setViewMode] = useState("list") // "list" or "bracket"
+  const [aiViewMode, setAiViewMode] = useState("list") // "list" or "bracket" for AI output
   const [isFormCollapsed, setIsFormCollapsed] = useState(false) // Collapse form when schedule is generated
   const [editedMatches, setEditedMatches] = useState({})
   const [isApplyingSchedule, setIsApplyingSchedule] = useState(false)
@@ -131,7 +142,11 @@ export default function AISchedule() {
   const [matchResults, setMatchResults] = useState({})
   const [officialViewCollapsed, setOfficialViewCollapsed] = useState(false)
   const [selectedBracketMatch, setSelectedBracketMatch] = useState(null) // match được click trong cây
-  const [activeTab, setActiveTab] = useState("generator") // "generator" | "manager"
+  // Main tabs: ai-output (AI proposals) vs official match management
+  const [activeTab, setActiveTab] = useState("ai") // "ai" | "match"
+  const [officialViewMode, setOfficialViewMode] = useState("bracket") // "bracket" | "list" for official tab
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [pendingPayload, setPendingPayload] = useState(null)
   const handleBracketMatchClick = useCallback((match) => setSelectedBracketMatch(match), [])
 
   const [formData, setFormData] = useState({
@@ -158,8 +173,26 @@ export default function AISchedule() {
 
   const memoizedOfficialMatches = useMemo(() => {
     if (!officialBracket?.rounds?.length) return []
-    return officialBracket.rounds.flatMap((round) => round.matches)
+    // Lấy toàn bộ matches của bracket chính thức (full bracket)
+    return officialBracket.rounds.flatMap((round) => round.matches || [])
   }, [officialBracket])
+
+  const officialRounds = useMemo(() => officialBracket?.rounds || [], [officialBracket])
+
+  const resolveClassName = useCallback(
+    (id) => {
+      if (!id || !classGroups?.length) return null
+      const cg = classGroups.find((c) => {
+        const cid = typeof c.id === "number" ? c.id : parseInt(c.id)
+        return cid === id
+      })
+      if (!cg) return null
+      const grade = cg.grade ? `${cg.grade}` : ""
+      const name = cg.name || ""
+      return grade && name ? `${grade}${name}` : name || null
+    },
+    [classGroups]
+  )
 
   const normalizeDateString = (dateStr) => {
     if (!dateStr) return ""
@@ -175,6 +208,26 @@ export default function AISchedule() {
     return `${hours}:${minutes}`
   }
 
+  // Cộng thêm duration (ví dụ formData.matchDuration) vào một giờ HH:mm
+  const addDurationToTime = (timeStr, durationStr) => {
+    const base = normalizeTimeString(timeStr || "00:00")
+    const duration = normalizeTimeString(durationStr || "00:00")
+
+    const [h1, m1] = base.split(":").map((v) => parseInt(v || "0", 10))
+    const [h2, m2] = duration.split(":").map((v) => parseInt(v || "0", 10))
+
+    if (Number.isNaN(h1) || Number.isNaN(m1) || Number.isNaN(h2) || Number.isNaN(m2)) {
+      // Fallback an toàn
+      return base
+    }
+
+    const totalMinutes = h1 * 60 + m1 + h2 * 60 + m2
+    const outH = Math.floor(totalMinutes / 60) % 24
+    const outM = totalMinutes % 60
+
+    return `${outH.toString().padStart(2, "0")}:${outM.toString().padStart(2, "0")}`
+  }
+
   const toBackendTimeSpan = (timeStr) => {
     if (!timeStr) return null
     return `${normalizeTimeString(timeStr)}:00`
@@ -184,10 +237,20 @@ export default function AISchedule() {
     (matches = []) => {
       const map = {}
       matches.forEach((match) => {
+        const baseStartTime =
+          normalizeTimeString(match.startTime) ||
+          normalizeTimeString(formData.preferredStartTime) ||
+          "08:00"
+
+        const baseEndTime =
+          normalizeTimeString(match.endTime) ||
+          addDurationToTime(baseStartTime, formData.matchDuration) ||
+          "09:00"
+
         map[match.matchNumber] = {
           matchDate: normalizeDateString(match.matchDate) || formData.startDate || "",
-          startTime: normalizeTimeString(match.startTime) || formData.preferredStartTime || "08:00",
-          endTime: normalizeTimeString(match.endTime) || normalizeTimeString(formData.matchDuration) || "09:00",
+          startTime: baseStartTime,
+          endTime: baseEndTime,
           location: match.location || formData.availableLocations[0] || "",
         }
       })
@@ -320,7 +383,7 @@ export default function AISchedule() {
   // Nếu đã có officialBracket mà chưa có generatedSchedule, ưu tiên tab "Quản lý giải đấu"
   useEffect(() => {
     if (officialBracket?.rounds?.length && !generatedSchedule) {
-      setActiveTab("manager")
+      setActiveTab("match")
     }
   }, [officialBracket, generatedSchedule])
 
@@ -339,7 +402,7 @@ export default function AISchedule() {
     loadAcademicYear()
   }, [])
 
-  // Load class groups - chỉ lấy các lớp đã đăng ký tham gia activity
+  // Load class groups - chỉ lấy các lớp đã đăng ký tham gia activity (ưu tiên đúng niên khóa hiện tại)
   useEffect(() => {
     const loadClassGroups = async () => {
       if (!activity || !activity.participants || activity.participants.length === 0) {
@@ -351,7 +414,7 @@ export default function AISchedule() {
       setLoadingClasses(true)
       try {
         const token = localStorage.getItem("token")
-        
+
         // Lấy danh sách ClassGroupId duy nhất từ participants
         const registeredClassGroupIds = new Set()
         activity.participants.forEach(participant => {
@@ -367,14 +430,46 @@ export default function AISchedule() {
         }
 
         // Lấy thông tin đầy đủ của các lớp đã đăng ký
-        const allClassesResponse = await ClassGroupService.list({ pageNumber: 1, pageSize: 100 }, token)
-        const allClasses = allClassesResponse?.data?.data || allClassesResponse?.data || []
+        // pageSize được scale theo số lớp tham gia để hạn chế thiếu dữ liệu nhưng vẫn giữ hiệu năng
+        const pageSize = Math.max(registeredClassGroupIds.size, 50)
+        const allClassesResponse = await ClassGroupService.list(
+          { pageNumber: 1, pageSize },
+          token
+        )
+        let allClasses = allClassesResponse?.data?.data || allClassesResponse?.data || []
+
+        // Nếu backend trả về cấu trúc phân trang chuẩn, cố gắng lấy thêm trang khi cần
+        if (allClassesResponse?.data?.totalCount > allClasses.length) {
+          const total = allClassesResponse.data.totalCount
+          const pages = Math.ceil(total / pageSize)
+          const extraRequests = []
+          for (let page = 2; page <= pages; page++) {
+            extraRequests.push(
+              ClassGroupService.list({ pageNumber: page, pageSize }, token)
+            )
+          }
+
+          const extraResponses = await Promise.all(extraRequests)
+          extraResponses.forEach((res) => {
+            const items = res?.data?.data || res?.data || []
+            allClasses = allClasses.concat(items)
+          })
+        }
         
         // Lọc chỉ các lớp đã đăng ký
-        const registeredClasses = allClasses.filter(c => 
+        let registeredClasses = allClasses.filter(c => 
           !c.isDeleted && 
           registeredClassGroupIds.has(typeof c.id === 'number' ? c.id : parseInt(c.id))
         )
+
+        // Nếu đã có currentAcademicYear, chỉ giữ các lớp đúng niên khóa để tránh lỗi BE
+        if (currentAcademicYear?.id) {
+          registeredClasses = registeredClasses.filter(c => {
+            // backend có thể dùng academicYearId hoặc AcademicYearId
+            const academicYearId = c.academicYearId ?? c.AcademicYearId
+            return academicYearId == null || academicYearId === currentAcademicYear.id
+          })
+        }
         
         // Sort by grade first, then by name alphabetically
         const sorted = registeredClasses.sort((a, b) => {
@@ -777,7 +872,7 @@ export default function AISchedule() {
         matchDate,
         startTime: toBackendTimeSpan(overrides.startTime || match.startTime),
         endTime: toBackendTimeSpan(overrides.endTime || match.endTime),
-        location: overrides.location ?? match.location ?? "",
+        location: (overrides.location ?? match.location ?? "").trim(),
         status: match.status ?? 0,
         score1: match.score1 ?? 0,
         score2: match.score2 ?? 0,
@@ -804,17 +899,33 @@ export default function AISchedule() {
       return
     }
 
+    // Validate: tất cả trận phải có sân thi đấu rõ ràng để tránh lỗi trùng lịch ở BE
+    const invalidLocation = matchesPayload.find(
+      (m) => !m.location || m.location.trim().length === 0
+    )
+    if (invalidLocation) {
+      toast.error(
+        `Vui lòng nhập sân thi đấu cho tất cả trận (thiếu ở match #${invalidLocation.matchNumber})`
+      )
+      return
+    }
+
+    setPendingPayload({
+      matches: matchesPayload,
+      isPublished: publishSchedule,
+    })
+    setConfirmDialogOpen(true)
+  }
+
+  const doApplySchedule = async () => {
+    if (!pendingPayload) return
+    setConfirmDialogOpen(false)
     setIsApplyingSchedule(true)
     try {
       const token = localStorage.getItem("token")
-      const payload = {
-        isPublished: publishSchedule,
-        matches: matchesPayload,
-      }
-
       await executeApiCall(
         activityService.applyTournamentSchedule.bind(activityService),
-        [params.id, payload, token],
+        [params.id, pendingPayload, token],
         { setLoading: setIsApplyingSchedule }
       )
 
@@ -823,16 +934,28 @@ export default function AISchedule() {
       if (formData.sportId) {
         await fetchOfficialBracket(formData.sportId)
       }
-      setActiveTab("manager")
+      setActiveTab("match")
     } catch (error) {
-      const message =
-        error?.message ||
-        error?.error ||
-        error?.data?.message ||
-        "Có lỗi xảy ra khi áp dụng lịch thi đấu"
-      toast.error(message)
+      const status = error?.statusCode ?? error?.status ?? error?.response?.status
+      const conflictPayload =
+        error?.data?.data?.conflicts ||
+        error?.data?.conflicts ||
+        error?.response?.data?.data?.conflicts
+
+      if (status === 409 && Array.isArray(conflictPayload) && conflictPayload.length > 0) {
+        console.error("Schedule conflicts from backend:", conflictPayload)
+        toast.error("Phát hiện xung đột lịch thi đấu, vui lòng xem chi tiết và điều chỉnh.")
+      } else {
+        const message =
+          error?.message ||
+          error?.error ||
+          error?.data?.message ||
+          "Có lỗi xảy ra khi áp dụng lịch thi đấu"
+        toast.error(message)
+      }
     } finally {
       setIsApplyingSchedule(false)
+      setPendingPayload(null)
     }
   }
 
@@ -1461,30 +1584,30 @@ export default function AISchedule() {
       </div>
 
       {/* Tabs chế độ */}
-      <div className="mt-4 border-b flex gap-2">
+      <div className="mt-4 border-b flex gap-2 grade-primary classname-tab-control">
         <button
           className={`px-4 py-2 text-sm font-medium border-b-2 ${
-            activeTab === "generator"
+            activeTab === "ai"
               ? "border-blue-600 text-blue-600"
               : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
-          onClick={() => setActiveTab("generator")}
+          onClick={() => setActiveTab("ai")}
         >
-          Tạo lịch với AI
+          Kết quả AI
         </button>
         <button
           className={`px-4 py-2 text-sm font-medium border-b-2 ${
-            activeTab === "manager"
+            activeTab === "match"
               ? "border-blue-600 text-blue-600"
               : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
-          onClick={() => setActiveTab("manager")}
+          onClick={() => setActiveTab("match")}
         >
-          Quản lý giải đấu
+          Quản lý Trận đấu
         </button>
       </div>
 
-      {activeTab === "generator" ? (
+      {activeTab === "ai" ? (
         <div className="flex flex-col lg:flex-row gap-6 mt-4">
           {/* Input Form */}
           <div
@@ -1854,9 +1977,9 @@ export default function AISchedule() {
           </Card>
         </div>
 
-          {/* Generated Schedule / Official Schedule / Empty State */}
-          <div className="flex-1 space-y-6">
-          {generatedSchedule ? (
+          {/* Generated Schedule / Empty State (chỉ hiển thị AI generate, không show official ở tab này) */}
+        <div className="flex-1 space-y-6">
+        {generatedSchedule ? (
             <>
               {/* Stats */}
               <div className="grid grid-cols-2 gap-4">
@@ -1883,11 +2006,11 @@ export default function AISchedule() {
                     <CardTitle>Lịch thi đấu đã tạo</CardTitle>
                     <div className="flex gap-2">
                       {/* View Mode Toggle */}
-                      <div className="flex items-center gap-1 border rounded-md p-1 bg-gray-50">
+                      <div className="flex items-center gap-1 border rounded-md p-1 bg-gray-50 grade-secondary classname-view-toggle">
                         <Button
                           size="sm"
-                          variant={viewMode === "list" ? "default" : "ghost"}
-                          onClick={() => setViewMode("list")}
+                          variant={aiViewMode === "list" ? "default" : "ghost"}
+                          onClick={() => setAiViewMode("list")}
                           className="h-7 px-3"
                         >
                           <List className="w-4 h-4 mr-1" />
@@ -1895,8 +2018,8 @@ export default function AISchedule() {
                         </Button>
                         <Button
                           size="sm"
-                          variant={viewMode === "bracket" ? "default" : "ghost"}
-                          onClick={() => setViewMode("bracket")}
+                          variant={aiViewMode === "bracket" ? "default" : "ghost"}
+                          onClick={() => setAiViewMode("bracket")}
                           className="h-7 px-3"
                         >
                           <GitBranch className="w-4 h-4 mr-1" />
@@ -1922,14 +2045,15 @@ export default function AISchedule() {
                       ))}
                     </datalist>
                   )}
-                  {viewMode === "bracket" ? (
+                  {aiViewMode === "bracket" ? (
                     // Bracket View (preview từ lịch AI, không edit)
-                    <div className="py-4">
+                    <div className="py-4 grade-content classname-bracket-view">
                       {generatedSchedule?.rawData?.generatedMatches?.length ? (
                         <BracketTree
                           matches={generatedSchedule.rawData.generatedMatches}
                           official={null}
                           onMatchClick={() => {}}
+                          getClassNameById={resolveClassName}
                         />
                       ) : (
                         <p className="text-sm text-gray-500">
@@ -1983,6 +2107,7 @@ export default function AISchedule() {
                                     <div className="grid grid-cols-2 gap-2">
                                       <select
                                         className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white"
+                                        disabled
                                         value={
                                           editable.classGroup1Id ??
                                           event.classGroup1Id ??
@@ -2016,6 +2141,7 @@ export default function AISchedule() {
                                       </select>
                                       <select
                                         className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white"
+                                        disabled
                                         value={
                                           editable.classGroup2Id ??
                                           event.classGroup2Id ??
@@ -2186,11 +2312,8 @@ export default function AISchedule() {
                 </div>
               </div>
             </>
-          ) : officialBracket && formData.sportId ? (
-            // State B: Chỉ có lịch chính thức trong DB
-            <>{renderOfficialBracketCard()}</>
           ) : (
-            // State C: Empty state hoàn toàn
+            // Empty state hoàn toàn
             <Card className="h-full">
               <CardContent className="flex flex-col items-center justify-center h-full p-12 text-center">
                 <Sparkles className="w-16 h-16 text-gray-300 mb-4" />
@@ -2204,42 +2327,144 @@ export default function AISchedule() {
           </div>
         </div>
       ) : (
-        // Tab "Quản lý giải đấu" – full-screen bracket chính thức
+        // Tab "Quản lý Trận đấu" – dữ liệu chính thức trong DB
         <div className="mt-4">
           {officialBracket && formData.sportId ? (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Quản lý giải đấu (Sport #{formData.sportId})</CardTitle>
+                    <CardTitle>Quản lý Trận đấu (Sport #{formData.sportId})</CardTitle>
                     <p className="text-xs text-gray-500">
                       Tổng {officialBracket.totalMatches} trận • {officialBracket.totalRounds} vòng đấu
                     </p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 px-3"
-                    disabled={loadingOfficialBracket}
-                    onClick={() => fetchOfficialBracket(formData.sportId)}
-                  >
-                    <Download className="w-4 h-4 mr-1" />
-                    Tải lại
-                  </Button>
+                  <div className="flex items-center gap-2 grade-secondary classname-view-toggle">
+                    <Button
+                      size="sm"
+                      variant={officialViewMode === "list" ? "default" : "ghost"}
+                      className="h-8 px-3"
+                      onClick={() => setOfficialViewMode("list")}
+                    >
+                      <List className="w-4 h-4 mr-1" />
+                      Danh sách
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={officialViewMode === "bracket" ? "default" : "ghost"}
+                      className="h-8 px-3"
+                      onClick={() => setOfficialViewMode("bracket")}
+                    >
+                      <GitBranch className="w-4 h-4 mr-1" />
+                      Sơ đồ
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-3"
+                      disabled={loadingOfficialBracket}
+                      onClick={() => fetchOfficialBracket(formData.sportId)}
+                    >
+                      <Download className="w-4 h-4 mr-1" />
+                      Tải lại
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <OfficialBracketViewer
-                  matches={memoizedOfficialMatches}
-                  official={officialBracket}
-                  onMatchClick={handleBracketMatchClick}
-                />
+                {officialViewMode === "bracket" ? (
+                  <div className="grade-content classname-bracket-view">
+                    <OfficialBracketViewer
+                      matches={memoizedOfficialMatches}
+                      official={officialBracket}
+                      onMatchClick={handleBracketMatchClick}
+                      getClassNameById={resolveClassName}
+                    />
+                  </div>
+                ) : (
+                  <div className="p-4 space-y-4 grade-content classname-list-view">
+                    {officialRounds.map((round) => (
+                      <div key={round.round} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-sm text-gray-800">
+                            {round.roundName || `Vòng ${round.round}`}
+                          </h4>
+                          <span className="text-xs text-gray-500">{round.matches?.length || 0} trận</span>
+                        </div>
+                        <div className="space-y-2">
+                          {(round.matches || []).map((match) => (
+                            <div
+                              key={match.id || match.matchNumber}
+                              className="border border-gray-200 rounded-md p-3 bg-white grade-item classname-match-card"
+                            >
+                          <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant="outline" className="text-xs">
+                                    Trận #{match.matchNumber}
+                                  </Badge>
+                                  <span className="text-sm font-semibold text-gray-800">
+                                    {(resolveClassName(match.classGroup1Id) || match.classGroup1Name || "Chờ kết quả")}{" "}
+                                    vs{" "}
+                                    {(resolveClassName(match.classGroup2Id) || match.classGroup2Name || "Chờ kết quả")}
+                                  </span>
+                                </div>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 flex-shrink-0">
+                                  {match.matchDate && match.startTime && (
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      {new Date(match.matchDate).toLocaleDateString("vi-VN", {
+                                        day: "2-digit",
+                                        month: "2-digit",
+                                        year: "numeric",
+                                      })}
+                                      {" • "}
+                                      {match.startTime?.toString().slice(0, 5)}
+                                    </span>
+                                  )}
+                                  {match.location && (
+                                    <span className="flex items-center gap-1">
+                                      <MapPin className="w-3 h-3" />
+                                      {match.location}
+                                    </span>
+                                  )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-3"
+                                onClick={() => setSelectedBracketMatch(match)}
+                              >
+                                Cập nhật tỉ số
+                              </Button>
+                                </div>
+                              </div>
+                              <div className="mt-2 text-sm text-gray-700 flex items-center gap-2">
+                                {match.score1 != null && match.score2 != null ? (
+                                  <span className="font-semibold">
+                                    {match.score1} - {match.score2}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-gray-500">Chưa có kết quả</span>
+                                )}
+                                {match.status === 2 && (
+                                  <Badge className="bg-green-100 text-green-700">Đã kết thúc</Badge>
+                                )}
+                                {match.status === 1 && (
+                                  <Badge className="bg-blue-100 text-blue-700">Đang diễn ra</Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ) : (
             <Card className="mt-4">
               <CardContent className="p-6 text-center text-sm text-gray-500">
-                Chưa có lịch thi đấu chính thức. Hãy tạo lịch và áp dụng ở tab "Tạo lịch với AI".
+                Chưa có lịch thi đấu chính thức. Hãy tạo lịch và áp dụng ở tab "Kết quả AI".
               </CardContent>
             </Card>
           )}
