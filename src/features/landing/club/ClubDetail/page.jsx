@@ -105,8 +105,7 @@ export default function ClubDetail() {
   const user = useSelector((state) => state.user.user);
   const currentUserId = getUserId(user) || 1;
 
-  // Chuẩn hóa role để dùng chung số / string
-  const rawRole = user?.role;
+  const rawRole = user?.role ?? user?.userRole;
   const roleValue =
     typeof rawRole === "string" ? rawRole.toUpperCase() : rawRole;
   const isTeacher =
