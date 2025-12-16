@@ -54,12 +54,13 @@ const SvgConnector = ({ isLeftWinner, isRightWinner, width = "100%", height = 24
   )
 }
 
-const MatchNode = ({ node, onMatchClick, officialMatchByNumber }) => {
+const MatchNode = ({ node, onMatchClick, officialMatchByNumber, getClassNameById }) => {
   if (!node) return null
 
   const { match: m, children = [] } = node
   const officialMatch = officialMatchByNumber?.[m.matchNumber] || m
   const status = officialMatch.status ?? 0
+  const isBye = officialMatch.isBye || officialMatch.IsBye
 
   // Spacer node để cân cây nếu cần (đang không dùng vì spacer logic được xử lý ở AISchedule)
   if (node.isSpacer) {
@@ -97,9 +98,34 @@ const MatchNode = ({ node, onMatchClick, officialMatchByNumber }) => {
       ? "border-blue-500 ring-1 ring-blue-200"
       : "border-slate-300"
 
+  const displayTeam = (sideIndex) => {
+    const name =
+      sideIndex === 1 ? officialMatch.classGroup1Name : officialMatch.classGroup2Name
+    const id = sideIndex === 1 ? officialMatch.classGroup1Id : officialMatch.classGroup2Id
+
+    if (name) return name
+    const resolved = getClassNameById ? getClassNameById(id) : null
+    if (resolved) return resolved
+
+    const child = children?.[sideIndex - 1]
+    if (child?.match?.matchNumber != null) {
+      const childMatch = child.match
+      const winnerId = childMatch.winnerClassGroupId ?? childMatch.WinnerClassGroupId
+      if (winnerId) {
+        const winnerName = getClassNameById ? getClassNameById(winnerId) : null
+        if (winnerName) return winnerName
+      }
+      return `Thắng trận #${child.match.matchNumber}`
+    }
+
+    return "Chờ kết quả"
+  }
+
   const scoreText =
     officialMatch.score1 != null && officialMatch.score2 != null
       ? `${officialMatch.score1} - ${officialMatch.score2}`
+      : isBye
+      ? "BYE"
       : "vs"
 
   return (
@@ -113,6 +139,7 @@ const MatchNode = ({ node, onMatchClick, officialMatchByNumber }) => {
                 node={child}
                 onMatchClick={onMatchClick}
                 officialMatchByNumber={officialMatchByNumber}
+                getClassNameById={getClassNameById}
               />
             </div>
           ))}
@@ -144,6 +171,14 @@ const MatchNode = ({ node, onMatchClick, officialMatchByNumber }) => {
           </span>
         </div>
 
+        {isBye && (
+          <div className="mb-1">
+            <span className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded bg-amber-100 text-amber-700">
+              BYE • Vượt vòng
+            </span>
+          </div>
+        )}
+
         <div className="flex flex-col gap-1 my-1">
           <div
             className={`text-sm font-semibold truncate ${
@@ -152,7 +187,7 @@ const MatchNode = ({ node, onMatchClick, officialMatchByNumber }) => {
                 : "text-slate-700"
             }`}
           >
-            {officialMatch.classGroup1Name || `Lớp ${officialMatch.classGroup1Id || "?"}`}
+            {displayTeam(1)}
           </div>
           <div className="text-xs font-bold text-slate-400">{scoreText}</div>
           <div
@@ -162,7 +197,7 @@ const MatchNode = ({ node, onMatchClick, officialMatchByNumber }) => {
                 : "text-slate-700"
             }`}
           >
-            {officialMatch.classGroup2Name || `Lớp ${officialMatch.classGroup2Id || "?"}`}
+            {displayTeam(2)}
           </div>
         </div>
 
@@ -187,40 +222,80 @@ const MatchNode = ({ node, onMatchClick, officialMatchByNumber }) => {
   )
 }
 
-// Xây tree từ matches (dùng nextMatchId để liên kết)
-const transformToTreeStructure = (matches) => {
-  if (!matches || matches.length === 0) return null
+// Chuẩn hóa liên kết trận: hỗ trợ nextMatchNumber hoặc nextMatchId (id DB)
+const normalizeLinkage = (matches) => {
+  if (!Array.isArray(matches)) return []
+  const idByMatchNumber = new Map()
+  matches.forEach((m) => {
+    const num = m.matchNumber ?? m.MatchNumber
+    const id = m.id ?? m.Id
+    if (num != null) idByMatchNumber.set(num, id)
+  })
+
+  return matches.map((m) => {
+    const clone = { ...m }
+    const matchNumber = m.matchNumber ?? m.MatchNumber
+    const nextNumber = m.nextMatchNumber ?? m.NextMatchNumber
+    const nextId = m.nextMatchId ?? m.NextMatchId
+
+    // Ưu tiên nextMatchNumber nếu có; nếu chỉ có id, thử map ngược sang matchNumber
+    if (nextNumber != null) {
+      clone._linkTo = nextNumber
+    } else if (nextId != null) {
+      // Tìm matchNumber tương ứng với id DB của trận kế tiếp
+      const target = matches.find((x) => (x.id ?? x.Id) === nextId)
+      if (target) {
+        clone._linkTo = target.matchNumber ?? target.MatchNumber ?? nextId
+      } else {
+        clone._linkTo = nextId
+      }
+    } else {
+      clone._linkTo = null
+    }
+
+    clone._id = m.id ?? m.Id ?? matchNumber
+    clone._matchNumber = matchNumber
+    return clone
+  })
+}
+
+// Xây tree từ matches (dùng _linkTo hoặc nextMatchNumber/nextMatchId)
+const transformToTreeStructure = (rawMatches) => {
+  if (!rawMatches || rawMatches.length === 0) return null
+
+  const matches = normalizeLinkage(rawMatches)
 
   const nodeMap = new Map()
   matches.forEach((m) => {
-    nodeMap.set(m.matchNumber, { match: m, children: [] })
+    nodeMap.set(m._matchNumber, { match: m, children: [] })
   })
 
   matches.forEach((m) => {
-    const parentNode = nodeMap.get(m.matchNumber)
-    const childrenMatches = matches.filter(
-      (child) => (child.nextMatchId || child.NextMatchId) === m.matchNumber
-    )
+    const parentNode = nodeMap.get(m._matchNumber)
+    const childrenMatches = matches.filter((child) => child._linkTo === m._matchNumber)
 
     childrenMatches
-      .sort((a, b) => (a.matchNumber || 0) - (b.matchNumber || 0))
+      .sort((a, b) => (a._matchNumber || 0) - (b._matchNumber || 0))
       .forEach((child) => {
-        const childNode = nodeMap.get(child.matchNumber)
+        const childNode = nodeMap.get(child._matchNumber)
         if (childNode) parentNode.children.push(childNode)
       })
   })
 
+  // Root: trận không có link lên trên; fallback lấy round lớn nhất
   let root =
     [...nodeMap.values()].find((node) => {
-      const nextId = node.match.nextMatchId || node.match.NextMatchId
-      return !nextId
-    }) || [...nodeMap.values()].pop()
+      const parentLink = node.match._linkTo
+      return !parentLink
+    }) || [...nodeMap.values()].reduce((max, curr) =>
+      (curr.match.round || 0) > (max.match.round || 0) ? curr : max
+    )
 
   return root
 }
 
 export const BracketTree = memo(
-  ({ matches, official, onMatchClick }) => {
+  ({ matches, official, onMatchClick, getClassNameById }) => {
     const treeData = useMemo(() => {
       if (!matches || matches.length === 0) return null
       const root = transformToTreeStructure(matches)
@@ -246,6 +321,7 @@ export const BracketTree = memo(
           node={treeData.root}
           onMatchClick={onMatchClick}
           officialMatchByNumber={treeData.officialMatchByNumber}
+          getClassNameById={getClassNameById}
         />
       </div>
     )
@@ -253,7 +329,8 @@ export const BracketTree = memo(
   (prev, next) =>
     prev.matches === next.matches &&
     prev.official === next.official &&
-    prev.onMatchClick === next.onMatchClick
+    prev.onMatchClick === next.onMatchClick &&
+    prev.getClassNameById === next.getClassNameById
 )
 
 
