@@ -22,7 +22,7 @@ export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false) // loading state riêng cho login
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
@@ -52,46 +52,85 @@ const PERMISSION_ROUTE_MAP = {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setIsLoading(true)
+    setIsLoading(true);
     setLoginError("");
     try {
+      // 1. Gọi login BE
       const result = await login({ username: loginEmail, password: loginPassword });
-      if (result?.data?.accessToken) {
-        localStorage.setItem("token", result.data.accessToken);
-        localStorage.setItem("refreshToken", result.data.refreshToken);
-        const resultUser = await getMe();
-        const decoded = jwtDecode(result.data.accessToken);
-        dispatch(setUser(resultUser?.data));
-        dispatch(setPermissions(decoded.Permission))
-        const resp = await starPointService.getUserPoints(resultUser?.data.id);
-        dispatch(setPoints(resp.data.points ?? 0));
-        initGlobalNotification(resultUser?.data.id, dispatch);
-        const roleValue = typeof resultUser?.data.role === "string" ? resultUser.data.role.toUpperCase() : resultUser?.data.role;
-        if (roleValue === ROLE.ADMIN || roleValue === "ADMIN") {
-        navigate(ROUTES.ADMIN.MAIN);
-      } 
-      else if (roleValue === ROLE.STAFF || roleValue === "STAFF") {
-        const userPermissions = decoded.Permission || [];
-        const firstAllowedRoute = Object.entries(PERMISSION_ROUTE_MAP).find(
-          ([perm]) => userPermissions.includes(perm)
-        )?.[1];
-        if (firstAllowedRoute) {
-          navigate(firstAllowedRoute);
-        } else {
+      const tokenModel = result?.data;
+      if (tokenModel?.accessToken) {
+        const accessToken = tokenModel.accessToken;
+        const refreshToken = tokenModel.refreshToken;
+        localStorage.setItem("token", accessToken);
+        localStorage.setItem("refreshToken", refreshToken);
+
+        // 2. Decode token để lấy thông tin cần cho điều hướng ngay lập tức
+        const decoded = jwtDecode(accessToken);
+        const permissions = decoded.Permission || [];
+        const userIdFromToken = decoded.Id || decoded.id || decoded.sub;
+        const roleFromTokenRaw = decoded.UserRole || decoded.userRole || decoded.role;
+        const roleFromToken =
+          typeof roleFromTokenRaw === "string"
+            ? roleFromTokenRaw.toUpperCase()
+            : roleFromTokenRaw;
+
+        // Lưu permissions và user tối thiểu ngay để menu / ProtectedRoute hoạt động đúng
+        dispatch(setPermissions(permissions));
+        dispatch(
+          setUser({
+            id: userIdFromToken,
+            role: roleFromToken,
+            permissions,
+          })
+        );
+
+        // 3. Điều hướng ngay lập tức dựa trên role + permissions trong token
+        if (roleFromToken === ROLE.ADMIN || roleFromToken === "ADMIN") {
           navigate(ROUTES.ADMIN.MAIN);
+        } else if (roleFromToken === ROLE.STAFF || roleFromToken === "STAFF") {
+          const firstAllowedRoute = Object.entries(PERMISSION_ROUTE_MAP).find(
+            ([perm]) => permissions.includes(perm)
+          )?.[1];
+          if (firstAllowedRoute) {
+            navigate(firstAllowedRoute);
+          } else {
+            navigate(ROUTES.ADMIN.MAIN);
+          }
+        } else if (roleFromToken === ROLE.TEACHER || roleFromToken === "TEACHER") {
+          navigate("/my-classes");
+        } else {
+          navigate(ROUTES.LANDING.HOME);
         }
-      } 
-      else if (roleValue === ROLE.TEACHER || roleValue === "TEACHER") {
-        navigate("/my-classes");
-      }
-      else {
-        navigate(ROUTES.LANDING.HOME);
-      }
+
+        // 4. Các call phụ (GetMe, điểm, SignalR) chạy nền để không chặn UX
+        Promise.allSettled([
+          getMe().then((resultUser) => {
+            if (resultUser?.data) {
+              dispatch(setUser(resultUser.data));
+              // Nếu BE trả về id, có thể dùng id này cho star point
+              const uid = resultUser.data.id ?? userIdFromToken;
+              if (uid) {
+                return starPointService
+                  .getUserPoints(uid)
+                  .then((resp) => {
+                    dispatch(setPoints(resp.data.points ?? 0));
+                  })
+                  .catch(() => {});
+              }
+            }
+          }),
+        ])
+          .catch(() => {})
+          .finally(() => {
+            if (userIdFromToken) {
+              initGlobalNotification(userIdFromToken, dispatch);
+            }
+          });
       }
     } catch (err) {
       setLoginError(err.message || "Đăng nhập thất bại");
     }
-    setIsLoading(false)
+    setIsLoading(false);
   }
 
   const toggleAuthMode = () => {
@@ -197,8 +236,8 @@ const PERMISSION_ROUTE_MAP = {
                     <div className="text-red-500 text-sm text-center">{loginError}</div>
                   )}
 
-                  <Button type="submit" className="w-full btn-primary h-12 text-lg font-semibold" disabled={loading}>
-                    {loading ? (
+                  <Button type="submit" className="w-full btn-primary h-12 text-lg font-semibold" disabled={isLoading}>
+                    {isLoading ? (
                       <div className="flex items-center">
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                         Đang đăng nhập...
