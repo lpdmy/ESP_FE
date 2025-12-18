@@ -57,6 +57,7 @@ import CreatePostModal from "../../post/CreatePostModal";
 import DeletePostModal from "../../post/DeletePostModal";
 import UpdatePostModal from "../../post/UpdatePostModal";
 import { useSelector } from "react-redux";
+import { ROLE } from "@/common/constants/roles";
 export default function ClubDetail() {
   const { isOpen: isDialogOpen, openDialog, closeDialog } = useDialog();
   const {
@@ -103,6 +104,14 @@ export default function ClubDetail() {
   };
   const user = useSelector((state) => state.user.user);
   const currentUserId = getUserId(user) || 1;
+
+  const rawRole = user?.role ?? user?.userRole;
+  const roleValue =
+    typeof rawRole === "string" ? rawRole.toUpperCase() : rawRole;
+  const isTeacher =
+    roleValue === ROLE.TEACHER || roleValue === "TEACHER";
+  const isStudent =
+    roleValue === ROLE.STUDENT || roleValue === "STUDENT";
   const handleClubDetail = async () => {
     try {
       const response = await getClubDetail(clubid);
@@ -371,8 +380,8 @@ export default function ClubDetail() {
                   </div>
                 </CardContent>
               </Card>
-              {((user?.role === 2 || user?.role === "TEACHER") && clubDetail.isMentorInvite) ||
-              ((user?.role === 4 || user?.role === "STUDENT") && !isJoined) ? (
+              {(isTeacher && clubDetail.isMentorInvite) ||
+              (isStudent && !isJoined) ? (
                 <Card className="glass sticky bottom-6 !bg-white">
                   <CardContent>
                     <div className="flex flex-col gap-2">
