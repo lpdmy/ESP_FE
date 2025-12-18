@@ -22,21 +22,30 @@ const SvgConnector = ({ isLeftWinner, isRightWinner, width = "100%", height = 24
   const colorActive = "#10b981"  // emerald-500
   const strokeDefault = 2
   const strokeActive = 3
+  
+  // Tính toán tọa độ dựa trên width và height (sử dụng viewBox để hỗ trợ percentage)
+  // Sử dụng viewBox="0 0 100 100" để có thể dùng percentage trong path
+  const viewBox = "0 0 100 100"
+  const centerX = 50
+  const centerY = 50
+  const leftX = 25
+  const rightX = 75
+  const bottomY = 100
 
   return (
-    <svg width={width} height={height} className="overflow-visible block">
+    <svg width={width} height={height} viewBox={viewBox} className="overflow-visible block" preserveAspectRatio="none">
       {/* stem từ parent xuống điểm fork */}
       <line
-        x1="50%"
+        x1={centerX}
         y1="0"
-        x2="50%"
-        y2="50%"
+        x2={centerX}
+        y2={centerY}
         stroke={isLeftWinner || isRightWinner ? colorActive : colorDefault}
         strokeWidth={isLeftWinner || isRightWinner ? strokeActive : strokeDefault}
       />
       {/* nhánh trái */}
       <path
-        d="M 50% 50% L 25% 50% L 25% 100%"
+        d={`M ${centerX} ${centerY} L ${leftX} ${centerY} L ${leftX} ${bottomY}`}
         fill="none"
         stroke={isLeftWinner ? colorActive : colorDefault}
         strokeWidth={isLeftWinner ? strokeActive : strokeDefault}
@@ -44,7 +53,7 @@ const SvgConnector = ({ isLeftWinner, isRightWinner, width = "100%", height = 24
       />
       {/* nhánh phải */}
       <path
-        d="M 50% 50% L 75% 50% L 75% 100%"
+        d={`M ${centerX} ${centerY} L ${rightX} ${centerY} L ${rightX} ${bottomY}`}
         fill="none"
         stroke={isRightWinner ? colorActive : colorDefault}
         strokeWidth={isRightWinner ? strokeActive : strokeDefault}

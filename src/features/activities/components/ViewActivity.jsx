@@ -62,287 +62,10 @@ import { jwtDecode } from "jwt-decode";
 import { useSearchApi } from "@/common/hooks/useSearchApi";
 import { useSubmissionApi } from "@/features/landing/submission/hooks/useSubmissionApi";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import { BracketTree as AdminBracketTree } from "@/features/admin/components/ActivityManagement/BracketTree";
+import { BracketTree } from "@/features/admin/components/ActivityManagement/BracketTree";
 import { formatDateFromAPI } from "@/common/utils/dateUtils";
 
-// Custom BracketTree với kẻ ngang và card lớn hơn
-const CustomBracketTree = memo(
-  ({ matches, official, onMatchClick }) => {
-    const formatDate = (dateStr) => {
-      if (!dateStr) return "";
-      try {
-        const d = new Date(dateStr);
-        return `${String(d.getDate()).padStart(2, "0")}/${String(
-          d.getMonth() + 1
-        ).padStart(2, "0")}`;
-      } catch {
-        return "";
-      }
-    };
-
-    const formatTime = (timeStr) =>
-      timeStr ? timeStr.toString().slice(0, 5) : "";
-
-    // Transform to tree structure
-    const treeData = useMemo(() => {
-      if (!matches || matches.length === 0) return null;
-
-      const nodeMap = new Map();
-      matches.forEach((m) => {
-        nodeMap.set(m.matchNumber, { match: m, children: [] });
-      });
-
-      matches.forEach((m) => {
-        const parentNode = nodeMap.get(m.matchNumber);
-        const childrenMatches = matches.filter(
-          (child) => (child.nextMatchId || child.NextMatchId) === m.matchNumber
-        );
-
-        childrenMatches
-          .sort((a, b) => (a.matchNumber || 0) - (b.matchNumber || 0))
-          .forEach((child) => {
-            const childNode = nodeMap.get(child.matchNumber);
-            if (childNode) parentNode.children.push(childNode);
-          });
-      });
-
-      let root =
-        [...nodeMap.values()].find((node) => {
-          const nextId = node.match.nextMatchId || node.match.NextMatchId;
-          return !nextId;
-        }) || [...nodeMap.values()].pop();
-
-      const officialMatchByNumber = {};
-      if (official?.rounds?.length) {
-        official.rounds.forEach((round) => {
-          round.matches.forEach((m) => {
-            officialMatchByNumber[m.matchNumber] = m;
-          });
-        });
-      }
-
-      return { root, officialMatchByNumber };
-    }, [matches, official]);
-
-    const MatchNode = ({ node, onMatchClick, officialMatchByNumber }) => {
-      if (!node) return null;
-
-      const { match: m, children = [] } = node;
-      const officialMatch = officialMatchByNumber?.[m.matchNumber] || m;
-      const status = officialMatch.status ?? 0;
-
-      let isLeftChildWinner = false;
-      let isRightChildWinner = false;
-      if (
-        children.length === 2 &&
-        (officialMatch.classGroup1Id || officialMatch.classGroup2Id)
-      ) {
-        const leftChildMatch =
-          officialMatchByNumber?.[children[0].match.matchNumber] ||
-          children[0].match;
-        const rightChildMatch =
-          officialMatchByNumber?.[children[1].match.matchNumber] ||
-          children[1].match;
-
-        if (
-          leftChildMatch.winnerClassGroupId === officialMatch.classGroup1Id ||
-          leftChildMatch.winnerClassGroupId === officialMatch.classGroup2Id
-        ) {
-          isLeftChildWinner = true;
-        }
-        if (
-          rightChildMatch.winnerClassGroupId === officialMatch.classGroup1Id ||
-          rightChildMatch.winnerClassGroupId === officialMatch.classGroup2Id
-        ) {
-          isRightChildWinner = true;
-        }
-      }
-
-      const statusColors =
-        status === 2
-          ? "border-emerald-500 ring-1 ring-emerald-500 shadow-md"
-          : status === 1
-          ? "border-blue-500 ring-1 ring-blue-200"
-          : "border-slate-300";
-
-      const scoreText =
-        officialMatch.score1 != null && officialMatch.score2 != null
-          ? `${officialMatch.score1} - ${officialMatch.score2}`
-          : "vs";
-
-      // Detect bye teams (teams waiting for results or empty)
-      const isByeTeam1 =
-        !officialMatch.classGroup1Name ||
-        officialMatch.classGroup1Name === "Chờ kết quả" ||
-        !officialMatch.classGroup1Id;
-      const isByeTeam2 =
-        !officialMatch.classGroup2Name ||
-        officialMatch.classGroup2Name === "Chờ kết quả" ||
-        !officialMatch.classGroup2Id;
-
-      return (
-        <div className="flex flex-col-reverse items-center">
-          {/* children rows */}
-          {children.length > 0 && (
-            <div className="flex flex-row justify-center gap-8 w-full">
-              {children.map((child) => (
-                <div
-                  key={child.match.matchNumber}
-                  className="flex flex-col items-center w-full"
-                >
-                  <MatchNode
-                    node={child}
-                    onMatchClick={onMatchClick}
-                    officialMatchByNumber={officialMatchByNumber}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* connector với kẻ ngang - rút ngắn */}
-          {children.length > 0 && (
-            <div className="w-full h-8 relative flex items-center justify-center">
-              <svg
-                width="100%"
-                height="100%"
-                className="overflow-visible block"
-              >
-                {/* Đường kẻ ngang từ trái sang phải - rút ngắn từ 30% đến 70% */}
-                <line
-                  x1="30%"
-                  y1="50%"
-                  x2="70%"
-                  y2="50%"
-                  stroke="#cbd5e1"
-                  strokeWidth="2"
-                  strokeDasharray="4 4"
-                />
-                {/* Stem từ parent xuống */}
-                <line
-                  x1="50%"
-                  y1="0"
-                  x2="50%"
-                  y2="50%"
-                  stroke={
-                    isLeftChildWinner || isRightChildWinner
-                      ? "#10b981"
-                      : "#cbd5e1"
-                  }
-                  strokeWidth={isLeftChildWinner || isRightChildWinner ? 3 : 2}
-                />
-                {/* Nhánh trái */}
-                <path
-                  d="M 50% 50% L 25% 50% L 25% 100%"
-                  fill="none"
-                  stroke={isLeftChildWinner ? "#10b981" : "#cbd5e1"}
-                  strokeWidth={isLeftChildWinner ? 3 : 2}
-                  className="transition-colors duration-300"
-                />
-                {/* Nhánh phải */}
-                <path
-                  d="M 50% 50% L 75% 50% L 75% 100%"
-                  fill="none"
-                  stroke={isRightChildWinner ? "#10b981" : "#cbd5e1"}
-                  strokeWidth={isRightChildWinner ? 3 : 2}
-                  className="transition-colors duration-300"
-                />
-              </svg>
-            </div>
-          )}
-
-          {/* card - lớn hơn */}
-          <div
-            className={`
-            bg-white border-t-4 rounded-lg p-3 w-56 text-center cursor-pointer
-            transition-all hover:scale-[1.02] shadow-sm
-            ${statusColors}
-          `}
-            onClick={() => onMatchClick(officialMatch)}
-          >
-            <div className="flex justify-between items-center mb-2 pb-2 border-b border-dashed border-slate-200">
-              <span className="text-xs font-bold text-slate-400">
-                #{officialMatch.matchNumber}
-              </span>
-              <span className="text-xs text-slate-500 truncate max-w-[140px]">
-                {officialMatch.roundName || `Vòng ${officialMatch.round}`}
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-1.5 my-2">
-              <div
-                className={`text-base font-semibold truncate ${
-                  isByeTeam1
-                    ? "bg-amber-100 text-amber-800 px-2 py-1 rounded font-bold"
-                    : officialMatch.winnerClassGroupId ===
-                      officialMatch.classGroup1Id
-                    ? "text-emerald-600"
-                    : "text-slate-700"
-                }`}
-              >
-                {officialMatch.classGroup1Name ||
-                  `Lớp ${officialMatch.classGroup1Id || "?"}`}
-              </div>
-              <div className="text-sm font-bold text-slate-400">
-                {scoreText}
-              </div>
-              <div
-                className={`text-base font-semibold truncate ${
-                  isByeTeam2
-                    ? "bg-amber-100 text-amber-800 px-2 py-1 rounded font-bold"
-                    : officialMatch.winnerClassGroupId ===
-                      officialMatch.classGroup2Id
-                    ? "text-emerald-600"
-                    : "text-slate-700"
-                }`}
-              >
-                {officialMatch.classGroup2Name ||
-                  `Lớp ${officialMatch.classGroup2Id || "?"}`}
-              </div>
-            </div>
-
-            {officialMatch.matchDate && (
-              <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-center gap-1 text-xs text-slate-500">
-                <Calendar className="w-3.5 h-3.5" />
-                <span>{formatDate(officialMatch.matchDate)}</span>
-                <span>•</span>
-                <span>{formatTime(officialMatch.startTime)}</span>
-              </div>
-            )}
-            {officialMatch.location && (
-              <div className="mt-1.5 flex items-center justify-center gap-1 text-xs text-slate-500">
-                <MapPin className="w-3.5 h-3.5" />
-                <span className="truncate max-w-[180px]">
-                  {officialMatch.location}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="h-4" />
-        </div>
-      );
-    };
-
-    if (!treeData?.root) return null;
-
-    return (
-      <div className="p-8 min-w-max flex justify-center">
-        <MatchNode
-          node={treeData.root}
-          onMatchClick={onMatchClick}
-          officialMatchByNumber={treeData.officialMatchByNumber}
-        />
-      </div>
-    );
-  },
-  (prev, next) =>
-    prev.matches === next.matches &&
-    prev.official === next.official &&
-    prev.onMatchClick === next.onMatchClick
-);
-
-// Tournament Bracket Viewer - Copy từ admin, dùng CustomBracketTree
+// Tournament Bracket Viewer - Sử dụng BracketTree từ admin
 const TournamentBracketViewer = memo(
   ({
     rounds,
@@ -408,12 +131,13 @@ const TournamentBracketViewer = memo(
     // Khi fullScreen, dùng native scroll, không dùng zoom/pan
     if (fullScreen) {
       return (
-        <div className={`w-full h-full overflow-auto bg-slate-50`}>
-          <div className="min-w-full min-h-full flex items-center justify-center p-20">
-            <CustomBracketTree
+        <div className={`w-full h-full overflow-auto bg-slate-50`} style={{ scrollBehavior: "smooth" }}>
+          <div className="min-w-full min-h-full flex items-center justify-center p-8 md:p-12 lg:p-20">
+            <BracketTree
               matches={allMatches}
               official={officialBracket}
               onMatchClick={onMatchClick}
+              getClassNameById={formatClassName}
             />
           </div>
         </div>
@@ -424,6 +148,7 @@ const TournamentBracketViewer = memo(
     return (
       <div
         className={`relative border border-slate-200 rounded-lg overflow-auto bg-slate-50/50 ${containerHeight}`}
+        style={{ scrollBehavior: "smooth" }}
       >
         {/* Toolbar chỉ có nút phóng to */}
         {onMaximize && (
@@ -440,11 +165,12 @@ const TournamentBracketViewer = memo(
         )}
 
         {/* Bracket với native scroll */}
-        <div className="min-w-full min-h-full flex items-center justify-center p-20">
-          <CustomBracketTree
+        <div className="min-w-full min-h-full flex items-center justify-center p-8 md:p-12 lg:p-20">
+          <BracketTree
             matches={allMatches}
             official={officialBracket}
             onMatchClick={onMatchClick}
+            getClassNameById={formatClassName}
           />
         </div>
       </div>

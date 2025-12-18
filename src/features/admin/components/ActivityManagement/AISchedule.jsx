@@ -33,6 +33,8 @@ import {
   Maximize2,
   Plus,
   Minus,
+  AlertTriangle,
+  Info,
 } from "lucide-react"
 import { toast } from "react-toastify"
 import { ROUTES } from "@/common/constants/routes"
@@ -147,8 +149,11 @@ export default function AISchedule() {
   const [officialViewMode, setOfficialViewMode] = useState("bracket") // "bracket" | "list" for official tab
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [pendingPayload, setPendingPayload] = useState(null)
+  const [slotWarningsDialogOpen, setSlotWarningsDialogOpen] = useState(false)
+  const [slotWarnings, setSlotWarnings] = useState([])
+  const [slotConflicts, setSlotConflicts] = useState([])
+  const [dateValidationErrors, setDateValidationErrors] = useState({})
   const handleBracketMatchClick = useCallback((match) => setSelectedBracketMatch(match), [])
-
   const [formData, setFormData] = useState({
     sportId: null,
     classGroupIds: [],
@@ -197,6 +202,54 @@ export default function AISchedule() {
   const normalizeDateString = (dateStr) => {
     if (!dateStr) return ""
     return dateStr.includes("T") ? dateStr.split("T")[0] : dateStr
+  }
+
+  // Validate dates and times inline
+  const validateDatesAndTimes = (data) => {
+    const errors = {}
+    
+    // Validate ngày bắt đầu và ngày kết thúc
+    if (data.startDate && data.endDate) {
+      const startDate = new Date(data.startDate)
+      const endDate = new Date(data.endDate)
+      
+      // Ngày bắt đầu phải <= ngày kết thúc
+      if (startDate > endDate) {
+        errors.startDate = "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc"
+        errors.endDate = "Ngày kết thúc phải sau hoặc bằng ngày bắt đầu"
+      }
+      
+      // Nếu cùng ngày, validate giờ
+      if (startDate.toDateString() === endDate.toDateString()) {
+        const parseTimeToMinutes = (timeStr) => {
+          if (!timeStr) return null
+          const [h, m] = timeStr.split(":").map(Number)
+          if (Number.isNaN(h) || Number.isNaN(m)) return null
+          return h * 60 + m
+        }
+
+        const startMinutes = parseTimeToMinutes(data.preferredStartTime)
+        const endMinutes = parseTimeToMinutes(data.preferredEndTime)
+
+        if (startMinutes != null && endMinutes != null) {
+          if (endMinutes <= startMinutes) {
+            errors.preferredStartTime = "Giờ bắt đầu phải trước giờ kết thúc (cùng ngày)"
+            errors.preferredEndTime = "Giờ kết thúc phải sau giờ bắt đầu (cùng ngày)"
+          }
+        } else {
+          // Nếu cùng ngày nhưng thiếu giờ
+          if (startMinutes == null) {
+            errors.preferredStartTime = "Khi ngày bắt đầu và kết thúc trùng nhau, cần nhập giờ bắt đầu"
+          }
+          if (endMinutes == null) {
+            errors.preferredEndTime = "Khi ngày bắt đầu và kết thúc trùng nhau, cần nhập giờ kết thúc"
+          }
+        }
+      }
+      // Nếu không cùng ngày, không validate giờ (không set errors cho time fields)
+    }
+    
+    return errors
   }
 
   const normalizeTimeString = (timeStr) => {
@@ -316,6 +369,11 @@ export default function AISchedule() {
     loadActivity()
   }, [loadActivity])
 
+  // Validate dates and times khi formData thay đổi
+  useEffect(() => {
+    setDateValidationErrors(validateDatesAndTimes(formData))
+  }, [formData.startDate, formData.endDate, formData.preferredStartTime, formData.preferredEndTime])
+
   const fetchOfficialBracket = useCallback(
     async (sportId) => {
       if (!params.id || !sportId) return
@@ -337,10 +395,8 @@ export default function AISchedule() {
       } catch (error) {
         const status = error?.statusCode ?? error?.status ?? error?.response?.status
         if (status === 404) {
-          console.log("No official bracket yet (404). This is expected until schedule is applied.")
           setOfficialBracket(null)
         } else {
-          console.error("Error loading official bracket:", error)
           setOfficialBracket(null)
           // Optionally show toast for real errors:
           // toast.error("Không thể tải lịch thi đấu chính thức")
@@ -576,13 +632,95 @@ export default function AISchedule() {
   }
 
   const handleGenerate = async () => {
-    if (!formData.sportId || formData.classGroupIds.length < 2) {
-      toast.error("Vui lòng chọn môn thể thao và ít nhất 2 lớp")
+    // Validation đầy đủ trước khi generate
+    const validationErrors = []
+    
+    // Kiểm tra date validation errors trước
+    const dateErrors = validateDatesAndTimes(formData)
+    if (Object.keys(dateErrors).length > 0) {
+      setDateValidationErrors(dateErrors)
+      toast.error(Object.values(dateErrors)[0])
       return
     }
 
-    if (!formData.startDate || !formData.endDate) {
-      toast.error("Vui lòng chọn ngày bắt đầu và kết thúc")
+    if (!formData.sportId) {
+      validationErrors.push("Vui lòng chọn môn thể thao")
+    }
+    
+    if (!formData.classGroupIds || formData.classGroupIds.length < 2) {
+      validationErrors.push("Cần ít nhất 2 lớp để tạo lịch thi đấu")
+    }
+    
+    if (!formData.startDate) {
+      validationErrors.push("Vui lòng chọn ngày bắt đầu")
+    }
+    
+    if (!formData.endDate) {
+      validationErrors.push("Vui lòng chọn ngày kết thúc")
+    }
+    
+    if (formData.startDate && formData.endDate) {
+      const startDate = new Date(formData.startDate)
+      const endDate = new Date(formData.endDate)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      // Ngày bắt đầu phải SAU ngày hiện tại
+      if (startDate <= today) {
+        validationErrors.push("Ngày bắt đầu phải sau ngày hiện tại")
+      }
+      
+      if (startDate > endDate) {
+        validationErrors.push("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc")
+      }
+
+      // Nếu startDate và endDate trùng nhau → bắt buộc kiểm tra giờ
+      if (startDate.toDateString() === endDate.toDateString()) {
+        const parseTimeToMinutes = (timeStr) => {
+          if (!timeStr) return null
+          const [h, m] = timeStr.split(":").map(Number)
+          if (Number.isNaN(h) || Number.isNaN(m)) return null
+          return h * 60 + m
+        }
+
+        const startMinutes = parseTimeToMinutes(formData.preferredStartTime)
+        const endMinutes = parseTimeToMinutes(formData.preferredEndTime)
+
+        if (startMinutes == null || endMinutes == null) {
+          validationErrors.push("Khi ngày bắt đầu và kết thúc trùng nhau, cần nhập cả giờ bắt đầu và giờ kết thúc")
+        } else {
+          if (endMinutes <= startMinutes) {
+            validationErrors.push("Giờ kết thúc phải sau giờ bắt đầu")
+          } else if (formData.matchDuration) {
+            const [mh, mm] = formData.matchDuration.split(":").map(Number)
+            if (!Number.isNaN(mh) && !Number.isNaN(mm)) {
+              const matchMinutes = mh * 60 + mm
+              if (endMinutes - startMinutes < matchMinutes) {
+                validationErrors.push("Khoảng thời gian trong một ngày chưa đủ để xếp ít nhất 1 trận (theo thời lượng trận đấu)")
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    if (!formData.availableLocations || formData.availableLocations.length === 0) {
+      validationErrors.push("Vui lòng nhập ít nhất 1 sân thi đấu")
+    }
+    
+    if (formData.maxMatchesPerDay < 1 || formData.maxMatchesPerDay > 50) {
+      validationErrors.push("Số trận tối đa mỗi ngày phải từ 1 đến 50")
+    }
+    
+    if (formData.minGapBetweenMatches < 0 || formData.minGapBetweenMatches > 120) {
+      validationErrors.push("Khoảng cách giữa các trận phải từ 0 đến 120 phút")
+    }
+    
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0])
+      if (validationErrors.length > 1) {
+        console.warn("Các lỗi validation khác:", validationErrors.slice(1))
+      }
       return
     }
 
@@ -652,16 +790,211 @@ export default function AISchedule() {
         setGeneratedSchedule(formattedSchedule)
         setEditedMatches(buildEditedMatchMap(response.data.generatedMatches))
         setIsFormCollapsed(true) // Collapse form when schedule is generated successfully
-        toast.success("AI đã tạo lịch thi đấu tối ưu cho bạn")
+        
+        // Parse warnings và conflicts từ response
+        const warnings = parseSlotWarnings(response.data, formData)
+        const conflicts = response.data.slotConflicts || []
+        
+        // Nếu có warnings hoặc conflicts → hiển thị dialog
+        if (warnings.length > 0 || conflicts.length > 0) {
+          setSlotWarnings(warnings)
+          setSlotConflicts(conflicts)
+          setSlotWarningsDialogOpen(true)
+        }
       } else {
-        toast.error(response?.data?.explanation || "Không thể tạo lịch thi đấu")
+        // Parse warnings và conflicts từ explanation khi failed
+        const warnings = parseSlotWarnings(response?.data, formData)
+        const conflicts = response?.data?.slotConflicts || []
+        
+        // Nếu backend không trả warnings/conflicts, vẫn tạo 1 warning tổng quát từ explanation
+        let finalWarnings = warnings
+        if (warnings.length === 0 && conflicts.length === 0) {
+          const explanation = response?.data?.explanation || "Không thể tạo lịch thi đấu"
+          finalWarnings = [{
+            warningType: "GeneralError",
+            title: "Không thể tạo lịch thi đấu",
+            description: explanation,
+            currentValue: "",
+            recommendedValue: "",
+            solution: "",
+            severity: "High",
+            field: ""
+          }]
+        }
+
+        setSlotWarnings(finalWarnings)
+        setSlotConflicts(conflicts)
+        setSlotWarningsDialogOpen(true)
+        console.error("Generate schedule failed:", response?.data)
       }
     } catch (error) {
       console.error("Error generating schedule:", error)
-      toast.error(error?.message || "Có lỗi xảy ra khi tạo lịch thi đấu")
+      
+      // Thử đọc warnings/conflicts từ backend (trường hợp API trả về 400/500 kèm data)
+      const serverData = error?.response?.data?.data || error?.response?.data
+      let backendWarnings = []
+      let backendConflicts = []
+
+      if (serverData) {
+        try {
+          backendWarnings = parseSlotWarnings(serverData, formData)
+          backendConflicts = serverData?.slotConflicts || serverData?.SlotConflicts || []
+        } catch (parseErr) {
+          console.error("Error parsing backend slotWarnings/slotConflicts from error response:", parseErr)
+        }
+      }
+
+      if (backendWarnings.length > 0 || backendConflicts.length > 0) {
+        setSlotWarnings(backendWarnings)
+        setSlotConflicts(backendConflicts)
+        setSlotWarningsDialogOpen(true)
+      } else {
+        // Fallback: message thân thiện, không lộ chi tiết hệ thống
+        const errorMessage = error?.response?.data?.message || 
+                            error?.data?.message || 
+                            error?.message || 
+                            "Có lỗi xảy ra khi tạo lịch thi đấu"
+
+        console.error("Generate schedule error detail:", errorMessage)
+
+        setSlotWarnings([{
+          warningType: "SystemError",
+          title: "Không thể tạo lịch thi đấu",
+          description: "Hệ thống không thể tạo lịch thi đấu với cấu hình hiện tại. Vui lòng kiểm tra lại khoảng ngày, giờ thi đấu, số sân và số lớp tham gia rồi thử lại.",
+          currentValue: "",
+          recommendedValue: "",
+          solution: "",
+          severity: "High",
+          field: ""
+        }])
+        setSlotConflicts([])
+        setSlotWarningsDialogOpen(true)
+      }
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  // Parse slot warnings từ response data
+  const parseSlotWarnings = (responseData, currentFormData) => {
+    const warnings = []
+    
+    // Nếu có slotWarnings từ backend, dùng trực tiếp (backend đã format đầy đủ)
+    if (responseData?.slotWarnings && Array.isArray(responseData.slotWarnings) && responseData.slotWarnings.length > 0) {
+      // Map field names từ backend sang frontend format nếu cần
+      return responseData.slotWarnings.map(w => ({
+        warningType: w.warningType || w.WarningType,
+        title: w.title || w.Title,
+        description: w.description || w.Description,
+        currentValue: w.currentValue || w.CurrentValue,
+        recommendedValue: w.recommendedValue || w.RecommendedValue,
+        solution: w.solution || w.Solution,
+        severity: w.severity || w.Severity,
+        field: w.field || w.Field || ""
+      }))
+    }
+    
+    // Parse từ explanation nếu không có slotWarnings
+    const explanation = responseData?.explanation || ""
+    if (!explanation) return warnings
+    
+    // Parse các warnings từ explanation text
+    // Format: "⚠️ CẢNH BÁO: Chỉ có X slots available (cần Y slots)..."
+    const slotMatch = explanation.match(/Chỉ có (\d+) slots available.*?cần (\d+) slots/)
+    if (slotMatch) {
+      const availableSlots = parseInt(slotMatch[1])
+      const neededSlots = parseInt(slotMatch[2])
+      
+      warnings.push({
+        warningType: "INSUFFICIENT_SLOTS",
+        title: "Không đủ slots để tạo lịch thi đấu",
+        description: `Hệ thống chỉ tìm thấy ${availableSlots} slots khả dụng, nhưng cần tối thiểu ${neededSlots} slots để tạo đủ các trận đấu.`,
+        currentValue: `${availableSlots} slots`,
+        recommendedValue: `≥ ${neededSlots} slots`,
+        solution: "Mở rộng khoảng thời gian (startDate, endDate) hoặc giảm conflicts với lịch học/hoạt động khác. Kiểm tra lại availableLocations và preferredStartTime/preferredEndTime.",
+        severity: "High",
+        field: "startDate, endDate, availableLocations, preferredStartTime, preferredEndTime"
+      })
+    }
+    
+    // Parse conflicts với activities khác - cải thiện regex để catch nhiều format hơn
+    const conflictMatch = explanation.match(/(\d+)\s*conflicts?\s*với\s*activities?\s*khác|(\d+)\s*conflicts?\s*với\s*participants?/i)
+    if (conflictMatch) {
+      const conflictCount = parseInt(conflictMatch[1] || conflictMatch[2])
+      
+      warnings.push({
+        warningType: "ACTIVITY_CONFLICTS",
+        title: "Xung đột với hoạt động khác",
+        description: `Phát hiện ${conflictCount} xung đột với các hoạt động khác mà participants đã tham gia trong cùng khoảng thời gian.`,
+        currentValue: `${conflictCount} conflicts`,
+        recommendedValue: "0 conflicts",
+        solution: "Mở rộng khoảng thời gian (startDate, endDate) hoặc kiểm tra lại lịch tham gia của các lớp (classGroupIds). Có thể cần điều chỉnh preferredStartTime/preferredEndTime.",
+        severity: "Medium",
+        field: "startDate, endDate, classGroupIds, preferredStartTime, preferredEndTime"
+      })
+    }
+    
+    // Parse matches created vs expected - cải thiện regex
+    const matchesMatch = explanation.match(/Chỉ tạo được\s*(\d+)\s*\/\s*(\d+)\s*matches?|Đã tạo\s*(\d+)\s*\/\s*(\d+)\s*matches?/i)
+    if (matchesMatch) {
+      const createdMatches = parseInt(matchesMatch[1] || matchesMatch[3])
+      const expectedMatches = parseInt(matchesMatch[2] || matchesMatch[4])
+      
+      warnings.push({
+        warningType: "INCOMPLETE_MATCHES",
+        title: "Không tạo đủ số trận đấu",
+        description: `Chỉ tạo được ${createdMatches}/${expectedMatches} trận đấu. Thiếu ${expectedMatches - createdMatches} trận so với yêu cầu.`,
+        currentValue: `${createdMatches} matches`,
+        recommendedValue: `${expectedMatches} matches`,
+        solution: "Mở rộng khoảng thời gian (startDate, endDate) hoặc giảm số lớp tham gia (classGroupIds). Kiểm tra lại maxMatchesPerDay và minGapBetweenMatches.",
+        severity: "High",
+        field: "startDate, endDate, classGroupIds, maxMatchesPerDay, minGapBetweenMatches"
+      })
+    }
+    
+    // Parse weekend requirement
+    if (explanation.includes("thứ 7") || explanation.includes("chủ nhật") || explanation.includes("cuối tuần")) {
+      warnings.push({
+        warningType: "WEEKEND_REQUIRED",
+        title: "Cần thêm ngày cuối tuần",
+        description: "Cần thêm ngày thứ 7, chủ nhật để đảm bảo sức khỏe học sinh cho trận chung kết giữa 2 nhóm. Lý do: Nhóm A (học sáng) chỉ đá được chiều, Nhóm B (học chiều) chỉ đá được sáng.",
+        currentValue: "Chỉ có ngày thường",
+        recommendedValue: "Bao gồm thứ 7, chủ nhật",
+        solution: "Mở rộng khoảng thời gian (endDate) để bao gồm cuối tuần. Điều chỉnh để khoảng thời gian bao gồm ít nhất 1 ngày thứ 7 hoặc chủ nhật.",
+        severity: "Medium",
+        field: "endDate"
+      })
+    }
+    
+    // Parse không optimal
+    if (explanation.includes("không tối ưu") || explanation.includes("không optimal") || (!responseData?.isOptimal && responseData?.success)) {
+      warnings.push({
+        warningType: "NOT_OPTIMAL",
+        title: "Lịch thi đấu chưa tối ưu",
+        description: "Lịch đã được tạo nhưng có thể không tối ưu do một số constraints không được thỏa mãn hoàn toàn.",
+        currentValue: "Lịch đã tạo nhưng chưa tối ưu",
+        recommendedValue: "Lịch tối ưu hoàn toàn",
+        solution: "Xem các cảnh báo khác để điều chỉnh thông tin đầu vào. Có thể cần mở rộng khoảng thời gian, điều chỉnh availableLocations, hoặc giảm conflicts.",
+        severity: "Low",
+        field: "startDate, endDate, availableLocations, maxMatchesPerDay"
+      })
+    }
+    
+    // Nếu không có warnings cụ thể nhưng có explanation và không success, tạo warning chung
+    if (warnings.length === 0 && explanation && !responseData?.success) {
+      warnings.push({
+        warningType: "GENERAL_WARNING",
+        title: "Không thể tạo lịch thi đấu",
+        description: explanation,
+        currentValue: "Không tạo được lịch",
+        recommendedValue: "Tạo được lịch thi đấu",
+        solution: "Vui lòng kiểm tra lại tất cả các thông tin đã nhập: sportId, classGroupIds (ít nhất 2 lớp), startDate, endDate, availableLocations, và các thông số khác.",
+        severity: "High",
+        field: "sportId, classGroupIds, startDate, endDate, availableLocations, matchDuration, preferredStartTime, preferredEndTime, maxMatchesPerDay, minGapBetweenMatches"
+      })
+    }
+    
+    return warnings
   }
 
   const handleMatchFieldChange = (matchNumber, field, value) => {
@@ -899,14 +1232,46 @@ export default function AISchedule() {
       return
     }
 
-    // Validate: tất cả trận phải có sân thi đấu rõ ràng để tránh lỗi trùng lịch ở BE
+    // Validation đầy đủ trước khi apply
+    const validationErrors = []
+    
+    // Validate: tất cả trận phải có sân thi đấu rõ ràng
     const invalidLocation = matchesPayload.find(
       (m) => !m.location || m.location.trim().length === 0
     )
     if (invalidLocation) {
-      toast.error(
-        `Vui lòng nhập sân thi đấu cho tất cả trận (thiếu ở match #${invalidLocation.matchNumber})`
-      )
+      validationErrors.push(`Thiếu sân thi đấu ở match #${invalidLocation.matchNumber}`)
+    }
+    
+    // Validate: tất cả trận phải có MatchDate
+    const invalidDate = matchesPayload.find(
+      (m) => !m.matchDate
+    )
+    if (invalidDate) {
+      validationErrors.push(`Thiếu ngày thi đấu ở match #${invalidDate.matchNumber}`)
+    }
+    
+    // Validate: tất cả trận phải có StartTime và EndTime
+    const invalidTime = matchesPayload.find(
+      (m) => !m.startTime || !m.endTime
+    )
+    if (invalidTime) {
+      validationErrors.push(`Thiếu thời gian thi đấu ở match #${invalidTime.matchNumber}`)
+    }
+    
+    // Validate: StartTime < EndTime
+    const invalidTimeRange = matchesPayload.find(
+      (m) => m.startTime && m.endTime && m.startTime >= m.endTime
+    )
+    if (invalidTimeRange) {
+      validationErrors.push(`Thời gian không hợp lệ ở match #${invalidTimeRange.matchNumber} (StartTime phải < EndTime)`)
+    }
+    
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0])
+      if (validationErrors.length > 1) {
+        console.warn("Các lỗi validation khác:", validationErrors.slice(1))
+      }
       return
     }
 
@@ -944,14 +1309,33 @@ export default function AISchedule() {
 
       if (status === 409 && Array.isArray(conflictPayload) && conflictPayload.length > 0) {
         console.error("Schedule conflicts from backend:", conflictPayload)
-        toast.error("Phát hiện xung đột lịch thi đấu, vui lòng xem chi tiết và điều chỉnh.")
+        
+        // Hiển thị conflicts chi tiết
+        const conflictMessages = conflictPayload.map(c => {
+          const matchInfo = `Match #${c.matchNumber} (${c.matchDate} ${c.startTime}-${c.endTime})`
+          return `${matchInfo}: ${c.message}`
+        })
+        
+        toast.error(
+          `Phát hiện ${conflictPayload.length} xung đột lịch thi đấu:\n${conflictMessages.slice(0, 3).join('\n')}${conflictMessages.length > 3 ? `\n... và ${conflictMessages.length - 3} xung đột khác` : ''}`,
+          { autoClose: 10000 }
+        )
+        
+        // Log tất cả conflicts để debug
+        console.error("All conflicts:", conflictPayload)
       } else {
         const message =
+          error?.response?.data?.message ||
+          error?.data?.message ||
           error?.message ||
           error?.error ||
-          error?.data?.message ||
           "Có lỗi xảy ra khi áp dụng lịch thi đấu"
         toast.error(message)
+        
+        // Log chi tiết để debug
+        if (error?.response?.data) {
+          console.error("Error details:", error.response.data)
+        }
       }
     } finally {
       setIsApplyingSchedule(false)
@@ -1614,6 +1998,7 @@ export default function AISchedule() {
             className={`space-y-6 transition-all duration-300 ${
               isFormCollapsed ? "lg:w-64" : "lg:w-[420px]"
             }`}
+            data-slot="schedule-form"
           >
           <Card>
             <CardHeader>
@@ -1658,9 +2043,16 @@ export default function AISchedule() {
                     id="startDate"
                     type="date"
                     value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    className="mt-2"
+                    onChange={(e) => {
+                      const newData = { ...formData, startDate: e.target.value }
+                      setFormData(newData)
+                      setDateValidationErrors(validateDatesAndTimes(newData))
+                    }}
+                    className={`mt-2 ${dateValidationErrors.startDate ? 'border-red-500' : ''}`}
                   />
+                  {dateValidationErrors.startDate && (
+                    <p className="text-xs text-red-600 mt-1">{dateValidationErrors.startDate}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="endDate">Ngày kết thúc</Label>
@@ -1668,9 +2060,16 @@ export default function AISchedule() {
                     id="endDate"
                     type="date"
                     value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="mt-2"
+                    onChange={(e) => {
+                      const newData = { ...formData, endDate: e.target.value }
+                      setFormData(newData)
+                      setDateValidationErrors(validateDatesAndTimes(newData))
+                    }}
+                    className={`mt-2 ${dateValidationErrors.endDate ? 'border-red-500' : ''}`}
                   />
+                  {dateValidationErrors.endDate && (
+                    <p className="text-xs text-red-600 mt-1">{dateValidationErrors.endDate}</p>
+                  )}
                 </div>
               </div>
 
@@ -1915,9 +2314,16 @@ export default function AISchedule() {
                     id="preferredStartTime"
                     type="time"
                     value={formData.preferredStartTime}
-                    onChange={(e) => setFormData({ ...formData, preferredStartTime: e.target.value })}
-                    className="mt-2"
+                    onChange={(e) => {
+                      const newData = { ...formData, preferredStartTime: e.target.value }
+                      setFormData(newData)
+                      setDateValidationErrors(validateDatesAndTimes(newData))
+                    }}
+                    className={`mt-2 ${dateValidationErrors.preferredStartTime ? 'border-red-500' : ''}`}
                   />
+                  {dateValidationErrors.preferredStartTime && (
+                    <p className="text-xs text-red-600 mt-1">{dateValidationErrors.preferredStartTime}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="preferredEndTime">Giờ kết thúc ưu tiên</Label>
@@ -1925,9 +2331,16 @@ export default function AISchedule() {
                     id="preferredEndTime"
                     type="time"
                     value={formData.preferredEndTime}
-                    onChange={(e) => setFormData({ ...formData, preferredEndTime: e.target.value })}
-                    className="mt-2"
+                    onChange={(e) => {
+                      const newData = { ...formData, preferredEndTime: e.target.value }
+                      setFormData(newData)
+                      setDateValidationErrors(validateDatesAndTimes(newData))
+                    }}
+                    className={`mt-2 ${dateValidationErrors.preferredEndTime ? 'border-red-500' : ''}`}
                   />
+                  {dateValidationErrors.preferredEndTime && (
+                    <p className="text-xs text-red-600 mt-1">{dateValidationErrors.preferredEndTime}</p>
+                  )}
                 </div>
               </div>
 
@@ -1957,7 +2370,7 @@ export default function AISchedule() {
 
               <Button
                 onClick={handleGenerate}
-                disabled={isGenerating}
+                disabled={isGenerating || Object.keys(dateValidationErrors).length > 0}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white"
               >
                 {isGenerating ? (
@@ -1972,6 +2385,11 @@ export default function AISchedule() {
                   </>
                 )}
               </Button>
+              {Object.keys(dateValidationErrors).length > 0 && (
+                <p className="text-xs text-red-600 text-center mt-2">
+                  Vui lòng sửa các lỗi ngày/giờ trước khi tạo lịch
+                </p>
+              )}
             </CardContent>
             )}
           </Card>
@@ -2477,6 +2895,188 @@ export default function AISchedule() {
           onClose={() => setSelectedBracketMatch(null)}
         />
       )}
+
+      {/* Dialog cảnh báo về slots */}
+      <Dialog open={slotWarningsDialogOpen} onOpenChange={setSlotWarningsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <AlertTriangle className="h-6 w-6 text-orange-500" />
+              Cảnh báo về lịch thi đấu
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <p className="text-sm text-orange-800">
+                {slotConflicts.length > 0 
+                  ? `Hệ thống không thể tạo lịch thi đấu do phát hiện ${slotConflicts.length} xung đột. Vui lòng xem chi tiết bên dưới và điều chỉnh các thông tin.`
+                  : "Hệ thống đã tạo lịch thi đấu nhưng phát hiện một số vấn đề cần lưu ý. Vui lòng xem chi tiết bên dưới và điều chỉnh các thông tin để có lịch thi đấu tối ưu hơn."
+                }
+              </p>
+            </div>
+
+            {/* Hiển thị conflicts chi tiết dưới dạng bullet points */}
+            {slotConflicts.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                  Chi tiết các xung đột:
+                </h3>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-96 overflow-y-auto">
+                  <ul className="space-y-2 list-disc list-inside">
+                    {slotConflicts.map((conflict, idx) => (
+                      <li key={idx} className="text-sm text-gray-700">
+                        <span className="font-medium">
+                          {conflict.slot?.matchDate 
+                            ? `${new Date(conflict.slot.matchDate).toLocaleDateString('vi-VN')} ${conflict.slot.startTime}-${conflict.slot.endTime}`
+                            : 'Slot không xác định'
+                          }
+                          {conflict.slot?.location && ` tại ${conflict.slot.location}`}
+                        </span>
+                        {': '}
+                        <span>{conflict.reason}</span>
+                        {conflict.matchConflict && (
+                          <div className="ml-6 mt-1 text-xs text-gray-600">
+                            → Trùng với Match #{conflict.matchConflict.matchNumber} 
+                            ({conflict.matchConflict.classGroup1Id && conflict.matchConflict.classGroup2Id 
+                              ? `Lớp ${conflict.matchConflict.classGroup1Id} vs ${conflict.matchConflict.classGroup2Id}`
+                              : 'Match đã có'
+                            })
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {slotWarnings.length > 0 && (
+              <div className="space-y-3">
+                {slotWarnings.map((warning, index) => {
+                  const severityColors = {
+                    High: "bg-red-50 border-red-200",
+                    Medium: "bg-orange-50 border-orange-200",
+                    Low: "bg-yellow-50 border-yellow-200"
+                  }
+                  
+                  const severityIcons = {
+                    High: "🔴",
+                    Medium: "🟠",
+                    Low: "🟡"
+                  }
+
+                  const severityColor = severityColors[warning.severity] || severityColors.Medium
+                  const severityIcon = severityIcons[warning.severity] || "🟠"
+
+                  return (
+                    <div
+                      key={index}
+                      className={`border rounded-lg p-4 ${severityColor}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">{severityIcon}</span>
+                        <div className="flex-1 space-y-2">
+                          <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                            {warning.title}
+                            {warning.severity === "High" && (
+                              <Badge variant="destructive" className="text-xs">Quan trọng</Badge>
+                            )}
+                          </h4>
+                          
+                          <p className="text-sm text-gray-700">{warning.description}</p>
+                          
+                          {(warning.currentValue || warning.recommendedValue) && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                              {warning.currentValue && warning.currentValue.trim() && (
+                                <div className="bg-white rounded-md p-3 border border-gray-200">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Info className="h-4 w-4 text-gray-500" />
+                                    <span className="text-xs font-medium text-gray-600">Giá trị hiện tại:</span>
+                                  </div>
+                                  <p className="text-sm font-semibold text-gray-900">{warning.currentValue}</p>
+                                </div>
+                              )}
+                              
+                              {warning.recommendedValue && warning.recommendedValue.trim() && (
+                                <div className="bg-white rounded-md p-3 border border-gray-200">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Info className="h-4 w-4 text-blue-500" />
+                                    <span className="text-xs font-medium text-gray-600">Khuyến nghị:</span>
+                                  </div>
+                                  <p className="text-sm font-semibold text-blue-600">{warning.recommendedValue}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {warning.field && (
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <div className="flex items-start gap-2">
+                                <MapPin className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <span className="text-xs font-medium text-gray-600">Các trường cần kiểm tra:</span>
+                                  <div className="flex flex-wrap gap-2 mt-1">
+                                    {warning.field.split(',').map((field, fieldIdx) => (
+                                      <Badge
+                                        key={fieldIdx}
+                                        variant="outline"
+                                        className="text-xs bg-white"
+                                      >
+                                        {field.trim()}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {warning.solution && (
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <div className="flex items-start gap-2">
+                                <Wand2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <span className="text-xs font-medium text-gray-600">Giải pháp đề xuất:</span>
+                                  <p className="text-sm text-gray-700 mt-1">{warning.solution}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSlotWarningsDialogOpen(false)}
+            >
+              Đóng
+            </Button>
+            <Button
+              onClick={() => {
+                setSlotWarningsDialogOpen(false)
+                // Scroll to form để user có thể điều chỉnh
+                const formElement = document.querySelector('[data-slot="schedule-form"]')
+                if (formElement) {
+                  formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  setIsFormCollapsed(false)
+                }
+              }}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              Điều chỉnh thông tin
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
