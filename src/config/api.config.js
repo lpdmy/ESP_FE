@@ -126,6 +126,7 @@ export const API_CONFIG = {
   CLUB: {
     CREATE_CLUB: "/club-creation-request",
     LIST_CLUB: "/club",
+    LIST_CLUB_Admin: "/club/admin",
     CLUB_CATEGORY: "/club/categories",
     CLUB_DETAIL: "/club/{id}",
     CLUB_JOIN_REQUEST: "/join-request/club",

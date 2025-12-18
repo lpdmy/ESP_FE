@@ -374,7 +374,7 @@ export default function ClubManage() {
           </div> */}
         </div>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-6 bg-white/50 backdrop-blur-sm">
+          <TabsList className="grid w-full grid-cols-4 mb-6 bg-white/50 backdrop-blur-sm">
             <TabsTrigger value="posts" className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
               Bài đăng
@@ -386,10 +386,6 @@ export default function ClubManage() {
             <TabsTrigger value="requests" className="flex items-center gap-2">
               <UserCheck className="w-4 h-4" />
               Yêu cầu tham gia
-            </TabsTrigger>
-            <TabsTrigger value="activities" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Hoạt động
             </TabsTrigger>
             <TabsTrigger value="info" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
