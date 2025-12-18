@@ -60,7 +60,6 @@ export const formatDateFromAPI = (dateStr, includeTime = false) => {
    
    // Verify date is valid
    if (isNaN(date.getTime())) {
-      console.error('❌ Invalid date string in formatDateFromAPI:', dateStr)
       return null
    }
    
@@ -111,11 +110,6 @@ export const utcToVNTime = (utcDate, includeTime = false) => {
    
    // Verify date is valid
    if (isNaN(date.getTime())) {
-      console.error('❌ Invalid date string in utcToVNTime:', {
-         original: utcDate,
-         normalized: dateStr,
-         type: typeof utcDate
-      })
       return null
    }
    
@@ -124,22 +118,6 @@ export const utcToVNTime = (utcDate, includeTime = false) => {
    const year = date.getUTCFullYear()
    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
    const day = String(date.getUTCDate()).padStart(2, '0')
-   
-   // Debug log for date conversion
-   if (process.env.NODE_ENV === 'development') {
-      console.log('🕐 utcToVNTime:', {
-         input: originalStr,
-         normalized: dateStr,
-         utcDate: date.toISOString(),
-         extracted: `${year}-${month}-${day}`,
-         utcYear: date.getUTCFullYear(),
-         utcMonth: date.getUTCMonth() + 1,
-         utcDay: date.getUTCDate(),
-         localYear: date.getFullYear(),
-         localMonth: date.getMonth() + 1,
-         localDay: date.getDate()
-      })
-   }
    
    if (includeTime) {
       // Return with time: YYYY-MM-DDTHH:mm:ss (in VN time)

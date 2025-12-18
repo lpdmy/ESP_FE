@@ -35,7 +35,6 @@ export default function JuryDashboard() {
       const response = await getJuryAcitivty(searchQuery, pageSize, pageNumber);
       setJuryActivity(response.data.data);
     } catch (error) {
-      console.log(error);
     }
   };
 

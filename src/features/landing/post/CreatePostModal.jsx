@@ -490,7 +490,6 @@ const CreatePostModal = ({
         error?.response?.data?.message ||
         error?.message ||
         "Có lỗi xảy ra khi đăng bài.";
-        console.log(error)
       setErrorMessage(message);
     } finally {
       setUiState((prev) => ({ ...prev, isAnimating: false }));
@@ -639,11 +638,7 @@ const CreatePostModal = ({
         alert(`File ${file.name} quá lớn. Kích thước tối đa là 50MB.`);
         return;
       }
-      console.log("📂 File đã chọn:", {
-        name: file.name,
-        type: file.type,
-        size: file.size / 1024 + " KB",
-      });
+
       let fileName = file.name;
       let counter = 1;
       while (existingFileNames.includes(fileName)) {
@@ -974,7 +969,6 @@ const CreatePostModal = ({
                           <button
                             key={option.value}
                             onClick={() => {
-                              console.log("Giá trị được chọn:", option.value);
                               setFormData((prev) => ({
                                 ...prev,
                                 privacyLevel: option.value,

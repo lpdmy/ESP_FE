@@ -99,7 +99,6 @@ export default function StaffManagement() {
       setTotalCount(total);
       setTotalPages(Math.ceil(total / pageSize));
     } catch (error) {
-      console.log(error);
     } finally {
       setIsLoading(false);
     }

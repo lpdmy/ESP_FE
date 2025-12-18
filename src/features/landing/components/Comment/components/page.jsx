@@ -43,7 +43,6 @@ export function CommentSection({ postId }) {
   const [selectedReportComment, setSelectedReportComment] = useState(null);
   const openReportModal = (comment) => {
     setSelectedReportComment(comment);
-    console.log(comment)
     setOpenReport(true);
   };
   const handleDeleteClick = (id) => {
@@ -77,7 +76,6 @@ export function CommentSection({ postId }) {
         contentText: selectedReportComment.content,
         status: "Pending",
       };
-      console.log("Payload gửi lên:", payload);
       await createReport(payload);
       toast.showSuccess("Đã gửi báo cáo");
     } catch (e) {
@@ -180,7 +178,6 @@ export function CommentSection({ postId }) {
         ...prev,
         [parentId]: res.data.data || [],
       }));
-      console.log(res.data.data);
     } catch (error) {
       console.error("Lỗi khi load phản hồi:", error);
       toast.loadCommentFail();
@@ -241,7 +238,6 @@ export function CommentSection({ postId }) {
 
       if (status === 400) {
         toast.showError(message);
-        console.log(message);
       } else {
         console.error("Lỗi khi gửi bình luận:", error);
         toast.showError(error.message);

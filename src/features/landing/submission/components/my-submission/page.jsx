@@ -34,7 +34,6 @@ export default function MySubmissions() {
       );
       setSubmissions(response.data.data);
     } catch (error) {
-      console.log(error);
     }
   };
 

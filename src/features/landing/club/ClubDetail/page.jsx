@@ -119,14 +119,11 @@ export default function ClubDetail() {
       SetIsJoined(response.data.isMember);
       setIsRequestToJoin(response.data.isRequestToJoin);
       SetIsPresident(response.data.isPresident);
-      console.log(response);
     } catch (error) {
       toast.loadClubFail();
-      console.log(error);
     }
   };
   const getProfileRoute = (user) => {
-    console.log("User object:", user);
     const role = Number(user?.userRole);
     switch (role) {
       case 2:
@@ -162,9 +159,7 @@ export default function ClubDetail() {
       const response = await getClubPost(clubid);
       const data = response.data;
       setPosts(data);
-      console.log("bài đăng", data);
     } catch (error) {
-      console.log(error);
     }
   };
   const handleCancelRequest = async () => {
@@ -172,7 +167,6 @@ export default function ClubDetail() {
       await cancelJoinRequest(clubid);
       handleClubDetail();
     } catch (err) {
-      console.log(err);
     }
   };
   const handleChangeRole = (vaitro) => {
@@ -222,14 +216,12 @@ export default function ClubDetail() {
       toast.approveInvitationSuccess();
     } catch (error) {
       toast.approveInvitationFail();
-      console.log(error);
     }
   };
 
   useEffect(() => {
     handleClubDetail();
     handleClubPost();
-    console.log(user);
   }, []);
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -297,7 +289,6 @@ export default function ClubDetail() {
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.preventDefault(); // optional
-                      console.log("clubid:", clubid);
                       navigate(`/club/manage/${clubid}`);
                     }}
                     className="flex items-center cursor-pointer"

@@ -80,14 +80,11 @@ export default function AssignDialog({
       onClose();
     } catch (err) {
       toast.showError("Phân công thất bại!");
-      console.log(err);
     } finally {
       setLoading(false);
     }
   };
-  useEffect(()=>{
-    console.log(juryList)
-  },[juryList])
+
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-4xl">

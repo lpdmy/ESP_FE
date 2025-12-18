@@ -25,9 +25,7 @@ export default function MentorInvitationModal({
       const response = await getInvitation();
       const data = response.data.data;
       setInvitation(data);
-      console.log(data)
     } catch (err) {
-      console.log(err);
     }
   };
   useEffect(()=>{

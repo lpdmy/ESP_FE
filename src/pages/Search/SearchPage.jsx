@@ -46,7 +46,6 @@ export default function SearchPage() {
   };
 
   const getProfileRoute = (user) => {
-    console.log("User object:", user);
   switch (user?.role) {
     case ROLE.TEACHER:
       return `${ROUTES.USER_PROFILE.TEACHER_PROFILE}/${user.id}`;

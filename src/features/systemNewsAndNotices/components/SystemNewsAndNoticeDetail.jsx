@@ -189,7 +189,6 @@ export default function SystemNewsAndNoticeDetail() {
 
   const handleDownload = (file) => {
     // TODO: Implement download functionality
-    console.log('Download file:', file);
     toast({
       title: "Thông báo",
       description: `Đang tải xuống ${file.name}`,

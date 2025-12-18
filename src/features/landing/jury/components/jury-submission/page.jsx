@@ -81,7 +81,6 @@ export default function JurySubmissions() {
       setTotalCount(response.data.totalCount);
       setSubmissions(response.data.data);
     } catch (err) {
-      console.log(err);
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +97,6 @@ export default function JurySubmissions() {
       setTotalCountNotGrade(response.data.totalCount);
       setSubmissionsNotGrade(response.data.data);
     } catch (err) {
-      console.log(err);
     } finally {
       setIsLoadingNotGrade(false);
     }
@@ -115,7 +113,6 @@ export default function JurySubmissions() {
       setTotalCountGrade(response.data.totalCount);
       setSubmissionsGrade(response.data.data);
     } catch (err) {
-      console.log(err);
     } finally {
       setIsLoadingGrade(false);
     }
@@ -137,13 +134,11 @@ export default function JurySubmissions() {
     try {
       // Load tất cả submissions chưa chấm để đảm bảo có dữ liệu
     const allSubmissions = await loadAllJurySubmissionsNotGrade();
-      console.log("📌 Đã load submissions chưa chấm:", allSubmissions.length);
       
       // Navigate đến trang chấm điểm
       // Trang grade sẽ tự động load lại dữ liệu từ API
     navigate(`/jury/grade/${id}`);
     } catch (error) {
-      console.error("❌ Lỗi khi navigate đến trang chấm điểm:", error);
       // Vẫn navigate để user có thể thấy trang, trang sẽ tự load
       navigate(`/jury/grade/${id}`);
     }

@@ -24,7 +24,6 @@ export default function ModerationModal({ open, onClose,data }) {
     status: "Đang chờ xử lý",
   };
   useEffect(()=>{
-    console.log(data)
   },[data])
   function formatDate(dateString, format = "dd/MM/yyyy") {
   const date = new Date(dateString);

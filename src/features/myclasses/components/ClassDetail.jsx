@@ -57,8 +57,6 @@ export default function ClassDetail() {
         
         // Luôn lấy lớp học hiện tại của user trong niên khóa này
         const currentClass = await ClassGroupService.getCurrentClass(token)
-        console.log('Current class response:', currentClass)
-        console.log('Schedules in current class:', currentClass?.schedules)
         
         // Lưu user role từ response
         if (currentClass?.userRole) {

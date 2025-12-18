@@ -39,7 +39,6 @@
         window.addEventListener("load", () => {
           // Hỗ trợ hệ thống thông báo iOS
           if (navigator.userAgent.match(/(iPad|iPhone|iPod)/g)) {
-            console.log("iOS device detected, configuring special handling");
 
             // Force reload khi đầu tiên load PWA, đảm bảo SW được đăng ký
             if (window.matchMedia("(display-mode: standalone)").matches) {

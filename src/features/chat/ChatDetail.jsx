@@ -141,7 +141,6 @@ export default function ChatDetail() {
 
     const setupRoomConnection = async () => {
       try {
-        console.log("🔄 Ensuring SignalR connection...");
         const conn = await ensureChatConnected(userId, (msg) => {
           // callback khi nhận message realtime
           if (isMounted && msg.roomId === roomId) {
@@ -151,7 +150,6 @@ export default function ChatDetail() {
 
         if (conn && conn.state === "Connected") {
           await joinChatRoom(roomId);
-          console.log("✅ Joined chat room:", roomId);
         } else {
           console.warn("⚠️ Connection not ready, retrying...");
         }
@@ -165,7 +163,6 @@ export default function ChatDetail() {
     return () => {
       isMounted = false;
       if (roomId) {
-        console.log("🚪 Leaving room:", roomId);
         leaveChatRoom(roomId);
       }
     };
@@ -195,8 +192,6 @@ export default function ChatDetail() {
         showError("Không thể gửi tin nhắn (chưa kết nối máy chủ)");
         return;
       }
-
-      console.log("💬 Sending message:", newMessage, "to room:", roomId);
 
       // --- 1️⃣ Gửi realtime qua SignalR ---
       await sendChatMessage(roomId, userId, newMessage, "text");

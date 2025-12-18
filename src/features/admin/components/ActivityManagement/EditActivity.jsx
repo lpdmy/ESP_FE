@@ -418,9 +418,7 @@ export default function EditActivity() {
           if (speakerImagePreview && speakerImagePreview.startsWith("blob:")) {
             URL.revokeObjectURL(speakerImagePreview);
           }
-          toast.success("Đã upload ảnh thành công");
         } catch (error) {
-          console.error("Error uploading speaker image:", error);
           toast.error(error.message || "Có lỗi xảy ra khi upload ảnh");
           setIsUploadingSpeakerImage(false);
           return;
@@ -762,10 +760,8 @@ export default function EditActivity() {
         const uploadedUrl = await uploadImage(file);
         if (uploadedUrl) {
           setFormData({ ...formData, thumbnail: uploadedUrl });
-          toast.success("Đã upload ảnh thành công");
         }
       } catch (error) {
-        console.error("Error uploading image:", error);
         toast.error(error.message || "Có lỗi xảy ra khi upload ảnh");
       } finally {
         setIsUploadingThumbnail(false);
@@ -802,10 +798,8 @@ export default function EditActivity() {
         const uploadedUrl = await uploadImage(file);
         if (uploadedUrl) {
           setFormData({ ...formData, thumbnail: uploadedUrl });
-          toast.success("Đã upload ảnh thành công");
         }
       } catch (error) {
-        console.error("Error uploading image:", error);
         toast.error(error.message || "Có lỗi xảy ra khi upload ảnh");
       } finally {
         setIsUploadingThumbnail(false);
@@ -818,7 +812,6 @@ export default function EditActivity() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    toast.success("Đã xóa ảnh");
   };
 
   if (isLoading) {

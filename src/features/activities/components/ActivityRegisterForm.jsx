@@ -111,7 +111,6 @@ export default function ActivityRegisterForm() {
             className: userData?.className || userData?.classGroupName || "",
           })
         } catch (apiErr) {
-          console.warn("Cannot fetch user info from API, using token data only:", apiErr)
           // Fallback: chỉ dùng thông tin từ token
           setCurrentUser({
             id: userId,
@@ -119,7 +118,7 @@ export default function ActivityRegisterForm() {
           })
         }
       } catch (err) {
-        console.warn("Cannot decode token", err)
+        // Token decode failed, continue without user info
       }
     }
     
@@ -128,7 +127,6 @@ export default function ActivityRegisterForm() {
 
   useEffect(() => {
     const fetchDetail = async () => {
-      console.log("🔵 ActivityRegisterForm: fetchDetail started, params.id:", params.id)
       if (!params.id) {
         navigate(ROUTES.ACTIVITY.LIST)
         return
@@ -136,31 +134,12 @@ export default function ActivityRegisterForm() {
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
-        console.log("🔵 ActivityRegisterForm: Calling getActivityById with id:", params.id)
         const response = await executeApiCall(
           activityService.getActivityById.bind(activityService),
           [params.id, token],
           { setLoading: () => {} }
         )
-        console.log("🔵 ActivityRegisterForm: Response received:", response)
         const data = response?.data?.data || response?.data
-        
-        // Debug: Log registrationSettings to check format
-        console.log("=== 🔵 FETCHED ACTIVITY DATA ===")
-        console.log("Activity ID:", data?.id)
-        console.log("Activity SubType:", data?.subType)
-        console.log("RegistrationSettings:", data?.registrationSettings)
-        console.log("RegistrationSettings type:", typeof data?.registrationSettings)
-        if (data?.registrationSettings) {
-          console.log("RegistrationSettings keys:", Object.keys(data.registrationSettings))
-          if (data.registrationSettings.groupRegistration) {
-            console.log("groupRegistration:", data.registrationSettings.groupRegistration)
-            console.log("minMembers:", data.registrationSettings.groupRegistration.minMembers)
-            console.log("maxMembers:", data.registrationSettings.groupRegistration.maxMembers)
-          }
-          console.log("RegistrationSettings JSON:", JSON.stringify(data.registrationSettings, null, 2))
-        }
-        console.log("=== END FETCHED DATA ===")
         
         setActivity(data)
         
@@ -221,7 +200,6 @@ export default function ActivityRegisterForm() {
 
       setClassStudents(normalizedStudents.filter((student) => student.id))
     } catch (err) {
-      console.error("Không thể tải thông tin lớp học:", err)
       toastRef.current.error(err?.message || "Không thể tải thông tin lớp học của bạn.")
     } finally {
       setIsClassLoading(false)
@@ -362,13 +340,11 @@ export default function ActivityRegisterForm() {
   // But we need to handle both cases: object or string
   const parseRegistrationSettings = (settings) => {
     if (!settings) {
-      console.log("parseRegistrationSettings: settings is null/undefined")
       return null
     }
     
     // If it's already an object (from BE deserialization), return as is
     if (typeof settings === "object" && !Array.isArray(settings)) {
-      console.log("parseRegistrationSettings: settings is already an object", settings)
       return settings
     }
     
@@ -376,15 +352,12 @@ export default function ActivityRegisterForm() {
     if (typeof settings === "string") {
       try {
         const parsed = JSON.parse(settings)
-        console.log("parseRegistrationSettings: parsed from string", parsed)
         return parsed
       } catch (err) {
-        console.warn("Không thể parse registration settings", err)
         return null
       }
     }
     
-    console.log("parseRegistrationSettings: unknown type", typeof settings, settings)
     return null
   }
 
@@ -409,7 +382,6 @@ export default function ActivityRegisterForm() {
       // Gọi API search user by email (chính xác)
       const response = await searchUserByEmail(trimmedQuery)
       
-      console.log("Search user by email response:", response)
 
       // Parse response - backend trả về ResponseDto<UserSearchResultDto>
       let user = null
@@ -448,12 +420,10 @@ export default function ActivityRegisterForm() {
         avatarUrl: user.avatarUrl || "",
       }
 
-      console.log("Normalized user:", normalizedUser)
 
       setSearchedUsers([normalizedUser])
       toast.success("Tìm thấy thành viên!")
     } catch (err) {
-      console.error("Error searching user by email:", err)
       if (err?.statusCode === 404) {
         toast.info("Không tìm thấy thành viên với email này")
       } else {
@@ -684,7 +654,6 @@ export default function ActivityRegisterForm() {
   const handleToggleGroupMember = (studentId, memberData = null) => {
     // Validate studentId
     if (!studentId || (typeof studentId !== 'number' && typeof studentId !== 'string')) {
-      console.error("Invalid studentId:", studentId)
       toast.showError("Không thể xác định thành viên. Vui lòng thử lại.")
       return
     }
@@ -692,7 +661,6 @@ export default function ActivityRegisterForm() {
     // Convert to number if needed
     const normalizedId = typeof studentId === 'string' ? Number(studentId) : studentId
     if (isNaN(normalizedId)) {
-      console.error("Invalid studentId (NaN):", studentId)
       toast.showError("ID thành viên không hợp lệ. Vui lòng thử lại.")
       return
     }
@@ -1140,17 +1108,13 @@ export default function ActivityRegisterForm() {
   }, [activity, params.id, currentUser, canRegister, summary, selectedSports, currentClass, groupForm, getGroupSettings, classStudents, groupMembers, searchedUsers])
 
   const handleOpenConfirm = () => {
-    console.log("🔵 handleOpenConfirm called")
     // Validate frontend trước
     const validation = validateForm()
-    console.log("🔵 Validation result:", validation)
     if (!validation || !validation.isValid) {
-      console.log("🔵 Validation failed, errors:", validation?.errors)
       // Errors đã được set trong validateForm, không cần làm gì thêm
       return
     }
     // Chỉ mở modal khi validate thành công
-    console.log("🔵 Validation passed, opening modal")
     setShowConfirmModal(true)
   }
 

@@ -9,6 +9,7 @@ import { Badge } from "@/common/components/ui/badge"
 import { SimpleSelect } from "@/common/components/ui/select"
 import { Checkbox } from "@/common/components/ui/checkbox"
 import { Switch } from "@/common/components/ui/switch"
+import { RadioGroup, RadioGroupItem } from "@/common/components/ui/radio-group"
 import {
   Dialog,
   DialogContent,
@@ -54,6 +55,7 @@ export default function CreateActivity() {
   const [gradingEnabled, setGradingEnabled] = useState(false) // Bật/tắt chấm điểm
   const [gradingCriteria, setGradingCriteria] = useState([]) // Danh sách tiêu chí chấm điểm
   const [onlyTeacherCanRegister, setOnlyTeacherCanRegister] = useState(false) // Chỉ giáo viên mới được đăng ký
+  const [registrationType, setRegistrationType] = useState("individual") // "individual" or "group"
   const [dateErrors, setDateErrors] = useState({
     startDate: "",
     endDate: "",
@@ -81,7 +83,6 @@ export default function CreateActivity() {
     // CreativeContest fields (gộp DrawingContest và CreativeWriting)
     paperSize: "",
     drawingMedium: "",
-    timeLimit: "",
     submissionFormat: "",
     genre: "",
     wordLimit: "",
@@ -228,7 +229,6 @@ export default function CreateActivity() {
       genre: dataToUse.genre || null,
       paperSize: dataToUse.paperSize || null,
       drawingMedium: dataToUse.drawingMedium || null,
-      timeLimit: dataToUse.timeLimit || null,
       submissionFormat: dataToUse.submissionFormat || null,
       problemText: dataToUse.problemText || null,
       problemFileUrl: dataToUse.problemFileUrl || null,
@@ -265,10 +265,6 @@ export default function CreateActivity() {
             [token],
             { setLoading: setIsLoadingTemplates, setError: () => {} }
           )
-          console.log("Templates response:", response)
-          console.log("Response type:", typeof response)
-          console.log("Response.data:", response?.data)
-          console.log("Response.data is array:", Array.isArray(response?.data))
           
           // Response format từ handleApiResponse: { statusCode: 200, message: "...", data: [...] }
           // handleApiResponse trả về response.json() nên response là object trực tiếp
@@ -283,18 +279,12 @@ export default function CreateActivity() {
           } else if (Array.isArray(response)) {
             // Case 3: response is directly the array
             templatesData = response
-          } else {
-            console.warn("Unexpected response format:", response)
-            console.warn("Response keys:", response ? Object.keys(response) : "null")
           }
           
-          console.log("Templates data extracted:", templatesData)
-          console.log("Templates count:", templatesData.length)
           setTemplates(templatesData)
           setShowTemplateList(true)
           setSelectedTemplate(null) // Ensure no template is selected initially
       } catch (error) {
-          console.error("Error loading templates:", error)
           toast.error(error?.message || "Không thể tải danh sách mẫu. Vui lòng thử lại.")
           setTemplates([])
           setShowTemplateList(true)
@@ -499,9 +489,7 @@ export default function CreateActivity() {
           if (speakerImagePreview && speakerImagePreview.startsWith("blob:")) {
             URL.revokeObjectURL(speakerImagePreview)
           }
-          toast.success("Đã upload ảnh thành công")
         } catch (error) {
-          console.error("Error uploading speaker image:", error)
           toast.error(error.message || "Có lỗi xảy ra khi upload ảnh")
           setIsUploadingSpeakerImage(false)
           return
@@ -529,7 +517,6 @@ export default function CreateActivity() {
     setEditingSpeakerIndex(null)
     toast.success(editingSpeakerIndex !== null ? "Cập nhật diễn giả thành công" : "Thêm diễn giả thành công")
     } catch (error) {
-      console.error("Error saving speaker:", error)
       toast.error("Có lỗi xảy ra khi lưu diễn giả")
     }
   }
@@ -577,12 +564,14 @@ export default function CreateActivity() {
   }
 
   // Validate dates with proper order: Now ≤ RegisterDate ≤ EndRegisterDate ≤ StartDate ≤ EndDate
+  // Rule for submissionDeadline: StartDate ≤ SubmissionDeadline < EndDate
   const validateDates = (dates) => {
     const errors = {
       registerDate: "",
       endRegisterDate: "",
       startDate: "",
       endDate: "",
+      submissionDeadline: "",
     }
 
     const now = dayjs().startOf("day")
@@ -590,6 +579,7 @@ export default function CreateActivity() {
     const endRegisterDate = dates.endRegisterDate ? dayjs(dates.endRegisterDate) : null
     const startDate = dates.startDate ? dayjs(dates.startDate) : null
     const endDate = dates.endDate ? dayjs(dates.endDate) : null
+    const submissionDeadline = dates.submissionDeadline ? dayjs(dates.submissionDeadline) : null
 
     // Rule 1: Now ≤ RegisterDate
     if (registerDate && registerDate.isBefore(now, "day")) {
@@ -609,6 +599,16 @@ export default function CreateActivity() {
     // Rule 4: StartDate ≤ EndDate
     if (startDate && endDate && endDate.isBefore(startDate, "day")) {
       errors.endDate = "Ngày kết thúc hoạt động không được trước ngày bắt đầu hoạt động"
+    }
+
+    // Rule 5: SubmissionDeadline phải sau StartDate và trước EndDate (chỉ validate nếu có submissionDeadline)
+    if (submissionDeadline && dates.subType === "CreativeContest") {
+      if (startDate && submissionDeadline.isBefore(startDate, "day")) {
+        errors.submissionDeadline = "Hạn cuối nộp bài phải sau hoặc bằng ngày bắt đầu hoạt động"
+      }
+      if (endDate && (submissionDeadline.isAfter(endDate, "day") || submissionDeadline.isSame(endDate, "day"))) {
+        errors.submissionDeadline = "Hạn cuối nộp bài phải trước ngày kết thúc hoạt động"
+      }
     }
 
     return errors
@@ -635,6 +635,18 @@ export default function CreateActivity() {
   const handleDateChange = (field, label) => (e) => {
     const value = e.target.value
 
+    // Validate date value before processing
+    try {
+      if (value && !dayjs(value).isValid()) {
+        toast.error(`Giá trị ngày không hợp lệ cho ${label}`)
+        return
+      }
+    } catch (error) {
+      console.error(`Error validating date for ${field}:`, error)
+      toast.error(`Lỗi xử lý ngày cho ${label}`)
+      return
+    }
+
     // Update form data
     const updatedFormData = {
       ...formData,
@@ -644,30 +656,53 @@ export default function CreateActivity() {
     // Auto-reset dates in the chain that become invalid
     if (field === "registerDate" && value) {
       // If registerDate changes, reset endRegisterDate, startDate, endDate if they become invalid
-      const newRegisterDate = dayjs(value)
-      if (formData.endRegisterDate && dayjs(formData.endRegisterDate).isBefore(newRegisterDate, "day")) {
-        updatedFormData.endRegisterDate = ""
-      }
-      if (formData.startDate && dayjs(formData.startDate).isBefore(newRegisterDate, "day")) {
-        updatedFormData.startDate = ""
-      }
-      if (formData.endDate && dayjs(formData.endDate).isBefore(newRegisterDate, "day")) {
-        updatedFormData.endDate = ""
+      try {
+        const newRegisterDate = dayjs(value)
+        if (formData.endRegisterDate && dayjs(formData.endRegisterDate).isValid() && dayjs(formData.endRegisterDate).isBefore(newRegisterDate, "day")) {
+          updatedFormData.endRegisterDate = ""
+        }
+        if (formData.startDate && dayjs(formData.startDate).isValid() && dayjs(formData.startDate).isBefore(newRegisterDate, "day")) {
+          updatedFormData.startDate = ""
+        }
+        if (formData.endDate && dayjs(formData.endDate).isValid() && dayjs(formData.endDate).isBefore(newRegisterDate, "day")) {
+          updatedFormData.endDate = ""
+        }
+      } catch (error) {
+        console.error("Error processing registerDate change:", error)
       }
     } else if (field === "endRegisterDate" && value) {
       // If endRegisterDate changes, reset startDate, endDate if they become invalid
-      const newEndRegisterDate = dayjs(value)
-      if (formData.startDate && dayjs(formData.startDate).isBefore(newEndRegisterDate, "day")) {
-        updatedFormData.startDate = ""
-      }
-      if (formData.endDate && dayjs(formData.endDate).isBefore(newEndRegisterDate, "day")) {
-        updatedFormData.endDate = ""
+      try {
+        const newEndRegisterDate = dayjs(value)
+        if (formData.startDate && dayjs(formData.startDate).isValid() && dayjs(formData.startDate).isBefore(newEndRegisterDate, "day")) {
+          updatedFormData.startDate = ""
+        }
+        if (formData.endDate && dayjs(formData.endDate).isValid() && dayjs(formData.endDate).isBefore(newEndRegisterDate, "day")) {
+          updatedFormData.endDate = ""
+        }
+      } catch (error) {
+        console.error("Error processing endRegisterDate change:", error)
       }
     } else if (field === "startDate" && value) {
       // If startDate changes, reset endDate if it becomes invalid
-      const newStartDate = dayjs(value)
-      if (formData.endDate && dayjs(formData.endDate).isBefore(newStartDate, "day")) {
-        updatedFormData.endDate = ""
+      try {
+        const newStartDate = dayjs(value)
+        if (formData.endDate && dayjs(formData.endDate).isValid() && dayjs(formData.endDate).isBefore(newStartDate, "day")) {
+          updatedFormData.endDate = ""
+        }
+      } catch (error) {
+        console.error("Error processing startDate change:", error)
+      }
+    } else if (field === "endDate" && value && formData.submissionDeadline) {
+      // If endDate changes, reset submissionDeadline if it becomes invalid
+      try {
+        const newEndDate = dayjs(value)
+        if (dayjs(formData.submissionDeadline).isValid() && 
+            (dayjs(formData.submissionDeadline).isAfter(newEndDate, "day") || dayjs(formData.submissionDeadline).isSame(newEndDate, "day"))) {
+          updatedFormData.submissionDeadline = ""
+        }
+      } catch (error) {
+        console.error("Error processing endDate change:", error)
       }
     }
 
@@ -735,22 +770,8 @@ export default function CreateActivity() {
       toast.error("Hội thao cần có ít nhất một môn thi đấu")
       return
     }
-    // Date order validation is already done above with validateDates()
-    // Only validate submissionDeadline if needed
-    if (formData.subType === "CreativeContest" && formData.submissionDeadline) {
-      const submissionDeadline = dayjs(formData.submissionDeadline)
-      const startDate = dayjs(formData.startDate)
-      const endDate = dayjs(formData.endDate)
-      
-      if (submissionDeadline.isBefore(startDate, "day")) {
-        toast.error("Hạn cuối nộp bài phải sau hoặc bằng ngày bắt đầu hoạt động")
-        return
-      }
-      if (submissionDeadline.isAfter(endDate, "day")) {
-        toast.error("Hạn cuối nộp bài phải trước hoặc bằng ngày kết thúc hoạt động")
-        return
-      }
-    }
+    // Date order validation (including submissionDeadline) is already done above with validateDates()
+    // No need to validate again as it's already included in the dateValidationErrors check above
     
     // Validate grading settings if enabled
     if (gradingEnabled) {
@@ -801,9 +822,7 @@ export default function CreateActivity() {
           }
           setThumbnailFile(null)
           setFormData({ ...formData, thumbnail: thumbnailUrl })
-          toast.success("Đã upload ảnh thành công")
         } catch (error) {
-          console.error("Error uploading image:", error)
           toast.error(error.message || "Có lỗi xảy ra khi upload ảnh")
           setIsSubmitting(false)
           setIsUploadingThumbnail(false)
@@ -841,7 +860,7 @@ export default function CreateActivity() {
           : []
 
       const registrationSettingsPayload =
-        formData.subType === "CreativeContest"
+        formData.subType === "CreativeContest" && registrationType === "group"
           ? {
               groupRegistration: {
                 minMembers: parseInt(formData.registrationSettings?.groupRegistration?.minMembers, 10) || 1,
@@ -866,10 +885,51 @@ export default function CreateActivity() {
         thumbnailUrl: thumbnailUrl,
         // Convert VN time (UTC+7) to UTC before sending to BE
         // Start dates: 00:00:00 UTC, End dates: 23:59:59 UTC
-        startDate: formData.startDate ? vnTimeToUTC(formData.startDate, false) : null,
-        endDate: formData.endDate ? vnTimeToUTC(formData.endDate, true) : null,
-        registerDate: formData.registerDate ? vnTimeToUTC(formData.registerDate, false) : null,
-        endRegisterDate: formData.endRegisterDate ? vnTimeToUTC(formData.endRegisterDate, true) : null,
+        // Wrap in try-catch to prevent RangeError: Invalid time value
+        startDate: (() => {
+          try {
+            if (formData.startDate && dayjs(formData.startDate).isValid()) {
+              return vnTimeToUTC(formData.startDate, false)
+            }
+            return null
+          } catch (error) {
+            console.error("Error processing startDate:", error)
+            return null
+          }
+        })(),
+        endDate: (() => {
+          try {
+            if (formData.endDate && dayjs(formData.endDate).isValid()) {
+              return vnTimeToUTC(formData.endDate, true)
+            }
+            return null
+          } catch (error) {
+            console.error("Error processing endDate:", error)
+            return null
+          }
+        })(),
+        registerDate: (() => {
+          try {
+            if (formData.registerDate && dayjs(formData.registerDate).isValid()) {
+              return vnTimeToUTC(formData.registerDate, false)
+            }
+            return null
+          } catch (error) {
+            console.error("Error processing registerDate:", error)
+            return null
+          }
+        })(),
+        endRegisterDate: (() => {
+          try {
+            if (formData.endRegisterDate && dayjs(formData.endRegisterDate).isValid()) {
+              return vnTimeToUTC(formData.endRegisterDate, true)
+            }
+            return null
+          } catch (error) {
+            console.error("Error processing endRegisterDate:", error)
+            return null
+          }
+        })(),
         // maxParticipants: null = không giới hạn, có giá trị = giới hạn số người
         maxParticipants: (formData.maxParticipants && formData.maxParticipants.trim() !== "") 
           ? parseInt(formData.maxParticipants) 
@@ -884,14 +944,24 @@ export default function CreateActivity() {
         genre: formData.subType === "CreativeContest" ? formData.genre : null,
         paperSize: formData.subType === "CreativeContest" ? formData.paperSize : null,
         drawingMedium: formData.subType === "CreativeContest" ? formData.drawingMedium : null,
-        timeLimit: formData.subType === "CreativeContest" ? formData.timeLimit : null,
         submissionFormat: formData.subType === "CreativeContest" ? formData.submissionFormat : null,
         // Problem/Submission fields - chỉ áp dụng cho CreativeContest
         problemText: formData.subType === "CreativeContest" ? formData.problemText : null,
         problemFileUrl: formData.subType === "CreativeContest" ? formData.problemFileUrl : null,
-        submissionDeadline: formData.subType === "CreativeContest" && formData.submissionDeadline 
-          ? vnTimeToUTC(formData.submissionDeadline, true) 
-          : null,
+        submissionDeadline: (() => {
+          try {
+            if (formData.subType === "CreativeContest" && formData.submissionDeadline) {
+              const deadline = dayjs(formData.submissionDeadline)
+              if (deadline.isValid()) {
+                return vnTimeToUTC(formData.submissionDeadline, true)
+              }
+            }
+            return null
+          } catch (error) {
+            console.error("Error processing submissionDeadline:", error)
+            return null
+          }
+        })(),
         // SeminarWorkshop fields
         speakers: formData.subType === "SeminarWorkshop" ? formData.speakers.map((s, index) => ({
           name: s.name,
@@ -934,7 +1004,6 @@ export default function CreateActivity() {
         navigate("/admin/activities")
       }
     } catch (err) {
-      console.error("Error creating activity:", err)
       toast.error(err?.message || "Có lỗi xảy ra khi tạo hoạt động")
     } finally {
       setIsSubmitting(false)
@@ -976,7 +1045,6 @@ export default function CreateActivity() {
           // Cập nhật formData với URL mới
           setFormData(prevFormData => ({ ...prevFormData, thumbnail: thumbnailUrl }))
     } catch (error) {
-          console.error("Error uploading image:", error)
           toast.error(error.message || "Có lỗi xảy ra khi upload ảnh")
           setIsSubmitting(false)
           return
@@ -994,15 +1062,12 @@ export default function CreateActivity() {
         finalFormData // Pass finalFormData với thumbnail đã upload
       )
       
-      console.log("Saving template with data:", templateDto)
-      
         const response = await executeApiCall(
         activityService.saveAsTemplate.bind(activityService),
         [templateDto, token],
           { setLoading: setIsSubmitting, setError: () => {} }
         )
         
-      console.log("Save template response:", response)
       
       // Response format từ handleApiResponse: { statusCode: 200, message: "...", data: {...} }
       // Hoặc có thể wrap: { data: { statusCode: 200, message: "...", data: {...} } }
@@ -1031,7 +1096,6 @@ export default function CreateActivity() {
         toast.error(errorMessage)
       }
     } catch (error) {
-      console.error("Error saving template:", error)
       toast.error(error?.message || error?.data?.message || "Không thể lưu mẫu. Vui lòng thử lại.")
     } finally {
       setIsSubmitting(false)
@@ -1067,7 +1131,6 @@ export default function CreateActivity() {
       const previewUrl = URL.createObjectURL(file)
       setThumbnailPreview(previewUrl)
       
-      toast.success("Ảnh đã được chọn. Ảnh sẽ được upload khi bạn tạo hoạt động.")
     }
   }
 
@@ -1105,7 +1168,6 @@ export default function CreateActivity() {
       const previewUrl = URL.createObjectURL(file)
       setThumbnailPreview(previewUrl)
       
-      toast.success("Ảnh đã được chọn. Ảnh sẽ được upload khi bạn tạo hoạt động.")
     }
   }
 
@@ -1120,7 +1182,6 @@ export default function CreateActivity() {
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
-    toast.success("Đã xóa ảnh")
   }
 
   // Cleanup preview URL khi component unmount hoặc khi thay đổi file
@@ -1151,7 +1212,6 @@ export default function CreateActivity() {
             ? JSON.parse(prefillData.starPointRewards)
             : prefillData.starPointRewards
         } catch (e) {
-          console.error("Error parsing starPointRewards:", e)
           starPointRewards = null
         }
       }
@@ -1163,7 +1223,6 @@ export default function CreateActivity() {
             ? JSON.parse(prefillData.registrationSettings)
             : prefillData.registrationSettings
         } catch (e) {
-          console.error("Error parsing registrationSettings:", e)
           registrationSettings = null
         }
       }
@@ -1188,7 +1247,6 @@ export default function CreateActivity() {
           genre: prefillData.genre || "",
           paperSize: prefillData.paperSize || "",
           drawingMedium: prefillData.drawingMedium || "",
-          timeLimit: prefillData.timeLimit || "",
           submissionFormat: prefillData.submissionFormat || "",
           problemText: prefillData.problemText || "",
           problemFileUrl: prefillData.problemFileUrl || "",
@@ -1218,7 +1276,6 @@ export default function CreateActivity() {
             setGradingCriteria(gradingSettings.criteria)
           }
         } catch (e) {
-          console.error("Error parsing grading settings:", e)
         }
       }
       if (prefillData.onlyTeacherCanRegister !== undefined) {
@@ -1248,14 +1305,12 @@ export default function CreateActivity() {
           { setLoading: () => {}, setError: () => {} }
         )
       } catch (error) {
-        console.error("Error incrementing template usage:", error)
       }
 
       setSelectedTemplate(template)
       setShowTemplateList(false)
       toast.success(`Đã áp dụng mẫu "${template.name}" thành công`)
     } catch (error) {
-      console.error("Error applying template:", error)
       toast.error("Không thể áp dụng mẫu. Vui lòng thử lại.")
     }
   }
@@ -1802,23 +1857,13 @@ export default function CreateActivity() {
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label>Chất liệu / Thể loại</Label>
-                      <Input
-                        placeholder="VD: Màu nước, Chì màu, Truyện ngắn, Thơ, Digital..."
-                        value={formData.drawingMedium}
-                        onChange={(e) => setFormData({ ...formData, drawingMedium: e.target.value })}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>Thời gian làm bài</Label>
-                      <Input
-                        placeholder="VD: 90 phút, 2 giờ, Tự do..."
-                        value={formData.timeLimit}
-                        onChange={(e) => setFormData({ ...formData, timeLimit: e.target.value })}
-                      />
-                    </div>
+                  <div className="grid gap-2">
+                    <Label>Chất liệu / Thể loại</Label>
+                    <Input
+                      placeholder="VD: Màu nước, Chì màu, Truyện ngắn, Thơ, Digital..."
+                      value={formData.drawingMedium}
+                      onChange={(e) => setFormData({ ...formData, drawingMedium: e.target.value })}
+                    />
                   </div>
 
                     <div className="grid gap-2">
@@ -1895,12 +1940,10 @@ export default function CreateActivity() {
                                   const fileUrl = await uploadFile(file)
                                   if (fileUrl) {
                                     setFormData({ ...formData, problemFileUrl: fileUrl })
-                                    toast.success("Upload file đề bài thành công!")
                                   } else {
                                     toast.error("Upload file thất bại. Vui lòng thử lại.")
                                   }
                                 } catch (err) {
-                                  console.error("Upload error:", err)
                                   toast.error("Upload file thất bại: " + (err?.message || "Lỗi không xác định"))
                                 } finally {
                                   setIsUploadingThumbnail(false)
@@ -1969,73 +2012,123 @@ export default function CreateActivity() {
 
                   <div className="border rounded-lg p-4 space-y-4">
                     <div>
-                      <Label className="text-base font-semibold">Cài đặt đăng ký theo nhóm</Label>
+                      <Label className="text-base font-semibold">Cài đặt đăng ký</Label>
                       <p className="text-sm text-gray-600 mt-1">
-                        Quy định số lượng thành viên và yêu cầu nhóm trưởng cho cuộc thi có nộp bài.
+                        Chọn hình thức đăng ký cho cuộc thi.
                       </p>
                     </div>
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <InputField
-                        label="Số thành viên tối thiểu"
-                        type="number"
-                        min={1}
-                        value={formData.registrationSettings?.groupRegistration?.minMembers}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            registrationSettings: {
-                              ...prev.registrationSettings,
-                              groupRegistration: {
-                                ...prev.registrationSettings?.groupRegistration,
-                                minMembers: e.target.value,
-                              },
-                            },
-                          }))
-                        }
-                        required
-                      />
-                      <InputField
-                        label="Số thành viên tối đa"
-                        type="number"
-                        min={1}
-                        placeholder="Không giới hạn nếu để trống"
-                        value={formData.registrationSettings?.groupRegistration?.maxMembers ?? ""}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            registrationSettings: {
-                              ...prev.registrationSettings,
-                              groupRegistration: {
-                                ...prev.registrationSettings?.groupRegistration,
-                                maxMembers: e.target.value,
-                              },
-                            },
-                          }))
-                        }
-                      />
-                      <div className="flex items-center gap-3 border rounded-lg px-4 py-3">
-                        <div className="flex-1">
-                          <Label className="text-sm font-medium">Yêu cầu nhóm trưởng</Label>
-                          <p className="text-xs text-gray-500">
-                            Người tạo nhóm sẽ được chọn làm nhóm trưởng mặc định.
-                          </p>
-                        </div>
-                        <Switch
-                          checked={!!formData.registrationSettings?.groupRegistration?.requireLeader}
-                          onCheckedChange={(checked) =>
+                    <div className="grid gap-4">
+                      <RadioGroup
+                        value={registrationType}
+                        onValueChange={(value) => {
+                          setRegistrationType(value)
+                          // Reset group registration settings when switching to individual
+                          if (value === "individual") {
                             setFormData((prev) => ({
                               ...prev,
                               registrationSettings: {
-                                ...prev.registrationSettings,
                                 groupRegistration: {
-                                  ...prev.registrationSettings?.groupRegistration,
-                                  requireLeader: checked,
+                                  minMembers: 1,
+                                  maxMembers: null,
+                                  requireLeader: false,
+                                },
+                              },
+                            }))
+                          } else {
+                            // Initialize group settings when switching to group
+                            setFormData((prev) => ({
+                              ...prev,
+                              registrationSettings: {
+                                groupRegistration: {
+                                  minMembers: prev.registrationSettings?.groupRegistration?.minMembers || 3,
+                                  maxMembers: prev.registrationSettings?.groupRegistration?.maxMembers || 6,
+                                  requireLeader: prev.registrationSettings?.groupRegistration?.requireLeader ?? true,
                                 },
                               },
                             }))
                           }
-                        />
-                      </div>
+                        }}
+                        className="flex gap-6"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="individual" id="reg-individual" />
+                          <Label htmlFor="reg-individual" className="cursor-pointer font-normal">
+                            Cá nhân
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="group" id="reg-group" />
+                          <Label htmlFor="reg-group" className="cursor-pointer font-normal">
+                            Theo nhóm
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                      
+                      {registrationType === "group" && (
+                        <div className="grid md:grid-cols-3 gap-4 pt-4 border-t">
+                          <InputField
+                            label="Số thành viên tối thiểu"
+                            type="number"
+                            min={1}
+                            value={formData.registrationSettings?.groupRegistration?.minMembers}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                registrationSettings: {
+                                  ...prev.registrationSettings,
+                                  groupRegistration: {
+                                    ...prev.registrationSettings?.groupRegistration,
+                                    minMembers: e.target.value,
+                                  },
+                                },
+                              }))
+                            }
+                            required
+                          />
+                          <InputField
+                            label="Số thành viên tối đa"
+                            type="number"
+                            min={1}
+                            placeholder="Không giới hạn nếu để trống"
+                            value={formData.registrationSettings?.groupRegistration?.maxMembers ?? ""}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                registrationSettings: {
+                                  ...prev.registrationSettings,
+                                  groupRegistration: {
+                                    ...prev.registrationSettings?.groupRegistration,
+                                    maxMembers: e.target.value,
+                                  },
+                                },
+                              }))
+                            }
+                          />
+                          <div className="flex items-center gap-3 border rounded-lg px-4 py-3">
+                            <div className="flex-1">
+                              <Label className="text-sm font-medium">Yêu cầu nhóm trưởng</Label>
+                              <p className="text-xs text-gray-500">
+                                Người tạo nhóm sẽ được chọn làm nhóm trưởng mặc định.
+                              </p>
+                            </div>
+                            <Switch
+                              checked={!!formData.registrationSettings?.groupRegistration?.requireLeader}
+                              onCheckedChange={(checked) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  registrationSettings: {
+                                    ...prev.registrationSettings,
+                                    groupRegistration: {
+                                      ...prev.registrationSettings?.groupRegistration,
+                                      requireLeader: checked,
+                                    },
+                                  },
+                                }))
+                              }
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

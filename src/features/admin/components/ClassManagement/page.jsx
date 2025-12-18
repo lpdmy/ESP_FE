@@ -144,15 +144,8 @@ export default function ClassManagementPage() {
         const currentYear = data.find((ay) => ay.isCurrent) || data[0];
         if (currentYear) {
           setSelectedAcademicYearId(currentYear.id);
-          console.log(
-            "Set default academic year to:",
-            currentYear.name,
-            "ID:",
-            currentYear.id
-          );
         }
       } catch (error) {
-        console.error("Failed to fetch academic years:", error);
         toast.error("Không thể tải danh sách niên khóa");
       }
     };
@@ -431,20 +424,12 @@ export default function ClassManagementPage() {
     const loadDashboardData = async () => {
       try {
         const token = localStorage.getItem("token");
-        console.log(
-          "Loading dashboard with academicYearId:",
-          selectedAcademicYearId
-        );
 
         const res = await ClassGroupService.dashboard(
           token,
           selectedAcademicYearId
         );
         const payload = res?.data || res;
-
-        console.log("Dashboard API response:", res);
-        console.log("Dashboard payload:", payload);
-        console.log("Statistics:", payload?.statistics);
 
         // Set dashboard stats from API (backend already filtered by academic year)
         setDashboardStats({

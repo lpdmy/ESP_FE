@@ -30,7 +30,6 @@ export async function uploadImage(file) {
             throw new Error(data.message || 'Upload failed');
         }
     } catch (error) {
-        console.error('Upload error:', error);
         throw error;
     }
 }
@@ -65,7 +64,6 @@ export async function uploadFile(file) {
             throw new Error(data.message || 'Upload failed');
         }
     } catch (error) {
-        console.error('Upload error:', error);
         throw error;
     }
 }
@@ -91,7 +89,6 @@ export async function uploadMultipleFiles(files) {
             fileName: files[index].name
         }));
     } catch (error) {
-        console.error('Error uploading multiple files:', error);
         throw error;
     }
 }
