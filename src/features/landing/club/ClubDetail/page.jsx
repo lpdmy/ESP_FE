@@ -187,7 +187,6 @@ export default function ClubDetail() {
   const handleCreatePost = async (newPost) => {
     try {
     } catch (error) {
-      console.error("❌ Lỗi khi reload bài đăng:", error);
     }
   };
   const handleSubmit = async ({ reasonToJoin, experience }) => {
@@ -197,7 +196,6 @@ export default function ClubDetail() {
       toast.createClubJoinRequestSuccess();
       handleClubDetail();
     } catch (error) {
-      toast.createClubJoinRequestFail();
     }
   };
   const handleLeaveClub = async () => {
@@ -214,6 +212,7 @@ export default function ClubDetail() {
     try {
       await approveInvitation(clubid);
       toast.approveInvitationSuccess();
+      handleClubDetail()
     } catch (error) {
       toast.approveInvitationFail();
     }
@@ -376,7 +375,7 @@ export default function ClubDetail() {
                 <Card className="glass sticky bottom-6 !bg-white">
                   <CardContent>
                     <div className="flex flex-col gap-2">
-                      {(user?.role === 2 || user?.role === "TEACHER") && clubDetail.isMentorInvite ? (
+                      {(user?.role === 2 || user?.role === "Teacher") && clubDetail.isMentorInvite ? (
                         <Button
                           className="w-full bg-orange-400 hover:bg-orange-600 text-white flex items-center gap-2"
                           onClick={handleAcceptMentorInvite}
