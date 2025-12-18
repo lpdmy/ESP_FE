@@ -56,7 +56,7 @@ export default function Sidebar() {
   const handleNavigation = (item) => {
     // Special handling for "Lớp học của tôi" - redirect to user's specific class
     if (item.key === "my-class" && user?.classGroupId) {
-      navigate(`/my-classes/${user.classGroupId}`)
+      navigate(`/my-classes`)
       return
     }
 

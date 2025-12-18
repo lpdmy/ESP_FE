@@ -119,7 +119,7 @@ export default function ClassDetail() {
     )
   }
 
-  const showSidebar = userRole !== 'Teacher'
+  const showSidebar = true
 
   return (
     <div className="min-h-screen">

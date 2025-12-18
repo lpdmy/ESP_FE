@@ -3621,12 +3621,12 @@ export default function ViewActivity() {
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
-                <Card className="glass hover-lift">
+                <Card className="glass hover-lift !bg-white/100">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-xl">Giới thiệu</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <p className="text-gray-700 leading-relaxed text-base">
+                    <p className="text-gray-700  leading-relaxed text-base">
                       {activity.description}
                     </p>
                   </CardContent>
@@ -3634,7 +3634,7 @@ export default function ViewActivity() {
 
                 {/* SportsFestival: Môn thi đấu */}
                 {isSportsFestival && activity.sportsCategories.length > 0 && (
-                  <Card className="glass hover-lift">
+                  <Card className="glass hover-lift !bg-white/100">
                     <CardHeader className="pb-4">
                       <CardTitle className="text-xl">Môn thi đấu</CardTitle>
                     </CardHeader>
@@ -3691,7 +3691,7 @@ export default function ViewActivity() {
 
                 {/* CreativeContest: Thông tin cuộc thi */}
                 {isCreativeContest && (
-                  <Card className="glass hover-lift">
+                  <Card className="glass hover-lift !bg-white/100">
                     <CardHeader className="pb-4">
                       <CardTitle className="text-xl">
                         Thông tin cuộc thi
@@ -3810,7 +3810,7 @@ export default function ViewActivity() {
 
                 {/* CreativeContest: Đề bài - Chỉ hiển thị sau StartDate */}
                 {isCreativeContest && (
-                  <Card className="glass hover-lift">
+                  <Card className="glass hover-lift !bg-white/100">
                     <CardHeader className="pb-4">
                       <CardTitle className="text-xl flex items-center gap-2">
                         <Info className="w-5 h-5 text-blue-500" />
@@ -3921,7 +3921,7 @@ export default function ViewActivity() {
                   activity.subType === "Seminar") &&
                   activity.speakers &&
                   activity.speakers.length > 0 && (
-                    <Card className="glass hover-lift">
+                    <Card className="glass hover-lift !bg-white/100">
                       <CardHeader className="pb-4">
                         <CardTitle className="text-xl flex items-center gap-2">
                           <Users className="w-5 h-5 text-blue-500" />
@@ -3982,7 +3982,7 @@ export default function ViewActivity() {
                   activity.subType === "Seminar") &&
                   activity.programs &&
                   activity.programs.length > 0 && (
-                    <Card className="glass hover-lift">
+                    <Card className="glass hover-lift !bg-white/100">
                       <CardHeader className="pb-4">
                         <CardTitle className="text-xl flex items-center gap-2">
                           <Clock className="w-5 h-5 text-purple-500" />
@@ -4021,7 +4021,7 @@ export default function ViewActivity() {
                     </Card>
                   )}
 
-                <Card className="glass hover-lift">
+                <Card className="glass hover-lift !bg-white/100">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-xl">Quy định tham gia</CardTitle>
                   </CardHeader>
@@ -4043,7 +4043,7 @@ export default function ViewActivity() {
                 {activity.gradingSettings &&
                   activity.gradingSettings.criteria &&
                   activity.gradingSettings.criteria.length > 0 && (
-                    <Card className="glass hover-lift">
+                    <Card className="glass hover-lift !bg-white/100">
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <CheckCircle className="w-5 h-5 text-blue-500" />
@@ -4075,7 +4075,7 @@ export default function ViewActivity() {
 
                 {/* Registration Settings */}
                 {activity.onlyTeacherCanRegister && (
-                  <Card className="glass hover-lift">
+                  <Card className="glass hover-lift !bg-white/100">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Users className="w-5 h-5 text-blue-500" />
@@ -4096,7 +4096,7 @@ export default function ViewActivity() {
 
               <TabsContent value="participants" className="space-y-4">
                 {isCreativeContest && groupRegistrations.length > 0 && (
-                  <Card className="glass hover-lift">
+                  <Card className="glass hover-lift !bg-white/100">
                     <CardHeader>
                       <CardTitle>
                         Danh sách nhóm tham gia ({groupRegistrations.length})
@@ -4147,7 +4147,7 @@ export default function ViewActivity() {
                 )}
 
                 {isSportsFestival && (
-                  <Card className="glass hover-lift">
+                  <Card className="glass hover-lift !bg-white/100">
                     <CardHeader>
                       <CardTitle>
                         Đội hình từng môn
@@ -4317,7 +4317,7 @@ export default function ViewActivity() {
                   </Card>
                 )}
 
-                <Card className="glass hover-lift">
+                <Card className="glass hover-lift !bg-white/100">
                   <CardHeader>
                     <CardTitle>
                       Danh sách người tham gia ({participants.length})
@@ -4370,7 +4370,7 @@ export default function ViewActivity() {
               </TabsContent>
 
               <TabsContent value="timeline" className="space-y-4">
-                <Card className="glass hover-lift">
+                <Card className="glass hover-lift !bg-white/100">
                   <CardHeader>
                     <CardTitle>Lịch trình hoạt động</CardTitle>
                   </CardHeader>
@@ -4407,7 +4407,7 @@ export default function ViewActivity() {
                 {isSportsFestival &&
                   activity.sports &&
                   activity.sports.length > 0 && (
-                    <Card className="glass hover-lift">
+                    <Card className="glass hover-lift !bg-white/100">
                       <CardHeader>
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <CardTitle>Lịch thi đấu & kết quả</CardTitle>
@@ -4680,7 +4680,7 @@ export default function ViewActivity() {
               </TabsContent>
 
               <TabsContent value="awards" className="space-y-4">
-                <Card className="glass hover-lift">
+                <Card className="glass hover-lift !bg-white/100">
                   <CardHeader>
                     <CardTitle>Giải thưởng</CardTitle>
                   </CardHeader>
