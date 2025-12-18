@@ -484,6 +484,12 @@ export default function ViewActivity() {
       setRanking(response.data);
     } catch (err) {}
   };
+  // Helper function to get registration type ("individual" or "group")
+  const getRegistrationType = (registrationSettings) => {
+    const parsed = parseRegistrationSettings(registrationSettings);
+    return parsed?.registrationType || "individual"; // Default to individual
+  };
+
   // Helper function to get group settings with defaults
   const getGroupSettings = (registrationSettings) => {
     const parsed = parseRegistrationSettings(registrationSettings);
@@ -2242,14 +2248,15 @@ export default function ViewActivity() {
       return renderSportRegistration();
     }
     if (isCreativeContest) {
-      const minMembers = groupSettings?.minMembers ?? 1;
-      // Nếu minMembers = 1, hiển thị cả 2 option (đơn và nhóm)
-      if (minMembers === 1) {
-        return renderCreativeContestRegistration();
+      const registrationType = getRegistrationType(activity?.registrationSettings);
+      // Nếu registrationType = "group", chỉ hiển thị đăng ký nhóm
+      if (registrationType === "group") {
+        return isRegistered ? renderRegisteredStatus() : renderGroupRegistration();
       }
-      // Nếu minMembers > 1, chỉ hiển thị đăng ký nhóm
-      return renderGroupRegistration();
+      // Nếu registrationType = "individual", chỉ hiển thị đăng ký cá nhân
+      return isRegistered ? renderRegisteredStatus() : renderSimpleRegistration();
     }
+    // Hội thảo và các hoạt động khác: hiển thị đăng ký cá nhân
     return isRegistered ? renderRegisteredStatus() : renderSimpleRegistration();
   };
 
@@ -2266,8 +2273,11 @@ export default function ViewActivity() {
         )
       : 0;
 
-  // Kiểm tra quyền đăng ký: Giáo viên chỉ được đăng ký hội thao, Học sinh chỉ được đăng ký các hoạt động khác
+  // Kiểm tra quyền đăng ký: 
+  // - Giáo viên: được đăng ký hội thao và hội thảo
+  // - Học sinh: được đăng ký các hoạt động ngoài hội thao (bao gồm hội thảo)
   // Và kiểm tra xem còn trong thời hạn đăng ký không
+  const isSeminarWorkshop = activity?.subType === "SeminarWorkshop" || activity?.subType === "Seminar";
   const canRegister = useMemo(() => {
     // Kiểm tra thời hạn đăng ký trước
     if (!isRegistrationOpen) {
@@ -2280,15 +2290,15 @@ export default function ViewActivity() {
     const isStudent = userRole === "student";
 
     if (isTeacher) {
-      // Giáo viên chỉ được đăng ký hội thao
-      return isSportsFestival;
+      // Giáo viên được đăng ký hội thao và hội thảo
+      return isSportsFestival || isSeminarWorkshop;
     }
     if (isStudent) {
-      // Học sinh chỉ được đăng ký các hoạt động ngoài hội thao
+      // Học sinh được đăng ký các hoạt động ngoài hội thao (bao gồm hội thảo)
       return !isSportsFestival;
     }
     return true; // Default allow for other roles
-  }, [currentUser?.role, activity, isSportsFestival, isRegistrationOpen]);
+  }, [currentUser?.role, activity, isSportsFestival, isSeminarWorkshop, isRegistrationOpen]);
 
   const groupRegistrations = useMemo(() => {
     if (!activity?.participants) return [];
@@ -3489,45 +3499,56 @@ export default function ViewActivity() {
                           </p>
                         </div>
                       )}
-                      {activity.registrationSettings?.groupRegistration && (
+                      {/* Hiển thị loại đăng ký và cài đặt nhóm nếu có */}
+                      {activity.registrationSettings && (
                         <div className="pt-4 border-t border-gray-100">
                           <p className="text-sm font-semibold text-gray-700 mb-3">
-                            Cài đặt đăng ký theo nhóm
+                            Hình thức đăng ký
                           </p>
-                          <div className="grid md:grid-cols-3 gap-3">
-                            <div className="p-3 bg-orange-50 rounded-lg">
-                              <p className="text-xs text-gray-500 mb-1">
-                                Số thành viên tối thiểu
-                              </p>
-                              <p className="font-semibold text-orange-700">
-                                {activity.registrationSettings.groupRegistration
-                                  .minMembers || 1}{" "}
-                                người
-                              </p>
-                            </div>
-                            <div className="p-3 bg-orange-50 rounded-lg">
-                              <p className="text-xs text-gray-500 mb-1">
-                                Số thành viên tối đa
-                              </p>
-                              <p className="font-semibold text-orange-700">
-                                {activity.registrationSettings.groupRegistration
-                                  .maxMembers
-                                  ? `${activity.registrationSettings.groupRegistration.maxMembers} người`
-                                  : "Không giới hạn"}
-                              </p>
-                            </div>
-                            <div className="p-3 bg-orange-50 rounded-lg">
-                              <p className="text-xs text-gray-500 mb-1">
-                                Yêu cầu nhóm trưởng
-                              </p>
-                              <p className="font-semibold text-orange-700">
-                                {activity.registrationSettings.groupRegistration
-                                  .requireLeader
-                                  ? "Có"
-                                  : "Không"}
-                              </p>
-                            </div>
+                          <div className="p-3 bg-blue-50 rounded-lg mb-3">
+                            <p className="font-semibold text-blue-700">
+                              {getRegistrationType(activity.registrationSettings) === "group" 
+                                ? "Đăng ký theo nhóm" 
+                                : "Đăng ký cá nhân"}
+                            </p>
                           </div>
+                          {getRegistrationType(activity.registrationSettings) === "group" && 
+                           activity.registrationSettings?.groupRegistration && (
+                            <div className="grid md:grid-cols-3 gap-3">
+                              <div className="p-3 bg-orange-50 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">
+                                  Số thành viên tối thiểu
+                                </p>
+                                <p className="font-semibold text-orange-700">
+                                  {activity.registrationSettings.groupRegistration
+                                    .minMembers || 1}{" "}
+                                  người
+                                </p>
+                              </div>
+                              <div className="p-3 bg-orange-50 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">
+                                  Số thành viên tối đa
+                                </p>
+                                <p className="font-semibold text-orange-700">
+                                  {activity.registrationSettings.groupRegistration
+                                    .maxMembers
+                                    ? `${activity.registrationSettings.groupRegistration.maxMembers} người`
+                                    : "Không giới hạn"}
+                                </p>
+                              </div>
+                              <div className="p-3 bg-orange-50 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">
+                                  Yêu cầu nhóm trưởng
+                                </p>
+                                <p className="font-semibold text-orange-700">
+                                  {activity.registrationSettings.groupRegistration
+                                    .requireLeader
+                                    ? "Có"
+                                    : "Không"}
+                                </p>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </CardContent>

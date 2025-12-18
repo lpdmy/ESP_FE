@@ -34,6 +34,7 @@ export const RadioGroupItem = ({
   children, 
   className = "",
   selectedValue,
+  id,
   ...props 
 }) => {
   const handleChange = () => {
@@ -41,29 +42,27 @@ export const RadioGroupItem = ({
   };
 
   const isSelected = selectedValue === value;
-  const id = `radio-${value}`;
+  const radioId = id || `radio-${value}`;
 
   return (
     <div 
       className={cn(
-        "flex items-start space-x-3 p-4 rounded-lg border hover:bg-gray-50 cursor-pointer transition-colors",
-        isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200",
+        "flex items-center space-x-2 cursor-pointer",
         className
       )}
       onClick={handleChange}
+      {...props}
     >
       <input
         type="radio"
-        id={id}
+        id={radioId}
         name="radio-group"
         value={value}
         checked={isSelected}
         onChange={handleChange}
-        className="mt-1 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
       />
-      <div className="flex-1">
-        {children}
-      </div>
+      {children}
     </div>
   );
 };

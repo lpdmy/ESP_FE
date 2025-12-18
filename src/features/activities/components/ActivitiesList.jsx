@@ -155,7 +155,10 @@ function ActivitiesCarousel({ activities }) {
                     <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8 text-white">
                       {/* Badge */}
                       <div className="mb-4">
-                        <Badge className="bg-orange-500/90 text-white border-0 text-xs px-3 py-1 mb-3 backdrop-blur-sm">
+                        <Badge 
+                          className="bg-orange-500/90 text-white border-0 text-xs px-3 py-1 mb-3 backdrop-blur-sm font-sans"
+                          style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}
+                        >
                           {activity.status || "Đang diễn ra"}
                         </Badge>
                         {activity.subType && (
@@ -318,6 +321,12 @@ const parseRegistrationSettings = (settings) => {
   return settings;
 };
 
+// Helper function to get registration type ("individual" or "group")
+const getRegistrationType = (registrationSettings) => {
+  const parsed = parseRegistrationSettings(registrationSettings);
+  return parsed?.registrationType || "individual"; // Default to individual
+};
+
 // Helper function to get group settings with defaults
 const getGroupSettings = (registrationSettings) => {
   const parsed = parseRegistrationSettings(registrationSettings);
@@ -467,7 +476,7 @@ export default function ActivitiesList() {
         setLoadingActivities(false);
       } catch (err) {
         console.error("Không thể tải danh sách hoạt động:", err);
-        toast.error(err?.message || "Không thể tải danh sách hoạt động.");
+        toast.showError(err?.message || "Không thể tải danh sách hoạt động.");
         setActivities([]);
         setLoadingActivities(false);
         setLoadingCarousel(false);
@@ -642,10 +651,10 @@ export default function ActivitiesList() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2 flex-1">
-          <Badge className="bg-orange-100 text-orange-700">Hoạt động</Badge>
+          <Badge className="bg-orange-100 text-orange-700 font-sans">Hoạt động</Badge>
           <h1 className="text-4xl gradient-text font-bold text-gray-900">
             Khám phá sự kiện nổi bật
           </h1>
@@ -975,8 +984,6 @@ export default function ActivitiesList() {
 function ActivityListItem({ activity }) {
   const navigate = useNavigate();
   const toast = useToast();
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [registerType, setRegisterType] = useState(null); // 'simple' or 'group'
   const [currentUser, setCurrentUser] = useState(null);
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -1023,6 +1030,7 @@ function ActivityListItem({ activity }) {
       : Math.min(participationCount / (maxParticipants || 1), 1);
 
   const isCreativeContest = activity?.subType === "CreativeContest";
+  const registrationType = getRegistrationType(activity?.registrationSettings);
   const groupSettings = getGroupSettings(activity?.registrationSettings);
   const minMembers = groupSettings?.minMembers ?? 1;
 
@@ -1106,13 +1114,20 @@ function ActivityListItem({ activity }) {
 
   const handleCancelRegistration = async () => {
     if (!activity?.id) {
-      toast.error("Không tìm thấy thông tin hoạt động");
+      toast.showError("Không tìm thấy thông tin hoạt động");
       return;
     }
 
     const token = localStorage.getItem("token");
     if (!token) {
-      toast.error("Vui lòng đăng nhập để tiếp tục.");
+      toast.showError("Vui lòng đăng nhập để tiếp tục.");
+      return;
+    }
+
+    // Đảm bảo activityId là number
+    const activityId = Number(activity.id);
+    if (isNaN(activityId) || activityId <= 0) {
+      toast.showError("ID hoạt động không hợp lệ");
       return;
     }
 
@@ -1122,7 +1137,7 @@ function ActivityListItem({ activity }) {
         activityParticipantService.cancelRegistration.bind(
           activityParticipantService
         ),
-        [activity.id, token],
+        [activityId, token],
         { setError: () => {} }
       );
 
@@ -1131,33 +1146,44 @@ function ActivityListItem({ activity }) {
       window.location.reload();
     } catch (err) {
       console.error("Error cancelling registration:", err);
-      toast.error(err?.message || "Có lỗi xảy ra khi hủy đăng ký");
+      // Parse error message từ response - có thể là object hoặc string
+      let errorMessage = "Có lỗi xảy ra khi hủy đăng ký";
+      if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      } else if (err?.data?.message) {
+        errorMessage = err.data.message;
+      } else if (err?.data && typeof err.data === 'string') {
+        errorMessage = err.data;
+      }
+      toast.showError(errorMessage);
     } finally {
       setIsCancelling(false);
     }
   };
 
   const handleRegisterClick = () => {
-    if (isCreativeContest && minMembers === 1) {
-      // Hiển thị modal với 2 option
-      setShowRegisterModal(true);
-    } else if (isCreativeContest && minMembers > 1) {
+    if (isCreativeContest && registrationType === "group") {
       // Chỉ đăng ký nhóm, navigate đến trang register
       navigate(ROUTES.ACTIVITY.REGISTER_ACTIVITY.replace(":id", activity.id));
+    } else if (isCreativeContest && registrationType === "individual") {
+      // Đăng ký cá nhân trực tiếp
+      handleSimpleRegister();
     } else {
-      // Các loại khác, navigate đến trang register
+      // Các loại khác (không phải CreativeContest), navigate đến trang register
       navigate(ROUTES.ACTIVITY.REGISTER_ACTIVITY.replace(":id", activity.id));
     }
   };
 
   const handleSimpleRegister = async () => {
     if (!currentUser?.id) {
-      toast.error("Vui lòng đăng nhập để đăng ký.");
+      toast.showError("Vui lòng đăng nhập để đăng ký.");
       return;
     }
     const token = localStorage.getItem("token");
     if (!token) {
-      toast.error("Vui lòng đăng nhập để đăng ký.");
+      toast.showError("Vui lòng đăng nhập để đăng ký.");
       return;
     }
     try {
@@ -1175,12 +1201,11 @@ function ActivityListItem({ activity }) {
         { setLoading: () => {}, setError: () => {} }
       );
       toast.showSuccess("Đăng ký thành công!");
-      setShowRegisterModal(false);
       // Refresh page or navigate
       window.location.reload();
     } catch (err) {
       console.error("Register failed:", err);
-      toast.error(err?.message || "Không thể đăng ký hoạt động.");
+      toast.showError(err?.message || "Không thể đăng ký hoạt động.");
     }
   };
 
@@ -1202,17 +1227,26 @@ function ActivityListItem({ activity }) {
       <div className="flex flex-1 flex-col gap-4 md:flex-row md:items-stretch">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <Badge variant="secondary" className="text-xs">
+            <Badge 
+              variant="secondary" 
+              className="text-xs font-sans"
+              style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}
+            >
               {categoryLabel}
             </Badge>
             <Badge
               variant="outline"
-              className={`text-xs ${getStatusBadgeClass(activity.status)}`}
+              className={`text-xs font-sans ${getStatusBadgeClass(activity.status)}`}
+              style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}
             >
               {activity.status || "Đang cập nhật"}
             </Badge>
             {activity.subType && (
-              <Badge variant="outline" className="text-xs border-gray-200">
+              <Badge 
+                variant="outline" 
+                className="text-xs border-gray-200 font-sans"
+                style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}
+              >
                 {SUB_TYPE_LABELS[activity.subType] || activity.subType}
               </Badge>
             )}
@@ -1270,22 +1304,19 @@ function ActivityListItem({ activity }) {
           <div className="flex flex-col gap-3">
             {isRegistered ? (
               <>
-                {canCancelRegistration ? (
-                  <Button
-                    variant="outline"
-                    className="h-11 rounded-xl border-red-300 text-red-600 hover:bg-red-50 w-full"
-                    onClick={handleCancelRegistration}
-                    disabled={isCancelling}
-                  >
-                    {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
-                  </Button>
-                ) : (
-                  <div className="flex items-center gap-2 p-3 bg-green-50 rounded-xl text-green-700 border border-green-200">
-                    <CheckCircle className="w-4 h-4" />
-                    <span className="text-sm font-medium text-center w-full">
-                      Đã đăng ký tham gia
-                    </span>
-                  </div>
+                <Button
+                  variant="outline"
+                  className="h-11 rounded-xl border-red-300 text-red-600 hover:bg-red-50 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleCancelRegistration}
+                  disabled={isCancelling || !canCancelRegistration}
+                  title={!canCancelRegistration ? "Đã hết thời hạn hủy đăng ký" : ""}
+                >
+                  {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
+                </Button>
+                {!canCancelRegistration && (
+                  <p className="text-xs text-gray-500 text-center">
+                    Đã hết thời hạn hủy đăng ký
+                  </p>
                 )}
               </>
             ) : isEnded ? (

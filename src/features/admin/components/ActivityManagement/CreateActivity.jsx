@@ -859,19 +859,23 @@ export default function CreateActivity() {
             })
           : []
 
+      // registrationSettingsPayload: Luôn gửi registrationType để phân biệt cá nhân/nhóm
       const registrationSettingsPayload =
-        formData.subType === "CreativeContest" && registrationType === "group"
+        formData.subType === "CreativeContest"
           ? {
-              groupRegistration: {
-                minMembers: parseInt(formData.registrationSettings?.groupRegistration?.minMembers, 10) || 1,
-                maxMembers:
-                  formData.registrationSettings?.groupRegistration?.maxMembers === "" ||
-                  formData.registrationSettings?.groupRegistration?.maxMembers === null ||
-                  formData.registrationSettings?.groupRegistration?.maxMembers === undefined
-                    ? null
-                    : parseInt(formData.registrationSettings?.groupRegistration?.maxMembers, 10),
-                requireLeader: !!formData.registrationSettings?.groupRegistration?.requireLeader,
-              },
+              registrationType: registrationType, // "individual" hoặc "group"
+              groupRegistration: registrationType === "group"
+                ? {
+                    minMembers: parseInt(formData.registrationSettings?.groupRegistration?.minMembers, 10) || 1,
+                    maxMembers:
+                      formData.registrationSettings?.groupRegistration?.maxMembers === "" ||
+                      formData.registrationSettings?.groupRegistration?.maxMembers === null ||
+                      formData.registrationSettings?.groupRegistration?.maxMembers === undefined
+                        ? null
+                        : parseInt(formData.registrationSettings?.groupRegistration?.maxMembers, 10),
+                    requireLeader: !!formData.registrationSettings?.groupRegistration?.requireLeader,
+                  }
+                : null,
             }
           : null
 
@@ -2050,18 +2054,16 @@ export default function CreateActivity() {
                         }}
                         className="flex gap-6"
                       >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="individual" id="reg-individual" />
-                          <Label htmlFor="reg-individual" className="cursor-pointer font-normal">
+                        <RadioGroupItem value="individual">
+                          <Label className="cursor-pointer font-normal">
                             Cá nhân
                           </Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="group" id="reg-group" />
-                          <Label htmlFor="reg-group" className="cursor-pointer font-normal">
+                        </RadioGroupItem>
+                        <RadioGroupItem value="group">
+                          <Label className="cursor-pointer font-normal">
                             Theo nhóm
                           </Label>
-                        </div>
+                        </RadioGroupItem>
                       </RadioGroup>
                       
                       {registrationType === "group" && (

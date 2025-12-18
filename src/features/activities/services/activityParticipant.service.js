@@ -19,8 +19,13 @@ export class ActivityParticipantService extends ApiService {
    * @returns {Promise} Response
    */
   async cancelRegistration(activityId, token) {
+    // Đảm bảo activityId là number và convert sang string để replace vào URL
+    const id = Number(activityId);
+    if (isNaN(id) || id <= 0) {
+      throw new Error('Activity ID không hợp lệ');
+    }
     return this.delete(
-      API_CONFIG.ACTIVITY_PARTICIPANT.CANCEL_REGISTRATION.replace('{activityId}', activityId),
+      API_CONFIG.ACTIVITY_PARTICIPANT.CANCEL_REGISTRATION.replace('{activityId}', String(id)),
       token
     );
   }
