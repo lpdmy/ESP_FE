@@ -424,11 +424,6 @@ export default function ClubDetail() {
           {/* Center Content - Tabs */}
           <div className="lg:col-span-6 ">
             <Tabs defaultValue="posts" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-2">
-                <TabsTrigger value="posts">Bài đăng</TabsTrigger>
-                <TabsTrigger value="activities">Hoạt động</TabsTrigger>
-              </TabsList>
-
               {/* Tổng quan */}
               <TabsContent value="overview" className="space-y-4 !bg-white-500">
                 <Card className="glass hover-lift ">

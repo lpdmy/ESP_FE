@@ -278,7 +278,7 @@ export default function ClubApprovalPage() {
                         {request.categoryName}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatDate(request.requestedAt)}</TableCell>
+                    <TableCell>{formatDate(request.createdAt)}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
                     <TableCell className="text-right relative">
                       <div className="relative inline-block text-left">
