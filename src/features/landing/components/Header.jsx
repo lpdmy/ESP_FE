@@ -21,7 +21,6 @@ export default function Header() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.user.user);
-  console.log(user.role)
   const roleValue = typeof user?.role === "string" ? user.role.toUpperCase() : user?.role;
   const isTeacher = roleValue === ROLE.TEACHER || roleValue === "TEACHER";
   const { isOpen, openMenu, closeMenu, toggleMenu } = useDropdownMenu(false);
@@ -67,7 +66,6 @@ export default function Header() {
               placeholder="Tìm kiếm bạn bè, bài viết, sự kiện, cuộc thi..."
               variant="default"
               onResultClick={(result, type) => {
-                console.log('Search result clicked:', { result, type });
               }}
             />
           </div>

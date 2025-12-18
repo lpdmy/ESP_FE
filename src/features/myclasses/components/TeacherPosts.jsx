@@ -28,7 +28,6 @@ export default function TeacherPosts({ classGroupId, userRole, onPostsUpdate }) 
       const postsData = response.data || []
       setPosts(postsData)
       onPostsUpdate && onPostsUpdate(postsData)
-      console.log('classGroupId', response.data)
     } catch (error) {
       console.error('Error loading posts:', error)
       showError("Không thể tải danh sách bài viết. Vui lòng thử lại.")

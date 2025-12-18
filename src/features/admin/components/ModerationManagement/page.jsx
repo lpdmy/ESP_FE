@@ -245,7 +245,6 @@ export default function ModerationCenter() {
       const total = response.data.totalCount || response.data.data.length;
       setTotalPages(Math.ceil(total / pageSize));
     } catch (error) {
-      console.log(error);
       toast.showError("Tải danh sách thất bại")
     } finally {
       setIsLoading(false);
@@ -257,7 +256,6 @@ export default function ModerationCenter() {
         id: id,
         status : status
       }
-      console.log(payload)
       await updateStatus(payload)
       hanldeGetUserStat();
       hanldeGetAllReport();
@@ -277,9 +275,7 @@ export default function ModerationCenter() {
       setUserStat(response.data.data);
       const total = response.data.totalCount || response.data.data.length;
       setTotalPagesStat(Math.ceil(total / pageSize));
-      console.log("Response :", response);
     } catch (error) {
-      console.log(error);
     } finally {
       setIsLoading(false);
     }

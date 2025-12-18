@@ -13,7 +13,6 @@ export async function connectChatHub(userId, onReceiveMessage) {
 
   // Nếu đã có kết nối đang hoạt động thì bỏ qua
   if (chatConnection && chatConnection.state === signalR.HubConnectionState.Connected) {
-    console.log("🔁 ChatHub already connected");
     return chatConnection;
   }
   const token = localStorage.getItem("token");
@@ -27,16 +26,13 @@ export async function connectChatHub(userId, onReceiveMessage) {
     .build();
 
   chatConnection.on("ReceiveMessage", (message) => {
-    console.log("💬 Received message:", message);
     onReceiveMessage?.(message);
   });
 
   chatConnection.onclose((error) => {
-    console.warn("⚠️ ChatHub disconnected", error);
   });
 
   await chatConnection.start();
-  console.log("✅ Connected to ChatHub");
 
   return chatConnection;
 }
@@ -45,9 +41,7 @@ export async function disconnectChatHub() {
   if (chatConnection) {
     try {
       await chatConnection.stop();
-      console.log("🔌 Disconnected from ChatHub");
     } catch (error) {
-      console.error("❌ Error while disconnecting ChatHub:", error);
     } finally {
       chatConnection = null;
       window.__chatHubConnected = false;
@@ -63,12 +57,9 @@ export async function joinChatRoom(roomId) {
   if (chatConnection && chatConnection.state === signalR.HubConnectionState.Connected) {
     try {
       await chatConnection.invoke("JoinRoom", roomId);
-      console.log(`✅ Joined room: ${roomId}`);
     } catch (error) {
-      console.error(`❌ Error joining room ${roomId}:`, error);
     }
   } else {
-    console.warn("⚠️ ChatHub not connected. Cannot join room.");
   }
 }
 
@@ -80,12 +71,9 @@ export async function leaveChatRoom(roomId) {
   if (chatConnection && chatConnection.state === signalR.HubConnectionState.Connected) {
     try {
       await chatConnection.invoke("LeaveRoom", roomId);
-      console.log(`✅ Left room: ${roomId}`);
     } catch (error) {
-      console.error(`❌ Error leaving room ${roomId}:`, error);
     }
   } else {
-    console.warn("⚠️ ChatHub not connected. Cannot leave room.");
   }
 }
 
@@ -100,20 +88,16 @@ export async function sendChatMessage(roomId, senderId, content, type = "text") 
   if (chatConnection && chatConnection.state === signalR.HubConnectionState.Connected) {
     try {
       await chatConnection.invoke("SendMessage", roomId, senderId, content, type);
-      console.log(`✅ Message sent to room ${roomId}:`, content);
     } catch (error) {
-      console.error(`❌ Error sending message to room ${roomId}:`, error);
       throw error;
     }
   } else {
-    console.warn("⚠️ ChatHub not connected. Cannot send message.");
     throw new Error("ChatHub not connected");
   }
 }
 
 export async function ensureChatConnected(userId, onReceiveMessage) {
   if (!chatConnection || chatConnection.state !== signalR.HubConnectionState.Connected) {
-    console.log("🔄 Reconnecting ChatHub...");
     await connectChatHub(userId, onReceiveMessage);
   }
   return chatConnection;

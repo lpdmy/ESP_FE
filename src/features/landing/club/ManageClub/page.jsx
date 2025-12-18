@@ -166,7 +166,6 @@ export default function ClubManage() {
     }
   };
   const getProfileRoute = (user) => {
-        console.log("User object:", user);
         const role = Number(user?.userRole);
       switch (role) {
         case 2:
@@ -179,7 +178,6 @@ export default function ClubManage() {
     try {
       const response = await getPostPending(id);
       const data = response.data.data;
-      console.log(data);
       setPendingPosts(data);
     } catch (err) {
       toast.loadPostFail();
@@ -187,7 +185,6 @@ export default function ClubManage() {
   };
   const openModal = (member) => {
     setSelectedMember(member);
-    console.log(member)
     setIsModalOpen(true);
   };
 
@@ -211,7 +208,6 @@ export default function ClubManage() {
       } else {
         toast.changeRoleFail();
       }
-      console.log(err);
     }
   };
   const handleInviteMentor = async (mentorid) => {
@@ -271,7 +267,6 @@ export default function ClubManage() {
       handleGetClubJoinRequest();
       toast.approveJoinRequestSuccess();
     } catch (error) {
-      console.log("lỗi khi chấp nhận tham gia ", error);
       toast.approveJoinRequestFail();
     }
   };
@@ -281,7 +276,6 @@ export default function ClubManage() {
       handleGetClubJoinRequest();
       toast.rejectJoinRequestSuccess();
     } catch (error) {
-      console.log("lỗi khi từ chối tham gia ", error);
       toast.rejectJoinRequestFail();
     }
   };

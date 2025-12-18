@@ -31,7 +31,6 @@ const AvatarImage = React.forwardRef(({ className, src, alt, ...props }, ref) =>
       alt={alt}
       className={cn("aspect-square h-full w-full object-cover", className)}
       onError={() => {
-        console.log('Image load error, src:', src)
         setImageError(true)
       }}
       {...props}

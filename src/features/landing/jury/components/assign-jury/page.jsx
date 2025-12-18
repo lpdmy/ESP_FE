@@ -73,15 +73,20 @@ export default function AssignJurySection({ activityId }) {
         pageSize,
         pageNumber
       );
-      const data = response.data.data || [];
-      console.log(data);
-
-      const total = response.data.totalCount || data.length;
+      // Đảm bảo data là mảng rỗng nếu không có dữ liệu
+      const data = Array.isArray(response?.data?.data) ? response.data.data : [];
+      
+      // Chỉ set totalCount nếu có dữ liệu hợp lệ từ response
+      const total = response?.data?.totalCount ?? 0;
       setSubmission(data);
       setTotalCount(total);
       setTotalPages(Math.ceil(total / pageSize));
     } catch (error) {
       const errorMessage = error?.message || error?.data?.message || "Không thể tải danh sách bài nộp";
+      // Đảm bảo set state về rỗng khi có lỗi
+      setSubmission([]);
+      setTotalCount(0);
+      setTotalPages(0);
       // toast.showError(errorMessage);
     } finally {
       setLoadingSubmission(false);
@@ -204,6 +209,13 @@ export default function AssignJurySection({ activityId }) {
                   <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                 </div>
               ))
+            ) : submission.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <p className="text-sm">Chưa có dữ liệu bài nộp được gán</p>
+                <p className="text-xs mt-2 text-gray-400">
+                  Danh sách sẽ hiển thị khi có bài nộp được gán cho giám khảo
+                </p>
+              </div>
             ) : (
               submission.map((s) => (
                 <div
@@ -222,7 +234,7 @@ export default function AssignJurySection({ activityId }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-700">
-                      {s.numberJurys} giám khảo
+                      {s.numberJurys || 0} giám khảo
                     </span>
                     <Button className=" border !border-blue-400" variant="outline" size="sm" onClick={() => openDialogForSubmission(s)}>
                       Phân công

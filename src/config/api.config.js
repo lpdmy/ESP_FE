@@ -331,9 +331,6 @@ export const getAuthHeaders = (token) => ({
 
 // API Response Handler
 export async function handleApiResponse(response) {
-  console.log("API Response status:", response.status);
-  console.log("API Response headers:", response.headers);
-
   const contentType = response.headers.get("content-type");
   if (!response.ok) {
     if (response.status === 401) {
@@ -345,15 +342,12 @@ export async function handleApiResponse(response) {
       throw new Error("Unauthorized");
     }
 
-    console.log("API Error - Status:", response.status);
     // Nếu là JSON thì parse, không thì trả về text
     if (contentType && contentType.includes("application/json")) {
       const errorData = await response.json();
-      console.log("API Error Data:", errorData);
       throw errorData;
     } else {
       const errorText = await response.text();
-      console.log("API Error Text:", errorText);
       throw new Error(errorText);
     }
   }

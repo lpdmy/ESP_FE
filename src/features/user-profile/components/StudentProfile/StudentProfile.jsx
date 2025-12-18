@@ -187,7 +187,6 @@ export default function StudentProfile() {
 
   const handleUpdatePost = (updatedPost) => {
     // TODO: Implement update post logic
-    console.log("Update post:", updatedPost);
     setIsUpdateModalOpen(false);
     setSelectedPost(null);
   };

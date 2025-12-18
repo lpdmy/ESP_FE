@@ -234,7 +234,6 @@ export default function RewardsManagement() {
       const resp = await getAllRedemptionsAdmin(queryParams);
       setPickups(resp.items);
       setTotalPickups(resp.totalCount);
-      console.log(pickups);
     } catch (err) {
       console.error("Lấy dữ liệu nhận thưởng thất bại:", err);
     } finally {
@@ -269,7 +268,6 @@ export default function RewardsManagement() {
 
   const handleSaveRuleEdit = async () => {
     try {
-      console.log(newPoints);
       const updatedRule = await updatePoints(
         editingRule.actionType,
         Number(newPoints)

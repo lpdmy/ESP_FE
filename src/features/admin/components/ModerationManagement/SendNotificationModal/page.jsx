@@ -35,7 +35,6 @@ export function SendNotificationModal({ open, onClose, selectedUser }) {
     }
   };
   useEffect(() => {
-    console.log(selectedUser);
   }, [selectedUser]);
   return (
     <Dialog open={open} onOpenChange={onClose}>

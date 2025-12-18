@@ -137,13 +137,11 @@ export default function ClubClassManagement() {
       const response = await getListClubAdmin(pageNumber, pageSize);
       const data = response.data.data;
       setClubsClasses(data);
-      console.log(data);
       const total = response.data.totalCount || data.length; // 🔹 dùng totalCount nếu có
       setClubsClasses(data);
       setTotalCount(total);
       setTotalPages(Math.ceil(total / pageSize));
     } catch (err) {
-      console.log(err);
       toast.loadClubFail();
     }
   };
@@ -171,7 +169,6 @@ export default function ClubClassManagement() {
       const response = await getClubCategory();
       const data = response.data;
       setClubCategory(data);
-      console.log(data);
       const formattedOptions = data.map((category) => ({
         label: category.name,
         value: category.name,
@@ -182,7 +179,6 @@ export default function ClubClassManagement() {
         ...formattedOptions,
       ]);
     } catch (err) {
-      console.log(err);
     }
   };
   useEffect(() => {
@@ -231,12 +227,10 @@ export default function ClubClassManagement() {
 
   const handleDelete = async () => {
     try {
-      console.log(deleteId);
       await deleteClub(deleteId);
       toast.deleteClubSuccess();
       handleListClub();
     } catch (err) {
-      console.log(err);
       toast.deleteClubFail();
     }
   };

@@ -15,14 +15,24 @@ export async function initGlobalNotification(userId, dispatch, onNewNotification
 
   try {
     await connectNotificationHub(userId, (notification) => {
-      console.log("Received notification:", notification);
-      
       // Gọi callback nếu có
       onNewNotification?.(notification);
-      dispatch(addNotification(notification))
-      // Hiển thị toast
-      toast.info(notification.title, {
-        position: "bottom-right",
+      
+      // Thêm notification vào Redux store (sẽ tự động cập nhật badge count)
+      dispatch(addNotification(notification));
+      
+      // Hiển thị toast notification với thông tin đầy đủ
+      const toastContent = (
+        <div className="flex flex-col gap-1">
+          <div className="font-semibold text-white">{notification.title || "Thông báo mới"}</div>
+          {notification.message && (
+            <div className="text-sm text-white/90">{notification.message}</div>
+          )}
+        </div>
+      );
+      
+      toast.info(toastContent, {
+        position: "top-right",
         autoClose: 5000,
         hideProgressBar: false,
         closeOnClick: true,
@@ -36,6 +46,13 @@ export async function initGlobalNotification(userId, dispatch, onNewNotification
           fontWeight: "500",
           borderRadius: "8px",
           boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+          minWidth: "300px",
+        },
+        onClick: () => {
+          // Navigate to notification page or link if available
+          if (notification.link) {
+            window.location.href = notification.link;
+          }
         },
       });
     });

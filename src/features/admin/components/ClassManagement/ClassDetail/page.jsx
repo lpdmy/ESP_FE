@@ -129,9 +129,6 @@ export default function ClassDetailPage() {
         setLoading(true);
         const token = localStorage.getItem("token");
 
-        console.log("Fetching class data for ID:", id);
-        console.log("Token:", token ? "Present" : "Missing");
-
         // Check if we should open assign teacher modal
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get("assignTeacher") === "true") {
@@ -142,21 +139,13 @@ export default function ClassDetailPage() {
 
         // Fetch class detail
         const classResponse = await ClassGroupService.getDetail(id, token);
-        console.log("Class response:", classResponse);
-        console.log("Class response.data:", classResponse?.data);
-        console.log("Schedules in response:", classResponse?.data?.schedules);
 
         if (classResponse && classResponse.data) {
           setClassData(classResponse.data);
-          console.log(
-            "Set classData with schedules:",
-            classResponse.data.schedules
-          );
+
         } else {
-          console.log("No class data found, trying basic getById...");
           // Fallback to basic getById if detail endpoint fails
           const basicResponse = await ClassGroupService.getById(id, token);
-          console.log("Basic response:", basicResponse);
           if (basicResponse && basicResponse.data) {
             setClassData(basicResponse.data);
           }
@@ -168,13 +157,11 @@ export default function ClassDetailPage() {
             id,
             token
           );
-          console.log("Homeroom teacher response:", teacherResponse);
 
           if (teacherResponse && teacherResponse.data) {
             setHomeroomTeacher(teacherResponse.data);
           }
         } catch (teacherError) {
-          console.log("No homeroom teacher found or error:", teacherError);
           setHomeroomTeacher(null);
         }
       } catch (error) {
@@ -224,7 +211,6 @@ export default function ClassDetailPage() {
         token
       );
 
-      console.log("Add student response:", response);
 
       if (response && response.data && response.data.success) {
         // Refresh students list with current sort
@@ -339,8 +325,6 @@ export default function ClassDetailPage() {
         token
       );
 
-      console.log("Assign teacher response:", response);
-
       if (response && response.data && response.data.success) {
         // Refresh homeroom teacher info
         try {
@@ -352,7 +336,6 @@ export default function ClassDetailPage() {
             setHomeroomTeacher(teacherResponse.data);
           }
         } catch (teacherError) {
-          console.log("Error refreshing teacher info:", teacherError);
         }
 
         setNewTeacher({ email: "" });

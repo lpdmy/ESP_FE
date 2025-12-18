@@ -396,8 +396,6 @@ export default function UserManagement() {
         userData.position = newUser.position
       }
 
-      console.log("Updating user:", userData)
-      
       const token = localStorage.getItem('token');
       await updateUser(userData, token);
       
@@ -490,8 +488,6 @@ export default function UserManagement() {
         userData.position = userToToggle.position
       }
 
-      console.log("Updating user status:", userData)
-      
       const token = localStorage.getItem('token');
       await updateUser(userData, token);
       
@@ -547,8 +543,6 @@ export default function UserManagement() {
         userData.position = newUser.position
       }
 
-      console.log("Creating user:", userData)
-      
       const token = localStorage.getItem('token');
       const res = await createUserAuth(userData, token);
       

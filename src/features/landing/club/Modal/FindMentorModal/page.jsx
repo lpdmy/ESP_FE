@@ -23,9 +23,7 @@ export default function FindMentorModal({ isOpen, onClose, onSelect }) {
          const response = await getTeacher(role,pageNumber,pageSize,searchTerm)
          const data = response.data.data
          setResults(data)
-         console.log(data)
       }catch(err){
-       console.log(err)
       }
   };
 

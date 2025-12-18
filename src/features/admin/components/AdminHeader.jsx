@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom"
 import { clearUser } from "@/store/user/userSlice";
 import { ROUTES } from "@/common/constants/routes";
 import { disconnectNotificationHub } from "@/features/notifications/services/signalr/notificationHub";
+import { disconnectChatHub } from "@/common/signalr/chatHub";
 
 export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
   const user = useSelector((state) => state.user.user);
@@ -66,10 +67,21 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
             <DropdownMenuTrigger onClick={toggleDropdown}>
               <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-100" data-dropdown-trigger="true">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/admin-avatar.png" />
-                  <AvatarFallback className="bg-blue-100 text-blue-600">{user.firstName.charAt(0)||'A'}</AvatarFallback>
+                  <AvatarImage src={user?.avatarUrl || "/admin-avatar.png"} />
+                  <AvatarFallback className="bg-blue-100 text-blue-600">
+                    {user?.firstName?.charAt(0)?.toUpperCase() || 
+                     user?.lastName?.charAt(0)?.toUpperCase() || 
+                     user?.fullName?.charAt(0)?.toUpperCase() || 
+                     user?.username?.charAt(0)?.toUpperCase() || 
+                     'A'}
+                  </AvatarFallback>
                 </Avatar>
-                <span className="text-sm font-medium text-gray-700">{user ? user.fullName : "Guest"}</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {user?.fullName || 
+                   (user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : null) ||
+                   user?.username || 
+                   "Guest"}
+                </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent 

@@ -737,7 +737,7 @@ export default function ViewActivity() {
         role: normalizedRole,
       });
     } catch (err) {
-      console.warn("Cannot decode token", err);
+      // Silent fail - token decode error
     }
   }, []);
 
@@ -747,7 +747,6 @@ export default function ViewActivity() {
       try {
         return JSON.parse(settings);
       } catch (err) {
-        console.warn("Không thể parse registration settings", err);
         return null;
       }
     }
@@ -757,7 +756,6 @@ export default function ViewActivity() {
     try {
       const response = await getSubmissionRank(params.id);
       setRanking(response.data);
-      console.log(response.data);
     } catch (err) {}
   };
   // Helper function to get group settings with defaults
@@ -938,7 +936,6 @@ export default function ViewActivity() {
         setLoading(false);
         return;
       }
-      console.log(activityData);
       const nowUTC = new Date();
       // Convert now sang VN time để so sánh
       const nowVN = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000);
@@ -1115,7 +1112,6 @@ export default function ViewActivity() {
       });
       setLoading(false);
     } catch (err) {
-      console.error("Error fetching activity:", err);
       toastRef.current.showError(
         err?.message || "Không thể tải thông tin hoạt động"
       );
@@ -1220,7 +1216,6 @@ export default function ViewActivity() {
 
         setClassGroups(sorted);
       } catch (error) {
-        console.error("Error loading class groups:", error);
         setClassGroups([]);
       } finally {
         setLoadingClassGroups(false);
@@ -1300,7 +1295,6 @@ export default function ViewActivity() {
           // Chưa có lịch thi đấu cho môn này là bình thường
           setScheduleBracket(null);
         } else {
-          console.error("Error loading schedule bracket:", err);
           setScheduleBracketError(err?.message || "Không thể tải lịch thi đấu");
           setScheduleBracket(null);
         }
@@ -1353,7 +1347,6 @@ export default function ViewActivity() {
           setSportRostersTotalPages(0);
         }
       } catch (err) {
-        console.error("Error loading sport rosters:", err);
         setSportRosters([]);
         setSportRostersTotalCount(0);
         setSportRostersTotalPages(0);
@@ -1398,7 +1391,6 @@ export default function ViewActivity() {
           setSubmissionStatus(statusData);
         }
       } catch (err) {
-        console.error("Error checking submission status:", err);
         // Không hiển thị error nếu không có quyền hoặc chưa đăng ký
       } finally {
         setIsCheckingSubmission(false);
@@ -1459,7 +1451,6 @@ export default function ViewActivity() {
 
       setClassStudents(normalizedStudents.filter((student) => student.id));
     } catch (err) {
-      console.error("Không thể tải thông tin lớp học:", err);
       toast.error(err?.message || "Không thể tải thông tin lớp học của bạn.");
     } finally {
       setIsClassLoading(false);
@@ -1506,7 +1497,6 @@ export default function ViewActivity() {
         }));
         setSearchedUsers(normalizedUsers);
       } catch (err) {
-        console.error("Error searching users:", err);
         setSearchedUsers([]);
       } finally {
         setIsSearchingUsers(false);
@@ -1654,7 +1644,6 @@ export default function ViewActivity() {
       setGroupForm({ groupName: "", memberIds: [], leaderId: null });
       fetchActivity();
     } catch (err) {
-      console.error("Group registration failed:", err);
       toast.error(err?.message || "Không thể đăng ký nhóm.");
     } finally {
       setGroupSubmitting(false);
@@ -1718,7 +1707,6 @@ export default function ViewActivity() {
       setSelectedSportMembers([]);
       fetchActivity();
     } catch (err) {
-      console.error("Sport registration failed:", err);
       toast.error(err?.message || "Không thể đăng ký môn thi đấu.");
     } finally {
       setSportSubmitting(false);
@@ -1819,7 +1807,6 @@ export default function ViewActivity() {
           fetchActivity();
         }
       } catch (err) {
-        console.error("Error registering for activity:", err);
         toast.error(err?.message || "Có lỗi xảy ra khi đăng ký");
       } finally {
         setIsRegistering(false);
@@ -1854,7 +1841,6 @@ export default function ViewActivity() {
         toast.showSuccess("Đã hủy đăng ký tham gia hoạt động.");
         fetchActivity();
       } catch (err) {
-        console.error("Error cancelling registration:", err);
         toast.error(err?.message || "Có lỗi xảy ra khi hủy đăng ký");
       } finally {
         setIsCancelling(false);
@@ -1873,7 +1859,6 @@ export default function ViewActivity() {
     // Ví dụ: "2025-12-15T00:00:00" → parse như local timezone (VN)
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) {
-      console.error("❌ Invalid date string in parseDateFromAPI:", dateStr);
       return null;
     }
     return date;
@@ -1884,7 +1869,6 @@ export default function ViewActivity() {
   // API trả về date string đã là VN time rồi, không cần convert thêm
   const isRegistrationOpen = useMemo(() => {
     if (!activity?.endRegisterDate) {
-      console.log("🟢 isRegistrationOpen: true (không có endRegisterDate)");
       return true; // Nếu không có end date, cho phép đăng ký
     }
 
@@ -1898,46 +1882,16 @@ export default function ViewActivity() {
     const endRegisterDateVN = parseDateFromAPI(activity.endRegisterDate);
 
     if (!endRegisterDateVN) {
-      console.log(
-        "🟢 isRegistrationOpen: true (không parse được endRegisterDate)"
-      );
       return true;
     }
 
-    console.log("🟢 isRegistrationOpen - Debug:", {
-      nowUTC: nowUTC.toISOString(),
-      nowVN: nowVN.toISOString(),
-      nowVNLocal: nowVN.toString(),
-      registerDateRaw: activity?.registerDate,
-      registerDateVN: registerDateVN?.toISOString(),
-      registerDateVNLocal: registerDateVN?.toString(),
-      endRegisterDateRaw: activity?.endRegisterDate,
-      endRegisterDateVN: endRegisterDateVN.toISOString(),
-      endRegisterDateVNLocal: endRegisterDateVN.toString(),
-    });
-
     // Nếu có registerDate, phải >= registerDate (so sánh trong VN time)
     if (registerDateVN && nowVN < registerDateVN) {
-      console.log(
-        "🟢 isRegistrationOpen: false (chưa đến ngày bắt đầu đăng ký)",
-        {
-          nowVN: nowVN.toISOString(),
-          registerDateVN: registerDateVN.toISOString(),
-          diff: registerDateVN.getTime() - nowVN.getTime(),
-        }
-      );
       return false;
     }
 
     // Phải <= endRegisterDate (so sánh trong VN time)
     const isOpen = nowVN <= endRegisterDateVN;
-    console.log("🟢 isRegistrationOpen:", isOpen, {
-      nowVN: nowVN.toISOString(),
-      endRegisterDateVN: endRegisterDateVN.toISOString(),
-      diff: endRegisterDateVN.getTime() - nowVN.getTime(),
-      diffHours:
-        (endRegisterDateVN.getTime() - nowVN.getTime()) / (1000 * 60 * 60),
-    });
     return isOpen;
   }, [activity?.registerDate, activity?.endRegisterDate, parseDateFromAPI]);
 
@@ -1946,11 +1900,6 @@ export default function ViewActivity() {
   // API trả về date string đã là VN time rồi, không cần convert thêm
   const canCancelRegistration = useMemo(() => {
     if (!activity?.endRegisterDate || !isRegistered) {
-      console.log("🔵 canCancelRegistration: false", {
-        hasEndDate: !!activity?.endRegisterDate,
-        isRegistered,
-        endDate: activity?.endRegisterDate,
-      });
       return false;
     }
     const nowUTC = new Date();
@@ -1962,12 +1911,6 @@ export default function ViewActivity() {
 
     // Có thể hủy nếu hiện tại <= endRegisterDate (so sánh trong VN time)
     const canCancel = nowVN <= endRegisterDateVN;
-    console.log("🔵 canCancelRegistration:", canCancel, {
-      nowVN: nowVN.toISOString(),
-      nowVNLocal: nowVN.toString(),
-      endRegisterDateVN: endRegisterDateVN.toISOString(),
-      endRegisterDateVNLocal: endRegisterDateVN.toString(),
-    });
     return canCancel;
   }, [activity?.endRegisterDate, isRegistered, parseDateFromAPI]);
 
@@ -2451,7 +2394,6 @@ export default function ViewActivity() {
         }
       }
     } catch (err) {
-      console.error("Error submitting:", err);
       toast.error(err?.message || "Có lỗi xảy ra khi nộp bài");
     } finally {
       setIsSubmitting(false);
@@ -4682,7 +4624,6 @@ export default function ViewActivity() {
                                   formatClassName={formatClassNameWithGrade}
                                   onMatchClick={(match) => {
                                     // Optional: handle match click
-                                    console.log("Match clicked:", match);
                                   }}
                                   fullScreen={false}
                                   onMaximize={() =>
@@ -4728,7 +4669,6 @@ export default function ViewActivity() {
                               formatClassName={formatClassNameWithGrade}
                               onMatchClick={(match) => {
                                 // Optional: handle match click
-                                console.log("Match clicked:", match);
                               }}
                               fullScreen={true}
                             />
