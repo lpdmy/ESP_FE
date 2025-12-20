@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/common/components/ui/select";
+import ModerationModal from "./ModerationDetailModal/page";
 import {
   Tabs,
   TabsContent,
@@ -112,7 +113,7 @@ const penaltyTypes = [
   },
 ];
 
-// ❌ Loại bỏ type annotation version TypeScript
+// ❌ Loại bỏ type annotation version TypeScripts
 function formatDate(dateString, format = "dd/MM/yyyy") {
   const date = new Date(dateString);
   const day = String(date.getDate()).padStart(2, "0");
@@ -141,7 +142,6 @@ export default function ModerationCenter() {
     const triggerRef = useRef(null);
 
     const selectedOption = options.find((o) => o.value === value);
-
     const openDropdown = () => {
       if (triggerRef.current) {
         const rect = triggerRef.current.getBoundingClientRect();
@@ -214,7 +214,7 @@ export default function ModerationCenter() {
       </>
     );
   }
-
+  const [openModalDetail, setOpenModalDetail] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [isPenaltyDialogOpen, setIsPenaltyDialogOpen] = useState(false);
   const [selectedPenalty, setSelectedPenalty] = useState("");
@@ -245,7 +245,6 @@ export default function ModerationCenter() {
       const total = response.data.totalCount || response.data.data.length;
       setTotalPages(Math.ceil(total / pageSize));
     } catch (error) {
-      console.log(error);
       toast.showError("Tải danh sách thất bại")
     } finally {
       setIsLoading(false);
@@ -257,7 +256,6 @@ export default function ModerationCenter() {
         id: id,
         status : status
       }
-      console.log(payload)
       await updateStatus(payload)
       hanldeGetUserStat();
       hanldeGetAllReport();
@@ -277,13 +275,16 @@ export default function ModerationCenter() {
       setUserStat(response.data.data);
       const total = response.data.totalCount || response.data.data.length;
       setTotalPagesStat(Math.ceil(total / pageSize));
-      console.log("Response :", response);
     } catch (error) {
-      console.log(error);
     } finally {
       setIsLoading(false);
     }
   };
+  const handleOpenDetaiModal = (data) =>{
+    setOpenModalDetail(true)
+    setSelectedReport(data)
+
+  }
   const statusOptions = [
     { value: "all", label: "Tất cả" },
     { value: "Pending", label: "Chờ xử lý" },
@@ -464,6 +465,7 @@ export default function ModerationCenter() {
                               variant="outline"
                               size="sm"
                               className="text-blue-600 border-blue-200 hover:bg-blue-50 bg-transparent"
+                              onClick={()=> handleOpenDetaiModal(report)}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -649,8 +651,7 @@ export default function ModerationCenter() {
                     >
                       <ChevronLeft className="h-4 w-4" />
                       Trước
-                    </Button>
-
+                    </Button> 
                     <div className="flex gap-1">
                       {Array.from(
                         { length: Math.min(5, totalPagesStat) },
@@ -700,6 +701,11 @@ export default function ModerationCenter() {
         open={openModal}
         onClose={() => setOpenModal(false)}
         selectedUser={selectedUser}
+      />
+       <ModerationModal
+        open={openModalDetail}
+        onClose={() => setOpenModalDetail(false)}
+        data={selectedReport}
       />
     </div>
   );

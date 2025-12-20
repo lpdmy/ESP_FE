@@ -2,6 +2,7 @@ import { Button } from "@/common/components/ui/button";
 import { Card } from "@/common/components/ui/card";
 import { Badge } from "@/common/components/ui/badge";
 import { useSelector } from "react-redux";
+import { ROLE } from "@/common/constants/roles";
 import {
   SIDEBAR_NAVIGATION,
   SIDEBAR_DEFAULT_TAB,
@@ -11,9 +12,14 @@ import { useEffect, useState, useCallback } from "react";
 import { Plus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/common/components/ui/avatar";
 import { useLocation, useNavigate } from "react-router-dom";
+import { ROUTES } from "@/common/constants/routes";
 
 export default function Sidebar() {
   const user = useSelector((state) => state.user.user);
+  const roleValue = typeof user?.role === "string" ? user.role.toUpperCase() : user?.role;
+  const isAdmin = roleValue === ROLE.ADMIN || roleValue === "ADMIN";
+  const isStaff = roleValue === ROLE.STAFF || roleValue === "STAFF";
+  const isTeacher = roleValue === ROLE.TEACHER || roleValue === "TEACHER";
   const navigate = useNavigate();
   const [joinedClubs, setJoinedClubs] = useState([]);
   const { getClubByUser } = useClubApi();
@@ -29,16 +35,44 @@ export default function Sidebar() {
       : user?.username
       ? user.username[0].toUpperCase()
       : "U";
-  const menuItems = SIDEBAR_NAVIGATION.filter(item => {
-  if (item.label === "Giám khảo") {
-    return user?.role === 2;
-  }
-  return true;
-});
+  const menuItems = SIDEBAR_NAVIGATION.filter((item) => {
+    // Admin và Staff không thấy sidebar này (họ dùng AdminSidebar)
+    if (isAdmin || isStaff) {
+      return false;
+    }
+    
+    // Giám khảo chỉ cho role giáo viên (2)
+    if (item.label === "Giám khảo") {
+      return isTeacher;
+    }
+    
+    // Đổi thưởng: ẩn với giáo viên
+    if (item.label === "Đổi thưởng" && isTeacher) {
+      return false;
+    }
+    
+    return true;
+  });
   const handleNavigation = (item) => {
     // Special handling for "Lớp học của tôi" - redirect to user's specific class
     if (item.key === "my-class" && user?.classGroupId) {
-      navigate(`/my-classes/${user.classGroupId}`)
+      navigate(`/my-classes`)
+      return
+    }
+
+    // Profile: route theo role
+    if (item.key === "profile") {
+      if (isTeacher) {
+        navigate(ROUTES.USER_PROFILE.TEACHER_PROFILE)
+      } else {
+        navigate(ROUTES.USER_PROFILE.PROFILE)
+      }
+      return
+    }
+
+    // Cài đặt: giáo viên đi thẳng tới đổi mật khẩu
+    if (item.label === "Cài đặt" && user?.role === ROLE.TEACHER) {
+      navigate(ROUTES.AUTH.CHANGEPASSWORD)
       return
     }
     

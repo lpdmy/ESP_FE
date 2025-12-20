@@ -60,6 +60,7 @@ export const SIDEBAR_NAVIGATION = [
   {
     label: "Hồ sơ",
     icon: User,
+    key: "profile",
     paths: [
       ROUTES.USER_PROFILE.PROFILE,
       ROUTES.USER_PROFILE.EDIT,

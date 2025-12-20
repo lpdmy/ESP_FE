@@ -28,7 +28,6 @@ export default function TeacherPosts({ classGroupId, userRole, onPostsUpdate }) 
       const postsData = response.data || []
       setPosts(postsData)
       onPostsUpdate && onPostsUpdate(postsData)
-      console.log('classGroupId', response.data)
     } catch (error) {
       console.error('Error loading posts:', error)
       showError("Không thể tải danh sách bài viết. Vui lòng thử lại.")
@@ -108,7 +107,7 @@ export default function TeacherPosts({ classGroupId, userRole, onPostsUpdate }) 
         <div className="flex justify-end">
           <Button
             onClick={() => setShowCreateModal(true)}
-            className="bg-orange-500 hover:bg-orange-600 flex items-center gap-2"
+            className="text-white bg-orange-500 hover:bg-orange-600 flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
             Tạo bài viết

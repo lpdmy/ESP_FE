@@ -64,8 +64,18 @@ export class JuryService extends ApiService {
     return this.post(API_CONFIG.JURY.GRADING, payload, token);
   }
 
+  async isAssignedToGrade(token, userId, submissionId) {
+    const url = `${API_CONFIG.JURY.IS_ASSIGNED}/${userId}/${submissionId}`;
+    return this.get(url, token);
+  }
+
   async RankByActivityId(token,id) {
     const url = API_CONFIG.ACTIVITY.RANK_BY_ID.replace("{id}", id);
     return this.get(url, token);
+  }
+  
+  
+  async improvedRandomAssign(token, payload) {
+    return this.post(API_CONFIG.JURY.IMPROVED_RANDOM_ASSIGN, payload, token);
   }
 }

@@ -95,7 +95,6 @@ export default function TeacherProfile() {
 
   useEffect(() => {
     const loadProfile = async () => {
-      console.log(id);
       try {
         let response;
         if (!!id) {
@@ -105,7 +104,6 @@ export default function TeacherProfile() {
         }
         const profileData = response.data;
         setProfile(profileData);
-        console.log(profileData);
         // Parse ExtraJson if it exists
 
         if (
@@ -183,14 +181,12 @@ export default function TeacherProfile() {
 
   const handleUpdatePost = (updatedPost) => {
     // TODO: Implement update post logic
-    console.log("Update post:", updatedPost);
     setIsUpdateModalOpen(false);
     setSelectedPost(null);
   };
 
   const handleConfirmDelete = (postId) => {
     // TODO: Implement delete post logic
-    console.log("Delete post:", postId);
     setIsDeleteModalOpen(false);
     setSelectedPost(null);
   };

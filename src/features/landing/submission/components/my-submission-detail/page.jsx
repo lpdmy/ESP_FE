@@ -47,7 +47,6 @@ export default function SubmissionDetail() {
     try {
       const response = await getSubmissionDetail(params.id);
       const rawAssignments = response.data.juryAssignments;
-      console.log(response);
       const processedAssignments = rawAssignments.map((jury) => {
         let scores = {};
         try {
@@ -69,9 +68,7 @@ export default function SubmissionDetail() {
       setSubmission(response.data);
       setJuryAssignment(processedAssignments);
 
-      console.log(processedAssignments);
     } catch (error) {
-      console.log(error);
     }
   };
   function formatVietnamDate(date) {

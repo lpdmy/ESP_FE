@@ -13,8 +13,6 @@ export const useUserApi = () => {
   const getAllUsers = useCallback(
     async (pageNumber = 1, pageSize = 10, search = null, status = null, role = null, sortField = null, sortDirection = null) => {
       const token = localStorage.getItem('token');
-      console.log('Token from localStorage:', token ? 'Token exists' : 'No token found');
-      console.log('Token length:', token ? token.length : 0);
       
       if (!token) {
         throw new Error('No authentication token found. Please log in again.');

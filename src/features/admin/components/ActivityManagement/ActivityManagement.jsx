@@ -28,6 +28,7 @@ import {
   Sparkles,
   Calendar,
   Users,
+  Lock,
   CheckCircle,
   Clock,
   XCircle,
@@ -68,6 +69,7 @@ export default function ActivityManagement() {
   const [deletingIds, setDeletingIds] = useState(new Set())
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [activityToDelete, setActivityToDelete] = useState(null)
+  
 
   // Pagination state
   const [pageNumber, setPageNumber] = useState(1)
@@ -157,20 +159,24 @@ export default function ActivityManagement() {
   const [statsLoading, setStatsLoading] = useState(true)
 
   // Calculate activity status based on dates
+  // API trả về date string đã là VN time rồi, so sánh trong cùng timezone (VN time)
   const getActivityStatus = (activity) => {
-    const now = new Date()
+    const nowUTC = new Date()
+    const nowVN = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000) // Convert now sang VN time
+    
+    // Parse date string từ API (đã là VN time)
     const startDate = activity.startDate ? new Date(activity.startDate) : null
     const endDate = activity.endDate ? new Date(activity.endDate) : null
 
     // If missing dates, consider as Upcoming (not Pending)
-    if (!startDate || !endDate) return "Upcoming"
+    if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return "Upcoming"
 
-    // Check current status based on dates
-    if (now >= startDate && now <= endDate) {
+    // Check current status based on dates (so sánh trong VN time)
+    if (nowVN >= startDate && nowVN <= endDate) {
       return "Active" // Đang diễn ra
     }
 
-    if (now > endDate) {
+    if (nowVN > endDate) {
       return "Ended" // Đã kết thúc
     }
 
@@ -178,8 +184,12 @@ export default function ActivityManagement() {
     return "Upcoming" // Sắp tới
   }
 
+  const isActivityLocked = (activity) =>
+    activity.status === "Active" || activity.status === "Ended"
+
   // Fetch activities from BE
   const fetchActivities = useCallback(async () => {
+    // Đảm bảo set loading ngay lập tức, không phụ thuộc vào executeApiCall
     setLoading(true)
     setError(null)
 
@@ -187,28 +197,64 @@ export default function ActivityManagement() {
       const token = localStorage.getItem("token")
       const search = searchDebounce.trim() || null
 
+      // Không truyền setLoading vào executeApiCall để tránh conflict
+      // Chúng ta tự quản lý loading state
       const response = await executeApiCall(
         activityService.getAllActivities.bind(activityService),
         [pageNumber, pageSize, search, token],
-        { setLoading, setError }
+        { setLoading: () => {}, setError }
       )
 
       if (response?.data) {
         const paginationData = response.data
         const activitiesData = paginationData.data || []
 
-        // Map BE data to FE format
-        const mappedActivities = activitiesData.map(activity => ({
+        // Map BE data to FE format - optimize performance
+        // Tính toán status inline thay vì gọi function để tăng tốc
+        // API trả về date string đã là VN time rồi, so sánh trong cùng timezone (VN time)
+        const nowUTC = new Date()
+        const nowVN = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000) // Convert now sang VN time
+        
+        const mappedActivities = activitiesData.map(activity => {
+          // Tính status một lần thay vì gọi function
+          let status = "Upcoming"
+          if (activity.startDate && activity.endDate) {
+            const startDate = new Date(activity.startDate) // Parse từ API (đã là VN time)
+            const endDate = new Date(activity.endDate) // Parse từ API (đã là VN time)
+            if (nowVN >= startDate && nowVN <= endDate) {
+              status = "Active"
+            } else if (nowVN > endDate) {
+              status = "Ended"
+            }
+          }
+          
+          // Parse dates một lần và tái sử dụng
+          // API trả về date string đã là VN time rồi, parse trực tiếp
+          const startDate = activity.startDate ? new Date(activity.startDate) : null
+          const endDate = activity.endDate ? new Date(activity.endDate) : null
+          const registerDate = activity.registerDate ? new Date(activity.registerDate) : null
+          const endRegisterDate = activity.endRegisterDate ? new Date(activity.endRegisterDate) : null
+          
+          // Helper để format date từ Date object (đã là VN time) sang YYYY-MM-DD
+          const formatDateForDisplay = (date) => {
+            if (!date || isNaN(date.getTime())) return ""
+            const year = date.getFullYear()
+            const month = String(date.getMonth() + 1).padStart(2, '0')
+            const day = String(date.getDate()).padStart(2, '0')
+            return `${year}-${month}-${day}`
+          }
+          
+          return {
           id: activity.id,
           thumbnail: activity.thumbnailUrl || "",
           title: activity.title || "",
           category: activity.category === 1 ? "Activity" : "Event",
           subType: activity.subType || "",
-          startDate: activity.startDate ? new Date(activity.startDate).toISOString().split("T")[0] : "",
-          endDate: activity.endDate ? new Date(activity.endDate).toISOString().split("T")[0] : "",
-          registerDate: activity.registerDate ? new Date(activity.registerDate).toISOString().split("T")[0] : "",
-          endRegisterDate: activity.endRegisterDate ? new Date(activity.endRegisterDate).toISOString().split("T")[0] : "",
-          status: getActivityStatus(activity),
+            startDate: formatDateForDisplay(startDate),
+            endDate: formatDateForDisplay(endDate),
+            registerDate: formatDateForDisplay(registerDate),
+            endRegisterDate: formatDateForDisplay(endRegisterDate),
+            status: status,
           participants: activity.numberOfParticipants || 0,
           maxParticipants: activity.maxParticipants ?? null,
           location: activity.location || "",
@@ -220,7 +266,8 @@ export default function ActivityManagement() {
           sports: activity.sports || [],
           participantDetails: activity.participants || [],
           isDeleted: activity.isDeleted || false,
-        }))
+          }
+        })
 
         setActivities(mappedActivities)
         setTotalCount(paginationData.totalCount || 0)
@@ -301,14 +348,18 @@ export default function ActivityManagement() {
   }, [])
 
   // Fetch activities when filters change
+  // FIX: Depend directly on values instead of function to avoid infinite loops
   useEffect(() => {
     fetchActivities()
-  }, [fetchActivities])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageNumber, pageSize, searchDebounce])
 
-  // Fetch statistics on component mount
+  // Fetch statistics on component mount (only once)
   useEffect(() => {
     fetchStatistics()
-  }, [fetchStatistics])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -479,7 +530,8 @@ export default function ActivityManagement() {
 
   // Filter activities on client side (since BE only supports search by title)
   // Note: Search is done on BE, but other filters are done on client side
-  const filteredActivities = activities.filter(activity => {
+  // Optimize với useMemo để tránh re-filter mỗi lần render
+  const filteredActivities = useMemo(() => activities.filter(activity => {
     // Soft delete filter - only show activities that are not deleted
     // Hide activities where isDeleted is explicitly true
     if (activity.isDeleted === true || activity.isDeleted === "true") return false
@@ -519,7 +571,7 @@ export default function ActivityManagement() {
     if (organizerFilter && activity.organizer && !activity.organizer.toLowerCase().includes(organizerFilter.toLowerCase())) return false
 
     return true
-  })
+  }), [activities, categoryFilter, statusFilter, subTypeFilter, dateFromFilter, dateToFilter, minParticipantsFilter, maxParticipantsFilter, organizerFilter])
 
   function getGroupRegistrations(activity) {
     if (!activity || !activity.participantDetails) return []
@@ -571,17 +623,23 @@ export default function ActivityManagement() {
     }))
   }
 
-  // Handle pagination
+  // Handle pagination với loading state
   const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) {
+    if (newPage >= 1 && newPage <= totalPages && !loading) {
+      // Set loading ngay lập tức khi user click paging
+      setLoading(true)
       setPageNumber(newPage)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
   const handlePageSizeChange = (newSize) => {
+    if (!loading) {
+      // Set loading ngay lập tức khi user thay đổi page size
+      setLoading(true)
     setPageSize(newSize)
     setPageNumber(1)
+    }
   }
 
   return (
@@ -829,18 +887,18 @@ export default function ActivityManagement() {
           ))
         ) : (
           stats.map((stat, index) => (
-            <Card key={index} className="hover-lift">
-              <CardContent>
-                <div className="flex items-start justify-between mb-3">
-                  <div className={`${stat.bgColor} p-3 rounded-lg`}>
-                    <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                  </div>
+          <Card key={index} className="hover-lift">
+            <CardContent>
+              <div className="flex items-start justify-between mb-3">
+                <div className={`${stat.bgColor} p-3 rounded-lg`}>
+                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
                 </div>
-                <div className="text-3xl font-bold mb-1">{stat.value}</div>
-                <div className="text-sm text-gray-600 mb-2">{stat.title}</div>
-                <div className="text-xs text-gray-500">{stat.trend}</div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="text-3xl font-bold mb-1">{stat.value}</div>
+              <div className="text-sm text-gray-600 mb-2">{stat.title}</div>
+              <div className="text-xs text-gray-500">{stat.trend}</div>
+            </CardContent>
+          </Card>
           ))
         )}
       </div>
@@ -978,9 +1036,10 @@ export default function ActivityManagement() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="relative">
+          <div className="relative min-h-[400px]">
+            {/* Loading overlay với backdrop blur - hiển thị khi loading */}
             {loading && (
-              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
+              <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center z-20 rounded-lg">
                 <div className="flex flex-col items-center gap-3">
                   <div className="relative w-12 h-12">
                     <div className="absolute inset-0 rounded-full border-4 border-orange-200 border-t-orange-500 animate-spin"></div>
@@ -989,26 +1048,30 @@ export default function ActivityManagement() {
                 </div>
               </div>
             )}
+            
+            {/* Ẩn hoặc làm mờ nội dung cũ khi đang loading */}
+            <div className={loading ? "opacity-30 pointer-events-none transition-opacity duration-200" : "opacity-100 transition-opacity duration-200"}>
             {error ? (
-              <div className="text-center py-8">
-                <p className="text-red-600 mb-4">{error}</p>
-                <Button onClick={fetchActivities} variant="outline">
-                  Thử lại
+            <div className="text-center py-8">
+              <p className="text-red-600 mb-4">{error}</p>
+              <Button onClick={fetchActivities} variant="outline">
+                Thử lại
+              </Button>
+            </div>
+          ) : filteredActivities.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Không tìm thấy hoạt động nào</p>
+              {hasActiveFilters() && (
+                <Button onClick={handleResetFilters} variant="outline" className="mt-4">
+                  Xóa bộ lọc
                 </Button>
-              </div>
-            ) : filteredActivities.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">Không tìm thấy hoạt động nào</p>
-                {hasActiveFilters() && (
-                  <Button onClick={handleResetFilters} variant="outline" className="mt-4">
-                    Xóa bộ lọc
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className=" rounded-lg overflow-hidden">
-                  <Table>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Làm mờ table khi loading */}
+              <div className={`rounded-lg overflow-hidden transition-opacity duration-200 ${loading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
+                <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Tiêu đề</TableHead>
@@ -1050,14 +1113,14 @@ export default function ActivityManagement() {
                             }
                           </div>
                           {activity.maxParticipants != null && activity.maxParticipants > 0 && (
-                            <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">
-                              <div
-                                className="bg-green-600 h-1.5 rounded-full"
-                                style={{
+                          <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">
+                            <div
+                              className="bg-green-600 h-1.5 rounded-full"
+                              style={{
                                   width: `${Math.min((activity.participants / activity.maxParticipants) * 100, 100)}%`,
-                                }}
-                              />
-                            </div>
+                              }}
+                            />
+                          </div>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
@@ -1077,41 +1140,69 @@ export default function ActivityManagement() {
                               </Tooltip>
                             )}
                             <Tooltip content="Xem trước trang">
-                              <Button
-                                variant="ghost"
-                                size="icon"
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
                                 asChild
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <Link to={`${ROUTES.ACTIVITY.VIEW_ACTIVITY.replace(':id', String(activity.id))}?isPreview=true`}>
                                   <Eye className="w-4 h-4 text-blue-500" />
                                 </Link>
-                              </Button>
+                                </Button>
+                              </Tooltip>
+                            <Tooltip content={activity.subType === "CreativeContest" ? "Giám khảo" : "Chỉ cuộc thi sáng tạo mới có giám khảo"}>
+                              {activity.subType === "CreativeContest" ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  asChild
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Link to={ROUTES.JURY.ASSIGN_JURY.replace(':id', String(activity.id))}>
+                                    <Trophy className="w-4 h-4 text-yellow-500" />
+                                  </Link>
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled
+                                  className="opacity-50 cursor-not-allowed"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Trophy className="w-4 h-4 text-gray-400" />
+                                </Button>
+                              )}
                             </Tooltip>
-                            <Tooltip content="Giám khảo">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                asChild
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Link to={ROUTES.JURY.ASSIGN_JURY.replace(':id', String(activity.id))}>
-                                  <Trophy className="w-4 h-4 text-yellow-500" />
-                                </Link>
-                              </Button>
-                            </Tooltip>
-                            <Tooltip content="Chỉnh sửa">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                asChild
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Link to={ROUTES.ADMIN.EDIT_ACTIVITY.replace(':id', String(activity.id))}>
-                                  <Edit className="w-4 h-4" />
-                                </Link>
-                              </Button>
-                            </Tooltip>
+                            {isActivityLocked(activity) ? (
+                              <Tooltip content="Hoạt động đang diễn ra/đã kết thúc - không thể chỉnh sửa">
+                                <span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    disabled
+                                    className="opacity-60"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Lock className="w-4 h-4" />
+                                  </Button>
+                                </span>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip content="Chỉnh sửa">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  asChild
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Link to={ROUTES.ADMIN.EDIT_ACTIVITY.replace(':id', String(activity.id))}>
+                                    <Edit className="w-4 h-4" />
+                                  </Link>
+                                </Button>
+                              </Tooltip>
+                            )}
                             <Tooltip content="Xóa sự kiện">
                               <Button
                                 variant="ghost"
@@ -1147,6 +1238,7 @@ export default function ActivityManagement() {
                         { value: "100", label: "100" },
                       ]}
                       className="w-20"
+                      disabled={loading}
                     />
                     <span className="text-sm text-gray-600">mục mỗi trang</span>
                   </div>
@@ -1156,7 +1248,7 @@ export default function ActivityManagement() {
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(pageNumber - 1)}
-                      disabled={pageNumber === 1}
+                      disabled={pageNumber === 1 || loading}
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
@@ -1181,6 +1273,7 @@ export default function ActivityManagement() {
                             size="sm"
                             onClick={() => handlePageChange(pageNum)}
                             className="min-w-[40px]"
+                            disabled={loading}
                           >
                             {pageNum}
                           </Button>
@@ -1192,7 +1285,7 @@ export default function ActivityManagement() {
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(pageNumber + 1)}
-                      disabled={pageNumber === totalPages}
+                      disabled={pageNumber === totalPages || loading}
                     >
                       <ChevronRight className="w-4 h-4" />
                     </Button>
@@ -1200,7 +1293,8 @@ export default function ActivityManagement() {
                 </div>
               )}
             </>
-            )}
+          )}
+            </div>
           </div>
         </CardContent>
       </Card>

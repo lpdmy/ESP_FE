@@ -94,6 +94,26 @@ const getJuryAssign = async (id, search, pageSize, pageNumber) => {
       { setLoading: setSaveLoading, setError }
     );
   };
+  
+  // Methods không pagination - trả về toàn bộ danh sách
+  const getJuryAssignNotGradeAll = async (id, search = "") => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      juryService.getJuryAssignNotGradeAll.bind(juryService),
+      [token, id, search],
+      { setLoading: setSaveLoading, setError }
+    );
+  };
+  
+  const getJuryAssignGradeAll = async (id, search = "") => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      juryService.getJuryAssignGradeAll.bind(juryService),
+      [token, id, search],
+      { setLoading: setSaveLoading, setError }
+    );
+  };
+  
   const gradingSubmission = useRef(async (payload) => {
     const token = localStorage.getItem("token");
     return executeApiCall(
@@ -102,6 +122,14 @@ const getJuryAssign = async (id, search, pageSize, pageNumber) => {
       { setLoading: setSaveLoading, setError }
     );
   });
+  const isAssignedToGrade = async (userId, submissionId) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      juryService.isAssignedToGrade.bind(juryService),
+      [token, userId, submissionId],
+      { setLoading: setJuryLoading, setError }
+    );
+  };
   const RankByActivityId = async (id) => {
     const token = localStorage.getItem("token");
     return executeApiCall(
@@ -110,6 +138,15 @@ const getJuryAssign = async (id, search, pageSize, pageNumber) => {
       { setLoading: setSaveLoading, setError }
     );
   };
+  
+  const improvedRandomAssign = useRef(async (payload) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      juryService.improvedRandomAssign.bind(juryService),
+      [token, payload],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
 
   return {
     createJury: createJury.current,
@@ -119,11 +156,15 @@ const getJuryAssign = async (id, search, pageSize, pageNumber) => {
     getJuryAcitivty,
     assignJury : assignJury.current,
     ramdomAssignJury: ramdomAssignJury.current,
+    improvedRandomAssign: improvedRandomAssign.current,
     deleteRandomAssign,
     getJuryAssign,
     getJuryAssignNotGrade,
     gradingSubmission : gradingSubmission.current,
     getJuryAssignGrade,
+    getJuryAssignNotGradeAll,
+    getJuryAssignGradeAll,
+    isAssignedToGrade,
     RankByActivityId,
   };
 }

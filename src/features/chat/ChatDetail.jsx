@@ -93,15 +93,19 @@ export default function ChatDetail() {
                 nameDict,
               })
             } else {
-            const otherIndex = room.participantIds.findIndex(id => id !== currentUserId)
-            if (otherIndex !== -1) {
-              setChatUser({
-                id: room.participantIds[otherIndex],
-                name: room.participantNames[otherIndex],
-                avatar: room.participantAvatars[otherIndex] || "/placeholder.svg",
+              const otherIndex = room.participantIds.findIndex(id => id !== currentUserId)
+              if (otherIndex !== -1) {
+                setChatUser({
+                  id: room.participantIds[otherIndex],
+                  name: room.participantNames[otherIndex],
+                  avatar: room.participantAvatars[otherIndex] || "/placeholder.svg",
                   isOnline: false,
                   nameDict,
-              })
+                  avatarDict: participantsList.reduce((acc, p) => {
+                    acc[p.id] = p.avatar;
+                    return acc;
+                  }, {}),
+                })
               }
             }
           } else {
@@ -137,7 +141,6 @@ export default function ChatDetail() {
 
     const setupRoomConnection = async () => {
       try {
-        console.log("🔄 Ensuring SignalR connection...");
         const conn = await ensureChatConnected(userId, (msg) => {
           // callback khi nhận message realtime
           if (isMounted && msg.roomId === roomId) {
@@ -147,7 +150,6 @@ export default function ChatDetail() {
 
         if (conn && conn.state === "Connected") {
           await joinChatRoom(roomId);
-          console.log("✅ Joined chat room:", roomId);
         } else {
           console.warn("⚠️ Connection not ready, retrying...");
         }
@@ -161,7 +163,6 @@ export default function ChatDetail() {
     return () => {
       isMounted = false;
       if (roomId) {
-        console.log("🚪 Leaving room:", roomId);
         leaveChatRoom(roomId);
       }
     };
@@ -191,8 +192,6 @@ export default function ChatDetail() {
         showError("Không thể gửi tin nhắn (chưa kết nối máy chủ)");
         return;
       }
-
-      console.log("💬 Sending message:", newMessage, "to room:", roomId);
 
       // --- 1️⃣ Gửi realtime qua SignalR ---
       await sendChatMessage(roomId, userId, newMessage, "text");
@@ -353,15 +352,22 @@ export default function ChatDetail() {
                       <div className="flex items-center gap-2 mb-1">
                         {!isMine && (
                           <Avatar className="w-6 h-6">
-                            <AvatarImage src={chatUser?.avatar || "/placeholder.svg"} alt={chatUser?.name || "User"} />
+                            <AvatarImage
+                              src={
+                                chatUser?.avatarDict?.[message.senderId] ||
+                                chatUser?.avatar ||
+                                "/placeholder.svg"
+                              }
+                              alt={chatUser?.nameDict?.[message.senderId] || "User"}
+                            />
                             <AvatarFallback className="bg-gradient-orange text-white text-xs">
-                              {(chatUser?.name || "U").charAt(0)}
+                              {(chatUser?.nameDict?.[message.senderId] || "U").charAt(0)}
                             </AvatarFallback>
                           </Avatar>
                         )}
                         {!isMine && (
                           <span className="text-xs text-gray-500">
-                            {chatUser?.nameDict?.[message.senderId] || chatUser?.name || "Unknown User"}
+                            {chatUser?.nameDict?.[message.senderId] || "Unknown User"}
                           </span>
                         )}
                       </div>
@@ -438,14 +444,6 @@ export default function ChatDetail() {
                     className="hover:bg-orange-100 rounded-full w-8 h-8 p-0"
                   >
                     <Smile className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="hover:bg-orange-100 rounded-full w-8 h-8 p-0"
-                  >
-                    <Paperclip className="w-4 h-4" />
                   </Button>
                 </div>
               </div>

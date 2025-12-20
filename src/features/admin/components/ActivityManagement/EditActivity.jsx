@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/common/components/ui/button";
 import {
@@ -108,13 +108,17 @@ export default function EditActivity() {
     },
   })
 
-  const sections = [
+  const sections = useMemo(() => [
     { id: "basic", title: "Thông tin cơ bản", icon: Info },
     { id: "schedule", title: "Lịch trình", icon: Calendar },
     { id: "details", title: "Chi tiết hoạt động", icon: Edit2 },
     { id: "rules", title: "Quy định", icon: Users },
-    { id: "assign-jury", title: "Phân công giám khảo", icon: UserCheck },
-  ];
+    // Chỉ hiển thị section "Phân công giám khảo" cho cuộc thi sáng tạo
+    ...(formData.subType === "CreativeContest" 
+      ? [{ id: "assign-jury", title: "Phân công giám khảo", icon: UserCheck }]
+      : []
+    ),
+  ], [formData.subType]);
 
   const subTypes = [
     { value: "SportsFestival", label: "Hội thao" },
@@ -139,6 +143,19 @@ export default function EditActivity() {
     "Bóng chuyền",
     "Bóng rổ",
   ];
+
+  // Trạng thái khóa chỉnh sửa (đang diễn ra hoặc đã kết thúc)
+  const getValidDate = (value) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+  const startDateValue = getValidDate(formData.startDate);
+  const endDateValue = getValidDate(formData.endDate);
+  const now = new Date();
+  const hasStarted = startDateValue ? now >= startDateValue : false;
+  const hasEnded = endDateValue ? now > endDateValue : false;
+  const isActivityLocked = hasStarted || hasEnded;
 
   // Load activity data
   useEffect(() => {
@@ -401,9 +418,7 @@ export default function EditActivity() {
           if (speakerImagePreview && speakerImagePreview.startsWith("blob:")) {
             URL.revokeObjectURL(speakerImagePreview);
           }
-          toast.success("Đã upload ảnh thành công");
         } catch (error) {
-          console.error("Error uploading speaker image:", error);
           toast.error(error.message || "Có lỗi xảy ra khi upload ảnh");
           setIsUploadingSpeakerImage(false);
           return;
@@ -529,6 +544,12 @@ export default function EditActivity() {
   };
 
   const handleSave = async () => {
+    if (isActivityLocked) {
+      toast.error(
+        "Hoạt động đang diễn ra hoặc đã kết thúc, không thể cập nhật."
+      );
+      return;
+    }
     // Validate required fields
     if (!formData.title?.trim()) {
       toast.error("Vui lòng nhập tiêu đề hoạt động");
@@ -739,10 +760,8 @@ export default function EditActivity() {
         const uploadedUrl = await uploadImage(file);
         if (uploadedUrl) {
           setFormData({ ...formData, thumbnail: uploadedUrl });
-          toast.success("Đã upload ảnh thành công");
         }
       } catch (error) {
-        console.error("Error uploading image:", error);
         toast.error(error.message || "Có lỗi xảy ra khi upload ảnh");
       } finally {
         setIsUploadingThumbnail(false);
@@ -779,10 +798,8 @@ export default function EditActivity() {
         const uploadedUrl = await uploadImage(file);
         if (uploadedUrl) {
           setFormData({ ...formData, thumbnail: uploadedUrl });
-          toast.success("Đã upload ảnh thành công");
         }
       } catch (error) {
-        console.error("Error uploading image:", error);
         toast.error(error.message || "Có lỗi xảy ra khi upload ảnh");
       } finally {
         setIsUploadingThumbnail(false);
@@ -795,7 +812,6 @@ export default function EditActivity() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    toast.success("Đã xóa ảnh");
   };
 
   if (isLoading) {
@@ -1826,23 +1842,30 @@ export default function EditActivity() {
             </div>
           </CardContent>
         </Card>
-        {/* Section 4: Assign-jury */}
-        <Card id="section-assign-jury">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-blue-600" />
-              Phân công giám khảo
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AssignJurySection activityId={params.id} />
-          </CardContent>
-        </Card>
+        {/* Section 4: Assign-jury - Chỉ hiển thị cho cuộc thi sáng tạo */}
+        {formData.subType === "CreativeContest" && (
+          <Card id="section-assign-jury">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-blue-600" />
+                Phân công giám khảo
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AssignJurySection activityId={params.id} />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Action Buttons - Fixed at bottom */}
       <Card>
         <CardContent className="p-6">
+      {isActivityLocked && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          Hoạt động đang diễn ra hoặc đã kết thúc nên không thể chỉnh sửa.
+        </div>
+      )}
           <div className="flex items-center justify-between">
             <Button
               variant="outline"
@@ -2142,7 +2165,7 @@ export default function EditActivity() {
                         setIsPreviewOpen(false);
                         handleSave();
                       }}
-                      disabled={isSaving}
+                      disabled={isSaving || isActivityLocked}
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       {isSaving ? "Đang lưu..." : "Xác nhận lưu"}
@@ -2152,8 +2175,8 @@ export default function EditActivity() {
               </Dialog>
               <Button
                 onClick={handleSave}
-                className="bg-green-600 hover:bg-green-700 text-white"
-                disabled={isSaving}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={isSaving || isActivityLocked}
               >
                 <Save className="w-4 h-4 mr-2" />
                 {isSaving ? "Đang lưu..." : "Lưu thay đổi"}

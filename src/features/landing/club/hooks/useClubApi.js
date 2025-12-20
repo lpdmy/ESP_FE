@@ -30,6 +30,14 @@ export function useClubApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
+  const getListClubAdmin = useRef(async (pageNumber, pageSize, search = "") => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.getListClubAdmin.bind(clubService),
+      [token, pageNumber, pageSize, search],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
   const getClubDetail = useRef(async (id) => {
     const token = localStorage.getItem("token");
     return executeApiCall(
@@ -267,5 +275,6 @@ export function useClubApi() {
     approveInvitation: approveInvitation.current,
     getClubMentorInvitation: getClubMentorInvitation.current,
     cancelInviteMentor,
+    getListClubAdmin : getListClubAdmin.current,
   };
 }

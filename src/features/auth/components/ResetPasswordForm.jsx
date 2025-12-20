@@ -28,6 +28,7 @@ import { toast } from "react-toastify";
 import { ROLE } from "@/common/constants/roles";
 import { initGlobalNotification } from "@/common/signalr/useGlobalNotification";
 import { addNotification } from "@/store/notification/notificationSlice";
+import { jwtDecode } from "jwt-decode";
 
 export default function ResetPasswordForm() {
     const location = useLocation();
@@ -83,19 +84,50 @@ export default function ResetPasswordForm() {
                 token,
                 newPassword: password,
             });
-            if (result?.data?.accessToken) {
-                localStorage.setItem("token", result.data.accessToken);
-                localStorage.setItem("refreshToken", result.data.refreshToken);
-                const resultUser = await getMe();
-                
-                initGlobalNotification(resultUser?.data.id);
-                
-                dispatch(setUser(resultUser?.data));
-                if (resultUser?.data.role == ROLE.ADMIN) {
+            const tokenModel = result?.data;
+            if (tokenModel?.accessToken) {
+                const accessToken = tokenModel.accessToken;
+                const refreshToken = tokenModel.refreshToken;
+
+                localStorage.setItem("token", accessToken);
+                localStorage.setItem("refreshToken", refreshToken);
+
+                // Decode token để lấy thông tin điều hướng nhanh
+                const decoded = jwtDecode(accessToken);
+                const userIdFromToken = decoded.Id || decoded.id || decoded.sub;
+                const roleFromTokenRaw = decoded.UserRole || decoded.userRole || decoded.role;
+                const roleFromToken =
+                    typeof roleFromTokenRaw === "string"
+                        ? roleFromTokenRaw.toUpperCase()
+                        : roleFromTokenRaw;
+
+                // Lưu user tối thiểu vào store để ProtectedRoute hoạt động đúng
+                dispatch(
+                    setUser({
+                        id: userIdFromToken,
+                        role: roleFromToken,
+                    })
+                );
+
+                if (userIdFromToken) {
+                    initGlobalNotification(userIdFromToken);
+                }
+
+                // Điều hướng ngay lập tức dựa trên role
+                if (roleFromToken === ROLE.ADMIN || roleFromToken === "ADMIN") {
                     navigate(ROUTES.ADMIN.USER_MANAGEMENT);
                 } else {
                     navigate(ROUTES.LANDING.HOME);
                 }
+
+                // Gọi getMe nền để cập nhật đầy đủ thông tin user (không chặn UX)
+                getMe()
+                    .then((resultUser) => {
+                        if (resultUser?.data) {
+                            dispatch(setUser(resultUser.data));
+                        }
+                    })
+                    .catch(() => { /* silent */ });
             }
             setIsSuccess(true);
         } catch (err) {

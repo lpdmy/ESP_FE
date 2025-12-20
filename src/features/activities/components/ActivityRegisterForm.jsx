@@ -111,7 +111,6 @@ export default function ActivityRegisterForm() {
             className: userData?.className || userData?.classGroupName || "",
           })
         } catch (apiErr) {
-          console.warn("Cannot fetch user info from API, using token data only:", apiErr)
           // Fallback: chỉ dùng thông tin từ token
           setCurrentUser({
             id: userId,
@@ -119,7 +118,7 @@ export default function ActivityRegisterForm() {
           })
         }
       } catch (err) {
-        console.warn("Cannot decode token", err)
+        // Token decode failed, continue without user info
       }
     }
     
@@ -128,7 +127,6 @@ export default function ActivityRegisterForm() {
 
   useEffect(() => {
     const fetchDetail = async () => {
-      console.log("🔵 ActivityRegisterForm: fetchDetail started, params.id:", params.id)
       if (!params.id) {
         navigate(ROUTES.ACTIVITY.LIST)
         return
@@ -136,31 +134,12 @@ export default function ActivityRegisterForm() {
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
-        console.log("🔵 ActivityRegisterForm: Calling getActivityById with id:", params.id)
         const response = await executeApiCall(
           activityService.getActivityById.bind(activityService),
           [params.id, token],
           { setLoading: () => {} }
         )
-        console.log("🔵 ActivityRegisterForm: Response received:", response)
         const data = response?.data?.data || response?.data
-        
-        // Debug: Log registrationSettings to check format
-        console.log("=== 🔵 FETCHED ACTIVITY DATA ===")
-        console.log("Activity ID:", data?.id)
-        console.log("Activity SubType:", data?.subType)
-        console.log("RegistrationSettings:", data?.registrationSettings)
-        console.log("RegistrationSettings type:", typeof data?.registrationSettings)
-        if (data?.registrationSettings) {
-          console.log("RegistrationSettings keys:", Object.keys(data.registrationSettings))
-          if (data.registrationSettings.groupRegistration) {
-            console.log("groupRegistration:", data.registrationSettings.groupRegistration)
-            console.log("minMembers:", data.registrationSettings.groupRegistration.minMembers)
-            console.log("maxMembers:", data.registrationSettings.groupRegistration.maxMembers)
-          }
-          console.log("RegistrationSettings JSON:", JSON.stringify(data.registrationSettings, null, 2))
-        }
-        console.log("=== END FETCHED DATA ===")
         
         setActivity(data)
         
@@ -221,7 +200,6 @@ export default function ActivityRegisterForm() {
 
       setClassStudents(normalizedStudents.filter((student) => student.id))
     } catch (err) {
-      console.error("Không thể tải thông tin lớp học:", err)
       toastRef.current.error(err?.message || "Không thể tải thông tin lớp học của bạn.")
     } finally {
       setIsClassLoading(false)
@@ -362,13 +340,11 @@ export default function ActivityRegisterForm() {
   // But we need to handle both cases: object or string
   const parseRegistrationSettings = (settings) => {
     if (!settings) {
-      console.log("parseRegistrationSettings: settings is null/undefined")
       return null
     }
     
     // If it's already an object (from BE deserialization), return as is
     if (typeof settings === "object" && !Array.isArray(settings)) {
-      console.log("parseRegistrationSettings: settings is already an object", settings)
       return settings
     }
     
@@ -376,15 +352,12 @@ export default function ActivityRegisterForm() {
     if (typeof settings === "string") {
       try {
         const parsed = JSON.parse(settings)
-        console.log("parseRegistrationSettings: parsed from string", parsed)
         return parsed
       } catch (err) {
-        console.warn("Không thể parse registration settings", err)
         return null
       }
     }
     
-    console.log("parseRegistrationSettings: unknown type", typeof settings, settings)
     return null
   }
 
@@ -400,7 +373,7 @@ export default function ActivityRegisterForm() {
     
     // Chỉ search khi nhập đúng email format
     if (!trimmedQuery || !isValidEmail(trimmedQuery)) {
-      toast.error("Vui lòng nhập đúng định dạng email (ví dụ: example@fpt.edu.vn)")
+      toast.showError("Vui lòng nhập đúng định dạng email (ví dụ: example@fpt.edu.vn)")
       return
     }
 
@@ -409,7 +382,6 @@ export default function ActivityRegisterForm() {
       // Gọi API search user by email (chính xác)
       const response = await searchUserByEmail(trimmedQuery)
       
-      console.log("Search user by email response:", response)
 
       // Parse response - backend trả về ResponseDto<UserSearchResultDto>
       let user = null
@@ -433,7 +405,7 @@ export default function ActivityRegisterForm() {
       // Normalize user từ UserSearchResultDto
       const userId = user.id || user.userId
       if (!userId) {
-        toast.error("Không thể xác định ID của thành viên. Vui lòng thử lại.")
+        toast.showError("Không thể xác định ID của thành viên. Vui lòng thử lại.")
         setSearchedUsers([])
         return
       }
@@ -448,16 +420,14 @@ export default function ActivityRegisterForm() {
         avatarUrl: user.avatarUrl || "",
       }
 
-      console.log("Normalized user:", normalizedUser)
 
       setSearchedUsers([normalizedUser])
       toast.success("Tìm thấy thành viên!")
     } catch (err) {
-      console.error("Error searching user by email:", err)
       if (err?.statusCode === 404) {
         toast.info("Không tìm thấy thành viên với email này")
       } else {
-        toast.error(err?.message || "Không thể tìm kiếm thành viên. Vui lòng thử lại.")
+        toast.showError(err?.message || "Không thể tìm kiếm thành viên. Vui lòng thử lại.")
       }
       setSearchedUsers([])
     } finally {
@@ -599,7 +569,7 @@ export default function ActivityRegisterForm() {
       }
 
       if (maxMembers && current.length + 1 > maxMembers) {
-        toast.error(`Môn ${sport?.sportName || "này"} chỉ được tối đa ${maxMembers} thành viên.`)
+        toast.showError(`Môn ${sport?.sportName || "này"} chỉ được tối đa ${maxMembers} thành viên.`)
         return prev
       }
 
@@ -684,16 +654,14 @@ export default function ActivityRegisterForm() {
   const handleToggleGroupMember = (studentId, memberData = null) => {
     // Validate studentId
     if (!studentId || (typeof studentId !== 'number' && typeof studentId !== 'string')) {
-      console.error("Invalid studentId:", studentId)
-      toast.error("Không thể xác định thành viên. Vui lòng thử lại.")
+      toast.showError("Không thể xác định thành viên. Vui lòng thử lại.")
       return
     }
 
     // Convert to number if needed
     const normalizedId = typeof studentId === 'string' ? Number(studentId) : studentId
     if (isNaN(normalizedId)) {
-      console.error("Invalid studentId (NaN):", studentId)
-      toast.error("ID thành viên không hợp lệ. Vui lòng thử lại.")
+      toast.showError("ID thành viên không hợp lệ. Vui lòng thử lại.")
       return
     }
 
@@ -706,7 +674,7 @@ export default function ActivityRegisterForm() {
     // Nếu vẫn không tìm thấy memberInfo, báo lỗi
     if (!memberInfo) {
       console.error("Cannot find member info for ID:", normalizedId)
-      toast.error("Không thể tìm thấy thông tin thành viên. Vui lòng thử lại.")
+      toast.showError("Không thể tìm thấy thông tin thành viên. Vui lòng thử lại.")
       return
     }
 
@@ -726,7 +694,7 @@ export default function ActivityRegisterForm() {
       
       // Không cho phép xóa người đăng ký (currentUser) khỏi nhóm
       if (alreadySelected && normalizedId === currentUser?.id) {
-        toast.error("Bạn không thể xóa chính mình khỏi nhóm. Bạn phải là thành viên của nhóm.")
+        toast.showError("Bạn không thể xóa chính mình khỏi nhóm. Bạn phải là thành viên của nhóm.")
         return prev
       }
 
@@ -736,7 +704,7 @@ export default function ActivityRegisterForm() {
 
       // Validate maxMembers constraint
       if (!alreadySelected && maxMembers !== null && maxMembers > 0 && updatedMembers.length > maxMembers) {
-        toast.error(`Nhóm chỉ được phép tối đa ${maxMembers} thành viên.`)
+        toast.showError(`Nhóm chỉ được phép tối đa ${maxMembers} thành viên.`)
         return prev
       }
 
@@ -907,9 +875,10 @@ export default function ActivityRegisterForm() {
     }
 
     // Kiểm tra số lượng người tham gia đã đầy chưa
+    // maxParticipants = null hoặc undefined → không giới hạn (vô hạn người)
     const currentParticipants = activity.numberOfParticipants || 0
-    const maxParticipants = activity.maxParticipants || 0
-    if (maxParticipants > 0 && currentParticipants >= maxParticipants) {
+    const maxParticipants = activity.maxParticipants
+    if (maxParticipants !== null && maxParticipants !== undefined && maxParticipants > 0 && currentParticipants >= maxParticipants) {
       newErrors.general = "Hoạt động này đã đủ số lượng người tham gia."
       setErrors(newErrors)
       return { isValid: false, errors: newErrors }
@@ -983,8 +952,10 @@ export default function ActivityRegisterForm() {
       }
 
       // Kiểm tra tổng số người tham gia sau khi đăng ký không vượt quá maxParticipants
-      if (maxParticipants > 0 && (currentParticipants + totalNewStudents) > maxParticipants) {
-        const remainingSlots = maxParticipants - currentParticipants
+      // maxParticipants = null hoặc undefined → không giới hạn (vô hạn người)
+      const maxParticipantsCheck = activity.maxParticipants
+      if (maxParticipantsCheck !== null && maxParticipantsCheck !== undefined && maxParticipantsCheck > 0 && (currentParticipants + totalNewStudents) > maxParticipantsCheck) {
+        const remainingSlots = maxParticipantsCheck - currentParticipants
         newErrors.general = `Số lượng người tham gia vượt quá giới hạn. Chỉ còn ${remainingSlots} chỗ trống.`
         setErrors(newErrors)
         return { isValid: false, errors: newErrors }
@@ -1078,8 +1049,10 @@ export default function ActivityRegisterForm() {
 
       // Kiểm tra số lượng người tham gia sau khi đăng ký không vượt quá maxParticipants
       // Với CreativeContest, mỗi nhóm tính là 1 đăng ký, nhưng số người tham gia = số thành viên trong nhóm
-      if (maxParticipants > 0 && (currentParticipants + groupForm.memberIds.length) > maxParticipants) {
-        const remainingSlots = maxParticipants - currentParticipants
+      // maxParticipants = null hoặc undefined → không giới hạn (vô hạn người)
+      const maxParticipantsCheck = activity.maxParticipants
+      if (maxParticipantsCheck !== null && maxParticipantsCheck !== undefined && maxParticipantsCheck > 0 && (currentParticipants + groupForm.memberIds.length) > maxParticipantsCheck) {
+        const remainingSlots = maxParticipantsCheck - currentParticipants
         newErrors.general = `Số lượng người tham gia vượt quá giới hạn. Chỉ còn ${remainingSlots} chỗ trống.`
         setErrors(newErrors)
         return { isValid: false, errors: newErrors }
@@ -1113,7 +1086,9 @@ export default function ActivityRegisterForm() {
     // Validation cho Simple Registration
     if (!isSportsFestivalCheck && !isCreativeContestCheck) {
       // Kiểm tra số lượng người tham gia sau khi đăng ký không vượt quá maxParticipants
-      if (maxParticipants > 0 && (currentParticipants + 1) > maxParticipants) {
+      // maxParticipants = null hoặc undefined → không giới hạn (vô hạn người)
+      const maxParticipantsCheck = activity.maxParticipants
+      if (maxParticipantsCheck !== null && maxParticipantsCheck !== undefined && maxParticipantsCheck > 0 && (currentParticipants + 1) > maxParticipantsCheck) {
         newErrors.general = "Hoạt động này đã đủ số lượng người tham gia."
         setErrors(newErrors)
         return { isValid: false, errors: newErrors }
@@ -1133,29 +1108,25 @@ export default function ActivityRegisterForm() {
   }, [activity, params.id, currentUser, canRegister, summary, selectedSports, currentClass, groupForm, getGroupSettings, classStudents, groupMembers, searchedUsers])
 
   const handleOpenConfirm = () => {
-    console.log("🔵 handleOpenConfirm called")
     // Validate frontend trước
     const validation = validateForm()
-    console.log("🔵 Validation result:", validation)
     if (!validation || !validation.isValid) {
-      console.log("🔵 Validation failed, errors:", validation?.errors)
       // Errors đã được set trong validateForm, không cần làm gì thêm
       return
     }
     // Chỉ mở modal khi validate thành công
-    console.log("🔵 Validation passed, opening modal")
     setShowConfirmModal(true)
   }
 
   const handleCancelRegistration = async () => {
     if (!activity?.id) {
-      toast.error("Không tìm thấy thông tin hoạt động")
+      toast.showError("Không tìm thấy thông tin hoạt động")
       return
     }
 
     const token = localStorage.getItem("token")
     if (!token) {
-      toast.error("Vui lòng đăng nhập để tiếp tục.")
+      toast.showError("Vui lòng đăng nhập để tiếp tục.")
       return
     }
 
@@ -1188,7 +1159,7 @@ export default function ActivityRegisterForm() {
       }
     } catch (err) {
       console.error("Error cancelling registration:", err)
-      toast.error(err?.message || "Có lỗi xảy ra khi hủy đăng ký")
+      toast.showError(err?.message || "Có lỗi xảy ra khi hủy đăng ký")
     } finally {
       setIsCancelling(false)
     }
@@ -1209,12 +1180,12 @@ export default function ActivityRegisterForm() {
     setShowConfirmModal(false)
       return
     }
-
+   const currentParticipants = activity.numberOfParticipants || 0
     setShowConfirmModal(false)
 
     const token = localStorage.getItem("token")
     if (!token) {
-      toast.error("Vui lòng đăng nhập để tiếp tục.")
+      toast.showError("Vui lòng đăng nhập để tiếp tục.")
       return
     }
 
@@ -1223,7 +1194,7 @@ export default function ActivityRegisterForm() {
       if (isSportsFestival) {
         const classId = currentClass?.id || currentClass?.classGroupId
         if (!classId) {
-          toast.error("Không tìm thấy thông tin lớp để đăng ký.")
+          toast.showError("Không tìm thấy thông tin lớp để đăng ký.")
           setSubmitting(false)
           return
         }
@@ -1246,7 +1217,7 @@ export default function ActivityRegisterForm() {
           })
 
         if (registrations.length === 0) {
-          toast.error("Vui lòng thêm ít nhất một học sinh vào các môn thi đấu.")
+          toast.showError("Vui lòng thêm ít nhất một học sinh vào các môn thi đấu.")
           setSubmitting(false)
           return
         }
@@ -1278,32 +1249,32 @@ export default function ActivityRegisterForm() {
         }
       } else if (isCreativeContest) {
         if (!currentUser?.id) {
-          toast.error("Không thể xác định thông tin người dùng. Vui lòng đăng nhập lại.")
+          toast.showError("Không thể xác định thông tin người dùng. Vui lòng đăng nhập lại.")
           setSubmitting(false)
           return
         }
 
         // Validate lại dữ liệu trước khi gửi
         if (groupForm.memberIds.length < minMembers) {
-          toast.error(`Nhóm cần ít nhất ${minMembers} thành viên.`)
+          toast.showError(`Nhóm cần ít nhất ${minMembers} thành viên.`)
           setSubmitting(false)
           return
         }
 
         if (maxMembers !== null && maxMembers > 0 && groupForm.memberIds.length > maxMembers) {
-          toast.error(`Nhóm chỉ được phép tối đa ${maxMembers} thành viên.`)
+          toast.showError(`Nhóm chỉ được phép tối đa ${maxMembers} thành viên.`)
           setSubmitting(false)
           return
         }
 
         if (!groupForm.leaderId) {
-          toast.error("Vui lòng chọn nhóm trưởng.")
+          toast.showError("Vui lòng chọn nhóm trưởng.")
           setSubmitting(false)
           return
         }
 
         if (!groupForm.memberIds.includes(groupForm.leaderId)) {
-          toast.error("Nhóm trưởng phải là một trong các thành viên của nhóm.")
+          toast.showError("Nhóm trưởng phải là một trong các thành viên của nhóm.")
           setSubmitting(false)
           return
         }
@@ -1334,13 +1305,13 @@ export default function ActivityRegisterForm() {
 
         // Validate lại memberIds trước khi gửi
         if (groupRegistrationData.memberIds.length < minMembers) {
-          toast.error(`Nhóm cần ít nhất ${minMembers} thành viên.`)
+          toast.showError(`Nhóm cần ít nhất ${minMembers} thành viên.`)
           setSubmitting(false)
           return
         }
 
         if (maxMembers !== null && maxMembers > 0 && groupRegistrationData.memberIds.length > maxMembers) {
-          toast.error(`Nhóm chỉ được phép tối đa ${maxMembers} thành viên.`)
+          toast.showError(`Nhóm chỉ được phép tối đa ${maxMembers} thành viên.`)
           setSubmitting(false)
           return
         }
@@ -1352,14 +1323,16 @@ export default function ActivityRegisterForm() {
       } else {
         // Simple registration
         if (!currentUser?.id) {
-          toast.error("Không thể xác định thông tin người dùng. Vui lòng đăng nhập lại.")
+          toast.showError("Không thể xác định thông tin người dùng. Vui lòng đăng nhập lại.")
           setSubmitting(false)
           return
         }
 
         // Kiểm tra số lượng người tham gia sau khi đăng ký không vượt quá maxParticipants
-        if (maxParticipants > 0 && (currentParticipants + 1) > maxParticipants) {
-          toast.error("Hoạt động này đã đủ số lượng người tham gia.")
+        // maxParticipants = null hoặc undefined → không giới hạn (vô hạn người)
+        const maxParticipants = activity?.maxParticipants
+        if (maxParticipants !== null && maxParticipants !== undefined && maxParticipants > 0 && (currentParticipants + 1) > maxParticipants) {
+          toast.showError("Hoạt động này đã đủ số lượng người tham gia.")
           setSubmitting(false)
           return
         }
@@ -1382,7 +1355,7 @@ export default function ActivityRegisterForm() {
       console.error("Register failed:", err)
       // Hiển thị lỗi chi tiết hơn
       const errorMessage = err?.response?.data?.message || err?.message || "Không thể đăng ký hoạt động. Vui lòng thử lại."
-      toast.error(errorMessage)
+      toast.showError(errorMessage)
     } finally {
       setSubmitting(false)
     }

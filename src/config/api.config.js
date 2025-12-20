@@ -1,3 +1,5 @@
+import { toast } from "react-toastify";
+
 // API Configuration
 export const API_CONFIG = {
   // Base URLs
@@ -124,6 +126,7 @@ export const API_CONFIG = {
   CLUB: {
     CREATE_CLUB: "/club-creation-request",
     LIST_CLUB: "/club",
+    LIST_CLUB_Admin: "/club/admin",
     CLUB_CATEGORY: "/club/categories",
     CLUB_DETAIL: "/club/{id}",
     CLUB_JOIN_REQUEST: "/join-request/club",
@@ -240,12 +243,22 @@ export const API_CONFIG = {
     UPDATE: "/activity",
     DELETE: "/activity/{id}",
     RANK_BY_ID: "/submission/activity/{id}/rank",
+    RECENT_INPUTS: "/activity/recent-inputs",
     GENERATE_TOURNAMENT_SCHEDULE: "/activity/{id}/generate-schedule",
     APPLY_TOURNAMENT_SCHEDULE: "/activity/{id}/apply-schedule",
     TRAIN_SCHEDULE_MODEL: "/activity/train-schedule-model",
     MY_ACTIVITIES: "/my-activities",
     STATISTICS: "/activity/statistics",
-
+  },
+  ACTIVITY_TEMPLATE: {
+    GET_ALL: "/activity-template",
+    GET_BY_ID: "/activity-template/{id}",
+    GET_BY_SUBTYPE: "/activity-template/subtype",
+    CREATE: "/activity-template",
+    SAVE_FROM_FORM: "/activity-template/save-from-form",
+    UPDATE: "/activity-template",
+    DELETE: "/activity-template/{id}",
+    INCREMENT_USAGE: "/activity-template/{id}/increment-usage",
   },
 
   ACTIVITY_MATCH: {
@@ -275,14 +288,18 @@ export const API_CONFIG = {
     JURY_DASHBOARD: "/jury/dashboard",
     JURY_SUBMISSION: "/jury/submission/:id",
     JURY_GRADE: "/jury/grade",
+    IMPROVED_RANDOM_ASSIGN: "/jury/improved-random-assign",
     RANDOM_ASSIGN: "/jury/random-assign",
     DELETE_RANDOM_ASSIGN: "/jury/delete-assign-activity",
     GET_ASSIGN_USER: "/jury/assign/user",
     GET_ASSIGN_USER_NOT_GRADE: "/jury/assign-not-grading/user",
     GET_ASSIGN_USER_GRADE: "/jury/assign-grading/user",
+    GET_ASSIGN_USER_NOT_GRADE_ALL: "/jury/assign-not-grading/user",
+    GET_ASSIGN_USER_GRADE_ALL: "/jury/assign-grading/user",
     JURY_ACTIVITY: "/jury/activity",
     JURY_ASSIGN: "/jury/assign",
     GRADING: "/jury/grade-submission",
+    IS_ASSIGNED: "/jury/is-assigned",
   },
   // Submission endpoints
   SUBMISSION: {
@@ -297,6 +314,13 @@ export const API_CONFIG = {
     GET_SUBMISSION_ACTIVITY: "/submission/activity",
     GET_MY_SUBMISSION: "/submission/activity/user",
     GET_SUBMISSION_DETAIL: "/submission",
+    GET_ACTITY_RANK: "/submission/activity",
+  },
+  MODERATION:{
+    GET_ALL_MODERATION:'/moderation/report',
+    GET_USER_STAT : '/moderation/user-violations',
+    CREATE_NOTIFICATION: '/moderation/alert',
+    UPDATE_STATUS :'/moderation/update-status',
   },
 };
 // HTTP Headers
@@ -307,20 +331,23 @@ export const getAuthHeaders = (token) => ({
 
 // API Response Handler
 export async function handleApiResponse(response) {
-  console.log("API Response status:", response.status);
-  console.log("API Response headers:", response.headers);
-
   const contentType = response.headers.get("content-type");
   if (!response.ok) {
-    console.log("API Error - Status:", response.status);
+    if (response.status === 401) {
+      // Phiên hết hạn: thông báo + xóa phiên + điều hướng login
+      toast.warn("Phiên làm việc của bạn đã hết hạn. Vui lòng đăng nhập lại.");
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      window.location.replace("/auth/login");
+      throw new Error("Unauthorized");
+    }
+
     // Nếu là JSON thì parse, không thì trả về text
     if (contentType && contentType.includes("application/json")) {
       const errorData = await response.json();
-      console.log("API Error Data:", errorData);
       throw errorData;
     } else {
       const errorText = await response.text();
-      console.log("API Error Text:", errorText);
       throw new Error(errorText);
     }
   }

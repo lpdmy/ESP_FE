@@ -105,7 +105,6 @@ export default function PostCard({
     try {
       const response = await getCollectionsByUser();
       setUserAlbum(response?.data.data || []);
-      console.log(response.data.data);
     } catch (err) {
       toast.loadAlbumFail();
       console.error("Lỗi khi like:", err);
@@ -125,35 +124,47 @@ export default function PostCard({
   };
 
   const formatTime = (time) => {
-    const now = new Date();
-    const postTime = new Date(time);
+    if (!time) return "Chưa cập nhật";
 
-    // Lấy thời gian ở UTC+7 (Asia/Ho_Chi_Minh)
+    // Normalize time input to avoid invalid date / wrong timezone
+    let parsed = new Date(time);
+    if (typeof time === "string" && isNaN(parsed.getTime())) {
+      // If backend sends ISO without timezone, assume UTC
+      parsed = new Date(`${time}Z`);
+    }
+    if (isNaN(parsed.getTime())) return "Chưa cập nhật";
+    if (parsed.getFullYear() < 2000) return "Chưa cập nhật";
+
     const postTimeInVN = new Date(
-      postTime.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
+      parsed.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
     );
+    if (isNaN(postTimeInVN.getTime())) return "Chưa cập nhật";
+    if (postTimeInVN.getFullYear() < 2000) return "Chưa cập nhật";
+
+    const formatDateTime = (date) => {
+      const pad = (val) => String(val).padStart(2, "0");
+      return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(
+        date.getDate()
+      )}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+    };
+
     const nowInVN = new Date(
-      now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
     );
 
     const diffMs = nowInVN - postTimeInVN;
     const diffMins = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
     if (diffMins < 5) return "Mới xong";
     if (diffMins < 60) return `${diffMins} phút trước`;
     if (diffHours < 24) return `${diffHours} giờ trước`;
     if (diffDays === 1) return "1 ngày trước";
     if (diffDays === 2) return "2 ngày trước";
     if (diffDays === 3) return "3 ngày trước";
-    return postTimeInVN.toLocaleString("vi-VN", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      hour: "2-digit",
-      minute: "2-digit",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+
+    return formatDateTime(postTimeInVN);
   };
 
   const prevMedia = () => {
@@ -288,16 +299,6 @@ export default function PostCard({
               >
                 {isOwner && (
                   <>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        onEdit();
-                        setIsDropdownOpen(false);
-                      }}
-                      className="flex items-center space-x-2 text-blue-600 hover:bg-blue-50 cursor-pointer"
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span>Chỉnh sửa bài đăng</span>
-                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
                         onDelete();
@@ -489,7 +490,6 @@ export default function PostCard({
             {/* Nút tạo album */}
             <Button
               onClick={() => {
-                console.log("Tạo album mới");
                 // slideToView("album-create") nếu có
               }}
               className="w-full flex items-center justify-center space-x-2 p-4 border-2 border-dashed border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg"
@@ -508,7 +508,6 @@ export default function PostCard({
                   key={album.id}
                   onClick={() => {
                     hanldeSaveCollection(album.id);
-                    console.log("Chọn album:", album.name);
                     setIsAlbumPopupOpen(false);
                   }}
                   className="w-full flex items-center space-x-3 p-3 border border-gray-200 

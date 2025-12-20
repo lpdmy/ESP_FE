@@ -68,8 +68,14 @@ import ClubDetailModal from "@/features/landing/club/Modal/ClubDetailModal/page"
 import { useClubApi } from "@/features/landing/club/hooks/useClubApi";
 import { useToast } from "@/common/hooks/useToast";
 import ClubApprovalPage from "./ClubCreationPending/page";
+import ConfirmDeleteDialog from "./DeleteModal/page";
 export default function ClubClassManagement() {
   const toast = useToast();
+  const {
+  isOpen: isOpenDialog,
+  openDialog,
+  closeDialog: closeDeleteDialog
+} = useDialog();
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedClub, setSelectedClub] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -87,6 +93,7 @@ export default function ClubClassManagement() {
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [deleteId,setDeleteId] = useState(0)
   const [formData, setFormData] = useState({
     name: "",
     type: "Câu lạc bộ",
@@ -98,7 +105,7 @@ export default function ClubClassManagement() {
     category: "",
     meetingTime: "",
   });
-  const { getListClub, getClubCategory, deleteClub } = useClubApi();
+  const { getListClubAdmin, getClubCategory, deleteClub } = useClubApi();
   const handleSort = (field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -127,16 +134,14 @@ export default function ClubClassManagement() {
   }, [searchTerm, selectedCategory, clubsClasses]);
   const handleListClub = async () => {
     try {
-      const response = await getListClub(pageNumber, pageSize);
+      const response = await getListClubAdmin(pageNumber, pageSize);
       const data = response.data.data;
       setClubsClasses(data);
-      console.log(data);
       const total = response.data.totalCount || data.length; // 🔹 dùng totalCount nếu có
       setClubsClasses(data);
       setTotalCount(total);
       setTotalPages(Math.ceil(total / pageSize));
     } catch (err) {
-      console.log(err);
       toast.loadClubFail();
     }
   };
@@ -148,7 +153,7 @@ export default function ClubClassManagement() {
       ? "bg-gray-200 text-gray-700 border border-gray-400"
       : "bg-green-100 text-green-700 border border-green-400";
 
-    const label = isDeleted ? "Đã kết thúc" : "Đang hoạt động";
+    const label = isDeleted ? "Đã tạm ngừng hoạt động" : "Đang hoạt động";
 
     return (
       <span
@@ -164,7 +169,6 @@ export default function ClubClassManagement() {
       const response = await getClubCategory();
       const data = response.data;
       setClubCategory(data);
-      console.log(data);
       const formattedOptions = data.map((category) => ({
         label: category.name,
         value: category.name,
@@ -175,7 +179,6 @@ export default function ClubClassManagement() {
         ...formattedOptions,
       ]);
     } catch (err) {
-      console.log(err);
     }
   };
   useEffect(() => {
@@ -222,14 +225,12 @@ export default function ClubClassManagement() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async () => {
     try {
-      console.log(id);
-      await deleteClub(id);
+      await deleteClub(deleteId);
       toast.deleteClubSuccess();
       handleListClub();
     } catch (err) {
-      console.log(err);
       toast.deleteClubFail();
     }
   };
@@ -525,8 +526,9 @@ export default function ClubClassManagement() {
                                   {/* Xóa câu lạc bộ */}
                                   <DropdownMenuItem
                                     onClick={() => {
-                                      handleDelete(item.id);
                                       setOpenMenuId(null);
+                                      openDialog();
+                                      setDeleteId(item.id)
                                     }}
                                     className="text-red-600 hover:bg-red-50 focus:bg-red-50 flex items-center"
                                   >
@@ -619,6 +621,11 @@ export default function ClubClassManagement() {
           </TabsContent>
         </Tabs>
       </Card>
+      <ConfirmDeleteDialog
+        open={isOpenDialog}
+        onClose={closeDeleteDialog}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

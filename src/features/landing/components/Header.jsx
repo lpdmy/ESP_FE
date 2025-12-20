@@ -21,6 +21,8 @@ export default function Header() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.user.user);
+  const roleValue = typeof user?.role === "string" ? user.role.toUpperCase() : user?.role;
+  const isTeacher = roleValue === ROLE.TEACHER || roleValue === "TEACHER";
   const { isOpen, openMenu, closeMenu, toggleMenu } = useDropdownMenu(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationCount = useSelector(state => state.notifications.count);
@@ -34,7 +36,7 @@ export default function Header() {
   };
 
   const getProfileRoute = () => {
-    if (user?.role === ROLE.TEACHER) {
+    if (isTeacher) {
       return ROUTES.USER_PROFILE.TEACHER_PROFILE;
     }
     return ROUTES.USER_PROFILE.PROFILE;
@@ -64,7 +66,6 @@ export default function Header() {
               placeholder="Tìm kiếm bạn bè, bài viết, sự kiện, cuộc thi..."
               variant="default"
               onResultClick={(result, type) => {
-                console.log('Search result clicked:', { result, type });
               }}
             />
           </div>
@@ -78,12 +79,8 @@ export default function Header() {
                 <span className="font-medium">Sự kiện</span>
               </Button>
               <Button variant="ghost" className="flex items-center space-x-2 hover:bg-orange-50 hover:text-orange-600 transition-colors rounded-xl px-4 py-2">
-                <Trophy className="h-4 w-4" />
-                <span className="font-medium">Cuộc thi</span>
-              </Button>
-              <Button variant="ghost" className="flex items-center space-x-2 hover:bg-orange-50 hover:text-orange-600 transition-colors rounded-xl px-4 py-2">
-                <Star className="h-4 w-4" />
-                <span className="font-medium">Xếp hạng</span>
+                <Calendar className="h-4 w-4" />
+                <span className="font-medium">Câu lạc bộ</span>
               </Button>
             </div>
 
@@ -126,7 +123,7 @@ export default function Header() {
                         : user?.username || "Guest"}
                     </div>
                     <div className="text-xs text-gray-500 capitalize">
-                      {user?.role === ROLE.TEACHER ? "Giáo viên" : "Học sinh"}
+                      {user?.role === "Student" ? "Học sinh" : "Giáo viên"}
                     </div>
                   </div>
                 </Button>

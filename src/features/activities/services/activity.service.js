@@ -103,6 +103,15 @@ export class ActivityService extends ApiService {
   }
 
   /**
+   * Lấy các giá trị nhập gần đây (theo user) để auto-fill
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with recent input values
+   */
+  async getRecentActivityInputs(token) {
+    return this.get(API_CONFIG.ACTIVITY.RECENT_INPUTS, token);
+  }
+
+  /**
    * Generate tournament schedule using AI
    * @param {number|string} activityId - Activity ID
    * @param {Object} scheduleRequest - Schedule request data (GenerateTournamentScheduleRequestDto)
@@ -162,6 +171,64 @@ export class ActivityService extends ApiService {
    */
   async getActivityStatistics(token) {
     return this.get(API_CONFIG.ACTIVITY.STATISTICS, token);
+  }
+
+  /**
+   * Get all activity templates
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with templates data
+   */
+  async getTemplates(token) {
+    return this.get(API_CONFIG.ACTIVITY_TEMPLATE.GET_ALL, token);
+  }
+
+  /**
+   * Get activity template by ID
+   * @param {number|string} id - Template ID
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with template data
+   */
+  async getTemplateById(id, token) {
+    return this.get(
+      API_CONFIG.ACTIVITY_TEMPLATE.GET_BY_ID.replace('{id}', id),
+      token
+    );
+  }
+
+  /**
+   * Get activity templates by SubType
+   * @param {string} subType - SubType (SeminarWorkshop, CreativeContest, SportsFestival)
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with templates data
+   */
+  async getTemplatesBySubType(subType, token) {
+    const endpoint = `${API_CONFIG.ACTIVITY_TEMPLATE.GET_BY_SUBTYPE}?subType=${encodeURIComponent(subType)}`;
+    return this.get(endpoint, token);
+  }
+
+  /**
+   * Increment usage count for a template
+   * @param {number|string} id - Template ID
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response
+   */
+  async incrementTemplateUsage(id, token) {
+    return this.post(
+      API_CONFIG.ACTIVITY_TEMPLATE.INCREMENT_USAGE.replace('{id}', id),
+      {},
+      token
+    );
+  }
+
+
+  /**
+   * Save activity form data as template
+   * @param {Object} templateData - Template data (CreateActivityTemplateFromFormDto)
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with created template
+   */
+  async saveAsTemplate(templateData, token) {
+    return this.post(API_CONFIG.ACTIVITY_TEMPLATE.SAVE_FROM_FORM, templateData, token);
   }
 }
 

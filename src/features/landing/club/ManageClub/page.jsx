@@ -71,13 +71,14 @@ import {
   ChevronRight,
   MoreHorizontal,
 } from "lucide-react";
-import { ROUTES } from '@/common/constants/routes';
+import { ROUTES } from "@/common/constants/routes";
 import { useToast } from "@/common/hooks/useToast";
 import { useClubApi } from "../hooks/useClubApi";
 import { LoadingCollection } from "@/common/components/ui/loading";
 import ClubBasicInfoForm from "@/features/landing/club/ClubBasicInfoForm/page.jsx";
 import FindMentorModal from "../Modal/FindMentorModal/page";
 import { useNavigate } from "react-router-dom";
+import CancelMentorInviteDialog from "../Modal/CancelMentorModal/page";
 const activities = [
   {
     id: 1,
@@ -116,6 +117,8 @@ export default function ClubManage() {
     kickClub,
     inviteMentor,
     changeRole,
+    getClubMentorInvitation,
+    cancelInviteMentor,
   } = useClubApi();
   const navigate = useNavigate();
   const [isFindMentorOpen, setIsFindMentorOpen] = useState(false);
@@ -132,17 +135,23 @@ export default function ClubManage() {
   const [selectedMember, setSelectedMember] = useState(null);
   const [pageSizeMember, setPageSizeMember] = useState(9);
   const [currentPage, setCurrentPage] = useState(1);
+  const [mentorInvite, setMentorInvite] = useState({});
+  const [loading, setLoading] = useState(false);
+  const { isOpen, openDialog, closeDialog } = useDialog();
   const filteredMembers =
-  clubInfo?.members?.filter(
-    (member) =>
-      member.role !== 'Mentor' &&
-      member.fullName.toLowerCase().includes(searchMemberTerm.toLowerCase())
+    clubInfo?.members?.filter(
+      (member) =>
+        member.role !== "Mentor" &&
+        member.fullName.toLowerCase().includes(searchMemberTerm.toLowerCase())
     ) || [];
   const totalPages = Math.ceil(filteredMembers.length / pageSizeMember);
   const pagedMembers = filteredMembers.slice(
     (currentPage - 1) * pageSizeMember,
     currentPage * pageSizeMember
   );
+  const hasPendingInvite =
+  mentorInvite && Object.keys(mentorInvite).length > 0;
+  const hasMentor = clubInfo?.members?.some(m => m.role === "Mentor");
   const handleChangeRole = (vaitro) => {
     const mapping = {
       President: "Chủ nhiệm",
@@ -160,26 +169,24 @@ export default function ClubManage() {
       const data = response.data.data;
       SetJoinRequests(data);
     } catch (error) {
-      console.error("Lỗi khi lấy yêu cầu vào câu lạc bộ:", error);
     } finally {
       SetIsloading(false);
     }
   };
   const getProfileRoute = (user) => {
-        console.log("User object:", user);
-        const role = Number(user?.userRole);
-      switch (role) {
-        case 2:
-          return `${ROUTES.USER_PROFILE.TEACHER_PROFILE}/${user.userId}`;
-        default:
-          return `${ROUTES.USER_PROFILE.PROFILE}/${user.userId}`;
-      }
+    const role = Number(user?.userRole);
+    switch (role) {
+      case 2:
+        return `${ROUTES.USER_PROFILE.TEACHER_PROFILE}/${user.userId}`;
+      default:
+        return `${ROUTES.USER_PROFILE.PROFILE}/${user.userId}`;
     }
+  };
+
   const handlePostPending = async () => {
     try {
       const response = await getPostPending(id);
       const data = response.data.data;
-      console.log(data);
       setPendingPosts(data);
     } catch (err) {
       toast.loadPostFail();
@@ -187,7 +194,6 @@ export default function ClubManage() {
   };
   const openModal = (member) => {
     setSelectedMember(member);
-    console.log(member)
     setIsModalOpen(true);
   };
 
@@ -211,13 +217,19 @@ export default function ClubManage() {
       } else {
         toast.changeRoleFail();
       }
-      console.log(err);
     }
+  };
+  const handleMentorInvitaion = async () => {
+    try {
+      const response = await getClubMentorInvitation(id);
+      setMentorInvite(response.data);
+    } catch (error) {}
   };
   const handleInviteMentor = async (mentorid) => {
     try {
       const payload = { clubId: id, mentorId: mentorid };
       await inviteMentor(payload);
+      handleMentorInvitaion();
       toast.inviteMentorSuccess();
     } catch (error) {
       if (error.statusCode == 400) {
@@ -227,7 +239,15 @@ export default function ClubManage() {
       }
     }
   };
-
+  const handleCancelInvite = async () => {
+    try {
+      setLoading(true);
+      cancelInviteMentor(mentorInvite.id);
+      handleMentorInvitaion()
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleKick = async (userid) => {
     try {
       const payload = { userId: userid, clubId: id };
@@ -261,9 +281,7 @@ export default function ClubManage() {
       const response = await getClubDetail(id);
       const data = response.data;
       SetClubInfor(data);
-    } catch (error) {
-      console.error("Lỗi khi lấy chi tiết câu lạc bộ:", error);
-    }
+    } catch (error) {}
   };
   const handleApproveJoinRequest = async (id) => {
     try {
@@ -271,7 +289,6 @@ export default function ClubManage() {
       handleGetClubJoinRequest();
       toast.approveJoinRequestSuccess();
     } catch (error) {
-      console.log("lỗi khi chấp nhận tham gia ", error);
       toast.approveJoinRequestFail();
     }
   };
@@ -281,7 +298,6 @@ export default function ClubManage() {
       handleGetClubJoinRequest();
       toast.rejectJoinRequestSuccess();
     } catch (error) {
-      console.log("lỗi khi từ chối tham gia ", error);
       toast.rejectJoinRequestFail();
     }
   };
@@ -292,13 +308,16 @@ export default function ClubManage() {
     if (activeTab == "posts") {
       handlePostPending();
     }
+    if (activeTab == "members") {
+      handleMentorInvitaion();
+    }
   }, [activeTab]);
   useEffect(() => {
     handleGetClubDetail();
   }, []);
   useEffect(() => {
-  setCurrentPage(1);
-}, [searchMemberTerm]);
+    setCurrentPage(1);
+  }, [searchMemberTerm]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -374,7 +393,7 @@ export default function ClubManage() {
           </div> */}
         </div>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-6 bg-white/50 backdrop-blur-sm">
+          <TabsList className="grid w-full grid-cols-4 mb-6 bg-white/50 backdrop-blur-sm">
             <TabsTrigger value="posts" className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
               Bài đăng
@@ -386,10 +405,6 @@ export default function ClubManage() {
             <TabsTrigger value="requests" className="flex items-center gap-2">
               <UserCheck className="w-4 h-4" />
               Yêu cầu tham gia
-            </TabsTrigger>
-            <TabsTrigger value="activities" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Hoạt động
             </TabsTrigger>
             <TabsTrigger value="info" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
@@ -423,11 +438,12 @@ export default function ClubManage() {
                     <div
                       key={member.userId}
                       className="flex items-center justify-between border border-gray-200 rounded-xl p-4 bg-gradient-to-br from-white to-orange-50 hover:shadow-md transition-all"
-                      onClick={()=>setSelectedMember(member)}
+                      onClick={() => setSelectedMember(member)}
                     >
                       {/* Left: Avatar + info */}
-                      <div className="flex items-center gap-3"
-                      onClick={()=> navigate(getProfileRoute(member))}
+                      <div
+                        className="flex items-center gap-3"
+                        onClick={() => navigate(getProfileRoute(member))}
                       >
                         <Avatar>
                           <AvatarImage
@@ -442,8 +458,7 @@ export default function ClubManage() {
                         </Avatar>
 
                         <div>
-                          <div className="font-semibold text-gray-800"
-                          >
+                          <div className="font-semibold text-gray-800">
                             {member.fullName}
                           </div>
                           <div className="text-sm text-gray-500">
@@ -528,84 +543,114 @@ export default function ClubManage() {
               </CardContent>
             </Card>
             <CardContent className="p-0">
-              {/* Card danh sách cố vấn */}
               <Card className="glass !bg-white mt-6">
                 <CardHeader>
                   <CardTitle className="text-lg font-semibold flex items-center gap-2">
                     <Users className="w-5 h-5 text-orange-500" />
-                    Cố vấn (
-                    {clubInfo?.members?.filter((m) => m.role === "Mentor")
-                      .length || 0}
-                    )
+                    Cố vấn
                   </CardTitle>
                 </CardHeader>
 
                 <CardContent>
-                  {clubInfo?.members?.some((m) => m.role === "Mentor") ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {clubInfo?.members?.some((m) => m.role === "Mentor") && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                       {clubInfo.members
-                        .filter((member) => member.role === "Mentor")
+                        .filter((m) => m.role === "Mentor")
                         .map((mentor) => (
                           <div
                             key={mentor.userId}
-                            className="flex items-center justify-between border border-gray-200 rounded-xl p-4 bg-gradient-to-br from-white to-yellow-50 hover:shadow-md transition-all"
+                            className="flex items-center gap-3 border border-gray-200 rounded-xl p-4 bg-gradient-to-br from-white to-yellow-50"
                           >
-                            {/* Left: Avatar + info */}
-                            <div className="flex items-center gap-3">
-                              <Avatar>
-                                <AvatarImage
-                                  src={
-                                    mentor.avatarUrl ||
-                                    "/placeholder.svg?height=40&width=40&query=avatar"
-                                  }
-                                />
-                                <AvatarFallback className="bg-yellow-500 text-white">
-                                  {mentor.fullName?.[0] || "?"}
-                                </AvatarFallback>
-                              </Avatar>
+                            <Avatar>
+                              <AvatarImage
+                                src={mentor.avatarUrl || "/placeholder.svg"}
+                              />
+                              <AvatarFallback className="bg-yellow-500 text-white">
+                                {mentor.fullName?.[0] || "?"}
+                              </AvatarFallback>
+                            </Avatar>
 
-                              <div>
-                                <div className="font-semibold text-gray-800">
-                                  {mentor.fullName}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  Tham gia:{" "}
-                                  {new Date(
-                                    mentor.createdAt
-                                  ).toLocaleDateString("vi-VN")}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  Chức vụ: {handleChangeRole(mentor.role)}
-                                </div>
+                            <div>
+                              <div className="font-semibold">
+                                {mentor.fullName}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {handleChangeRole(mentor.role)}
                               </div>
                             </div>
                           </div>
                         ))}
                     </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500 bg-white rounded-lg shadow-sm">
-                      <p className="mb-4">
-                        Hiện tại chưa có cố vấn nào trong câu lạc bộ.
-                      </p>
-                      <Button
-                        onClick={() => setIsFindMentorOpen(true)}
-                        className="btn-primary flex items-center gap-2 mx-auto"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                        Tìm cố vấn
-                      </Button>
-                      <FindMentorModal
-                        isOpen={isFindMentorOpen}
-                        onClose={() => setIsFindMentorOpen(false)}
-                        onSelect={(mentor) => handleInviteMentor(mentor.id)}
-                      />
+                  )}
+
+                  {/* ===== 2. Mentor đang được mời ===== */}
+                  {mentorInvite && mentorInvite.status === "Pending" && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-semibold text-gray-600 mb-3">
+                        Cố vấn đang được mời
+                      </h3>
+
+                      <div className="flex items-center justify-between border border-yellow-200 rounded-xl p-4 bg-yellow-50">
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarImage
+                              src={
+                                mentorInvite.avatar ||
+                                "/placeholder.svg?height=40&width=40&query=avatar"
+                              }
+                            />
+                            <AvatarFallback className="bg-yellow-400 text-white">
+                              {mentorInvite.userFullName?.[0] || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+
+                          <div>
+                            <div className="font-semibold text-gray-800">
+                              {mentorInvite.userFullName}
+                            </div>
+                            <div className="text-sm text-yellow-700">
+                              Đang chờ phản hồi
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Đã mời:{" "}
+                              {new Date(
+                                mentorInvite.createdAt
+                              ).toLocaleDateString("vi-VN")}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          className="px-4 py-2 rounded-xl bg-yellow-300 hover:bg-yellow-400 transition"
+                          onClick={openDialog}
+                        >
+                          Hủy lời mời
+                        </button>
+                      </div>
                     </div>
                   )}
+                  {!hasMentor && !hasPendingInvite && (
+  <div className="text-center py-8 text-gray-500">
+    <p className="mb-4">
+      Hiện tại chưa có cố vấn nào trong câu lạc bộ.
+    </p>
+    <Button
+      onClick={() => setIsFindMentorOpen(true)}
+      className="btn-primary flex items-center gap-2 mx-auto"
+    >
+      <UserPlus className="w-4 h-4" />
+      Tìm cố vấn
+    </Button>
+  </div>
+)}
+                  <FindMentorModal
+                    isOpen={isFindMentorOpen}
+                    onClose={() => setIsFindMentorOpen(false)}
+                    onSelect={(mentor) => handleInviteMentor(mentor.id)}
+                  />
                 </CardContent>
               </Card>
             </CardContent>
           </TabsContent>
-
           {/* Join Requests Tab */}
           <TabsContent value="requests">
             <Card className="glass !bg-white">
@@ -1244,6 +1289,12 @@ export default function ClubManage() {
           </div>
         </div>
       )}
+      <CancelMentorInviteDialog
+        open={isOpen}
+        onClose={closeDialog}
+        onConfirm={handleCancelInvite}
+        mentorName={mentorInvite.name}
+      />
     </div>
   );
 }

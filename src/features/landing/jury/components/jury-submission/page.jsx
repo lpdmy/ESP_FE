@@ -50,10 +50,11 @@ import { useEffect, useState } from "react";
 import { useJuryApi } from "../../hooks/useJuryApi";
 import { useNavigate } from "react-router-dom";
 import { list } from "postcss";
+import { lazyLoadAllPages } from "../../utils/lazyLoadAll";
 export default function JurySubmissions() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getJuryAssign, getJuryAssignNotGrade,getJuryAssignGrade } = useJuryApi();
+  const { getJuryAssign, getJuryAssignNotGrade, getJuryAssignGrade } = useJuryApi();
   const [pageNumber, setPageNumber] = useState(1);
   const [pageNumberNotGrade, setPageNumberNotGrade] = useState(1);
   const [pageSizeNotGrade, setPageSizeNotGrade] = useState(10);
@@ -71,6 +72,8 @@ export default function JurySubmissions() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingNotGrade, setIsLoadingNotGrade] = useState(false);
   const [isLoadingGrade, setIsLoadingGrade] = useState(false);
+  const [openScore, setOpenScore] = useState(false);
+  const [selectedScore, setSelectedScore] = useState(null);
   const hanldeLoadJurySubmission = async () => {
     setIsLoading(true);
     try {
@@ -78,7 +81,6 @@ export default function JurySubmissions() {
       setTotalCount(response.data.totalCount);
       setSubmissions(response.data.data);
     } catch (err) {
-      console.log(err);
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +97,6 @@ export default function JurySubmissions() {
       setTotalCountNotGrade(response.data.totalCount);
       setSubmissionsNotGrade(response.data.data);
     } catch (err) {
-      console.log(err);
     } finally {
       setIsLoadingNotGrade(false);
     }
@@ -112,45 +113,40 @@ export default function JurySubmissions() {
       setTotalCountGrade(response.data.totalCount);
       setSubmissionsGrade(response.data.data);
     } catch (err) {
-      console.log(err);
     } finally {
       setIsLoadingGrade(false);
     }
   };
   const loadAllJurySubmissionsNotGrade = async () => {
     try {
-      const firstResponse = await getJuryAssignNotGrade(
-        id,
-        searhTerm,
-        pageSizeNotGrade,
-        1
+      // Sử dụng Lazy Loading để load tất cả pages tự động
+      return await lazyLoadAllPages(
+        (pageNumber, pageSize) => getJuryAssignNotGrade(id, searhTerm, pageSize, pageNumber),
+        100 // PageSize hợp lý, không quá lớn
       );
-      const total = firstResponse.data.totalCount;
-      const totalPages = Math.ceil(total / pageSizeNotGrade);
-
-      let allData = [...firstResponse.data.data];
-
-      for (let i = 2; i <= totalPages; i++) {
-        const response = await getJuryAssignNotGrade(
-          id,
-          searhTerm,
-          pageSizeNotGrade,
-          i
-        );
-        allData = [...allData, ...response.data.data];
-      }
-
-      return allData;
     } catch (err) {
-      console.log(err);
+      console.error("❌ Lỗi khi load danh sách bài chưa chấm:", err);
       return [];
     }
   };
 
   const handleNavigateGrade = async () => {
+    try {
+      // Load tất cả submissions chưa chấm để đảm bảo có dữ liệu
     const allSubmissions = await loadAllJurySubmissionsNotGrade();
+      
+      // Navigate đến trang chấm điểm
+      // Trang grade sẽ tự động load lại dữ liệu từ API
     navigate(`/jury/grade/${id}`);
-    console.log("📌 Đã bấm và load đủ:", allSubmissions.length);
+    } catch (error) {
+      // Vẫn navigate để user có thể thấy trang, trang sẽ tự load
+      navigate(`/jury/grade/${id}`);
+    }
+  };
+
+  const handleViewScore = (submission) => {
+    setSelectedScore(submission);
+    setOpenScore(true);
   };
   function formatToVietnamTime(isoString) {
     if (!isoString) return "Không có dữ liệu";
@@ -237,7 +233,6 @@ export default function JurySubmissions() {
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -267,21 +262,6 @@ export default function JurySubmissions() {
           </Card> */}
         </div>
 
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Tìm kiếm theo tên, lớp..."
-                  className="pl-9"
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
         {/* Submissions List */}
         <Tabs defaultValue="all" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-3">
@@ -306,7 +286,7 @@ export default function JurySubmissions() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4 h-10 ">
                           <div className="flex-1">
-                            <h3 className="text-xl font-bold mb-2">
+                            <h3 className="text-xl font-bold">
                               {submission.title}
                             </h3>
 
@@ -315,16 +295,19 @@ export default function JurySubmissions() {
                                 <Avatar className="h-10 w-10 object-cover">
                                   <AvatarImage src="/placeholder.svg?height=24&width=24" />
                                   <AvatarFallback>
-                                    {submission.submission.firstName.charAt(0)}
+                                    {submission.submission.submissionCode
+                                      ? submission.submission.submissionCode.replace("SUB-", "")
+                                      : submission.submission.orderNumber || submission.submission.id || "?"}
                                   </AvatarFallback>
                                 </Avatar>
                                 <span>
-                                  {submission.submission.userFullName}
+                                  {submission.submission.submissionCode
+                                    ? `Mã bài: ${submission.submission.submissionCode}`
+                                    : submission.submission.orderNumber
+                                    ? `Bài #${submission.submission.orderNumber}`
+                                    : `Bài #${submission.submission.id}`}
                                 </span>
                               </div>
-
-                              <span>•</span>
-                              <span>Lớp {submission.class}</span>
                               <span>•</span>
                               <span>
                                 {formatToVietnamTime(
@@ -368,19 +351,106 @@ export default function JurySubmissions() {
                               <DialogHeader>
                                 <DialogTitle>{submission.title}</DialogTitle>
                                 <DialogDescription>
-                                  {submission.student} - Lớp {submission.class}
+                                  {submission.submission.submissionCode
+                                    ? `Mã bài: ${submission.submission.submissionCode}`
+                                    : submission.submission.orderNumber
+                                    ? `Bài #${submission.submission.orderNumber}`
+                                    : `Bài #${submission.submission.id}`}
                                 </DialogDescription>
                               </DialogHeader>
+                              <div className="space-y-4 py-4">
+                                {/* Bài nộp - Hiển thị tất cả attachments */}
+                                <div className="space-y-3">
+                                  <h4 className="font-semibold text-lg">Bài nộp</h4>
+                                  {submission.submission?.attachments && submission.submission.attachments.length > 0 ? (
+                                    <div className="space-y-3">
+                                      {submission.submission.attachments.map((attachment, index) => (
+                                        <div key={index} className="border rounded-lg overflow-hidden">
+                                          {attachment.fileType === "image" ? (
+                                            <div className="relative w-full group">
+                                              <a
+                                                href={attachment.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="block cursor-pointer hover:opacity-90 transition-opacity"
+                                              >
+                                                <img
+                                                  src={attachment.url}
+                                                  alt={attachment.fileName || `Ảnh ${index + 1}`}
+                                                  className="w-full h-auto max-h-96 object-contain bg-gray-100 rounded-lg"
+                                                />
+                                              </a>
+                                              {attachment.fileName && (
+                                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                                  {attachment.fileName} - Click để xem full size
+                                                </div>
+                                              )}
+                                            </div>
+                                          ) : attachment.fileType === "video" ? (
+                                            <div className="relative w-full aspect-video bg-black">
+                                              <video
+                                                src={attachment.url}
+                                                controls
+                                                className="w-full h-full"
+                                              >
+                                                Trình duyệt của bạn không hỗ trợ video.
+                                              </video>
+                                            </div>
+                                          ) : attachment.fileType === "audio" ? (
+                                            <div className="p-4 bg-gray-50">
+                                              <div className="flex items-center gap-3 mb-2">
+                                                <span className="text-sm font-medium">{attachment.fileName || `Audio ${index + 1}`}</span>
+                                              </div>
+                                              <audio
+                                                src={attachment.url}
+                                                controls
+                                                className="w-full"
+                                              >
+                                                Trình duyệt của bạn không hỗ trợ audio.
+                                              </audio>
+                                            </div>
+                                          ) : (
+                                            <a
+                                              href={attachment.url}
+                                              download
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="flex flex-col items-center justify-center w-full p-6 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
+                                            >
+                                              <Download className="w-8 h-8 text-orange-600 mb-2" />
+                                              <span className="text-orange-700 font-medium text-center">
+                                                {attachment.fileName || `File ${index + 1}`}
+                                              </span>
+                                              <span className="text-xs text-gray-500 mt-1">
+                                                {attachment.fileType ? `Loại: ${attachment.fileType}` : "Tải xuống"}
+                                              </span>
+                                            </a>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                      <p className="text-sm text-muted-foreground text-center">
+                                        Không có file đính kèm
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </DialogContent>
                           </Dialog>
 
-                          {submission.totalScore &&
-                          submission.totalScore > 0 ? (
+                          {/* QUAN TRỌNG: submission.scoreTemp kiểm tra assignment của chính user hiện tại
+                              Mỗi giám khảo có assignment riêng, nên chỉ cần check assignment của chính họ
+                              Các giám khảo khác chấm cùng bài KHÔNG ảnh hưởng đến việc hiển thị nút này */}
+                          {submission.scoreTemp !== null || (submission.totalScore && submission.totalScore > 0) ? (
                             <div className="ml-auto">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="gap-2 bg-transparent"
+                                onClick={()=>handleViewScore(submission)}
                               >
                                 <Eye className="h-4 w-4" />
                                 Xem điểm
@@ -500,7 +570,7 @@ export default function JurySubmissions() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4 h-10">
                           <div className="flex-1">
-                            <h3 className="text-xl font-bold mb-2">
+                            <h3 className="text-xl font-bold">
                               {submission.title}
                             </h3>
                             <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">
@@ -508,21 +578,39 @@ export default function JurySubmissions() {
                                 <Avatar className="h-10 w-10 object-cover">
                                   <AvatarImage src="/placeholder.svg?height=24&width=24" />
                                   <AvatarFallback>
-                                    {submission.submission.firstName.charAt(0)}
+                                    {submission.submission.submissionCode
+                                      ? submission.submission.submissionCode.replace("SUB-", "")
+                                      : submission.submission.orderNumber || submission.submission.id || "?"}
                                   </AvatarFallback>
                                 </Avatar>
                                 <span>
-                                  {submission.submission.userFullName}
+                                  {submission.submission.submissionCode
+                                    ? `Mã bài: ${submission.submission.submissionCode}`
+                                    : submission.submission.orderNumber
+                                    ? `Bài #${submission.submission.orderNumber}`
+                                    : `Bài #${submission.submission.id}`}
                                 </span>
                               </div>
+                              {submission.submission.class && submission.submission.class.name && (
+                                <>
                               <span>•</span>
-                              <span>Lớp {submission.class}</span>
+                                  <span>
+                                    {formatToVietnamTime(
+                                      submission.submission.createdAt
+                                    )}
+                                  </span>
+                                </>
+                              )}
+                              {(!submission.submission.class || !submission.submission.class.name) && (
                               <span>•</span>
+                              )}
+                              {(!submission.submission.class || !submission.submission.class.name) && (
                               <span>
                                 {formatToVietnamTime(
                                   submission.submission.createdAt
                                 )}
                               </span>
+                              )}
                             </div>
                             <p className="text-muted-foreground line-clamp-2 mb-4">
                               {submission.submission.title}
@@ -558,7 +646,11 @@ export default function JurySubmissions() {
                               <DialogHeader>
                                 <DialogTitle>{submission.title}</DialogTitle>
                                 <DialogDescription>
-                                  {submission.student} - Lớp {submission.class}
+                                  {submission.submission.submissionCode
+                                    ? `Mã bài: ${submission.submission.submissionCode}`
+                                    : submission.submission.orderNumber
+                                    ? `Bài #${submission.submission.orderNumber}`
+                                    : `Bài #${submission.submission.id}`}
                                 </DialogDescription>
                               </DialogHeader>
                               <div className="space-y-4 py-4">
@@ -593,18 +685,21 @@ export default function JurySubmissions() {
                             </DialogContent>
                           </Dialog>
 
-                          {submission.totalScore &&
-                          submission.totalScore > 0 ? (
-                            <Link>
+                          {/* QUAN TRỌNG: submission.scoreTemp kiểm tra assignment của chính user hiện tại
+                              Mỗi giám khảo có assignment riêng, nên chỉ cần check assignment của chính họ
+                              Các giám khảo khác chấm cùng bài KHÔNG ảnh hưởng đến việc hiển thị nút này */}
+                          {submission.scoreTemp !== null || (submission.totalScore && submission.totalScore > 0) ? (
+                            <div className="ml-auto">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="gap-2 bg-transparent"
+                                onClick={()=>handleViewScore(submission)}
                               >
                                 <Eye className="h-4 w-4" />
                                 Xem điểm
                               </Button>
-                            </Link>
+                            </div>
                           ) : (
                             <div className="ml-auto">
                               <Button
@@ -615,15 +710,6 @@ export default function JurySubmissions() {
                                 <Star className="h-4 w-4" />
                                 Chấm điểm
                               </Button>
-                            </div>
-                          )}
-
-                          {submission.status === "graded" && (
-                            <div className="ml-auto flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-orange-100 to-yellow-100 rounded-lg">
-                              <Star className="h-4 w-4 text-orange-600" />
-                              <span className="font-bold text-orange-600">
-                                {submission.score}/100
-                              </span>
                             </div>
                           )}
                         </div>
@@ -730,7 +816,7 @@ export default function JurySubmissions() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4 h-10">
                           <div className="flex-1">
-                            <h3 className="text-xl font-bold mb-2">
+                            <h3 className="text-xl font-bold">
                               {submission.title}
                             </h3>
                             <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">
@@ -738,21 +824,39 @@ export default function JurySubmissions() {
                                 <Avatar className="h-10 w-10 object-cover">
                                   <AvatarImage src="/placeholder.svg?height=24&width=24" />
                                   <AvatarFallback>
-                                    {submission.submission.firstName.charAt(0)}
+                                    {submission.submission.submissionCode
+                                      ? submission.submission.submissionCode.replace("SUB-", "")
+                                      : submission.submission.orderNumber || submission.submission.id || "?"}
                                   </AvatarFallback>
                                 </Avatar>
                                 <span>
-                                  {submission.submission.userFullName}
+                                  {submission.submission.submissionCode
+                                    ? `Mã bài: ${submission.submission.submissionCode}`
+                                    : submission.submission.orderNumber
+                                    ? `Bài #${submission.submission.orderNumber}`
+                                    : `Bài #${submission.submission.id}`}
                                 </span>
                               </div>
+                              {submission.submission.class && submission.submission.class.name && (
+                                <>
                               <span>•</span>
-                              <span>Lớp {submission.class}</span>
+                                  <span>
+                                    {formatToVietnamTime(
+                                      submission.submission.createdAt
+                                    )}
+                                  </span>
+                                </>
+                              )}
+                              {(!submission.submission.class || !submission.submission.class.name) && (
                               <span>•</span>
+                              )}
+                              {(!submission.submission.class || !submission.submission.class.name) && (
                               <span>
                                 {formatToVietnamTime(
                                   submission.submission.createdAt
                                 )}
                               </span>
+                              )}
                             </div>
                             <p className="text-muted-foreground line-clamp-2 mb-4">
                               {submission.submission.title}
@@ -788,7 +892,7 @@ export default function JurySubmissions() {
                               <DialogHeader>
                                 <DialogTitle>{submission.title}</DialogTitle>
                                 <DialogDescription>
-                                  {submission.student} - Lớp {submission.class}
+                                  {submission.submission.userFullNameWithClass || submission.submission.userFullName}
                                 </DialogDescription>
                               </DialogHeader>
                               <div className="space-y-4 py-4">
@@ -823,13 +927,16 @@ export default function JurySubmissions() {
                             </DialogContent>
                           </Dialog>
 
-                          {submission.totalScore &&
-                          submission.totalScore > 0 ? (
+                          {/* QUAN TRỌNG: submission.scoreTemp kiểm tra assignment của chính user hiện tại
+                              Mỗi giám khảo có assignment riêng, nên chỉ cần check assignment của chính họ
+                              Các giám khảo khác chấm cùng bài KHÔNG ảnh hưởng đến việc hiển thị nút này */}
+                          {submission.scoreTemp !== null || (submission.totalScore && submission.totalScore > 0) ? (
                             <div className="ml-auto">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="gap-2 bg-transparent"
+                                onClick={()=>handleViewScore(submission)}
                               >
                                 <Eye className="h-4 w-4" />
                                 Xem điểm
@@ -845,15 +952,6 @@ export default function JurySubmissions() {
                                 <Star className="h-4 w-4" />
                                 Chấm điểm
                               </Button>
-                            </div>
-                          )}
-
-                          {submission.status === "graded" && (
-                            <div className="ml-auto flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-orange-100 to-yellow-100 rounded-lg">
-                              <Star className="h-4 w-4 text-orange-600" />
-                              <span className="font-bold text-orange-600">
-                                {submission.score}/100
-                              </span>
                             </div>
                           )}
                         </div>
@@ -946,6 +1044,137 @@ export default function JurySubmissions() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* View score dialog */}
+      <Dialog open={openScore} onOpenChange={setOpenScore}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedScore?.submission?.submissionCode
+                ? `Mã bài: ${selectedScore.submission.submissionCode}`
+                : selectedScore?.submission?.orderNumber
+                ? `Bài #${selectedScore.submission.orderNumber}`
+                : selectedScore?.title || "Bài đã chấm"}
+            </DialogTitle>
+            <DialogDescription>
+              Điểm đã chấm cho bài này.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Điểm số */}
+            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
+              <span className="text-sm font-semibold text-muted-foreground">Tổng điểm</span>
+              <span className="text-3xl font-bold text-orange-600">
+                {selectedScore?.totalScore ?? "--"}
+              </span>
+            </div>
+            
+            {/* Nhận xét */}
+            {selectedScore?.comment && (
+              <div className="space-y-2">
+                <span className="text-sm font-semibold">Nhận xét</span>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap p-3 bg-gray-50 rounded-lg">
+                  {selectedScore.comment}
+                </p>
+              </div>
+            )}
+            
+            {/* Bài nộp - Hiển thị tất cả attachments */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-lg">Bài nộp</h4>
+              {selectedScore?.submission?.attachments && selectedScore.submission.attachments.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedScore.submission.attachments.map((attachment, index) => (
+                    <div key={index} className="border rounded-lg overflow-hidden">
+                      {attachment.fileType === "image" ? (
+                        <div className="relative w-full group">
+                          <a
+                            href={attachment.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block cursor-pointer hover:opacity-90 transition-opacity"
+                          >
+                            <img
+                              src={attachment.url}
+                              alt={attachment.fileName || `Ảnh ${index + 1}`}
+                              className="w-full h-auto max-h-96 object-contain bg-gray-100 rounded-lg"
+                            />
+                          </a>
+                          {attachment.fileName && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                              {attachment.fileName} - Click để xem full size
+          </div>
+                          )}
+                        </div>
+                      ) : attachment.fileType === "video" ? (
+                        <div className="relative w-full aspect-video bg-black">
+                          <video
+                            src={attachment.url}
+                            controls
+                            className="w-full h-full"
+                          >
+                            Trình duyệt của bạn không hỗ trợ video.
+                          </video>
+                        </div>
+                      ) : attachment.fileType === "audio" ? (
+                        <div className="p-4 bg-gray-50">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-sm font-medium">{attachment.fileName || `Audio ${index + 1}`}</span>
+                          </div>
+                          <audio
+                            src={attachment.url}
+                            controls
+                            className="w-full"
+                          >
+                            Trình duyệt của bạn không hỗ trợ audio.
+                          </audio>
+                        </div>
+                      ) : (
+                        <a
+                          href={attachment.url}
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex flex-col items-center justify-center w-full p-6 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
+                        >
+                          <Download className="w-8 h-8 text-orange-600 mb-2" />
+                          <span className="text-orange-700 font-medium text-center">
+                            {attachment.fileName || `File ${index + 1}`}
+                          </span>
+                          <span className="text-xs text-gray-500 mt-1">
+                            {attachment.fileType ? `Loại: ${attachment.fileType}` : "Tải xuống"}
+                          </span>
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm text-muted-foreground text-center">
+                    Không có file đính kèm
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            {/* Thông tin bài nộp */}
+            {selectedScore?.submission?.title && (
+              <div className="space-y-2 pt-4 border-t">
+                <span className="text-sm font-semibold">Tiêu đề bài nộp</span>
+                <p className="text-sm text-muted-foreground">
+                  {selectedScore.submission.title}
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end pt-4">
+            <Button variant="outline" onClick={()=>setOpenScore(false)}>
+              Đóng
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

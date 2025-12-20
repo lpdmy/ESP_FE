@@ -142,13 +142,11 @@ export default function ClubApprovalPage() {
       
       const data = resposne.data.data;
       setRequests(data);
-        console.log(status)
       const total = resposne.data.totalCount || data.length;
       setTotalCount(total);
       setTotalPages(Math.ceil(total / pageSize));
       
     } catch (error) {
-      console.log(error);
     }
   };
   useEffect(() => {
@@ -167,7 +165,6 @@ export default function ClubApprovalPage() {
       toast.approveCreationSucces;
       handleJoinCreation();
     } catch (err) {
-      console.log(err);
       toast.approveCreationFail;
     } finally {
       setIsDetailDialogOpen(false);
@@ -278,7 +275,7 @@ export default function ClubApprovalPage() {
                         {request.categoryName}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatDate(request.requestedAt)}</TableCell>
+                    <TableCell>{formatDate(request.createdAt)}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
                     <TableCell className="text-right relative">
                       <div className="relative inline-block text-left">

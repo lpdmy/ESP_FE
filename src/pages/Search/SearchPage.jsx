@@ -1,6 +1,6 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Search, Filter, Calendar, MapPin, User, Hash, Users2, FileText, Eye, MessageCircle, Heart, Share2, Bell, Menu, Trophy, Star, LogOut, Settings } from 'lucide-react';
+import { Search, Filter, Calendar, MapPin, User, Users2, FileText, Eye, MessageCircle, Heart, Share2, Bell, Menu, Trophy, Star, LogOut, Settings, Loader2 } from 'lucide-react';
 import { useSearchApi } from '@/common/hooks/useSearchApi';
 import { useToast } from '@/common/hooks/useToast';
 import { LoadingCard } from '@/common/components/ui/loading';
@@ -29,15 +29,10 @@ export default function SearchPage() {
   
   const [query, setQuery] = useState(searchParams.get('q') || '');
   const [activeFilter, setActiveFilter] = useState('all');
-  const [filters, setFilters] = useState({
-    datePosted: '',
-    postsFrom: '',
-    taggedLocation: '',
-    recentPosts: false,
-    postsSeen: false
-  });
+  const filters = useMemo(() => ({}), []);
   const [results, setResults] = useState({});
   const [loading, setLoading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   
   const { globalSearch } = useSearchApi();
 
@@ -51,7 +46,6 @@ export default function SearchPage() {
   };
 
   const getProfileRoute = (user) => {
-    console.log("User object:", user);
   switch (user?.role) {
     case ROLE.TEACHER:
       return `${ROUTES.USER_PROFILE.TEACHER_PROFILE}/${user.id}`;
@@ -65,12 +59,10 @@ export default function SearchPage() {
 
   const filterOptions = [
     { id: 'all', label: 'Tất cả', icon: Search, color: 'text-gray-700' },
-    { id: 'users', label: 'Người dùng', icon: User, color: 'text-blue-600' },
+    { id: 'users', label: 'Người dùng', icon: User, color: 'text-orange-600' },
     { id: 'posts', label: 'Bài viết', icon: FileText, color: 'text-green-600' },
     { id: 'activities', label: 'Hoạt động', icon: Calendar, color: 'text-purple-600' },
-    { id: 'clubs', label: 'Câu lạc bộ', icon: Users2, color: 'text-orange-600' },
-    { id: 'classes', label: 'Lớp học', icon: Hash, color: 'text-pink-600' },
-    { id: 'events', label: 'Sự kiện', icon: Calendar, color: 'text-indigo-600' }
+    { id: 'clubs', label: 'Câu lạc bộ hoạt động', icon: Users2, color: 'text-orange-600' }
   ];
 
   const datePostedOptions = [
@@ -94,6 +86,7 @@ export default function SearchPage() {
     if (!query.trim()) return;
     
     setLoading(true);
+    setIsSearching(true);
     try {
       // Always search all categories to get complete results
       const searchResults = await globalSearch({
@@ -110,6 +103,7 @@ export default function SearchPage() {
       toast.error('Có lỗi xảy ra khi tìm kiếm');
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
   };
 
@@ -120,12 +114,14 @@ export default function SearchPage() {
     }
   }, [query, setSearchParams]);
 
-  // Perform search when query or filters change
+  // Debounced search when query changes (activeFilter is client-side only, no API reload)
   useEffect(() => {
-    if (query.trim()) {
+    if (!query.trim()) return;
+    const timer = setTimeout(() => {
       performSearch();
-    }
-  }, [query, activeFilter, filters]);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [query, filters]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -136,9 +132,7 @@ export default function SearchPage() {
     setActiveFilter(filterId);
   };
 
-  const handleFilterUpdate = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
+  const handleFilterUpdate = () => {};
 
   const getResultCount = () => {
     return Object.values(results).reduce((total, arr) => total + (arr?.length || 0), 0);
@@ -173,8 +167,11 @@ export default function SearchPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Tìm kiếm bạn bè, bài viết, sự kiện, cuộc thi..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none"
               />
+              {isSearching && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-orange-500 animate-spin" />
+              )}
             </form>
           </div>
 
@@ -291,14 +288,14 @@ export default function SearchPage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-6">
-          {/* Sidebar Filters */}
-          <div className="w-80 flex-shrink-0">
+          <div className="flex gap-6 flex-col lg:flex-row">
+          {/* Sidebar Filters - simplified */}
+          <div className="w-80 flex-shrink-0 hidden lg:block">
             <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-orange-100 p-4 sticky top-24">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Bộ lọc tìm kiếm</h3>
               
               {/* Filter Categories */}
-              <div className="space-y-2 mb-6">
+              <div className="space-y-2">
                 {filterOptions.map((option) => {
                   const Icon = option.icon;
                   const isActive = activeFilter === option.id;
@@ -318,82 +315,6 @@ export default function SearchPage() {
                     </button>
                   );
                 })}
-              </div>
-
-              {/* Advanced Filters */}
-              <div className="space-y-4">
-                {/* Recent Posts Toggle */}
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700">Bài viết gần đây</label>
-                  <input
-                    type="checkbox"
-                    checked={filters.recentPosts}
-                    onChange={(e) => handleFilterUpdate('recentPosts', e.target.checked)}
-                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                  />
-                </div>
-
-                {/* Posts You've Seen Toggle */}
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700">Bài viết đã xem</label>
-                  <input
-                    type="checkbox"
-                    checked={filters.postsSeen}
-                    onChange={(e) => handleFilterUpdate('postsSeen', e.target.checked)}
-                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                  />
-                </div>
-
-                {/* Date Posted */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ngày đăng
-                  </label>
-                  <select
-                    value={filters.datePosted}
-                    onChange={(e) => handleFilterUpdate('datePosted', e.target.value)}
-                    className="w-full px-3 py-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none text-sm bg-white/50"
-                  >
-                    {datePostedOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Posts From */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Bài viết từ
-                  </label>
-                  <select
-                    value={filters.postsFrom}
-                    onChange={(e) => handleFilterUpdate('postsFrom', e.target.value)}
-                    className="w-full px-3 py-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none text-sm bg-white/50"
-                  >
-                    {postsFromOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Tagged Location */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <MapPin className="h-4 w-4 inline mr-1" />
-                    Địa điểm được gắn thẻ
-                  </label>
-                  <input
-                    type="text"
-                    value={filters.taggedLocation}
-                    onChange={(e) => handleFilterUpdate('taggedLocation', e.target.value)}
-                    placeholder="Nhập địa điểm..."
-                    className="w-full px-3 py-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:outline-none text-sm bg-white/50"
-                  />
-                </div>
               </div>
             </div>
           </div>
@@ -429,12 +350,10 @@ const SearchResults = ({ results, activeFilter, query, onFilterChange,getProfile
   const navigate = useNavigate();
 
   const resultTypes = [
-    { key: 'users', label: 'Người dùng', icon: User, color: 'blue' },
+    { key: 'users', label: 'Người dùng', icon: User, color: 'orange' },
     { key: 'posts', label: 'Bài viết', icon: FileText, color: 'green' },
     { key: 'activities', label: 'Hoạt động', icon: Calendar, color: 'purple' },
-    { key: 'clubs', label: 'Câu lạc bộ', icon: Users2, color: 'orange' },
-    { key: 'classes', label: 'Lớp học', icon: Hash, color: 'pink' },
-    { key: 'events', label: 'Sự kiện', icon: Calendar, color: 'indigo' }
+    { key: 'clubs', label: 'Câu lạc bộ hoạt động', icon: Users2, color: 'orange' }
   ];
 
   const hasResults = Object.values(results).some(arr => arr?.length > 0);
@@ -504,7 +423,7 @@ const SearchResults = ({ results, activeFilter, query, onFilterChange,getProfile
                 <div className="pt-3 border-t border-gray-100">
                   <button
                     onClick={() => onFilterChange('users')}
-                    className="w-full text-center text-blue-600 hover:text-blue-800 font-medium py-2 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="w-full text-center text-orange-600 hover:text-orange-800 font-medium py-2 hover:bg-orange-50 rounded-lg transition-colors"
                   >
                     Xem tất cả ({items.length} người dùng)
                   </button>
@@ -543,7 +462,7 @@ const SearchResultListItem = ({ result, type, color, query, onClick }) => {
           subtitle: `${result.authorName} • ${formatDate(result.createdAt)}`,
           content: result.body?.substring(0, 100) + '...',
           extra: `${result.likesCount || 0} likes • ${result.commentsCount || 0} comments`,
-          action: 'View'
+          action: 'Xem'
         };
       
       case 'activities':
@@ -551,8 +470,8 @@ const SearchResultListItem = ({ result, type, color, query, onClick }) => {
           title: result.title,
           subtitle: `${formatDate(result.startDate)} • ${result.location}`,
           content: result.description?.substring(0, 100) + '...',
-          extra: `${result.participantsCount}/${result.maxParticipants} tham gia`,
-          action: 'Join'
+          extra: `${result.participantsCount}/${result.maxParticipants} đăng ký`,
+          action: 'Đăng ký'
         };
         
       case 'clubs':
@@ -561,7 +480,7 @@ const SearchResultListItem = ({ result, type, color, query, onClick }) => {
           subtitle: `${result.membersCount} thành viên`,
           content: result.description?.substring(0, 100) + '...',
           avatar: result.avatarUrl,
-          action: 'Join'
+          action: 'Tham gia'
         };
         
       default:
@@ -609,8 +528,9 @@ const SearchResultListItem = ({ result, type, color, query, onClick }) => {
       <div onClick={onClick} className="cursor-pointer">
         <PostCard
           author={result.authorName || 'Ẩn danh'}
+          avatarUrl={result.authorAvatarUrl}
           class={result.authorClass || 'Không xác định'}
-          time={formatDate(result.createdAt)}
+          time={result.createdAt}
           content={result.body || result.title}
           image={result.imageUrl}
           likes={result.likesCount || 0}
@@ -684,7 +604,7 @@ const SearchResultListItem = ({ result, type, color, query, onClick }) => {
             onClick && onClick();
           }}
           disabled={creatingRoom}
-          className={`px-4 py-2 text-sm font-medium text-white ${creatingRoom ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} rounded-lg transition-colors`}
+          className={`px-4 py-2 text-sm font-medium text-white ${creatingRoom ? 'bg-gray-400' : 'bg-orange-600 hover:bg-orange-700'} rounded-lg transition-colors`}
         >
           {creatingRoom ? 'Đang tạo...' : content.action}
         </button>
