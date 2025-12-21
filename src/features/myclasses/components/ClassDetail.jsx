@@ -109,10 +109,6 @@ export default function ClassDetail() {
           <div className="text-center py-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Không tìm thấy lớp học</h2>
             <p className="text-gray-600 mb-6">Bạn chưa được phân vào lớp học nào trong năm học này.</p>
-            <Button onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Quay lại
-            </Button>
           </div>
         </div>
       </div>

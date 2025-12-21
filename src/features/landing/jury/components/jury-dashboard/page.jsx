@@ -12,13 +12,7 @@ import {
   TabsTrigger,
 } from "@/common/components/ui/tabs";
 import { Input } from "@/common/components/ui/input";
-import {
-  Search,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Eye,
-} from "lucide-react";
+import { Search, Calendar, CheckCircle2, Clock, Eye } from "lucide-react";
 import { useJuryApi } from "../../hooks/useJuryApi";
 
 export default function JuryDashboard() {
@@ -35,6 +29,7 @@ export default function JuryDashboard() {
       const response = await getJuryAcitivty(searchQuery, pageSize, pageNumber);
       setJuryActivity(response.data.data);
     } catch (error) {
+      console.error(error);
     }
   };
 
@@ -82,9 +77,12 @@ export default function JuryDashboard() {
     }
   }
 
+  // ✅ FIX: KHÔNG CHIA 0 / 0
   function getProgressColor(graded, total) {
+    if (total === 0) return "bg-gray-300";
+    if (graded === total) return "bg-green-500";
+
     const percentage = (graded / total) * 100;
-    if (percentage === 100) return "bg-green-500";
     if (percentage >= 50) return "bg-orange-500";
     return "bg-yellow-500";
   }
@@ -101,9 +99,15 @@ export default function JuryDashboard() {
     [juryActivity]
   );
 
-  const countCompleted = activitiesWithStatus.filter((x) => x.status === "completed").length;
-  const countInProgress = activitiesWithStatus.filter((x) => x.status === "in-progress").length;
-  const countPending = activitiesWithStatus.filter((x) => x.status === "pending").length;
+  const countCompleted = activitiesWithStatus.filter(
+    (x) => x.status === "completed"
+  ).length;
+  const countInProgress = activitiesWithStatus.filter(
+    (x) => x.status === "in-progress"
+  ).length;
+  const countPending = activitiesWithStatus.filter(
+    (x) => x.status === "pending"
+  ).length;
 
   useEffect(() => {
     handleLoadActivity();
@@ -142,12 +146,24 @@ export default function JuryDashboard() {
         </Card>
 
         {/* Activities list */}
-        <Tabs defaultValue="all" onValueChange={setActiveTab} className="space-y-6">
+        <Tabs
+          defaultValue="all"
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
           <TabsList>
-            <TabsTrigger value="all">Tất cả ({activitiesWithStatus.length})</TabsTrigger>
-            <TabsTrigger value="pending">Chưa bắt đầu ({countPending})</TabsTrigger>
-            <TabsTrigger value="in-progress">Đang chấm ({countInProgress})</TabsTrigger>
-            <TabsTrigger value="completed">Hoàn thành ({countCompleted})</TabsTrigger>
+            <TabsTrigger value="all">
+              Tất cả ({activitiesWithStatus.length})
+            </TabsTrigger>
+            <TabsTrigger value="pending">
+              Chưa bắt đầu ({countPending})
+            </TabsTrigger>
+            <TabsTrigger value="in-progress">
+              Đang chấm ({countInProgress})
+            </TabsTrigger>
+            <TabsTrigger value="completed">
+              Hoàn thành ({countCompleted})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="space-y-4">
@@ -156,141 +172,139 @@ export default function JuryDashboard() {
                 Không có hoạt động nào trong mục này.
               </p>
             ) : (
-              filteredActivities.map((assignment) => (
-                <Card
-                  key={assignment.id}
-                  className="hover:shadow-lg transition-shadow"
-                >
-                  <CardContent className="p-6">
-                    <div className="flex flex-col lg:flex-row gap-6">
-                      {/* Left */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-4 mb-4">
-                          <div>
-                            <h3 className="text-xl font-bold mb-2">
-                              {assignment.activity.title}
-                            </h3>
+              filteredActivities.map((assignment) => {
+                const completed =
+                  assignment.activity.numberOfCompletedSubmission;
+                const total = assignment.activity.numberOfSubmission;
 
-                            <div className="flex items-center gap-3 mb-3">
-                              <Badge className="bg-orange-50 border-orange-200 text-orange-700">
-                                {assignment.activity.subType}
-                              </Badge>
-                              {getStatusBadge(assignment.status)}
-                              <Badge className="bg-blue-50 text-blue-700">
-                                {assignment.role}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
+                // ✅ FIX: normalize progress
+                const progress =
+                  total === 0
+                    ? 0
+                    : Math.round((completed / total) * 100);
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-                          <div>
-                            <p className="text-sm text-gray-600">Tổng bài nộp</p>
-                            <p className="text-2xl font-bold">
-                              {assignment.activity.numberOfSubmission}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600 flex gap-1 items-center">
-                              <CheckCircle2 className="w-4 h-4 text-green-500" />
-                              Đã chấm
-                            </p>
-                            <p className="text-2xl font-bold text-green-600">
-                              {assignment.activity.numberOfCompletedSubmission}
-                            </p>
+                return (
+                  <Card
+                    key={assignment.id}
+                    className="hover:shadow-lg transition-shadow"
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex flex-col lg:flex-row gap-6">
+                        {/* Left */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-xl font-bold mb-2">
+                            {assignment.activity.title}
+                          </h3>
+
+                          <div className="flex items-center gap-3 mb-4">
+                            <Badge className="bg-orange-50 border-orange-200 text-orange-700">
+                              {assignment.activity.subType}
+                            </Badge>
+                            {getStatusBadge(assignment.status)}
+                            <Badge className="bg-blue-50 text-blue-700">
+                              {assignment.role}
+                            </Badge>
                           </div>
 
-                          <div>
-                            <p className="text-sm text-gray-600 flex gap-1 items-center">
-                              <Clock className="w-4 h-4 text-orange-500" />
-                              Chưa chấm
-                            </p>
-                            <p className="text-2xl font-bold text-orange-600">
-                              {assignment.activity.numberOfPendingSubmission}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-sm text-gray-600">Tiến độ</p>
-                            <p className="text-2xl font-bold">
-                              {Math.round(
-                                (assignment.activity.numberOfCompletedSubmission /
-                                  assignment.activity.numberOfSubmission) *
-                                  100
-                              )}
-                              %
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Progress bar */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Tiến độ chấm</span>
-                            <span className="font-medium">
-                              {
-                                assignment.activity.numberOfCompletedSubmission
-                              }/
-                              {assignment.activity.numberOfSubmission}
-                            </span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-3">
-                            <div
-                              className={`h-full ${getProgressColor(
-                                assignment.activity.numberOfCompletedSubmission,
-                                assignment.activity.numberOfSubmission
-                              )} rounded-full`}
-                              style={{
-                                width: `${
-                                  (assignment.activity.numberOfCompletedSubmission /
-                                    assignment.activity.numberOfSubmission) *
-                                  100
-                                }%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right */}
-                      <div className="lg:w-64 flex-shrink-0">
-                        <div className="bg-gray-50 rounded-lg p-4 mb-4 text-sm space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-gray-500" />
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
                             <div>
-                              <p className="text-gray-600">Bắt đầu</p>
-                              <p className="font-medium">
-                                {formatVietnamDate(
-                                  assignment.activity.startDate
-                                )}
+                              <p className="text-sm text-gray-600">
+                                Tổng bài nộp
+                              </p>
+                              <p className="text-2xl font-bold">{total}</p>
+                            </div>
+
+                            <div>
+                              <p className="text-sm text-gray-600 flex gap-1 items-center">
+                                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                Đã chấm
+                              </p>
+                              <p className="text-2xl font-bold text-green-600">
+                                {completed}
                               </p>
                             </div>
+
+                            <div>
+                              <p className="text-sm text-gray-600 flex gap-1 items-center">
+                                <Clock className="w-4 h-4 text-orange-500" />
+                                Chưa chấm
+                              </p>
+                              <p className="text-2xl font-bold text-orange-600">
+                                {assignment.activity.numberOfPendingSubmission}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-sm text-gray-600">Tiến độ</p>
+                              <p className="text-2xl font-bold">{progress}%</p>
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-gray-500" />
-                            <div>
-                              <p className="text-gray-600">Kết thúc</p>
-                              <p className="font-medium">
-                                {formatVietnamDate(
-                                  assignment.activity.endDate
-                                )}
-                              </p>
+                          {/* Progress bar */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600">
+                                Tiến độ chấm
+                              </span>
+                              <span className="font-medium">
+                                {completed}/{total}
+                              </span>
+                            </div>
+
+                            <div className="w-full bg-gray-200 rounded-full h-3">
+                              <div
+                                className={`h-full ${getProgressColor(
+                                  completed,
+                                  total
+                                )} rounded-full transition-all`}
+                                style={{ width: `${progress}%` }}
+                              />
                             </div>
                           </div>
                         </div>
 
-                        <a href={`/jury/submission/${assignment.activityId}`}>
-                          <button className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white gap-2 flex items-center px-4 py-2 rounded">
-                            <Eye className="h-4 w-4" />
-                            Xem bài nộp
-                          </button>
-                        </a>
+                        {/* Right */}
+                        <div className="lg:w-64 flex-shrink-0">
+                          <div className="bg-gray-50 rounded-lg p-4 mb-4 text-sm space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-gray-500" />
+                              <div>
+                                <p className="text-gray-600">Bắt đầu</p>
+                                <p className="font-medium">
+                                  {formatVietnamDate(
+                                    assignment.activity.startDate
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-gray-500" />
+                              <div>
+                                <p className="text-gray-600">Kết thúc</p>
+                                <p className="font-medium">
+                                  {formatVietnamDate(
+                                    assignment.activity.endDate
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <Link
+                            to={`/jury/submission/${assignment.activityId}`}
+                          >
+                            <Button className="w-full gap-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white">
+                              <Eye className="h-4 w-4" />
+                              Xem bài nộp
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </TabsContent>
         </Tabs>

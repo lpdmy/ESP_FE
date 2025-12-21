@@ -197,21 +197,12 @@ export default function MyEventsPage() {
         setLoading(true);
         setError(null);
 
-        // Fetch both ongoing and finished activities independently
-        // Use Promise.allSettled to handle errors gracefully
-        console.log("Fetching activities with params:", {
-          pageNumber,
-          pageSize,
-          status: "ongoing/finished",
-        });
-
         const [ongoingResult, finishedResult] = await Promise.allSettled([
           executeApiCall(
             activityService.getMyActivities.bind(activityService),
             [pageNumber, pageSize, null, "ongoing", token],
             { setLoading: () => {}, setError: () => {} }
           ).catch((err) => {
-            console.error("Error fetching ongoing activities:", err);
             return null;
           }),
           executeApiCall(
@@ -219,7 +210,6 @@ export default function MyEventsPage() {
             [pageNumber, pageSize, null, "finished", token],
             { setLoading: () => {}, setError: () => {} }
           ).catch((err) => {
-            console.error("Error fetching finished activities:", err);
             return null;
           }),
         ]);
@@ -227,87 +217,39 @@ export default function MyEventsPage() {
         // Process ongoing activities
         const ongoingResponse =
           ongoingResult.status === "fulfilled" ? ongoingResult.value : null;
-        console.log(
-          "Ongoing Response Full:",
-          JSON.stringify(ongoingResponse, null, 2)
-        );
-
         if (ongoingResponse?.data) {
           // Backend returns: { data: { data: [...], totalCount, ... }, message, statusCode }
           const paginationData = ongoingResponse.data;
-          console.log("Ongoing Pagination Data:", paginationData);
-          console.log("Ongoing Pagination Data.data:", paginationData?.data);
-          console.log("Ongoing Total Count:", paginationData?.totalCount);
-
           const activitiesData = Array.isArray(paginationData?.data)
             ? paginationData.data
             : [];
-          console.log("Ongoing Activities Data (parsed):", activitiesData);
-          console.log("Ongoing Activities Data length:", activitiesData.length);
-
           if (activitiesData.length > 0) {
             const mappedActivities = activitiesData.map(mapActivityToEvent);
-            console.log("Mapped Ongoing Activities:", mappedActivities);
             setOngoingActivities(mappedActivities);
-            console.log(
-              "Set ongoingActivities state with",
-              mappedActivities.length,
-              "items"
-            );
           } else {
-            console.warn("Ongoing activities array is empty");
             setOngoingActivities([]);
           }
         } else {
-          console.warn(
-            "No ongoing activities data in response",
-            ongoingResponse
-          );
           setOngoingActivities([]);
         }
 
         // Process finished activities
         const finishedResponse =
           finishedResult.status === "fulfilled" ? finishedResult.value : null;
-        console.log(
-          "Finished Response Full:",
-          JSON.stringify(finishedResponse, null, 2)
-        );
 
         if (finishedResponse?.data) {
           // Backend returns: { data: { data: [...], totalCount, ... }, message, statusCode }
           const paginationData = finishedResponse.data;
-          console.log("Finished Pagination Data:", paginationData);
-          console.log("Finished Pagination Data.data:", paginationData?.data);
-          console.log("Finished Total Count:", paginationData?.totalCount);
-
           const activitiesData = Array.isArray(paginationData?.data)
             ? paginationData.data
             : [];
-          console.log("Finished Activities Data (parsed):", activitiesData);
-          console.log(
-            "Finished Activities Data length:",
-            activitiesData.length
-          );
-
           if (activitiesData.length > 0) {
             const mappedActivities = activitiesData.map(mapActivityToEvent);
-            console.log("Mapped Finished Activities:", mappedActivities);
             setFinishedActivities(mappedActivities);
-            console.log(
-              "Set finishedActivities state with",
-              mappedActivities.length,
-              "items"
-            );
           } else {
-            console.warn("Finished activities array is empty");
             setFinishedActivities([]);
           }
         } else {
-          console.warn(
-            "No finished activities data in response",
-            finishedResponse
-          );
           setFinishedActivities([]);
         }
 
@@ -322,12 +264,9 @@ export default function MyEventsPage() {
           finishedResult.status === "rejected"
         ) {
           // Partial error - show warning but don't block UI
-          console.warn("Một số hoạt động không thể tải được");
         }
-
         setLoading(false);
       } catch (err) {
-        console.error("Error fetching activities:", err);
         setError(err.message || "Không thể tải danh sách hoạt động");
         setLoading(false);
       }
@@ -375,8 +314,6 @@ export default function MyEventsPage() {
         setExistingAttachments([]);
       }
     } catch (error) {
-      console.error("Error fetching submission:", error);
-      // If 404, user hasn't submitted yet
       if (error.statusCode !== 404) {
         setError("Không thể tải thông tin bài nộp");
       }
@@ -481,7 +418,6 @@ export default function MyEventsPage() {
         }
       }
     } catch (error) {
-      console.error("Error submitting submission:", error);
       toast.showError(error.message || "Không thể nộp bài. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
@@ -575,7 +511,7 @@ export default function MyEventsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card className="glass hover-lift">
+            <Card className="glass hover-lift !bg-white/100">
               <CardContent className="p-4 text-center">
                 <Calendar className="w-8 h-8 mx-auto mb-2 text-orange-500" />
                 <h3 className="font-semibold text-gray-900">Tổng cộng</h3>
@@ -584,7 +520,7 @@ export default function MyEventsPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="glass hover-lift">
+            <Card className="glass hover-lift !bg-white/100">
               <CardContent className="p-4 text-center">
                 <Trophy className="w-8 h-8 mx-auto mb-2 text-green-500" />
                 <h3 className="font-semibold text-gray-900">Đang diễn ra</h3>
@@ -593,7 +529,7 @@ export default function MyEventsPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="glass hover-lift">
+            <Card className="glass hover-lift !bg-white/100">
               <CardContent className="p-4 text-center">
                 <Users className="w-8 h-8 mx-auto mb-2 text-blue-500" />
                 <h3 className="font-semibold text-gray-900">Đã kết thúc</h3>
@@ -639,7 +575,7 @@ export default function MyEventsPage() {
                     return (
                       <Card
                         key={event.id}
-                        className="glass hover-lift card-shine cursor-pointer transition-all"
+                        className="glass hover-lift !bg-white/100 card-shine cursor-pointer transition-all"
                         onClick={() => handleEventClick(event)}
                       >
                         <CardContent className="p-6">
@@ -701,7 +637,10 @@ export default function MyEventsPage() {
                                 <div className="flex items-center gap-1">
                                   <Users className="w-4 h-4 text-orange-500" />
                                   <span>
-                                    {event.participants}/{event.maxParticipants}
+                                    {event.participants}/
+                                    {event.maxParticipants === null
+                                      ? "không giới hạn"
+                                      : event.maxParticipants}
                                   </span>
                                 </div>
                               </div>
@@ -774,7 +713,7 @@ export default function MyEventsPage() {
                     return (
                       <Card
                         key={event.id}
-                        className="glass hover-lift card-shine cursor-pointer transition-all opacity-80 hover:opacity-100"
+                        className="glass hover-lift !bg-white/100 card-shine cursor-pointer transition-all opacity-80 hover:opacity-100"
                         onClick={() => handleEventClick(event)}
                       >
                         <CardContent className="p-6">

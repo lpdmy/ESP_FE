@@ -193,12 +193,12 @@ export default function JurySubmissions() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <Link>
+          <a href="/jury/dashboard">
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Quay lại hoạt động
             </Button>
-          </Link>
+          </a>
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-yellow-600 bg-clip-text text-transparent mb-2">
