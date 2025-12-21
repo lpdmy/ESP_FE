@@ -1,5 +1,5 @@
 import { motion } from "framer-motion"
-import { MessageCircle, Heart, UserPlus, Trophy, Calendar, Check, X, Server } from "lucide-react"
+import { MessageCircle, Heart, UserPlus, Trophy, Calendar, Check, X, Server, Bell, Star } from "lucide-react"
 import { Avatar, AvatarImage } from "@/common/components/ui/avatar"
 import { Button } from "@/common/components/ui/button"
 import { useNavigate } from "react-router-dom"
@@ -24,7 +24,9 @@ export default function NotificationItem({ notification, index = 0, compact = fa
             case "event":
                 return <Calendar className="h-4 w-4 text-purple-500" />;
             case "system":
-                return <Server className="h-4 w-4 text-gray-500" />; // 👈 thêm mới
+                return <Server className="h-4 w-4 text-gray-500" />;
+            case "starpoint":
+                return <Star className="h-4 w-4 text-yellow-500" />;
             default:
                 return <Bell className="h-4 w-4 text-gray-400" />;
         }
@@ -94,13 +96,19 @@ export default function NotificationItem({ notification, index = 0, compact = fa
         >
             <div className="flex items-start space-x-3">
                 <div className="relative flex-shrink-0">
+                    {notification?.avatar ? (
                     <Avatar className="h-12 w-12 bg-gradient-to-r from-orange-400 to-yellow-400 text-white font-semibold flex items-center justify-center">
-                        {notification?.avatar ? (
                             <AvatarImage src={notification.avatar} alt="Avatar" />
-                        ) : (
-                            <span>HT</span>
-                        )}
-                    </Avatar>
+                        </Avatar>
+                    ) : (
+                        <div className="h-12 w-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center overflow-hidden">
+                            <img 
+                                src="https://image2url.com/images/1764759513753-4a01ffc6-ebe9-4b17-8840-17c2162dba94.jpg" 
+                                alt="EduSphere Logo" 
+                                className="w-full h-full object-cover rounded-full"
+                            />
+                        </div>
+                    )}
                     <div className="absolute -bottom-1 -right-1 h-6 w-6 bg-white rounded-full flex items-center justify-center shadow-sm">
                         <div className="text-orange-600">{getIcon(notification.type)}</div>
                     </div>
