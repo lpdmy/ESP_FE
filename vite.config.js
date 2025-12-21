@@ -12,7 +12,12 @@ export default defineConfig({
       logOverride: { 'this-is-undefined-in-esm': 'silent' }
    },
    plugins: [
-      react(),
+      react({
+         // Đảm bảo React Fast Refresh hoạt động đúng và không tạo duplicate React
+         babel: {
+            plugins: []
+         }
+      }),
       VitePWA({
          registerType: 'prompt',
          includeAssets: ['favicon.ico', 'logo.svg', '/logo/*.png', '/assets/*.svg'],
@@ -107,11 +112,13 @@ export default defineConfig({
          '@admin': path.resolve(__dirname, './src/features/admin'),
          '@landing': path.resolve(__dirname, './src/features/landing'),
          '@LandingPage': path.resolve(__dirname, './src/features/landing/components'),
-         // Đảm bảo chỉ có 1 instance của React
+         // Đảm bảo chỉ có 1 instance của React - CRITICAL để fix useSyncExternalStore error
          'react': path.resolve(__dirname, './node_modules/react'),
          'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
+         'react/jsx-runtime': path.resolve(__dirname, './node_modules/react/jsx-runtime'),
+         'react/jsx-dev-runtime': path.resolve(__dirname, './node_modules/react/jsx-dev-runtime'),
       },
-      dedupe: ['react', 'react-dom'],
+      dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
    },
    server: {
       port: 3000,
@@ -146,12 +153,26 @@ export default defineConfig({
             manualChunks: (id) => {
                // Tách các thư viện lớn thành chunks riêng
                if (id.includes('node_modules')) {
-                  // React core - QUAN TRỌNG: React và React-DOM phải cùng chunk
-                  if (id.includes('react/') || id.includes('react-dom/') || 
-                      id === 'react' || id === 'react-dom' ||
-                      id.includes('react/jsx-runtime') || id.includes('react/jsx-dev-runtime')) {
+                  // React core - CRITICAL: Tất cả React modules PHẢI cùng chunk để tránh duplicate React instance
+                  // Kiểm tra tất cả các pattern có thể của React
+                  const isReactModule = 
+                     id.includes('react/') || 
+                     id.includes('react-dom/') || 
+                     id === 'react' || 
+                     id === 'react-dom' ||
+                     id.includes('react/jsx-runtime') || 
+                     id.includes('react/jsx-dev-runtime') ||
+                     id.includes('react-is') ||
+                     id.includes('scheduler') ||
+                     id.includes('object-assign') ||
+                     // Kiểm tra các thư viện phụ thuộc vào React
+                     (id.includes('react-router') && !id.includes('react-router-dom')) ||
+                     (id.includes('react-redux') && !id.includes('@reduxjs/toolkit'));
+                  
+                  if (isReactModule) {
                      return 'vendor-react';
                   }
+                  
                   // Ant Design
                   if (id.includes('antd')) {
                      return 'vendor-antd';
@@ -172,8 +193,8 @@ export default defineConfig({
                   if (id.includes('dayjs') || id.includes('moment')) {
                      return 'vendor-date';
                   }
-                  // Router
-                  if (id.includes('react-router')) {
+                  // Router (react-router-dom - không phải react-router core)
+                  if (id.includes('react-router-dom')) {
                      return 'vendor-router';
                   }
                   // Redux/State management
@@ -197,9 +218,13 @@ export default defineConfig({
       }
    },
    optimizeDeps: {
+      // Force pre-bundling để đảm bảo React được bundle đúng cách
+      force: true,
       include: [
          'react',
          'react-dom',
+         'react/jsx-runtime',
+         'react/jsx-dev-runtime',
          'react-is',
          'lucide-react',
          'dayjs',
