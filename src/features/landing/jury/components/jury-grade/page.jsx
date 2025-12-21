@@ -27,54 +27,45 @@ export default function Grading() {
   const location = useLocation();
   const navigate = useNavigate();
   const toast = useToast();
-  const { gradingSubmission, getJuryAssignNotGrade, getJuryAssignGrade } = useJuryApi();
+  const { gradingSubmission, getJuryAssignNotGrade, getJuryAssignGrade } =
+    useJuryApi();
   const [currentSubmission, setCurrentSubmission] = useState(0);
   const [criterias, setCriterias] = useState([]);
   const [grades, setGrades] = useState({});
-  const [submissions,setSubmissions] =useState([])
-  const [gradedSubmissions,setGradedSubmissions]=useState([])
-  const [openConfirm,setOpenConfirm]=useState(false)
-  const [openViewScores,setOpenViewScores]=useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-
+  const [submissions, setSubmissions] = useState([]);
+  const [gradedSubmissions, setGradedSubmissions] = useState([]);
+  const [openConfirm, setOpenConfirm] = useState(false);
+  const [openViewScores, setOpenViewScores] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedScore, setSelectedScore] = useState(null);
+  const [openScore, setOpenScore] = useState(false);
+  const [openImage, setOpenImage] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
   const syncAssignments = async (shouldNavigate = false) => {
     try {
       setIsLoading(true);
-      // Lấy tất cả assignment chưa chấm và đã chấm của user hiện tại
-      // QUAN TRỌNG: Backend đã filter theo userId của user hiện tại rồi
-      // Mỗi API call chỉ trả về assignments của chính user đó, không bao gồm assignments của giám khảo khác
-      // Do đó, việc chấm điểm của các giám khảo khác KHÔNG ảnh hưởng đến danh sách này
       if (!params.id) {
         console.error("Activity ID không hợp lệ");
         return 0;
       }
-      
-      // Sử dụng Lazy Loading để load tất cả pages tự động
-      // Load song song cả 2 danh sách để tối ưu performance
       const [ungradedList, gradedList] = await Promise.all([
         lazyLoadAllPages(
-          (pageNumber, pageSize) => getJuryAssignNotGrade(params.id, "", pageSize, pageNumber),
-          100 // PageSize hợp lý, không quá lớn
+          (pageNumber, pageSize) =>
+            getJuryAssignNotGrade(params.id, "", pageSize, pageNumber),
+          100
         ),
         lazyLoadAllPages(
-          (pageNumber, pageSize) => getJuryAssignGrade(params.id, "", pageSize, pageNumber),
-          100 // PageSize hợp lý, không quá lớn
+          (pageNumber, pageSize) =>
+            getJuryAssignGrade(params.id, "", pageSize, pageNumber),
+          100
         ),
       ]);
-      
-      // Lưu danh sách assignment đã chấm (theo assignmentId của user hiện tại, không phải submissionId)
-      // Mỗi assignment là riêng biệt cho mỗi giám khảo, nên không có conflict
       setGradedSubmissions(gradedList);
-      // Lưu danh sách assignment chưa chấm của user hiện tại
       setSubmissions(ungradedList);
-
-      // Giữ current index hợp lệ sau khi danh sách thay đổi
-      setCurrentSubmission((prev)=>{
-        if(!ungradedList.length) return 0;
+      setCurrentSubmission((prev) => {
+        if (!ungradedList.length) return 0;
         return Math.min(prev, ungradedList.length - 1);
       });
-
-      // Nếu đã chấm hết và cần điều hướng, quay lại trang danh sách
       if (shouldNavigate && ungradedList.length === 0) {
         navigate(`/jury/submission/${params.id}`);
       }
@@ -82,21 +73,21 @@ export default function Grading() {
       return ungradedList.length;
     } catch (error) {
       console.error("❌ Lỗi khi load assignments:", error);
-      // Hiển thị thông báo lỗi cho user
       toast.showError("Không thể tải danh sách bài chấm. Vui lòng thử lại.");
       return 0;
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Refresh dữ liệu khi vào trang hoặc khi activityId thay đổi
-  useEffect(()=>{
-    if(params.id) {
-    syncAssignments();
+  const handleViewScore = (submission) => {
+    setSelectedScore(submission);
+    setOpenScore(true);
+  };
+  useEffect(() => {
+    if (params.id) {
+      syncAssignments();
     }
-  },[params.id])
-  //  Chuyển tiêu chí lấy từ backend thành dạng có key
+  }, [params.id]);
   useEffect(() => {
     if (Array.isArray(submissions) && submissions.length > 0) {
       const raw = submissions[currentSubmission]?.criteria || [];
@@ -104,10 +95,7 @@ export default function Grading() {
         key: `criterion_${index}`,
         label,
       }));
-
       setCriterias(mapped);
-
-      // Khởi tạo điểm theo tiêu chí
       const initial = {};
       mapped.forEach((c) => (initial[c.key] = 0));
       initial.comment = "";
@@ -115,13 +103,11 @@ export default function Grading() {
     }
   }, [submissions, currentSubmission]);
 
-  // 🟢 Tính điểm tổng hợp
   const overallScore = Math.round(
     criterias.reduce((sum, c) => sum + (grades[c.key] ?? 0), 0) /
       (criterias.length || 1)
   );
 
-  // 🟢 Payload đúng chuẩn yêu cầu backend
   const buildGradePayload = () => {
     const scores = {};
     criterias.forEach((c) => {
@@ -166,20 +152,20 @@ export default function Grading() {
     submissions[currentSubmission]?.id;
   const currentSubmissionData = submissions[currentSubmission];
   const hasPending = submissions.length > 0;
-  
+
   // Kiểm tra xem assignment hiện tại (của user hiện tại) đã được chấm chưa
   // QUAN TRỌNG: Check dựa trên assignmentId của chính user này, KHÔNG phải submissionId
   // Mỗi giám khảo có assignment riêng cho mỗi bài, nên chỉ cần check assignment của chính họ
   // Các giám khảo khác chấm cùng bài KHÔNG ảnh hưởng đến việc chấm của user hiện tại
-  const isCurrentAssignmentGraded = currentAssignmentId 
+  const isCurrentAssignmentGraded = currentAssignmentId
     ? gradedSubmissions.some((g) => g.id === currentAssignmentId)
     : false;
   const handleNextSubmission = () => {
-  if (currentSubmission < submissions.length - 1) {
-    setCurrentSubmission((prev) => prev + 1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-};
+    if (currentSubmission < submissions.length - 1) {
+      setCurrentSubmission((prev) => prev + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
   useEffect(() => {
     if (!criterias.length || !submissions.length) return;
 
@@ -189,7 +175,6 @@ export default function Grading() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-white">
       <div className="max-w-6xl mx-auto px-4 py-6">
-
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <div>
@@ -197,15 +182,15 @@ export default function Grading() {
                 Chấm điểm bài thi
               </h1>
               <p className="text-gray-600">
-                {isLoading 
+                {isLoading
                   ? "Đang tải danh sách bài chấm..."
                   : hasPending
                   ? `Bài ${currentSubmission + 1}/${submissions.length}`
                   : "Không còn bài chờ chấm"}
               </p>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => navigate(`/jury/submission/${params.id}`)}
               className="gap-2"
             >
@@ -223,13 +208,42 @@ export default function Grading() {
             </CardHeader>
             <CardContent>
               {currentSubmissionData?.submission?.attachments?.length > 0 ? (
-                <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-4">
-                  {currentSubmissionData.submission.attachments[0].fileType === "image" ? (
-                    <img
-                      src={currentSubmissionData.submission.attachments[0].url}
-                      alt={currentSubmissionData.submission.attachments[0].fileName}
-                      className="w-full h-full object-cover"
-                    />
+                <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-4 group">
+                  {currentSubmissionData.submission.attachments[0].fileType ===
+                  "image" ? (
+                    <>
+                      <img
+                        src={
+                          currentSubmissionData.submission.attachments[0].url
+                        }
+                        alt={
+                          currentSubmissionData.submission.attachments[0]
+                            .fileName
+                        }
+                        className="w-full h-full object-cover cursor-zoom-in hover:opacity-90 transition"
+                        onClick={() => {
+                          const fullImageUrl =
+                            currentSubmissionData.submission.attachments[0].url.replace(
+                              "/upload/",
+                              "/upload/w_2000,c_limit/"
+                            );
+                          setImageUrl(fullImageUrl);
+                          setOpenImage(true);
+                        }}
+                      />
+
+                      {/* Hover text */}
+                      {currentSubmissionData.submission.attachments[0]
+                        .fileName && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                          {
+                            currentSubmissionData.submission.attachments[0]
+                              .fileName
+                          }{" "}
+                          – Click để xem full size
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <a
                       href={currentSubmissionData.submission.attachments[0].url}
@@ -239,10 +253,18 @@ export default function Grading() {
                       className="flex flex-col items-center justify-center w-full h-full bg-orange-50 border border-orange-200 rounded-lg p-4 hover:bg-orange-100"
                     >
                       <span className="text-orange-700 font-medium">
-                        {currentSubmissionData.submission.attachments[0].fileName}
+                        {
+                          currentSubmissionData.submission.attachments[0]
+                            .fileName
+                        }
                       </span>
                       <span className="text-xs text-gray-500 mt-1">
-                        Tải xuống ({currentSubmissionData.submission.attachments[0].fileType})
+                        Tải xuống (
+                        {
+                          currentSubmissionData.submission.attachments[0]
+                            .fileType
+                        }
+                        )
                       </span>
                     </a>
                   )}
@@ -252,10 +274,30 @@ export default function Grading() {
                   <p className="text-gray-400">Không có file đính kèm</p>
                 </div>
               )}
+
               <h3 className="font-bold text-xl mb-1">
                 {currentSubmissionData?.submission?.title ||
                   (hasPending ? "Không rõ" : "Đã chấm hết bài được giao")}
               </h3>
+
+              {/* MODAL FULL SIZE */}
+              {openImage && (
+                <div
+                  className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+                  onClick={() => setOpenImage(false)}
+                >
+                  <img
+                    src={imageUrl}
+                    alt="Full size"
+                    className="
+        w-[90vw] 
+        h-[90vh] 
+        object-contain 
+        cursor-zoom-out
+      "
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -278,50 +320,56 @@ export default function Grading() {
                       Bạn đã chấm hết các bài được phân công.
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Vui lòng quay lại trang danh sách để xem điểm hoặc chờ bài mới được phân công.
+                      Vui lòng quay lại trang danh sách để xem điểm hoặc chờ bài
+                      mới được phân công.
                     </p>
                   </div>
                 )}
-                {!isLoading && hasPending && criterias.map((c) => (
-                  <div key={c.key}>
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="font-semibold">{c.label}</Label>
-                    <span className="text-2xl font-bold text-orange-600">
-                        {grades[c.key]}
-                      </span>
-                    </div>
+                {!isLoading &&
+                  hasPending &&
+                  criterias.map((c) => (
+                    <div key={c.key}>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="font-semibold">{c.label}</Label>
+                        <span className="text-2xl font-bold text-orange-600">
+                          {grades[c.key]}
+                        </span>
+                      </div>
 
-                  <div className="flex flex-col gap-2">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={grades[c.key] ?? 0}
-                      className="w-24"
-                      disabled={isCurrentAssignmentGraded || isLoading}
-                      onChange={(e)=>{
-                        const val = Number(e.target.value);
-                        const safe = Math.min(100, Math.max(0, isNaN(val)?0:val));
-                        setGrades({...grades,[c.key]: safe})
-                      }}
-                    />
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={grades[c.key] ?? 0}
-                      disabled={isCurrentAssignmentGraded || isLoading}
-                      onChange={(e) =>
-                        setGrades({
-                          ...grades,
-                          [c.key]: Number(e.target.value),
-                        })
-                      }
-                      className="w-full accent-orange-600"
-                    />
-                  </div>
-                  </div>
-                ))}
+                      <div className="flex flex-col gap-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={grades[c.key] ?? 0}
+                          className="w-24"
+                          disabled={isCurrentAssignmentGraded || isLoading}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            const safe = Math.min(
+                              100,
+                              Math.max(0, isNaN(val) ? 0 : val)
+                            );
+                            setGrades({ ...grades, [c.key]: safe });
+                          }}
+                        />
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={grades[c.key] ?? 0}
+                          disabled={isCurrentAssignmentGraded || isLoading}
+                          onChange={(e) =>
+                            setGrades({
+                              ...grades,
+                              [c.key]: Number(e.target.value),
+                            })
+                          }
+                          className="w-full accent-orange-600"
+                        />
+                      </div>
+                    </div>
+                  ))}
 
                 <div className="pt-4 border-t flex justify-between">
                   <Label className="font-semibold text-lg">Điểm tổng hợp</Label>
@@ -345,7 +393,9 @@ export default function Grading() {
                     setGrades({ ...grades, comment: e.target.value })
                   }
                   rows={6}
-                  disabled={!hasPending || isCurrentAssignmentGraded || isLoading}
+                  disabled={
+                    !hasPending || isCurrentAssignmentGraded || isLoading
+                  }
                 />
               </CardContent>
             </Card>
@@ -361,12 +411,14 @@ export default function Grading() {
                 Bài trước
               </Button>
               <Button
-                onClick={()=>setOpenConfirm(true)}
+                onClick={() => setOpenConfirm(true)}
                 className="flex-1 bg-gradient-orange text-white"
                 disabled={isCurrentAssignmentGraded || !hasPending || isLoading}
               >
-                {hasPending 
-                  ? (isCurrentAssignmentGraded ? "Đã chấm" : "Chấm điểm") 
+                {hasPending
+                  ? isCurrentAssignmentGraded
+                    ? "Đã chấm"
+                    : "Chấm điểm"
                   : "Hết bài"}
               </Button>
               {hasPending && currentSubmission < submissions.length - 1 ? (
@@ -378,8 +430,10 @@ export default function Grading() {
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               ) : (
-                <Button 
-                  disabled={hasPending && currentSubmission < submissions.length - 1} 
+                <Button
+                  disabled={
+                    hasPending && currentSubmission < submissions.length - 1
+                  }
                   className="flex-1 bg-green-500 text-white"
                 >
                   <CheckCircle className="w-4 h-4 mr-2" /> Hoàn thành
@@ -403,10 +457,12 @@ export default function Grading() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={()=>setOpenConfirm(false)}>Hủy</Button>
+            <Button variant="outline" onClick={() => setOpenConfirm(false)}>
+              Hủy
+            </Button>
             <Button
               className="bg-gradient-orange text-white"
-              onClick={async ()=>{
+              onClick={async () => {
                 await handleSubmitGrade();
                 setOpenConfirm(false);
                 const remainingCount = await syncAssignments(true);
@@ -425,9 +481,9 @@ export default function Grading() {
       {/* View scores dialog */}
       <Dialog
         open={openViewScores}
-        onOpenChange={(val)=>{
+        onOpenChange={(val) => {
           setOpenViewScores(val);
-          if(val) syncAssignments();
+          if (val) syncAssignments();
         }}
       >
         <DialogContent className="max-w-4xl">
@@ -441,8 +497,11 @@ export default function Grading() {
             {gradedSubmissions.length === 0 && (
               <p className="text-sm text-muted-foreground">Chưa có bài nào.</p>
             )}
-            {gradedSubmissions.map((item)=>(
-              <div key={item.id} className="p-3 border rounded-lg flex items-center justify-between">
+            {gradedSubmissions.map((item) => (
+              <div
+                key={item.id}
+                className="p-3 border rounded-lg flex items-center justify-between"
+              >
                 <div className="flex flex-col">
                   <span className="font-semibold">
                     {item.submission?.submissionCode
@@ -462,11 +521,151 @@ export default function Grading() {
             ))}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={()=>setOpenViewScores(false)}>Đóng</Button>
+            <Button variant="outline" onClick={() => setOpenViewScores(false)}>
+              Đóng
+            </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={openScore} onOpenChange={setOpenScore}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedScore?.submission?.submissionCode
+                ? `Mã bài: ${selectedScore.submission.submissionCode}`
+                : selectedScore?.submission?.orderNumber
+                ? `Bài #${selectedScore.submission.orderNumber}`
+                : selectedScore?.title || "Bài đã chấm"}
+            </DialogTitle>
+            <DialogDescription>Điểm đã chấm cho bài này.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Điểm số */}
+            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
+              <span className="text-sm font-semibold text-muted-foreground">
+                Tổng điểm
+              </span>
+              <span className="text-3xl font-bold text-orange-600">
+                {selectedScore?.totalScore ?? "--"}
+              </span>
+            </div>
+
+            {/* Nhận xét */}
+            {selectedScore?.comment && (
+              <div className="space-y-2">
+                <span className="text-sm font-semibold">Nhận xét</span>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap p-3 bg-gray-50 rounded-lg">
+                  {selectedScore.comment}
+                </p>
+              </div>
+            )}
+
+            {/* Bài nộp - Hiển thị tất cả attachments */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-lg">Bài nộp</h4>
+              {selectedScore?.submission?.attachments &&
+              selectedScore.submission.attachments.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedScore.submission.attachments.map(
+                    (attachment, index) => (
+                      <div
+                        key={index}
+                        className="border rounded-lg overflow-hidden"
+                      >
+                        {attachment.fileType === "image" ? (
+                          <div className="relative w-full group">
+                            <a
+                              href={attachment.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block cursor-pointer hover:opacity-90 transition-opacity"
+                            >
+                              <img
+                                src={attachment.url}
+                                alt={attachment.fileName || `Ảnh ${index + 1}`}
+                                className="w-full h-auto max-h-96 object-contain bg-gray-100 rounded-lg"
+                              />
+                            </a>
+                            {attachment.fileName && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                {attachment.fileName} - Click để xem full size
+                              </div>
+                            )}
+                          </div>
+                        ) : attachment.fileType === "video" ? (
+                          <div className="relative w-full aspect-video bg-black">
+                            <video
+                              src={attachment.url}
+                              controls
+                              className="w-full h-full"
+                            >
+                              Trình duyệt của bạn không hỗ trợ video.
+                            </video>
+                          </div>
+                        ) : attachment.fileType === "audio" ? (
+                          <div className="p-4 bg-gray-50">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="text-sm font-medium">
+                                {attachment.fileName || `Audio ${index + 1}`}
+                              </span>
+                            </div>
+                            <audio
+                              src={attachment.url}
+                              controls
+                              className="w-full"
+                            >
+                              Trình duyệt của bạn không hỗ trợ audio.
+                            </audio>
+                          </div>
+                        ) : (
+                          <a
+                            href={attachment.url}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col items-center justify-center w-full p-6 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
+                          >
+                            <Download className="w-8 h-8 text-orange-600 mb-2" />
+                            <span className="text-orange-700 font-medium text-center">
+                              {attachment.fileName || `File ${index + 1}`}
+                            </span>
+                            <span className="text-xs text-gray-500 mt-1">
+                              {attachment.fileType
+                                ? `Loại: ${attachment.fileType}`
+                                : "Tải xuống"}
+                            </span>
+                          </a>
+                        )}
+                      </div>
+                    )
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm text-muted-foreground text-center">
+                    Không có file đính kèm
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Thông tin bài nộp */}
+            {selectedScore?.submission?.title && (
+              <div className="space-y-2 pt-4 border-t">
+                <span className="text-sm font-semibold">Tiêu đề bài nộp</span>
+                <p className="text-sm text-muted-foreground">
+                  {selectedScore.submission.title}
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end pt-4">
+            <Button variant="outline" onClick={() => setOpenScore(false)}>
+              Đóng
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
-
