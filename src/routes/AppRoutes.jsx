@@ -13,6 +13,7 @@ import { adminSystemNewsAndNoticesRoutes } from "./AdminSystemNewsAndNoticesRout
 import { systemNewsAndNoticesRoutes } from "./SystemNewsAndNoticesRoutes";
 import { submissionRoutes } from "./SubmissionRoutes";
 import { juryRoutes } from "./JuryRoutes";
+import { weeklyQuizRoutes } from "./WeeklyQuizRoutes";
 
 import { activityRoutes } from "./ActivityRoutes";
 
@@ -34,6 +35,7 @@ export default function AppRoutes() {
       {...juryRoutes}
       {...activityRoutes}
       {...submissionRoutes}
+      {...weeklyQuizRoutes}
 
     </Routes>
   );

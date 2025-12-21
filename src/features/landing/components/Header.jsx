@@ -11,11 +11,12 @@ import { useNavigate } from "react-router-dom"
 import { GlobalSearch } from "@/common/components/search/GlobalSearch"
 
 import { clearUser } from "@/store/user/userSlice";
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import NotificationModal from "@/features/notifications/NotificationModal"
 import { disconnectNotificationHub } from "@/features/notifications/services/signalr/notificationHub"
-import { clearNotifications } from "@/store/notification/notificationSlice"
+import { clearNotifications, setNotifications } from "@/store/notification/notificationSlice"
 import { disconnectChatHub } from "@/common/signalr/chatHub"
+import { useNotificationApi } from "@/features/notifications/hooks/useNotificationApi"
 
 export default function Header() {
   const dispatch = useDispatch();
@@ -26,6 +27,24 @@ export default function Header() {
   const { isOpen, openMenu, closeMenu, toggleMenu } = useDropdownMenu(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationCount = useSelector(state => state.notifications.count);
+  const { getByUser } = useNotificationApi();
+
+  // Fetch số thông báo chưa đọc khi load trang
+  useEffect(() => {
+    if (user?.id) {
+      const fetchNotifications = async () => {
+        try {
+          const notifications = await getByUser();
+          if (notifications && Array.isArray(notifications)) {
+            dispatch(setNotifications(notifications));
+          }
+        } catch (error) {
+          console.error("Error fetching notifications:", error);
+        }
+      };
+      fetchNotifications();
+    }
+  }, [user?.id, dispatch, getByUser]);
   const handleLogout = () => {
     dispatch(clearUser());
     localStorage.removeItem("token");
@@ -87,14 +106,22 @@ export default function Header() {
             {/* Notifications */}
             <Button variant="ghost"
               className="relative p-3 hover:bg-orange-50 hover:text-orange-600 transition-colors rounded-xl"
-              onClick={() => {
-                setIsNotificationOpen(true);        // mở modal
-                dispatch(clearNotifications());     // reset count + clear list
+              onClick={async () => {
+                setIsNotificationOpen(true);
+                // Refresh notifications khi mở modal
+                try {
+                  const notifications = await getByUser();
+                  if (notifications && Array.isArray(notifications)) {
+                    dispatch(setNotifications(notifications));
+                  }
+                } catch (error) {
+                  console.error("Error fetching notifications:", error);
+                }
               }}>
               <Bell className="h-5 w-5" />
               {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold shadow-lg">
-                  {notificationCount}
+                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 shadow-lg animate-pulse">
+                  {notificationCount > 99 ? '99+' : notificationCount}
                 </span>
               )}
             </Button>

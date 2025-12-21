@@ -276,6 +276,15 @@ export const API_CONFIG = {
     GET_SPORT_ROSTERS: "/activityparticipant/sport-rosters",
   },
 
+  // Statistics endpoints
+  STATISTICS: {
+    ACTIVITY_OVERVIEW: "/statistics/activities/overview",
+    ACTIVITY_DETAIL: "/statistics/activities/{activityId}",
+    ACADEMIC_YEAR: "/statistics/academic-years/{academicYearId}",
+    CLASS_GROUP: "/statistics/classgroups/{classGroupId}",
+    DASHBOARD: "/statistics/dashboard",
+  },
+
   // Timetable endpoints
   TIMETABLE: {
     IMPORT: "/timetable/import",
@@ -320,6 +329,21 @@ export const API_CONFIG = {
     GET_ALL_MODERATION:'/moderation/report',
     GET_USER_STAT : '/moderation/user-violations',
     CREATE_NOTIFICATION: '/moderation/alert',
+  },
+
+  WEEKLY_QUIZ: {
+    CREATE: '/weekly-quiz',
+    GET_BY_ID: '/weekly-quiz/{id}',
+    GET_ALL: '/weekly-quiz/all',
+    GET_BY_WEEK_YEAR: '/weekly-quiz/week/{weekNumber}/year/{year}',
+    GET_MY_QUIZZES: '/weekly-quiz/my-quizzes',
+    UPDATE: '/weekly-quiz/{id}',
+    DELETE: '/weekly-quiz/{id}',
+    SUBMIT: '/weekly-quiz/submit',
+    GET_MY_SUBMISSION: '/weekly-quiz/{quizId}/my-submission',
+    CHECK_SUBMITTED: '/weekly-quiz/{quizId}/check-submitted',
+    GET_SUBMISSIONS: '/weekly-quiz/{quizId}/submissions',
+    GET_MY_SUBMISSIONS: '/weekly-quiz/my-submissions',
     UPDATE_STATUS :'/moderation/update-status',
   },
 };

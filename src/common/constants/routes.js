@@ -24,7 +24,8 @@ export const ROUTES = {
     AI_SCHEDULE: "/admin/activities/:id/ai-schedule",
     CLASSES: "admin/classes",
     CLASS_DETAIL: "/admin/classes/:id",
-    MODERATION:"/admin/moderation"
+    MODERATION:"/admin/moderation",
+    STATISTICS: "/admin/statistics"
   },
   USER_PROFILE: {
     PROFILE: "/profile",
@@ -74,6 +75,12 @@ export const ROUTES = {
   },
   NOTIFICATION: {
     LIST_NOTIFICATION: "/notifications",
+  },
+  WEEKLY_QUIZ: {
+    LIST: "/weekly-quiz",
+    CREATE: "/weekly-quiz/create",
+    DETAIL: "/weekly-quiz/:id",
+    MY_SUBMISSIONS: "/weekly-quiz/my-submissions",
   },
   JURY:{
     ASSIGN_JURY:"/jury/assign-jury/:id",

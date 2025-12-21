@@ -52,8 +52,17 @@ const notificationSlice = createSlice({
         localStorage.setItem("notifications", JSON.stringify(state.list));
       }
     },
+    setUnreadCount: (state, action) => {
+      state.count = action.payload;
+    },
+    setNotifications: (state, action) => {
+      state.list = action.payload;
+      // Đếm số lượng thông báo chưa đọc
+      state.count = action.payload.filter((n) => !n.read).length;
+      localStorage.setItem("notifications", JSON.stringify(state.list));
+    },
   },
 });
 
-export const { addNotification, clearNotifications, loadNotificationsFromStorage, markAsRead } = notificationSlice.actions;
+export const { addNotification, clearNotifications, loadNotificationsFromStorage, markAsRead, setUnreadCount, setNotifications } = notificationSlice.actions;
 export default notificationSlice.reducer;
