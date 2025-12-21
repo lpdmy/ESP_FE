@@ -3,6 +3,31 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// Plugin để inject preload link cho React chunk - CRITICAL cho Netlify deployment
+function reactChunkPreload() {
+   return {
+      name: 'react-chunk-preload',
+      generateBundle(options, bundle) {
+         // Tìm React chunk
+         const reactChunk = Object.keys(bundle).find(
+            key => key.includes('vendor-react') && key.endsWith('.js')
+         );
+         
+         if (reactChunk && bundle['index.html']) {
+            const html = bundle['index.html'];
+            if (html.type === 'asset' && typeof html.source === 'string') {
+               // Inject preload link vào <head> để đảm bảo React load trước
+               const preloadLink = `    <link rel="modulepreload" href="/${reactChunk}" crossorigin>\n`;
+               html.source = html.source.replace(
+                  /<head>/,
+                  `<head>\n${preloadLink}`
+               );
+            }
+         }
+      }
+   };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
    define: {
@@ -18,6 +43,7 @@ export default defineConfig({
             plugins: []
          }
       }),
+      reactChunkPreload(),
       VitePWA({
          registerType: 'prompt',
          includeAssets: ['favicon.ico', 'logo.svg', '/logo/*.png', '/assets/*.svg'],
@@ -117,8 +143,15 @@ export default defineConfig({
          'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
          'react/jsx-runtime': path.resolve(__dirname, './node_modules/react/jsx-runtime'),
          'react/jsx-dev-runtime': path.resolve(__dirname, './node_modules/react/jsx-dev-runtime'),
+         'use-sync-external-store': path.resolve(__dirname, './node_modules/use-sync-external-store'),
       },
-      dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
+      dedupe: [
+         'react', 
+         'react-dom', 
+         'react/jsx-runtime', 
+         'react/jsx-dev-runtime',
+         'use-sync-external-store' // CRITICAL: react-redux dependency, phải cùng React instance
+      ],
    },
    server: {
       port: 3000,
@@ -150,6 +183,20 @@ export default defineConfig({
       sourcemap: false,
       rollupOptions: {
          output: {
+            // Đảm bảo React chunk được load đầu tiên và đồng bộ
+            entryFileNames: 'assets/[name]-[hash].js',
+            chunkFileNames: (chunkInfo) => {
+               // React chunk PHẢI được đặt tên đặc biệt để load đầu tiên
+               // Trên Netlify, không dùng hash cho React chunk để đảm bảo preload hoạt động
+               if (chunkInfo.name === 'vendor-react') {
+                  return 'assets/vendor-react-[hash].js';
+               }
+               return 'assets/[name]-[hash].js';
+            },
+            // Đảm bảo React chunk được import đúng cách
+            format: 'es',
+            // Đảm bảo chunk dependencies được resolve đúng
+            interop: 'compat',
             manualChunks: (id) => {
                // Tách các thư viện lớn thành chunks riêng
                if (id.includes('node_modules')) {
@@ -165,9 +212,12 @@ export default defineConfig({
                      id.includes('react-is') ||
                      id.includes('scheduler') ||
                      id.includes('object-assign') ||
-                     // Kiểm tra các thư viện phụ thuộc vào React
-                     (id.includes('react-router') && !id.includes('react-router-dom')) ||
-                     (id.includes('react-redux') && !id.includes('@reduxjs/toolkit'));
+                     // CRITICAL: use-sync-external-store phải cùng chunk với React
+                     id.includes('use-sync-external-store') ||
+                     // CRITICAL: react-redux cũng phải cùng chunk với React để đảm bảo useSyncExternalStore hoạt động
+                     id.includes('react-redux') ||
+                     // Kiểm tra các thư viện phụ thuộc vào React core
+                     (id.includes('react-router') && !id.includes('react-router-dom'));
                   
                   if (isReactModule) {
                      return 'vendor-react';
@@ -197,8 +247,8 @@ export default defineConfig({
                   if (id.includes('react-router-dom')) {
                      return 'vendor-router';
                   }
-                  // Redux/State management
-                  if (id.includes('redux') || id.includes('@reduxjs')) {
+                  // Redux/State management (nhưng KHÔNG bao gồm react-redux - đã ở vendor-react)
+                  if ((id.includes('redux') || id.includes('@reduxjs')) && !id.includes('react-redux')) {
                      return 'vendor-redux';
                   }
                   // SignalR
@@ -215,6 +265,18 @@ export default defineConfig({
       commonjsOptions: {
          include: [/node_modules/],
          transformMixedEsModules: true
+      },
+      // Đảm bảo React chunk được load đầu tiên
+      modulePreload: {
+         polyfill: true,
+         resolveDependencies: (filename, deps) => {
+            // Nếu đây là React chunk, không cần preload gì cả (nó là base)
+            if (filename.includes('vendor-react')) {
+               return [];
+            }
+            // Các chunk khác cần preload React chunk
+            return deps.filter(dep => dep.includes('vendor-react'));
+         }
       }
    },
    optimizeDeps: {
@@ -226,6 +288,7 @@ export default defineConfig({
          'react/jsx-runtime',
          'react/jsx-dev-runtime',
          'react-is',
+         'use-sync-external-store', // CRITICAL: Đảm bảo pre-bundle cùng React
          'lucide-react',
          'dayjs',
          'dayjs/plugin/weekday',

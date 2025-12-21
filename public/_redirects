@@ -1,0 +1,10 @@
+# Netlify redirects cho SPA
+# Đảm bảo tất cả routes đều serve index.html để React Router hoạt động
+
+# Preload React chunk để đảm bảo load đầu tiên
+/assets/vendor-react.js 200
+/assets/vendor-react-*.js 200
+
+# SPA fallback - tất cả routes khác đều serve index.html
+/*    /index.html   200
+
