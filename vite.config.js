@@ -3,21 +3,21 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// Plugin để inject preload link cho React chunk - CRITICAL cho Netlify deployment
+// Plugin để inject preload link cho entry chunk - CRITICAL cho Netlify deployment
 function reactChunkPreload() {
    return {
       name: 'react-chunk-preload',
       generateBundle(options, bundle) {
-         // Tìm React chunk
-         const reactChunk = Object.keys(bundle).find(
-            key => key.includes('vendor-react') && key.endsWith('.js')
+         // Tìm entry chunk (chứa React)
+         const entryChunk = Object.keys(bundle).find(
+            key => (key.includes('index') || key.includes('main')) && key.endsWith('.js')
          );
          
-         if (reactChunk && bundle['index.html']) {
+         if (entryChunk && bundle['index.html']) {
             const html = bundle['index.html'];
             if (html.type === 'asset' && typeof html.source === 'string') {
-               // Inject preload link vào <head> để đảm bảo React load trước
-               const preloadLink = `    <link rel="modulepreload" href="/${reactChunk}" crossorigin>\n`;
+               // Inject preload link vào <head> để đảm bảo entry chunk (chứa React) load trước
+               const preloadLink = `    <link rel="modulepreload" href="/${entryChunk}" crossorigin>\n`;
                html.source = html.source.replace(
                   /<head>/,
                   `<head>\n${preloadLink}`
@@ -183,45 +183,44 @@ export default defineConfig({
       sourcemap: false,
       rollupOptions: {
          output: {
-            // Đảm bảo React chunk được load đầu tiên và đồng bộ
+            // Entry chunk chứa React - đảm bảo load đầu tiên
             entryFileNames: 'assets/[name]-[hash].js',
-            chunkFileNames: (chunkInfo) => {
-               // React chunk PHẢI được đặt tên đặc biệt để load đầu tiên
-               // Trên Netlify, không dùng hash cho React chunk để đảm bảo preload hoạt động
-               if (chunkInfo.name === 'vendor-react') {
-                  return 'assets/vendor-react-[hash].js';
-               }
-               return 'assets/[name]-[hash].js';
-            },
+            chunkFileNames: 'assets/[name]-[hash].js',
             // Đảm bảo React chunk được import đúng cách
             format: 'es',
             // Đảm bảo chunk dependencies được resolve đúng
             interop: 'compat',
+            // Đảm bảo entry chunk được load trước các chunk khác
+            inlineDynamicImports: false,
             manualChunks: (id) => {
+               // CRITICAL: React và các dependencies của nó PHẢI được bundle vào entry chunk
+               // để đảm bảo React luôn có sẵn trước khi các chunk khác load
+               const isReactModule = 
+                  id.includes('react/') || 
+                  id.includes('react-dom/') || 
+                  id === 'react' || 
+                  id === 'react-dom' ||
+                  id.includes('react/jsx-runtime') || 
+                  id.includes('react/jsx-dev-runtime') ||
+                  id.includes('react-is') ||
+                  id.includes('scheduler') ||
+                  id.includes('object-assign') ||
+                  // CRITICAL: use-sync-external-store phải cùng với React
+                  id.includes('use-sync-external-store') ||
+                  // CRITICAL: react-redux cũng phải cùng với React
+                  id.includes('react-redux') ||
+                  // react-router core cũng cần React
+                  (id.includes('react-router') && !id.includes('react-router-dom'));
+               
+               // KHÔNG tách React ra thành chunk riêng - để nó trong entry chunk
+               // Điều này đảm bảo React luôn có sẵn khi các chunk khác load
+               if (isReactModule) {
+                  // Return undefined để React được bundle vào entry chunk
+                  return undefined;
+               }
+               
                // Tách các thư viện lớn thành chunks riêng
                if (id.includes('node_modules')) {
-                  // React core - CRITICAL: Tất cả React modules PHẢI cùng chunk để tránh duplicate React instance
-                  // Kiểm tra tất cả các pattern có thể của React
-                  const isReactModule = 
-                     id.includes('react/') || 
-                     id.includes('react-dom/') || 
-                     id === 'react' || 
-                     id === 'react-dom' ||
-                     id.includes('react/jsx-runtime') || 
-                     id.includes('react/jsx-dev-runtime') ||
-                     id.includes('react-is') ||
-                     id.includes('scheduler') ||
-                     id.includes('object-assign') ||
-                     // CRITICAL: use-sync-external-store phải cùng chunk với React
-                     id.includes('use-sync-external-store') ||
-                     // CRITICAL: react-redux cũng phải cùng chunk với React để đảm bảo useSyncExternalStore hoạt động
-                     id.includes('react-redux') ||
-                     // Kiểm tra các thư viện phụ thuộc vào React core
-                     (id.includes('react-router') && !id.includes('react-router-dom'));
-                  
-                  if (isReactModule) {
-                     return 'vendor-react';
-                  }
                   
                   // Ant Design
                   if (id.includes('antd')) {
@@ -266,16 +265,16 @@ export default defineConfig({
          include: [/node_modules/],
          transformMixedEsModules: true
       },
-      // Đảm bảo React chunk được load đầu tiên
+      // Đảm bảo entry chunk (chứa React) được load đầu tiên
       modulePreload: {
          polyfill: true,
          resolveDependencies: (filename, deps) => {
-            // Nếu đây là React chunk, không cần preload gì cả (nó là base)
-            if (filename.includes('vendor-react')) {
+            // Entry chunk không cần preload gì cả (nó là base)
+            if (filename.includes('index') || filename.includes('main')) {
                return [];
             }
-            // Các chunk khác cần preload React chunk
-            return deps.filter(dep => dep.includes('vendor-react'));
+            // Các chunk khác cần preload entry chunk nếu có dependency
+            return deps.filter(dep => dep.includes('index') || dep.includes('main'));
          }
       }
    },
