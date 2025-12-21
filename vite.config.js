@@ -107,7 +107,11 @@ export default defineConfig({
          '@admin': path.resolve(__dirname, './src/features/admin'),
          '@landing': path.resolve(__dirname, './src/features/landing'),
          '@LandingPage': path.resolve(__dirname, './src/features/landing/components'),
+         // Đảm bảo chỉ có 1 instance của React
+         'react': path.resolve(__dirname, './node_modules/react'),
+         'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
       },
+      dedupe: ['react', 'react-dom'],
    },
    server: {
       port: 3000,
@@ -142,8 +146,10 @@ export default defineConfig({
             manualChunks: (id) => {
                // Tách các thư viện lớn thành chunks riêng
                if (id.includes('node_modules')) {
-                  // React core
-                  if (id.includes('react') || id.includes('react-dom')) {
+                  // React core - QUAN TRỌNG: React và React-DOM phải cùng chunk
+                  if (id.includes('react/') || id.includes('react-dom/') || 
+                      id === 'react' || id === 'react-dom' ||
+                      id.includes('react/jsx-runtime') || id.includes('react/jsx-dev-runtime')) {
                      return 'vendor-react';
                   }
                   // Ant Design
@@ -184,7 +190,11 @@ export default defineConfig({
             }
          }
       },
-      chunkSizeWarningLimit: 1000
+      chunkSizeWarningLimit: 1000,
+      commonjsOptions: {
+         include: [/node_modules/],
+         transformMixedEsModules: true
+      }
    },
    optimizeDeps: {
       include: [
