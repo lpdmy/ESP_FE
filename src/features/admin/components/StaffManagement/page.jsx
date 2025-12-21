@@ -99,7 +99,6 @@ export default function StaffManagement() {
       setTotalCount(total);
       setTotalPages(Math.ceil(total / pageSize));
     } catch (error) {
-      console.log(error);
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +125,7 @@ export default function StaffManagement() {
       if (error.statusCode == 400) {
         toast.showError(error.message);
       } else {
-        toast.recoveryStaffFail;
+        toast.recoveryStaffFail();
       }
     }
   };

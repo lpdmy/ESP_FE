@@ -195,11 +195,6 @@ const UpdatePostModal = ({ isOpen, onClose, post,payload }) => {
         : "other",
       uploadProgress: 0, // bắt đầu từ 0 để simulate
     };
-console.log("📂 File đã chọn:", {
-        name: file.name,
-        type: file.type,
-        size: file.size / 1024 + " KB",
-      });
     simulateIndividualUpload(mediaObj);
     newFiles.push(mediaObj);
   });
@@ -285,7 +280,6 @@ const simulateIndividualUpload = async (file) => {
       attachmentUrls: uploadedAttachments,
       hashtagInput: "",
     };
-    console.log("📤 Update payload:", payload);
     await updatePost(payload);
     showSuccess("Cập nhật bài đăng thành công");
     onClose();

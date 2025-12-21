@@ -57,6 +57,7 @@ import CreatePostModal from "../../post/CreatePostModal";
 import DeletePostModal from "../../post/DeletePostModal";
 import UpdatePostModal from "../../post/UpdatePostModal";
 import { useSelector } from "react-redux";
+import { ROLE } from "@/common/constants/roles";
 export default function ClubDetail() {
   const { isOpen: isDialogOpen, openDialog, closeDialog } = useDialog();
   const {
@@ -103,6 +104,14 @@ export default function ClubDetail() {
   };
   const user = useSelector((state) => state.user.user);
   const currentUserId = getUserId(user) || 1;
+
+  const rawRole = user?.role ?? user?.userRole;
+  const roleValue =
+    typeof rawRole === "string" ? rawRole.toUpperCase() : rawRole;
+  const isTeacher =
+    roleValue === ROLE.TEACHER || roleValue === "TEACHER";
+  const isStudent =
+    roleValue === ROLE.STUDENT || roleValue === "STUDENT";
   const handleClubDetail = async () => {
     try {
       const response = await getClubDetail(clubid);
@@ -110,14 +119,11 @@ export default function ClubDetail() {
       SetIsJoined(response.data.isMember);
       setIsRequestToJoin(response.data.isRequestToJoin);
       SetIsPresident(response.data.isPresident);
-      console.log(response);
     } catch (error) {
       toast.loadClubFail();
-      console.log(error);
     }
   };
   const getProfileRoute = (user) => {
-    console.log("User object:", user);
     const role = Number(user?.userRole);
     switch (role) {
       case 2:
@@ -153,9 +159,7 @@ export default function ClubDetail() {
       const response = await getClubPost(clubid);
       const data = response.data;
       setPosts(data);
-      console.log("bài đăng", data);
     } catch (error) {
-      console.log(error);
     }
   };
   const handleCancelRequest = async () => {
@@ -163,7 +167,6 @@ export default function ClubDetail() {
       await cancelJoinRequest(clubid);
       handleClubDetail();
     } catch (err) {
-      console.log(err);
     }
   };
   const handleChangeRole = (vaitro) => {
@@ -184,7 +187,6 @@ export default function ClubDetail() {
   const handleCreatePost = async (newPost) => {
     try {
     } catch (error) {
-      console.error("❌ Lỗi khi reload bài đăng:", error);
     }
   };
   const handleSubmit = async ({ reasonToJoin, experience }) => {
@@ -194,7 +196,6 @@ export default function ClubDetail() {
       toast.createClubJoinRequestSuccess();
       handleClubDetail();
     } catch (error) {
-      toast.createClubJoinRequestFail();
     }
   };
   const handleLeaveClub = async () => {
@@ -211,16 +212,15 @@ export default function ClubDetail() {
     try {
       await approveInvitation(clubid);
       toast.approveInvitationSuccess();
+      handleClubDetail()
     } catch (error) {
       toast.approveInvitationFail();
-      console.log(error);
     }
   };
 
   useEffect(() => {
     handleClubDetail();
     handleClubPost();
-    console.log(user);
   }, []);
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -288,7 +288,6 @@ export default function ClubDetail() {
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.preventDefault(); // optional
-                      console.log("clubid:", clubid);
                       navigate(`/club/manage/${clubid}`);
                     }}
                     className="flex items-center cursor-pointer"
@@ -371,12 +370,12 @@ export default function ClubDetail() {
                   </div>
                 </CardContent>
               </Card>
-              {(user?.role === 2 && clubDetail.isMentorInvite) ||
-              (user?.role === 4 && !isJoined) ? (
+              {(isTeacher && clubDetail.isMentorInvite) ||
+              (isStudent && !isJoined) ? (
                 <Card className="glass sticky bottom-6 !bg-white">
                   <CardContent>
                     <div className="flex flex-col gap-2">
-                      {user?.role === 2 && clubDetail.isMentorInvite ? (
+                      {(user?.role === 2 || user?.role === "Teacher") && clubDetail.isMentorInvite ? (
                         <Button
                           className="w-full bg-orange-400 hover:bg-orange-600 text-white flex items-center gap-2"
                           onClick={handleAcceptMentorInvite}
@@ -415,11 +414,6 @@ export default function ClubDetail() {
           {/* Center Content - Tabs */}
           <div className="lg:col-span-6 ">
             <Tabs defaultValue="posts" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-2">
-                <TabsTrigger value="posts">Bài đăng</TabsTrigger>
-                <TabsTrigger value="activities">Hoạt động</TabsTrigger>
-              </TabsList>
-
               {/* Tổng quan */}
               <TabsContent value="overview" className="space-y-4 !bg-white-500">
                 <Card className="glass hover-lift ">

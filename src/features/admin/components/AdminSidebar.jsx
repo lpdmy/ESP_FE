@@ -74,15 +74,19 @@ export default function AdminSidebar({ isOpen, onClose }) {
   const location = useLocation();
   const pathname = location.pathname;
   const user = useSelector((state) => state.user.user);
-  const {permissions} = user  
+  const { permissions } = user || {};
+  // Hỗ trợ cả role dạng string từ BE
+  const roleValue = typeof user?.role === "string" ? user.role.toUpperCase() : user?.role;
+  const isAdminRole = roleValue === ROLE.ADMIN || roleValue === "ADMIN";
+  const isStaffRole = roleValue === ROLE.STAFF || roleValue === "STAFF";
   const visibleNavigation = navigation.filter((item) => {
     // Admin thấy tất cả items
-    if (user?.role === ROLE.ADMIN) {
+    if (isAdminRole) {
       return true;
     }
     
     // Staff chỉ thấy items có permissions phù hợp
-    if (user?.role === ROLE.STAFF) {
+    if (isStaffRole) {
       // Nếu item có cả allowedRoles và requiredPermissions
       // Check requiredPermissions trước (ưu tiên hơn)
       if (item.requiredPermissions && item.requiredPermissions.length > 0) {

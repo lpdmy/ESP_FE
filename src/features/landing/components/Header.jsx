@@ -11,19 +11,40 @@ import { useNavigate } from "react-router-dom"
 import { GlobalSearch } from "@/common/components/search/GlobalSearch"
 
 import { clearUser } from "@/store/user/userSlice";
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import NotificationModal from "@/features/notifications/NotificationModal"
 import { disconnectNotificationHub } from "@/features/notifications/services/signalr/notificationHub"
-import { clearNotifications } from "@/store/notification/notificationSlice"
+import { clearNotifications, setNotifications } from "@/store/notification/notificationSlice"
 import { disconnectChatHub } from "@/common/signalr/chatHub"
+import { useNotificationApi } from "@/features/notifications/hooks/useNotificationApi"
 
 export default function Header() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.user.user);
+  const roleValue = typeof user?.role === "string" ? user.role.toUpperCase() : user?.role;
+  const isTeacher = roleValue === ROLE.TEACHER || roleValue === "TEACHER";
   const { isOpen, openMenu, closeMenu, toggleMenu } = useDropdownMenu(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationCount = useSelector(state => state.notifications.count);
+  const { getByUser } = useNotificationApi();
+
+  // Fetch số thông báo chưa đọc khi load trang
+  useEffect(() => {
+    if (user?.id) {
+      const fetchNotifications = async () => {
+        try {
+          const notifications = await getByUser();
+          if (notifications && Array.isArray(notifications)) {
+            dispatch(setNotifications(notifications));
+          }
+        } catch (error) {
+          console.error("Error fetching notifications:", error);
+        }
+      };
+      fetchNotifications();
+    }
+  }, [user?.id, dispatch, getByUser]);
   const handleLogout = () => {
     dispatch(clearUser());
     localStorage.removeItem("token");
@@ -34,7 +55,7 @@ export default function Header() {
   };
 
   const getProfileRoute = () => {
-    if (user?.role === ROLE.TEACHER) {
+    if (isTeacher) {
       return ROUTES.USER_PROFILE.TEACHER_PROFILE;
     }
     return ROUTES.USER_PROFILE.PROFILE;
@@ -64,7 +85,6 @@ export default function Header() {
               placeholder="Tìm kiếm bạn bè, bài viết, sự kiện, cuộc thi..."
               variant="default"
               onResultClick={(result, type) => {
-                console.log('Search result clicked:', { result, type });
               }}
             />
           </div>
@@ -78,26 +98,30 @@ export default function Header() {
                 <span className="font-medium">Sự kiện</span>
               </Button>
               <Button variant="ghost" className="flex items-center space-x-2 hover:bg-orange-50 hover:text-orange-600 transition-colors rounded-xl px-4 py-2">
-                <Trophy className="h-4 w-4" />
-                <span className="font-medium">Cuộc thi</span>
-              </Button>
-              <Button variant="ghost" className="flex items-center space-x-2 hover:bg-orange-50 hover:text-orange-600 transition-colors rounded-xl px-4 py-2">
-                <Star className="h-4 w-4" />
-                <span className="font-medium">Xếp hạng</span>
+                <Calendar className="h-4 w-4" />
+                <span className="font-medium">Câu lạc bộ</span>
               </Button>
             </div>
 
             {/* Notifications */}
             <Button variant="ghost"
               className="relative p-3 hover:bg-orange-50 hover:text-orange-600 transition-colors rounded-xl"
-              onClick={() => {
-                setIsNotificationOpen(true);        // mở modal
-                dispatch(clearNotifications());     // reset count + clear list
+              onClick={async () => {
+                setIsNotificationOpen(true);
+                // Refresh notifications khi mở modal
+                try {
+                  const notifications = await getByUser();
+                  if (notifications && Array.isArray(notifications)) {
+                    dispatch(setNotifications(notifications));
+                  }
+                } catch (error) {
+                  console.error("Error fetching notifications:", error);
+                }
               }}>
               <Bell className="h-5 w-5" />
               {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold shadow-lg">
-                  {notificationCount}
+                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 shadow-lg animate-pulse">
+                  {notificationCount > 99 ? '99+' : notificationCount}
                 </span>
               )}
             </Button>
@@ -126,7 +150,7 @@ export default function Header() {
                         : user?.username || "Guest"}
                     </div>
                     <div className="text-xs text-gray-500 capitalize">
-                      {user?.role === ROLE.TEACHER ? "Giáo viên" : "Học sinh"}
+                      {user?.role === "Student" ? "Học sinh" : "Giáo viên"}
                     </div>
                   </div>
                 </Button>

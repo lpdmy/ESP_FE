@@ -17,7 +17,6 @@ export const notificationSamples = {
         type: "confirm",
         variant: "default",
         onClick: async () => {
-          console.log("Đã xác nhận tham gia")
           // Call API để xác nhận: await joinActivity(123)
           await new Promise((resolve) => setTimeout(resolve, 500))
         }
@@ -27,7 +26,6 @@ export const notificationSamples = {
         type: "reject",
         variant: "outline",
         onClick: async () => {
-          console.log("Đã từ chối")
           // Call API để từ chối: await rejectActivity(123)
           await new Promise((resolve) => setTimeout(resolve, 500))
         }
@@ -72,7 +70,6 @@ export const notificationSamples = {
         type: "confirm",
         variant: "default",
         onClick: async () => {
-          console.log("Đã chấp nhận lời mời kết bạn")
         }
       },
       {
@@ -80,7 +77,6 @@ export const notificationSamples = {
         type: "reject",
         variant: "outline",
         onClick: async () => {
-          console.log("Đã từ chối lời mời kết bạn")
         }
       }
     ]
@@ -134,7 +130,6 @@ export const notificationSamples = {
         type: "view",
         variant: "default",
         onClick: async () => {
-          console.log("Chuyển đến trang messages")
           // navigate("/messages")
         }
       }
@@ -183,7 +178,6 @@ const actionNotification = {
       variant: "default",
       onClick: async () => {
         // Call API
-        console.log("Confirmed")
       }
     },
     {
@@ -192,7 +186,6 @@ const actionNotification = {
       variant: "outline",
       onClick: async () => {
         // Call API
-        console.log("Rejected")
       }
     }
   ]

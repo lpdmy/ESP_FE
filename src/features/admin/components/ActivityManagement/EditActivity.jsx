@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/common/components/ui/button";
 import {
@@ -108,13 +108,17 @@ export default function EditActivity() {
     },
   })
 
-  const sections = [
+  const sections = useMemo(() => [
     { id: "basic", title: "Thông tin cơ bản", icon: Info },
     { id: "schedule", title: "Lịch trình", icon: Calendar },
     { id: "details", title: "Chi tiết hoạt động", icon: Edit2 },
     { id: "rules", title: "Quy định", icon: Users },
-    { id: "assign-jury", title: "Phân công giám khảo", icon: UserCheck },
-  ];
+    // Chỉ hiển thị section "Phân công giám khảo" cho cuộc thi sáng tạo
+    ...(formData.subType === "CreativeContest" 
+      ? [{ id: "assign-jury", title: "Phân công giám khảo", icon: UserCheck }]
+      : []
+    ),
+  ], [formData.subType]);
 
   const subTypes = [
     { value: "SportsFestival", label: "Hội thao" },
@@ -414,9 +418,7 @@ export default function EditActivity() {
           if (speakerImagePreview && speakerImagePreview.startsWith("blob:")) {
             URL.revokeObjectURL(speakerImagePreview);
           }
-          toast.success("Đã upload ảnh thành công");
         } catch (error) {
-          console.error("Error uploading speaker image:", error);
           toast.error(error.message || "Có lỗi xảy ra khi upload ảnh");
           setIsUploadingSpeakerImage(false);
           return;
@@ -758,10 +760,8 @@ export default function EditActivity() {
         const uploadedUrl = await uploadImage(file);
         if (uploadedUrl) {
           setFormData({ ...formData, thumbnail: uploadedUrl });
-          toast.success("Đã upload ảnh thành công");
         }
       } catch (error) {
-        console.error("Error uploading image:", error);
         toast.error(error.message || "Có lỗi xảy ra khi upload ảnh");
       } finally {
         setIsUploadingThumbnail(false);
@@ -798,10 +798,8 @@ export default function EditActivity() {
         const uploadedUrl = await uploadImage(file);
         if (uploadedUrl) {
           setFormData({ ...formData, thumbnail: uploadedUrl });
-          toast.success("Đã upload ảnh thành công");
         }
       } catch (error) {
-        console.error("Error uploading image:", error);
         toast.error(error.message || "Có lỗi xảy ra khi upload ảnh");
       } finally {
         setIsUploadingThumbnail(false);
@@ -814,7 +812,6 @@ export default function EditActivity() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    toast.success("Đã xóa ảnh");
   };
 
   if (isLoading) {
@@ -1845,18 +1842,20 @@ export default function EditActivity() {
             </div>
           </CardContent>
         </Card>
-        {/* Section 4: Assign-jury */}
-        <Card id="section-assign-jury">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-blue-600" />
-              Phân công giám khảo
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AssignJurySection activityId={params.id} />
-          </CardContent>
-        </Card>
+        {/* Section 4: Assign-jury - Chỉ hiển thị cho cuộc thi sáng tạo */}
+        {formData.subType === "CreativeContest" && (
+          <Card id="section-assign-jury">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-blue-600" />
+                Phân công giám khảo
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AssignJurySection activityId={params.id} />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Action Buttons - Fixed at bottom */}

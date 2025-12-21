@@ -82,7 +82,6 @@ export default function SystemAnnouncementProvider({ children }) {
     // Listen for urgent announcement custom event
     const handleUrgentAnnouncement = async (event) => {
       const announcement = event.detail;
-      console.log('🚨 Urgent announcement received:', announcement);
       
       // Skip if user is admin or on admin pages
       const isAdmin = user.role === ROLE.ADMIN || 

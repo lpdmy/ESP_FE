@@ -15,6 +15,13 @@ export class ClubService extends ApiService {
     }
     return this.get(url, token);
   }
+  async getListClubAdmin(token, pageNumber = 1, pageSize = 10, search = "") {
+    let url = `${API_CONFIG.CLUB.LIST_CLUB_Admin}?PageNumber=${pageNumber}&PageSize=${pageSize}`;
+    if (search && search.trim() !== "") {
+      url += `&search=${encodeURIComponent(search.trim())}`;
+    }
+    return this.get(url, token);
+  }
   async getClubCategory(token) {
     let url = `${API_CONFIG.CLUB.CLUB_CATEGORY}`;
     return this.get(url, token);

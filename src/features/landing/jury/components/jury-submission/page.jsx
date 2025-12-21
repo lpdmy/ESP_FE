@@ -81,7 +81,6 @@ export default function JurySubmissions() {
       setTotalCount(response.data.totalCount);
       setSubmissions(response.data.data);
     } catch (err) {
-      console.log(err);
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +97,6 @@ export default function JurySubmissions() {
       setTotalCountNotGrade(response.data.totalCount);
       setSubmissionsNotGrade(response.data.data);
     } catch (err) {
-      console.log(err);
     } finally {
       setIsLoadingNotGrade(false);
     }
@@ -115,7 +113,6 @@ export default function JurySubmissions() {
       setTotalCountGrade(response.data.totalCount);
       setSubmissionsGrade(response.data.data);
     } catch (err) {
-      console.log(err);
     } finally {
       setIsLoadingGrade(false);
     }
@@ -136,14 +133,12 @@ export default function JurySubmissions() {
   const handleNavigateGrade = async () => {
     try {
       // Load tất cả submissions chưa chấm để đảm bảo có dữ liệu
-      const allSubmissions = await loadAllJurySubmissionsNotGrade();
-      console.log("📌 Đã load submissions chưa chấm:", allSubmissions.length);
+    const allSubmissions = await loadAllJurySubmissionsNotGrade();
       
       // Navigate đến trang chấm điểm
       // Trang grade sẽ tự động load lại dữ liệu từ API
-      navigate(`/jury/grade/${id}`);
+    navigate(`/jury/grade/${id}`);
     } catch (error) {
-      console.error("❌ Lỗi khi navigate đến trang chấm điểm:", error);
       // Vẫn navigate để user có thể thấy trang, trang sẽ tự load
       navigate(`/jury/grade/${id}`);
     }
@@ -238,7 +233,6 @@ export default function JurySubmissions() {
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -1109,7 +1103,7 @@ export default function JurySubmissions() {
                           {attachment.fileName && (
                             <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
                               {attachment.fileName} - Click để xem full size
-                            </div>
+          </div>
                           )}
                         </div>
                       ) : attachment.fileType === "video" ? (

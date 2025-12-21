@@ -20,7 +20,6 @@ export default function TeacherSearchDialog({ isOpen, onClose, jury, activityId,
       const data = response.data.data;
       setResults(data);
     } catch (err) {
-      console.log(err);
     }
   };
   const handleAddJury = async () => {
@@ -44,7 +43,6 @@ export default function TeacherSearchDialog({ isOpen, onClose, jury, activityId,
       onSuccess?.(); // Reload danh sách giám khảo
       onClose();
     } catch (err) {
-      console.log(err);
       if (err.statusCode == 400) {
         toast.showError(err.message);
       } else {

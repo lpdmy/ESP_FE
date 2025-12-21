@@ -14,12 +14,36 @@ import { useNavigate } from "react-router-dom"
 import { clearUser } from "@/store/user/userSlice";
 import { ROUTES } from "@/common/constants/routes";
 import { disconnectNotificationHub } from "@/features/notifications/services/signalr/notificationHub";
+import { disconnectChatHub } from "@/common/signalr/chatHub";
+import { setNotifications } from "@/store/notification/notificationSlice";
+import { useNotificationApi } from "@/features/notifications/hooks/useNotificationApi";
+import NotificationModal from "@/features/notifications/NotificationModal";
 
 export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
   const user = useSelector((state) => state.user.user);
-  const [isDropdownOpen, setDropdownOpen] = useState(false)
+  const [isDropdownOpen, setDropdownOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const notificationCount = useSelector(state => state.notifications.count);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { getByUser } = useNotificationApi();
+
+  // Fetch số thông báo chưa đọc khi load trang
+  useEffect(() => {
+    if (user?.id) {
+      const fetchNotifications = async () => {
+        try {
+          const notifications = await getByUser();
+          if (notifications && Array.isArray(notifications)) {
+            dispatch(setNotifications(notifications));
+          }
+        } catch (error) {
+          console.error("Error fetching notifications:", error);
+        }
+      };
+      fetchNotifications();
+    }
+  }, [user?.id, dispatch, getByUser]);
 
   const toggleDropdown = () => {
     setDropdownOpen(!isDropdownOpen);
@@ -57,8 +81,29 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
         {/* Right side - Notifications and User Profile */}
         <div className="flex items-center gap-4">
           {/* Notifications */}
-          <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="relative text-gray-600 hover:text-gray-900"
+            onClick={async () => {
+              setIsNotificationOpen(true);
+              // Refresh notifications khi mở modal
+              try {
+                const notifications = await getByUser();
+                if (notifications && Array.isArray(notifications)) {
+                  dispatch(setNotifications(notifications));
+                }
+              } catch (error) {
+                console.error("Error fetching notifications:", error);
+              }
+            }}
+          >
             <Bell className="h-5 w-5" />
+            {notificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 shadow-lg animate-pulse">
+                {notificationCount > 99 ? '99+' : notificationCount}
+              </span>
+            )}
           </Button>
 
           {/* User Profile Dropdown */}
@@ -66,10 +111,21 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
             <DropdownMenuTrigger onClick={toggleDropdown}>
               <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-100" data-dropdown-trigger="true">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/admin-avatar.png" />
-                  <AvatarFallback className="bg-blue-100 text-blue-600">{user.firstName.charAt(0)||'A'}</AvatarFallback>
+                  <AvatarImage src={user?.avatarUrl || "/admin-avatar.png"} />
+                  <AvatarFallback className="bg-blue-100 text-blue-600">
+                    {user?.firstName?.charAt(0)?.toUpperCase() || 
+                     user?.lastName?.charAt(0)?.toUpperCase() || 
+                     user?.fullName?.charAt(0)?.toUpperCase() || 
+                     user?.username?.charAt(0)?.toUpperCase() || 
+                     'A'}
+                  </AvatarFallback>
                 </Avatar>
-                <span className="text-sm font-medium text-gray-700">{user ? user.fullName : "Guest"}</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {user?.fullName || 
+                   (user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : null) ||
+                   user?.username || 
+                   "Guest"}
+                </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent 
@@ -96,6 +152,7 @@ export default function AdminHeader({ sidebarOpen, setSidebarOpen }) {
           </DropdownMenu>
         </div>
       </div>
+      <NotificationModal isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
     </header>
   )
 }

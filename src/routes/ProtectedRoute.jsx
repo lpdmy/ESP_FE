@@ -14,24 +14,56 @@ const ProtectedRoute = ({ allowedRoles = [], requiredPermissions = [] }) => {
   const location = useLocation();
   const [showModal, setShowModal] = useState(false);
   const [redirect, setRedirect] = useState(false);
+  
   if (!user) {
     return <Navigate to="/auth/login" replace />;
   }
+  
   const { role, permissions } = user;
 
-  // Admin không truy cập home/search landing
-  if (role === ROLE.ADMIN && (location.pathname === "/" || location.pathname === "/search")) {
+  // Chuẩn hóa role: hỗ trợ cả dạng number và string, so sánh bằng key
+  const ROLE_KEY = {
+    [ROLE.ADMIN]: "ADMIN",
+    [ROLE.STAFF]: "STAFF",
+    [ROLE.TEACHER]: "TEACHER",
+    [ROLE.STUDENT]: "STUDENT",
+  };
+  const toRoleKey = (val) => {
+    if (typeof val === "string") return val.toUpperCase();
+    return ROLE_KEY[val] ?? val;
+  };
+
+  const roleKey = toRoleKey(role);
+  const allowedRoleKeys = allowedRoles.map(toRoleKey);
+
+  const isAdminRole = roleKey === "ADMIN";
+  const isTeacherRole = roleKey === "TEACHER";
+  const isStaffRole = roleKey === "STAFF";
+
+  const isAdminRoute =
+    location.pathname.startsWith("/admin") || allowedRoleKeys.includes("ADMIN");
+
+  // Chặn admin đi vào các trang thường (không dành cho admin)
+  if (isAdminRole && !isAdminRoute) {
     return <Navigate to="/admin" replace />;
   }
-  if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+
+  // Admin được phép truy cập các route dành cho admin hoặc được chỉ định rõ
+  if (isAdminRole) {
+    return <Outlet />;
+  }
+  
+  // Kiểm tra allowedRoles sau khi đã check ADMIN
+  if (allowedRoles.length > 0 && !allowedRoleKeys.includes(roleKey)) {
     return <Navigate to="/" replace />;
   }
 
-  if (role === ROLE.ADMIN) {
+  // Teacher có quyền truy cập mà không cần permission (theo BE: Teacher,Staff,Admin)
+  if (isTeacherRole) {
     return <Outlet />;
   }
 
-  if (role === ROLE.STAFF && requiredPermissions.length > 0) {
+  if (isStaffRole && requiredPermissions.length > 0) {
     const hasPermission = requiredPermissions.some((perm) =>
       permissions?.includes(perm)
     );

@@ -16,6 +16,10 @@ import { ROUTES } from "@/common/constants/routes";
 
 export default function Sidebar() {
   const user = useSelector((state) => state.user.user);
+  const roleValue = typeof user?.role === "string" ? user.role.toUpperCase() : user?.role;
+  const isAdmin = roleValue === ROLE.ADMIN || roleValue === "ADMIN";
+  const isStaff = roleValue === ROLE.STAFF || roleValue === "STAFF";
+  const isTeacher = roleValue === ROLE.TEACHER || roleValue === "TEACHER";
   const navigate = useNavigate();
   const [joinedClubs, setJoinedClubs] = useState([]);
   const { getClubByUser } = useClubApi();
@@ -33,17 +37,17 @@ export default function Sidebar() {
       : "U";
   const menuItems = SIDEBAR_NAVIGATION.filter((item) => {
     // Admin và Staff không thấy sidebar này (họ dùng AdminSidebar)
-    if (user?.role === ROLE.ADMIN || user?.role === ROLE.STAFF) {
+    if (isAdmin || isStaff) {
       return false;
     }
     
     // Giám khảo chỉ cho role giáo viên (2)
     if (item.label === "Giám khảo") {
-      return user?.role === ROLE.TEACHER;
+      return isTeacher;
     }
     
     // Đổi thưởng: ẩn với giáo viên
-    if (item.label === "Đổi thưởng" && user?.role === ROLE.TEACHER) {
+    if (item.label === "Đổi thưởng" && isTeacher) {
       return false;
     }
     
@@ -52,13 +56,13 @@ export default function Sidebar() {
   const handleNavigation = (item) => {
     // Special handling for "Lớp học của tôi" - redirect to user's specific class
     if (item.key === "my-class" && user?.classGroupId) {
-      navigate(`/my-classes/${user.classGroupId}`)
+      navigate(`/my-classes`)
       return
     }
 
     // Profile: route theo role
     if (item.key === "profile") {
-      if (user?.role === ROLE.TEACHER) {
+      if (isTeacher) {
         navigate(ROUTES.USER_PROFILE.TEACHER_PROFILE)
       } else {
         navigate(ROUTES.USER_PROFILE.PROFILE)

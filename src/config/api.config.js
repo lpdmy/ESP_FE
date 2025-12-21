@@ -126,6 +126,7 @@ export const API_CONFIG = {
   CLUB: {
     CREATE_CLUB: "/club-creation-request",
     LIST_CLUB: "/club",
+    LIST_CLUB_Admin: "/club/admin",
     CLUB_CATEGORY: "/club/categories",
     CLUB_DETAIL: "/club/{id}",
     CLUB_JOIN_REQUEST: "/join-request/club",
@@ -242,12 +243,22 @@ export const API_CONFIG = {
     UPDATE: "/activity",
     DELETE: "/activity/{id}",
     RANK_BY_ID: "/submission/activity/{id}/rank",
+    RECENT_INPUTS: "/activity/recent-inputs",
     GENERATE_TOURNAMENT_SCHEDULE: "/activity/{id}/generate-schedule",
     APPLY_TOURNAMENT_SCHEDULE: "/activity/{id}/apply-schedule",
     TRAIN_SCHEDULE_MODEL: "/activity/train-schedule-model",
     MY_ACTIVITIES: "/my-activities",
     STATISTICS: "/activity/statistics",
-
+  },
+  ACTIVITY_TEMPLATE: {
+    GET_ALL: "/activity-template",
+    GET_BY_ID: "/activity-template/{id}",
+    GET_BY_SUBTYPE: "/activity-template/subtype",
+    CREATE: "/activity-template",
+    SAVE_FROM_FORM: "/activity-template/save-from-form",
+    UPDATE: "/activity-template",
+    DELETE: "/activity-template/{id}",
+    INCREMENT_USAGE: "/activity-template/{id}/increment-usage",
   },
 
   ACTIVITY_MATCH: {
@@ -265,6 +276,15 @@ export const API_CONFIG = {
     GET_SPORT_ROSTERS: "/activityparticipant/sport-rosters",
   },
 
+  // Statistics endpoints
+  STATISTICS: {
+    ACTIVITY_OVERVIEW: "/statistics/activities/overview",
+    ACTIVITY_DETAIL: "/statistics/activities/{activityId}",
+    ACADEMIC_YEAR: "/statistics/academic-years/{academicYearId}",
+    CLASS_GROUP: "/statistics/classgroups/{classGroupId}",
+    DASHBOARD: "/statistics/dashboard",
+  },
+
   // Timetable endpoints
   TIMETABLE: {
     IMPORT: "/timetable/import",
@@ -277,7 +297,6 @@ export const API_CONFIG = {
     JURY_DASHBOARD: "/jury/dashboard",
     JURY_SUBMISSION: "/jury/submission/:id",
     JURY_GRADE: "/jury/grade",
-    GET_ACTIVITIES_WITHOUT_JURY: "/jury/activities-without-jury",
     IMPROVED_RANDOM_ASSIGN: "/jury/improved-random-assign",
     RANDOM_ASSIGN: "/jury/random-assign",
     DELETE_RANDOM_ASSIGN: "/jury/delete-assign-activity",
@@ -304,6 +323,28 @@ export const API_CONFIG = {
     GET_SUBMISSION_ACTIVITY: "/submission/activity",
     GET_MY_SUBMISSION: "/submission/activity/user",
     GET_SUBMISSION_DETAIL: "/submission",
+    GET_ACTITY_RANK: "/submission/activity",
+  },
+  MODERATION:{
+    GET_ALL_MODERATION:'/moderation/report',
+    GET_USER_STAT : '/moderation/user-violations',
+    CREATE_NOTIFICATION: '/moderation/alert',
+  },
+
+  WEEKLY_QUIZ: {
+    CREATE: '/weekly-quiz',
+    GET_BY_ID: '/weekly-quiz/{id}',
+    GET_ALL: '/weekly-quiz/all',
+    GET_BY_WEEK_YEAR: '/weekly-quiz/week/{weekNumber}/year/{year}',
+    GET_MY_QUIZZES: '/weekly-quiz/my-quizzes',
+    UPDATE: '/weekly-quiz/{id}',
+    DELETE: '/weekly-quiz/{id}',
+    SUBMIT: '/weekly-quiz/submit',
+    GET_MY_SUBMISSION: '/weekly-quiz/{quizId}/my-submission',
+    CHECK_SUBMITTED: '/weekly-quiz/{quizId}/check-submitted',
+    GET_SUBMISSIONS: '/weekly-quiz/{quizId}/submissions',
+    GET_MY_SUBMISSIONS: '/weekly-quiz/my-submissions',
+    UPDATE_STATUS :'/moderation/update-status',
   },
 };
 // HTTP Headers
@@ -314,9 +355,6 @@ export const getAuthHeaders = (token) => ({
 
 // API Response Handler
 export async function handleApiResponse(response) {
-  console.log("API Response status:", response.status);
-  console.log("API Response headers:", response.headers);
-
   const contentType = response.headers.get("content-type");
   if (!response.ok) {
     if (response.status === 401) {
@@ -328,15 +366,12 @@ export async function handleApiResponse(response) {
       throw new Error("Unauthorized");
     }
 
-    console.log("API Error - Status:", response.status);
     // Nếu là JSON thì parse, không thì trả về text
     if (contentType && contentType.includes("application/json")) {
       const errorData = await response.json();
-      console.log("API Error Data:", errorData);
       throw errorData;
     } else {
       const errorText = await response.text();
-      console.log("API Error Text:", errorText);
       throw new Error(errorText);
     }
   }

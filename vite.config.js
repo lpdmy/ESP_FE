@@ -34,6 +34,8 @@ export default defineConfig({
             ]
          },
          workbox: {
+            // Tăng giới hạn kích thước file để precache (mặc định 2MB, file hiện tại 3.39MB)
+            maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
             runtimeCaching: [
                {
                   urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -105,6 +107,9 @@ export default defineConfig({
          '@admin': path.resolve(__dirname, './src/features/admin'),
          '@landing': path.resolve(__dirname, './src/features/landing'),
          '@LandingPage': path.resolve(__dirname, './src/features/landing/components'),
+         // Đảm bảo chỉ có 1 instance của React
+         'react': path.resolve(__dirname, './node_modules/react'),
+         'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
       },
       dedupe: ['react', 'react-dom'],
    },
@@ -139,18 +144,47 @@ export default defineConfig({
       rollupOptions: {
          output: {
             manualChunks: (id) => {
-               // Đảm bảo React và React-DOM luôn cùng chunk
+               // Tách các thư viện lớn thành chunks riêng
                if (id.includes('node_modules')) {
-                  if (id.includes('react') || id.includes('react-dom') || 
+                  // React core - QUAN TRỌNG: React và React-DOM phải cùng chunk
+                  if (id.includes('react/') || id.includes('react-dom/') || 
+                      id === 'react' || id === 'react-dom' ||
                       id.includes('react/jsx-runtime') || id.includes('react/jsx-dev-runtime')) {
                      return 'vendor-react';
                   }
+                  // Ant Design
                   if (id.includes('antd')) {
                      return 'vendor-antd';
                   }
-                  if (id.includes('lucide-react')) {
+                  // Chart libraries
+                  if (id.includes('recharts') || id.includes('chart.js') || id.includes('chartjs')) {
+                     return 'vendor-charts';
+                  }
+                  // Excel/PDF libraries
+                  if (id.includes('exceljs') || id.includes('xlsx') || id.includes('jspdf') || id.includes('html2canvas')) {
+                     return 'vendor-export';
+                  }
+                  // UI libraries
+                  if (id.includes('lucide-react') || id.includes('@radix-ui')) {
                      return 'vendor-ui';
                   }
+                  // Date/time libraries
+                  if (id.includes('dayjs') || id.includes('moment')) {
+                     return 'vendor-date';
+                  }
+                  // Router
+                  if (id.includes('react-router')) {
+                     return 'vendor-router';
+                  }
+                  // Redux/State management
+                  if (id.includes('redux') || id.includes('@reduxjs')) {
+                     return 'vendor-redux';
+                  }
+                  // SignalR
+                  if (id.includes('signalr') || id.includes('@microsoft/signalr')) {
+                     return 'vendor-signalr';
+                  }
+                  // Other vendor libraries
                   return 'vendor';
                }
             }

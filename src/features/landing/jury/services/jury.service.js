@@ -74,9 +74,6 @@ export class JuryService extends ApiService {
     return this.get(url, token);
   }
   
-  async getActivitiesWithoutJury(token) {
-    return this.get(API_CONFIG.JURY.GET_ACTIVITIES_WITHOUT_JURY, token);
-  }
   
   async improvedRandomAssign(token, payload) {
     return this.post(API_CONFIG.JURY.IMPROVED_RANDOM_ASSIGN, payload, token);

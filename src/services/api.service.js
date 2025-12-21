@@ -52,4 +52,15 @@ export class ApiService {
     });
     return handleApiResponse(response);
   }
+
+  async postFormData(endpoint, formData, token = null) {
+    const response = await fetch(`${this.baseURL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: formData
+    });
+    return handleApiResponse(response);
+  }
 }

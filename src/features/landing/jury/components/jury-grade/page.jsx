@@ -62,8 +62,6 @@ export default function Grading() {
         ),
       ]);
       
-      console.log("📌 Loaded assignments - Chưa chấm:", ungradedList.length, "Đã chấm:", gradedList.length);
-      
       // Lưu danh sách assignment đã chấm (theo assignmentId của user hiện tại, không phải submissionId)
       // Mỗi assignment là riêng biệt cho mỗi giám khảo, nên không có conflict
       setGradedSubmissions(gradedList);
@@ -95,7 +93,7 @@ export default function Grading() {
   // Refresh dữ liệu khi vào trang hoặc khi activityId thay đổi
   useEffect(()=>{
     if(params.id) {
-      syncAssignments();
+    syncAssignments();
     }
   },[params.id])
   //  Chuyển tiêu chí lấy từ backend thành dạng có key
@@ -140,7 +138,6 @@ export default function Grading() {
 
   const handleSubmitGrade = async () => {
     const payload = buildGradePayload();
-    console.log("📌 Payload gửi API:", payload);
     try {
       await gradingSubmission(payload);
       toast.showSuccess("Chấm điểm thành công");
@@ -187,7 +184,6 @@ export default function Grading() {
     if (!criterias.length || !submissions.length) return;
 
     const payload = buildGradePayload();
-    console.log("📌 Tracking Payload Real-time:", payload);
   }, [grades, criterias, currentSubmission]);
 
   return (

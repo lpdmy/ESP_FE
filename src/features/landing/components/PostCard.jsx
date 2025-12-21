@@ -105,7 +105,6 @@ export default function PostCard({
     try {
       const response = await getCollectionsByUser();
       setUserAlbum(response?.data.data || []);
-      console.log(response.data.data);
     } catch (err) {
       toast.loadAlbumFail();
       console.error("Lỗi khi like:", err);
@@ -302,16 +301,6 @@ export default function PostCard({
                   <>
                     <DropdownMenuItem
                       onClick={() => {
-                        onEdit();
-                        setIsDropdownOpen(false);
-                      }}
-                      className="flex items-center space-x-2 text-blue-600 hover:bg-blue-50 cursor-pointer"
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span>Chỉnh sửa bài đăng</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
                         onDelete();
                         setIsDropdownOpen(false);
                       }}
@@ -501,7 +490,6 @@ export default function PostCard({
             {/* Nút tạo album */}
             <Button
               onClick={() => {
-                console.log("Tạo album mới");
                 // slideToView("album-create") nếu có
               }}
               className="w-full flex items-center justify-center space-x-2 p-4 border-2 border-dashed border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg"
@@ -520,7 +508,6 @@ export default function PostCard({
                   key={album.id}
                   onClick={() => {
                     hanldeSaveCollection(album.id);
-                    console.log("Chọn album:", album.name);
                     setIsAlbumPopupOpen(false);
                   }}
                   className="w-full flex items-center space-x-3 p-3 border border-gray-200 

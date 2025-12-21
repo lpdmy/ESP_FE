@@ -65,7 +65,6 @@ export const lazyLoadAllPages = async (loadPageFunction, pageSize = 100) => {
     }
   }
 
-  console.log(`✅ Lazy loaded ${allData.length} items từ ${currentPage - 1} page(s)`);
   return allData;
 };
 

@@ -15,6 +15,7 @@ import EditActivityPage from "@/pages/Admin/Activities/EditActivityPage";
 import AISchedulePage from "@/pages/Admin/Activities/AISchedulePage";
 import ClassDetailPage from "@/pages/Admin/ClassDetailPage";
 import ModerationManagementPage from "@/pages/Admin/ModerationPage";
+import StatisticsPage from "@/pages/Admin/StatisticsPage";
 export const adminRoutes = [
   <Route
     element={<ProtectedRoute allowedRoles={[ROLE.ADMIN, ROLE.STAFF]} />}
@@ -133,7 +134,7 @@ export const adminRoutes = [
   <Route
     element={
       <ProtectedRoute
-        allowedRoles={[ROLE.ADMIN, ROLE.STAFF]}
+        allowedRoles={[ROLE.ADMIN, ROLE.STAFF, ROLE.TEACHER]}
         requiredPermissions={["MANAGE_ACTIVITIES"]}
       />
     }
@@ -163,6 +164,21 @@ export const adminRoutes = [
       key="moderation"
       path={ROUTES.ADMIN.MODERATION}
       element={<ModerationManagementPage />}
+    />
+  </Route>,
+  <Route
+    element={
+      <ProtectedRoute
+        allowedRoles={[ROLE.ADMIN, ROLE.STAFF]}
+        requiredPermissions={["VIEW_STATISTICS"]}
+      />
+    }
+    key="statistics-route"
+  >
+    <Route
+      key="statistics"
+      path={ROUTES.ADMIN.STATISTICS}
+      element={<StatisticsPage />}
     />
   </Route>,
 ];
