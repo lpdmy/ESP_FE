@@ -64,6 +64,7 @@ import { useSubmissionApi } from "@/features/landing/submission/hooks/useSubmiss
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { BracketTree } from "@/features/admin/components/ActivityManagement/BracketTree";
 import { formatDateFromAPI } from "@/common/utils/dateUtils";
+import { uploadFile } from "@/common/utils/upload";
 
 // Tournament Bracket Viewer - Sử dụng BracketTree từ admin
 const TournamentBracketViewer = memo(
@@ -2095,7 +2096,6 @@ export default function ViewActivity() {
     setIsSubmitting(true);
     try {
       // Upload file first
-      const { uploadFile } = await import("@/common/utils/upload");
       const fileUrl = await uploadFile(submissionFile);
 
       if (!fileUrl) {
