@@ -1,7 +1,4 @@
-import { lazy, Suspense } from "react"
-
-// Lazy load Sidebar để tránh circular dependency và tối ưu bundle size
-const Sidebar = lazy(() => import("@/features/landing/components/Sidebar"))
+import Sidebar from "@/features/landing/components/Sidebar"
 
 /**
  * ContentLayout - Layout component tái sử dụng cho các page có sidebar và main content
@@ -32,11 +29,7 @@ export default function ContentLayout({
               className={`hidden lg:block sticky top-[88px] self-start flex-shrink-0`}
               style={{ width: sidebarWidth }}
             >
-              {customSidebar || (
-                <Suspense fallback={<div className="w-full h-64 bg-gray-100 animate-pulse rounded-lg" />}>
-                  <Sidebar />
-                </Suspense>
-              )}
+              {customSidebar || <Sidebar />}
             </aside>
           )}
 

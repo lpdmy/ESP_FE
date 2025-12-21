@@ -34,6 +34,8 @@ export default defineConfig({
             ]
          },
          workbox: {
+            // Tăng giới hạn kích thước file để precache (mặc định 2MB, file hiện tại 3.39MB)
+            maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
             runtimeCaching: [
                {
                   urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -137,10 +139,48 @@ export default defineConfig({
       sourcemap: false,
       rollupOptions: {
          output: {
-            manualChunks: {
-               vendor: ['react', 'react-dom'],
-               ui: ['lucide-react'],
-               antd: ['antd']
+            manualChunks: (id) => {
+               // Tách các thư viện lớn thành chunks riêng
+               if (id.includes('node_modules')) {
+                  // React core
+                  if (id.includes('react') || id.includes('react-dom')) {
+                     return 'vendor-react';
+                  }
+                  // Ant Design
+                  if (id.includes('antd')) {
+                     return 'vendor-antd';
+                  }
+                  // Chart libraries
+                  if (id.includes('recharts') || id.includes('chart.js') || id.includes('chartjs')) {
+                     return 'vendor-charts';
+                  }
+                  // Excel/PDF libraries
+                  if (id.includes('exceljs') || id.includes('xlsx') || id.includes('jspdf') || id.includes('html2canvas')) {
+                     return 'vendor-export';
+                  }
+                  // UI libraries
+                  if (id.includes('lucide-react') || id.includes('@radix-ui')) {
+                     return 'vendor-ui';
+                  }
+                  // Date/time libraries
+                  if (id.includes('dayjs') || id.includes('moment')) {
+                     return 'vendor-date';
+                  }
+                  // Router
+                  if (id.includes('react-router')) {
+                     return 'vendor-router';
+                  }
+                  // Redux/State management
+                  if (id.includes('redux') || id.includes('@reduxjs')) {
+                     return 'vendor-redux';
+                  }
+                  // SignalR
+                  if (id.includes('signalr') || id.includes('@microsoft/signalr')) {
+                     return 'vendor-signalr';
+                  }
+                  // Other vendor libraries
+                  return 'vendor';
+               }
             }
          }
       },

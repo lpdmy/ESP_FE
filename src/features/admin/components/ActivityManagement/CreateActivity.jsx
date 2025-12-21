@@ -22,7 +22,7 @@ import {
 import { toast } from "react-toastify"
 import { ArrowLeft, ArrowRight, Save, Upload, Plus, X, CheckCircle, Star, Trophy, Eye, Calendar, MapPin, Users, User, Clock, Edit2, Trash2, Info, FileText } from "lucide-react"
 import { ROUTES } from "@/common/constants/routes"
-import { uploadImage } from "@/common/utils/upload"
+import { uploadImage, uploadFile } from "@/common/utils/upload"
 import { executeApiCall } from "@/common/utils/executeApiCall"
 import { activityService } from "@/features/activities/services/activity.service"
 import { GradingCriteriaSection } from "./GradingCriteriaSection"
@@ -1940,7 +1940,6 @@ export default function CreateActivity() {
                                 
                                 setIsUploadingThumbnail(true)
                                 try {
-                                  const { uploadFile } = await import("@/common/utils/upload")
                                   const fileUrl = await uploadFile(file)
                                   if (fileUrl) {
                                     setFormData({ ...formData, problemFileUrl: fileUrl })
