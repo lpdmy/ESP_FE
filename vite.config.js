@@ -106,6 +106,7 @@ export default defineConfig({
          '@landing': path.resolve(__dirname, './src/features/landing'),
          '@LandingPage': path.resolve(__dirname, './src/features/landing/components'),
       },
+      dedupe: ['react', 'react-dom'],
    },
    server: {
       port: 3000,
@@ -137,14 +138,29 @@ export default defineConfig({
       sourcemap: false,
       rollupOptions: {
          output: {
-            manualChunks: {
-               vendor: ['react', 'react-dom'],
-               ui: ['lucide-react'],
-               antd: ['antd']
+            manualChunks: (id) => {
+               // Đảm bảo React và React-DOM luôn cùng chunk
+               if (id.includes('node_modules')) {
+                  if (id.includes('react') || id.includes('react-dom') || 
+                      id.includes('react/jsx-runtime') || id.includes('react/jsx-dev-runtime')) {
+                     return 'vendor-react';
+                  }
+                  if (id.includes('antd')) {
+                     return 'vendor-antd';
+                  }
+                  if (id.includes('lucide-react')) {
+                     return 'vendor-ui';
+                  }
+                  return 'vendor';
+               }
             }
          }
       },
-      chunkSizeWarningLimit: 1000
+      chunkSizeWarningLimit: 1000,
+      commonjsOptions: {
+         include: [/node_modules/],
+         transformMixedEsModules: true
+      }
    },
    optimizeDeps: {
       include: [
