@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import ReactDOM from "react-dom/client";
 import AdminPageLayout from "@/features/admin/components/AdminPageLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/common/components/ui/card";
 import { LoadingCard } from "@/common/components/ui/loading";
@@ -7,22 +8,8 @@ import { ClassGroupService } from "@/services/classgroup.service";
 import { activityService } from "@/features/activities/services/activity.service";
 import { Button } from "@/common/components/ui/button";
 import { CustomSelect } from "@/common/components/ui/CustomSelect";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  LineChart,
-  Line,
-  Area,
-  AreaChart,
-} from "recharts";
+import ReactECharts from "echarts-for-react";
+import * as echarts from "echarts";
 import {
   Activity,
   Users,
@@ -31,22 +18,60 @@ import {
   Calendar,
   Download,
   Filter,
+  BarChart3,
+  PieChart,
+  LineChart,
+  Target,
 } from "lucide-react";
 import { useToast } from "@/common/hooks/useToast";
-import { exportStatisticsToExcel, exportToPDF } from "@/utils/exportUtils";
-import { convertChartsToImages, replaceChartsWithImages } from "@/utils/chartExportUtils";
+import { exportStatisticsToExcel, exportToPDF, exportStatisticsToPDFProfessional } from "@/utils/exportUtils";
+import { convertEChartsToImages } from "@/utils/chartExportUtils";
 import { exportStatisticsToExcelWithCharts } from "@/utils/excelWithCharts";
+import { StatisticsPdfReport } from "@/features/admin/components/StatisticsPdfReport";
+import { defaultStatisticsReportConfig } from "@/features/admin/config/statisticsReportConfig";
 
-const COLORS = [
-  "#f97316", // Orange
-  "#3b82f6", // Blue
-  "#22c55e", // Green
-  "#ef4444", // Red
-  "#a855f7", // Purple
-  "#f59e0b", // Amber
-  "#06b6d4", // Cyan
-  "#ec4899", // Pink
+// ECharts theme colors - Theo palette từ hình ảnh
+const ECHARTS_COLORS = [
+  "#4A90E2", // Medium Blue (slice lớn nhất)
+  "#7ED321", // Lime Green
+  "#4A4A4A", // Dark Grey/Charcoal
+  "#F5A623", // Medium Orange
+  "#50E3C2", // Light Blue/Cyan
+  "#F8E71C", // Bright Yellow
+  "#BD10E0", // Pink/Magenta
+  "#9013FE", // Purple
+  "#B8E986", // Light Green (bổ sung)
+  "#D0021B", // Red (bổ sung)
 ];
+
+// Common ECharts text style for consistent font
+const ECHARTS_TEXT_STYLE = {
+  fontFamily: "'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif",
+  fontSize: 13,
+  color: "#374151",
+};
+
+// Map activity SubType to Vietnamese label
+const getActivityTypeLabel = (subType) => {
+  const subTypeMap = {
+    "SportsFestival": "Hội thao",
+    "CreativeContest": "Cuộc thi sáng tạo",
+    "SeminarWorkshop": "Hội thảo / Workshop",
+    "Other": "Khác",
+    "Unknown": "Không xác định",
+  };
+  return subTypeMap[subType] || subType || "Khác";
+};
+
+// Common ECharts title style
+const ECHARTS_TITLE_STYLE = {
+  textStyle: {
+    fontFamily: "'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif",
+    fontSize: 16,
+    fontWeight: 600,
+    color: "#1F2937",
+  },
+};
 
 export default function StatisticsPage() {
   const toast = useToast();
@@ -60,7 +85,7 @@ export default function StatisticsPage() {
   const [academicYears, setAcademicYears] = useState([]);
   const [activityOverview, setActivityOverview] = useState(null);
   const [dashboardStats, setDashboardStats] = useState(null);
-  const [activeTab, setActiveTab] = useState("overview"); // overview, activities, academic-year, class-group
+  const [activeTab, setActiveTab] = useState("overview"); // overview, activities, users, points, trends
 
   useEffect(() => {
     loadAcademicYears();
@@ -109,267 +134,96 @@ export default function StatisticsPage() {
         ? academicYears.find((y) => y.id === selectedAcademicYear)?.name || "Tất cả"
         : "Tất cả";
       
-      // Create a printable element ID
       const printId = `statistics-print-${activeTab}-${Date.now()}`;
       
-      // Create a temporary div with the statistics content
       const printElement = document.createElement("div");
       printElement.id = printId;
       printElement.style.position = "absolute";
+      printElement.style.top = "-9999px";
       printElement.style.left = "-9999px";
-      printElement.style.width = "210mm"; // A4 width
+      printElement.style.width = "210mm";
       document.body.appendChild(printElement);
       
-      // Get current tab content
-      const currentContent = document.querySelector(`[data-tab="${activeTab}"]`);
-      if (currentContent) {
-        // Clone content to avoid modifying original
-        const clonedContent = currentContent.cloneNode(true);
+        const tabNames = {
+          overview: "Tổng quan hệ thống",
+          activities: "Thống kê hoạt động",
+          users: "Thống kê người dùng",
+          points: "Thống kê điểm thưởng",
+          trends: "Phân tích xu hướng"
+        };
         
-        // Convert charts to images
-        try {
-          const chartImages = await convertChartsToImages(clonedContent);
-          if (chartImages.length > 0) {
-            replaceChartsWithImages(clonedContent, chartImages);
-          }
-        } catch (chartError) {
-          console.warn("Could not convert charts to images, using placeholders:", chartError);
-          // Fallback to placeholders if conversion fails
-          const charts = clonedContent.querySelectorAll('[class*="recharts"], svg');
-          charts.forEach(chart => {
-            const container = chart.closest('.h-80, [class*="CardContent"]');
-            if (container) {
-              const card = container.closest('[class*="Card"]');
-              const title = card?.querySelector('[class*="CardTitle"]')?.textContent || 'Biểu đồ';
-              container.innerHTML = `
-                <div class="chart-container">
-                  <div class="chart-title">${title}</div>
-                  <div class="chart-placeholder">
-                    <p style="font-size: 14px;">Biểu đồ sẽ được hiển thị trong file Excel</p>
-                  </div>
-                </div>
-              `;
-            }
-          });
+        let statsDataForPDF = {};
+        if (activeTab === "overview") {
+          statsDataForPDF = { dashboardStats, activityOverview };
+        } else if (activeTab === "activities") {
+          statsDataForPDF = { activityOverview };
+        } else if (activeTab === "users") {
+          statsDataForPDF = { dashboardStats };
+        } else if (activeTab === "points") {
+          statsDataForPDF = { dashboardStats };
+        } else if (activeTab === "trends") {
+          statsDataForPDF = { dashboardStats, activityOverview };
         }
         
-        // Remove interactive elements
-        const buttons = clonedContent.querySelectorAll('button, [role="button"]');
-        buttons.forEach(btn => btn.remove());
-        
-        // Style cards for print with better formatting
-        const cards = clonedContent.querySelectorAll('[class*="Card"]');
-        cards.forEach(card => {
-          // Skip if it's already a stat card
-          if (!card.classList.contains('stat-card')) {
-            card.className = 'card';
-            card.style.cssText = `
-              border: 2px solid #e2e8f0;
-              border-radius: 12px;
-              padding: 24px;
-              margin-bottom: 24px;
-              background: white;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-              page-break-inside: avoid;
-            `;
-            
-            // Style card titles
-            const cardTitle = card.querySelector('[class*="CardTitle"], h3, h4');
-            if (cardTitle) {
-              cardTitle.className = 'card-title';
-              cardTitle.style.cssText = `
-                font-size: 20px;
-                font-weight: 700;
-                margin-bottom: 18px;
-                color: #1e40af;
-                border-bottom: 3px solid #3b82f6;
-                padding-bottom: 12px;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-              `;
+      // Convert ECharts hiện tại thành image để chèn vào layout PDF
+      const currentContent = document.querySelector(`[data-tab="${activeTab}"]`);
+      let chartImagesMap = {};
+      if (currentContent) {
+        try {
+          const chartImages = await convertEChartsToImages(currentContent);
+          chartImages.forEach((chart) => {
+            const title = (chart.title || "").toLowerCase();
+            if (title.includes("hoạt động theo thời gian") || title.includes("xu hướng")) {
+              if (!chartImagesMap.activityTimeline) {
+                chartImagesMap.activityTimeline = chart.imageData;
+              }
             }
-          }
-        });
-        
-        // Style stat cards - find grid containers first
-        const grids = clonedContent.querySelectorAll('[class*="grid"]');
-        grids.forEach(grid => {
-          const gridItems = grid.querySelectorAll(':scope > div, :scope > [class*="Card"]');
-          gridItems.forEach((item, index) => {
-            // Check if it's a stat card (has large number)
-            const hasLargeNumber = item.querySelector('[class*="text-2xl"], [class*="text-3xl"]');
-            if (hasLargeNumber) {
-              item.className = 'stat-card';
-              item.style.cssText = `
-                background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-                border: 2px solid #e2e8f0;
-                border-radius: 12px;
-                padding: 24px;
-                margin-bottom: 20px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-                page-break-inside: avoid;
-              `;
-              
-              // Style the number
-              const numberEl = item.querySelector('[class*="text-2xl"], [class*="text-3xl"]');
-              if (numberEl) {
-                numberEl.className = 'stat-value';
-                numberEl.style.cssText = `
-                  font-size: 32px;
-                  font-weight: 800;
-                  color: #1e40af;
-                  margin-bottom: 6px;
-                  line-height: 1.2;
-                `;
-              }
-              
-              // Style the label
-              const labelEl = item.querySelector('[class*="text-sm"], [class*="text-gray"]');
-              if (labelEl && labelEl.textContent && !labelEl.textContent.includes('|')) {
-                labelEl.className = 'stat-label';
-                labelEl.style.cssText = `
-                  font-size: 13px;
-                  color: #64748b;
-                  font-weight: 600;
-                  text-transform: uppercase;
-                  letter-spacing: 0.5px;
-                `;
-              }
-              
-              // Style subvalue
-              const subValueEl = item.querySelector('[class*="text-xs"], [class*="text-gray-500"]');
-              if (subValueEl && subValueEl.textContent.includes('|')) {
-                subValueEl.className = 'stat-subvalue';
-                subValueEl.style.cssText = `
-                  font-size: 12px;
-                  color: #94a3b8;
-                  margin-top: 8px;
-                  font-weight: 500;
-                `;
+            if (title.includes("điểm theo năm học") || title.includes("phân bổ điểm theo năm học")) {
+              if (!chartImagesMap.pointsByYear) {
+                chartImagesMap.pointsByYear = chart.imageData;
               }
             }
           });
-        });
-        
-        // Style tables
-        const tables = clonedContent.querySelectorAll('table');
-        tables.forEach(table => {
-          table.style.cssText = `
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            margin-bottom: 30px;
-            font-size: 12px;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            page-break-inside: avoid;
-          `;
-          
-          // Style table headers
-          const headers = table.querySelectorAll('th');
-          headers.forEach(th => {
-            th.style.cssText = `
-              background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-              color: white;
-              font-weight: 700;
-              font-size: 13px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              padding: 14px 16px;
-              border: none;
-              border-bottom: 2px solid #1e3a8a;
-            `;
-          });
-          
-          // Style table cells
-          const cells = table.querySelectorAll('td');
-          cells.forEach((td, index) => {
-            const row = td.parentElement;
-            const rowIndex = Array.from(row.parentElement.children).indexOf(row);
-            td.style.cssText = `
-              padding: 14px 16px;
-              border: none;
-              border-bottom: 1px solid #e2e8f0;
-              background: ${rowIndex % 2 === 0 ? 'white' : '#f8fafc'};
-            `;
-          });
-        });
-        
-        // Style list items (top lists)
-        const listContainers = clonedContent.querySelectorAll('[class*="space-y"]');
-        listContainers.forEach(container => {
-          const items = container.querySelectorAll(':scope > div');
-          items.forEach((item, index) => {
-            if (item.querySelector('[class*="rounded-full"]') || item.querySelector('[class*="flex items-center"]')) {
-              item.className = 'list-item';
-              item.style.cssText = `
-                padding: 14px 16px;
-                margin-bottom: 8px;
-                background: ${index % 2 === 0 ? '#f8fafc' : 'white'};
-                border-radius: 8px;
-                border-left: 4px solid ${index % 2 === 0 ? '#3b82f6' : '#f97316'};
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                page-break-inside: avoid;
-              `;
-              
-              // Style rank badge
-              const rankBadge = item.querySelector('[class*="rounded-full"]');
-              if (rankBadge) {
-                rankBadge.className = 'rank-badge';
-                rankBadge.style.cssText = `
-                  width: 32px;
-                  height: 32px;
-                  border-radius: 50%;
-                  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
-                  color: white;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  font-weight: 700;
-                  font-size: 14px;
-                  margin-right: 12px;
-                `;
-              }
-            }
-          });
-        });
-        
-        const exportDate = new Date().toLocaleDateString("vi-VN", { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        
-        printElement.innerHTML = `
-          <div class="report-header">
-            <h1 class="report-title">Báo cáo thống kê hệ thống</h1>
-            <div class="report-meta">Năm học: ${academicYearName}</div>
-            <div class="report-meta">Ngày xuất: ${exportDate}</div>
-          </div>
-          ${clonedContent.innerHTML}
-        `;
-      } else {
-        printElement.innerHTML = `
-          <div style="padding: 20px; font-family: Arial, sans-serif;">
-            <h1 style="color: #f97316;">Báo cáo thống kê - ${academicYearName}</h1>
-            <p>Ngày xuất: ${new Date().toLocaleDateString("vi-VN")}</p>
-            <p>Không có dữ liệu để xuất</p>
-          </div>
-        `;
+        } catch (chartError) {
+          console.warn("Could not convert charts to images for PDF:", chartError);
+        }
       }
-      
-      // Wait a bit for content to render, then export
+
+      // Render layout PDF chuyên nghiệp bằng React vào container ẩn
+      const root = ReactDOM.createRoot(printElement);
+      const generatedAtLabel = new Date().toLocaleDateString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+
+      root.render(
+        <StatisticsPdfReport
+          dashboardStats={dashboardStats}
+          activityOverview={activityOverview}
+          academicYearLabel={academicYearName}
+          generatedAt={generatedAtLabel}
+          reportConfig={{
+            ...defaultStatisticsReportConfig,
+            academicYear: academicYearName || defaultStatisticsReportConfig.academicYear,
+          }}
+          chartImages={chartImagesMap}
+        />
+      );
+
       setTimeout(() => {
-        exportToPDF(printId, `ThongKe_${activeTab}_${academicYearName.replace(/[^a-z0-9]/gi, "_")}_${new Date().toISOString().split("T")[0]}`);
-        // Clean up after a delay
+        exportStatisticsToPDFProfessional(
+          printId, 
+          `BaoCaoThongKe_${activeTab}_${academicYearName.replace(/[^a-z0-9]/gi, "_")}_${new Date().toISOString().split("T")[0]}`,
+          {
+            academicYear: academicYearName,
+            reportType: tabNames[activeTab] || "Tổng quan",
+            statsData: statsDataForPDF
+          }
+        );
+        
         setTimeout(() => {
+          root.unmount();
           if (printElement.parentNode) {
             printElement.parentNode.removeChild(printElement);
           }
@@ -398,48 +252,78 @@ export default function StatisticsPage() {
           toast.showError("Chưa có dữ liệu để xuất");
           return;
         }
-        statsData = { dashboardStats };
+        statsData = { dashboardStats, activityOverview };
       } else if (activeTab === "activities") {
         if (!activityOverview) {
           toast.showError("Chưa có dữ liệu để xuất");
           return;
         }
         statsData = { activityOverview };
-      } else if (activeTab === "academic-year") {
-        const academicYearStats = window.currentAcademicYearStats;
-        if (!academicYearStats) {
-          toast.showError("Chưa có dữ liệu để xuất. Vui lòng chọn năm học.");
-          return;
-        }
-        statsData = { academicYearStats };
-      } else if (activeTab === "class-group") {
-        const classGroupStats = window.currentClassGroupStats;
-        if (!classGroupStats) {
-          toast.showError("Chưa có dữ liệu để xuất. Vui lòng chọn lớp.");
-          return;
-        }
-        statsData = { classGroupStats };
+      } else if (activeTab === "users") {
+        statsData = { dashboardStats };
+      } else if (activeTab === "points") {
+        statsData = { dashboardStats };
+      } else if (activeTab === "trends") {
+        statsData = { dashboardStats, activityOverview };
       }
       
-      // Convert charts to images
+      // Convert ECharts to images
       const currentContent = document.querySelector(`[data-tab="${activeTab}"]`);
       let chartImages = [];
       
       if (currentContent) {
         try {
-          chartImages = await convertChartsToImages(currentContent);
+          chartImages = await convertEChartsToImages(currentContent);
         } catch (chartError) {
           console.warn("Could not convert charts to images:", chartError);
         }
       }
       
-      // Export with charts
       await exportStatisticsToExcelWithCharts(statsData, academicYearName, activeTab, chartImages);
       toast.showSuccess("Đã xuất file Excel thành công với biểu đồ!");
     } catch (error) {
       console.error("Error exporting Excel:", error);
       toast.showError(error.message || "Không thể xuất Excel. Vui lòng thử lại.");
     }
+  };
+
+  const styleContentForPrint = (element) => {
+    // Style cards
+    const cards = element.querySelectorAll('[class*="Card"]');
+    cards.forEach(card => {
+      card.style.cssText = `
+        border: 1px solid #e5e5e5;
+        padding: 20px;
+        margin-bottom: 20px;
+        background: white;
+        page-break-inside: avoid;
+      `;
+    });
+    
+    // Style stat cards
+    const statCards = element.querySelectorAll('[class*="stat-card"]');
+    statCards.forEach(card => {
+      card.style.cssText = `
+        background: #ffffff;
+        border: 1px solid #e5e5e5;
+        border-left: 3px solid #1e3a5f;
+        padding: 20px;
+        margin-bottom: 15px;
+        page-break-inside: avoid;
+      `;
+    });
+    
+    // Style chart containers
+    const chartContainers = element.querySelectorAll('.echarts-container, [class*="chart"]');
+    chartContainers.forEach(container => {
+      container.style.cssText = `
+        margin-bottom: 25px;
+        page-break-inside: avoid;
+        background: #ffffff;
+        border: 1px solid #e5e5e5;
+        padding: 20px;
+      `;
+    });
   };
 
   return (
@@ -450,7 +334,7 @@ export default function StatisticsPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Thống kê hệ thống</h1>
             <p className="text-gray-600 mt-1">
-              Tổng quan và phân tích dữ liệu hoạt động - sự kiện
+              Phân tích toàn diện dữ liệu hoạt động và hiệu suất hệ thống
             </p>
           </div>
           <div className="flex gap-2">
@@ -487,44 +371,59 @@ export default function StatisticsPage() {
         {/* Tabs */}
         <div className="flex gap-2 border-b">
           <button
-            className={`px-4 py-2 font-medium ${
+            className={`px-4 py-2 font-medium flex items-center gap-2 ${
               activeTab === "overview"
                 ? "text-orange-600 border-b-2 border-orange-600"
                 : "text-gray-600 hover:text-gray-900"
             }`}
             onClick={() => setActiveTab("overview")}
           >
+            <BarChart3 className="w-4 h-4" />
             Tổng quan
           </button>
           <button
-            className={`px-4 py-2 font-medium ${
+            className={`px-4 py-2 font-medium flex items-center gap-2 ${
               activeTab === "activities"
                 ? "text-orange-600 border-b-2 border-orange-600"
                 : "text-gray-600 hover:text-gray-900"
             }`}
             onClick={() => setActiveTab("activities")}
           >
-            Sự kiện
+            <Activity className="w-4 h-4" />
+            Hoạt động
           </button>
           <button
-            className={`px-4 py-2 font-medium ${
-              activeTab === "academic-year"
+            className={`px-4 py-2 font-medium flex items-center gap-2 ${
+              activeTab === "users"
                 ? "text-orange-600 border-b-2 border-orange-600"
                 : "text-gray-600 hover:text-gray-900"
             }`}
-            onClick={() => setActiveTab("academic-year")}
+            onClick={() => setActiveTab("users")}
           >
-            Năm học
+            <Users className="w-4 h-4" />
+            Người dùng
           </button>
           <button
-            className={`px-4 py-2 font-medium ${
-              activeTab === "class-group"
+            className={`px-4 py-2 font-medium flex items-center gap-2 ${
+              activeTab === "points"
                 ? "text-orange-600 border-b-2 border-orange-600"
                 : "text-gray-600 hover:text-gray-900"
             }`}
-            onClick={() => setActiveTab("class-group")}
+            onClick={() => setActiveTab("points")}
           >
-            Lớp học
+            <Award className="w-4 h-4" />
+            Điểm thưởng
+          </button>
+          <button
+            className={`px-4 py-2 font-medium flex items-center gap-2 ${
+              activeTab === "trends"
+                ? "text-orange-600 border-b-2 border-orange-600"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+            onClick={() => setActiveTab("trends")}
+          >
+            <TrendingUp className="w-4 h-4" />
+            Xu hướng
           </button>
         </div>
 
@@ -539,29 +438,14 @@ export default function StatisticsPage() {
               {activeTab === "activities" && (
                 <ActivitiesTab activityOverview={activityOverview} />
               )}
-              {activeTab === "academic-year" && (
-                <AcademicYearTab 
-                  selectedAcademicYear={selectedAcademicYear}
-                  onExportExcel={(stats) => {
-                    const academicYearName = selectedAcademicYear
-                      ? academicYears.find((y) => y.id === selectedAcademicYear)?.name || "Tất cả"
-                      : "Tất cả";
-                    exportStatisticsToExcel({ academicYearStats: stats }, academicYearName, "academic-year");
-                    toast.showSuccess("Đã xuất file Excel thành công!");
-                  }}
-                />
+              {activeTab === "users" && (
+                <UsersTab dashboardStats={dashboardStats} />
               )}
-              {activeTab === "class-group" && (
-                <ClassGroupTab 
-                  selectedAcademicYear={selectedAcademicYear}
-                  onExportExcel={(stats) => {
-                    const academicYearName = selectedAcademicYear
-                      ? academicYears.find((y) => y.id === selectedAcademicYear)?.name || "Tất cả"
-                      : "Tất cả";
-                    exportStatisticsToExcel({ classGroupStats: stats }, academicYearName, "class-group");
-                    toast.showSuccess("Đã xuất file Excel thành công!");
-                  }}
-                />
+              {activeTab === "points" && (
+                <PointsTab dashboardStats={dashboardStats} selectedAcademicYear={selectedAcademicYear} />
+              )}
+              {activeTab === "trends" && (
+                <TrendsTab dashboardStats={dashboardStats} activityOverview={activityOverview} />
               )}
             </div>
           </>
@@ -573,6 +457,30 @@ export default function StatisticsPage() {
 
 // Overview Tab Component
 function OverviewTab({ dashboardStats, activityOverview }) {
+  const [classGroups, setClassGroups] = useState([]);
+
+  useEffect(() => {
+    const loadClassGroups = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await ClassGroupService.list({ pageNumber: 1, pageSize: 1000 }, token);
+        const data = response?.data?.items || [];
+        setClassGroups(data);
+      } catch (error) {
+        console.error("Error loading class groups in OverviewTab:", error);
+      }
+    };
+    loadClassGroups();
+  }, []);
+
+  // Format class name with grade: "10A1"
+  const formatClassName = (classGroup) => {
+    if (!classGroup) return "";
+    const grade = classGroup.grade || "";
+    const name = classGroup.name || "";
+    return grade ? `${grade}${name}` : name;
+  };
+
   if (!dashboardStats && !activityOverview) {
     return <div className="text-center text-gray-500 py-12">Chưa có dữ liệu</div>;
   }
@@ -614,12 +522,147 @@ function OverviewTab({ dashboardStats, activityOverview }) {
       ]
     : [];
 
+  // Activity Timeline Chart
+  const activityTimelineOption = dashboardStats?.activityTimeline?.length > 0 ? {
+    ...ECHARTS_TITLE_STYLE,
+    title: {
+      text: "Hoạt động theo thời gian",
+      left: "center",
+      ...ECHARTS_TITLE_STYLE.textStyle,
+    },
+    tooltip: {
+      trigger: "axis",
+      axisPointer: { type: "cross" },
+      textStyle: ECHARTS_TEXT_STYLE,
+    },
+    legend: {
+      data: ["Số sự kiện", "Số người tham gia"],
+      bottom: 0,
+      textStyle: ECHARTS_TEXT_STYLE,
+    },
+    grid: {
+      left: "3%",
+      right: "4%",
+      bottom: "15%",
+      containLabel: true,
+    },
+    xAxis: {
+      type: "category",
+      data: dashboardStats.activityTimeline.map((item) => item.monthYear),
+      axisLabel: { 
+        rotate: 45,
+        ...ECHARTS_TEXT_STYLE,
+      },
+    },
+    yAxis: [
+      {
+        type: "value",
+        name: "Số sự kiện",
+        position: "left",
+        nameTextStyle: ECHARTS_TEXT_STYLE,
+        axisLabel: ECHARTS_TEXT_STYLE,
+      },
+      {
+        type: "value",
+        name: "Số người tham gia",
+        position: "right",
+        nameTextStyle: ECHARTS_TEXT_STYLE,
+        axisLabel: ECHARTS_TEXT_STYLE,
+      },
+    ],
+    series: [
+      {
+        name: "Số sự kiện",
+        type: "bar",
+        data: dashboardStats.activityTimeline.map((item) => item.activityCount),
+        itemStyle: { 
+          color: ECHARTS_COLORS[0],
+          borderRadius: [4, 4, 0, 0],
+        },
+        yAxisIndex: 0,
+      },
+      {
+        name: "Số người tham gia",
+        type: "line",
+        data: dashboardStats.activityTimeline.map((item) => item.participantCount),
+        itemStyle: { 
+          color: ECHARTS_COLORS[1],
+        },
+        lineStyle: {
+          width: 3,
+          type: "solid",
+        },
+        symbol: "circle",
+        symbolSize: 6,
+        yAxisIndex: 1,
+      },
+    ],
+  } : null;
+
+  // Points by Academic Year Chart
+  const pointsByYearOption = dashboardStats?.pointsByAcademicYear?.length > 0 ? {
+    ...ECHARTS_TITLE_STYLE,
+    title: {
+      text: "Điểm theo năm học",
+      left: "center",
+      ...ECHARTS_TITLE_STYLE.textStyle,
+    },
+    tooltip: {
+      trigger: "axis",
+      textStyle: ECHARTS_TEXT_STYLE,
+      formatter: (params) => {
+        const param = params[0];
+        return `${param.name}<br/>${param.seriesName}: ${param.value.toLocaleString()} điểm`;
+      },
+    },
+    grid: {
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
+      containLabel: true,
+    },
+    xAxis: {
+      type: "category",
+      data: dashboardStats.pointsByAcademicYear.map((item) => item.academicYearName),
+      axisLabel: { 
+        rotate: 45,
+        ...ECHARTS_TEXT_STYLE,
+      },
+    },
+    yAxis: {
+      type: "value",
+      name: "Tổng điểm",
+      nameTextStyle: ECHARTS_TEXT_STYLE,
+      axisLabel: ECHARTS_TEXT_STYLE,
+    },
+    series: [
+      {
+        name: "Tổng điểm",
+        type: "bar",
+        data: dashboardStats.pointsByAcademicYear.map((item) => item.totalPoints),
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: ECHARTS_COLORS[2] },
+            { offset: 1, color: ECHARTS_COLORS[2] + "CC" },
+          ]),
+          borderRadius: [4, 4, 0, 0],
+        },
+        label: {
+          show: true,
+          position: "top",
+          formatter: (params) => params.value.toLocaleString(),
+          ...ECHARTS_TEXT_STYLE,
+        },
+      },
+    ],
+  } : null;
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statsCards.map((stat, index) => (
-          <Card key={index} className="hover-lift">
+          <Card key={index} className="hover-lift stat-card">
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-3">
                 <div className={`${stat.bgColor} p-3 rounded-lg`}>
@@ -637,66 +680,27 @@ function OverviewTab({ dashboardStats, activityOverview }) {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Activity Timeline */}
-        {dashboardStats?.activityTimeline && dashboardStats.activityTimeline.length > 0 && (
+        {activityTimelineOption && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-orange-600" />
-                Hoạt động theo thời gian
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dashboardStats.activityTimeline}>
-                  <defs>
-                    <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="monthYear" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Area
-                    type="monotone"
-                    dataKey="activityCount"
-                    stroke="#f97316"
-                    fillOpacity={1}
-                    fill="url(#colorActivity)"
-                    name="Số sự kiện"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="participantCount"
-                    stroke="#3b82f6"
-                    name="Số người tham gia"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+            <CardContent className="p-6">
+              <ReactECharts
+                option={activityTimelineOption}
+                style={{ height: "400px", width: "100%" }}
+                opts={{ renderer: "svg" }}
+              />
             </CardContent>
           </Card>
         )}
 
         {/* Points by Academic Year */}
-        {dashboardStats?.pointsByAcademicYear && dashboardStats.pointsByAcademicYear.length > 0 && (
+        {pointsByYearOption && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-green-600" />
-                Điểm theo năm học
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboardStats.pointsByAcademicYear}>
-                  <XAxis dataKey="academicYearName" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="totalPoints" fill="#22c55e" name="Tổng điểm" />
-                </BarChart>
-              </ResponsiveContainer>
+            <CardContent className="p-6">
+              <ReactECharts
+                option={pointsByYearOption}
+                style={{ height: "400px", width: "100%" }}
+                opts={{ renderer: "svg" }}
+              />
             </CardContent>
           </Card>
         )}
@@ -705,7 +709,7 @@ function OverviewTab({ dashboardStats, activityOverview }) {
       {/* Top Lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Classes */}
-        {dashboardStats?.topActiveClasses && dashboardStats.topActiveClasses.length > 0 && (
+        {dashboardStats?.topActiveClasses?.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Top 10 lớp tích cực nhất</CardTitle>
@@ -722,7 +726,13 @@ function OverviewTab({ dashboardStats, activityOverview }) {
                         {index + 1}
                       </div>
                       <div>
-                        <div className="font-medium">{cls.classGroupName}</div>
+                        <div className="font-medium">
+                          {(() => {
+                            // Tìm lớp trong classGroups để lấy grade
+                            const fullClass = classGroups.find(cg => cg.id === cls.classGroupId);
+                            return fullClass ? formatClassName(fullClass) : cls.classGroupName || `Lớp ${cls.classGroupId}`;
+                          })()}
+                        </div>
                         <div className="text-sm text-gray-500">
                           {cls.activityCount} sự kiện • {cls.participantCount} người tham gia
                         </div>
@@ -742,7 +752,7 @@ function OverviewTab({ dashboardStats, activityOverview }) {
         )}
 
         {/* Top Students */}
-        {dashboardStats?.topActiveStudents && dashboardStats.topActiveStudents.length > 0 && (
+        {dashboardStats?.topActiveStudents?.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Top 10 học sinh tích cực nhất</CardTitle>
@@ -784,47 +794,181 @@ function OverviewTab({ dashboardStats, activityOverview }) {
 
 // Activities Tab Component
 function ActivitiesTab({ activityOverview }) {
-  const { loading, getActivityDetailStatistics } = useStatisticsApi();
-  const [activities, setActivities] = useState([]);
-  const [selectedActivityId, setSelectedActivityId] = useState(null);
-  const [activityDetailStats, setActivityDetailStats] = useState(null);
-
-  useEffect(() => {
-    loadActivities();
-  }, []);
-
-  useEffect(() => {
-    if (selectedActivityId) {
-      loadActivityDetailStats();
-    } else {
-      setActivityDetailStats(null);
-    }
-  }, [selectedActivityId]);
-
-  const loadActivities = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await activityService.getAllActivities(1, 1000, null, token);
-      const items = response?.data?.items || [];
-      setActivities(items);
-    } catch (error) {
-      console.error("Error loading activities:", error);
-    }
-  };
-
-  const loadActivityDetailStats = async () => {
-    try {
-      const data = await getActivityDetailStatistics(selectedActivityId);
-      setActivityDetailStats(data);
-    } catch (error) {
-      console.error("Error loading activity detail statistics:", error);
-      setActivityDetailStats(null);
-    }
-  };
-
   if (!activityOverview) {
     return <div className="text-center text-gray-500 py-12">Chưa có dữ liệu</div>;
   }
+
+  // Activity Status Pie Chart
+  const activityStatusOption = {
+    ...ECHARTS_TITLE_STYLE,
+    title: {
+      text: "Trạng thái sự kiện",
+      left: "center",
+      ...ECHARTS_TITLE_STYLE.textStyle,
+    },
+    tooltip: {
+      trigger: "item",
+      textStyle: ECHARTS_TEXT_STYLE,
+      formatter: "{a} <br/>{b}: {c} ({d}%)",
+    },
+    legend: {
+      orient: "vertical",
+      left: "left",
+      data: ["Đang diễn ra", "Đã kết thúc", "Đã hủy"],
+      textStyle: ECHARTS_TEXT_STYLE,
+    },
+    series: [
+      {
+        name: "Trạng thái",
+        type: "pie",
+        radius: ["40%", "70%"],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 10,
+          borderColor: "#fff",
+          borderWidth: 2,
+        },
+        label: {
+          show: true,
+          formatter: "{b}\n{d}%",
+          ...ECHARTS_TEXT_STYLE,
+        },
+        emphasis: {
+          label: {
+            show: true,
+            fontSize: 14,
+            fontWeight: 600,
+            ...ECHARTS_TEXT_STYLE,
+          },
+        },
+        data: [
+          {
+            value: activityOverview.ongoing || 0,
+            name: "Đang diễn ra",
+            itemStyle: { color: ECHARTS_COLORS[0] },
+          },
+          {
+            value: activityOverview.completed || 0,
+            name: "Đã kết thúc",
+            itemStyle: { color: ECHARTS_COLORS[2] },
+          },
+          {
+            value: activityOverview.cancelled || 0,
+            name: "Đã hủy",
+            itemStyle: { color: ECHARTS_COLORS[3] },
+          },
+        ],
+      },
+    ],
+  };
+
+  // Activities by Type Chart
+  const activitiesByTypeOption = activityOverview?.byType?.length > 0 ? {
+    ...ECHARTS_TITLE_STYLE,
+    title: {
+      text: "Phân loại theo loại sự kiện",
+      left: "center",
+      ...ECHARTS_TITLE_STYLE.textStyle,
+    },
+    tooltip: {
+      trigger: "item",
+      textStyle: ECHARTS_TEXT_STYLE,
+      formatter: "{a} <br/>{b}: {c} ({d}%)",
+    },
+    legend: {
+      orient: "vertical",
+      right: 10,
+      top: "center",
+      textStyle: ECHARTS_TEXT_STYLE,
+    },
+    series: [
+      {
+        name: "Loại sự kiện",
+        type: "pie",
+        radius: "60%",
+        itemStyle: {
+          borderRadius: 8,
+          borderColor: "#fff",
+          borderWidth: 2,
+        },
+        label: {
+          ...ECHARTS_TEXT_STYLE,
+        },
+        data: activityOverview.byType.map((item, index) => ({
+          value: item.count,
+          name: getActivityTypeLabel(item.type), // Hiển thị tên tiếng Việt
+          itemStyle: { color: ECHARTS_COLORS[index % ECHARTS_COLORS.length] },
+        })),
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 8,
+            shadowOffsetX: 0,
+            shadowColor: "rgba(0, 0, 0, 0.2)",
+          },
+          label: {
+            ...ECHARTS_TEXT_STYLE,
+            fontSize: 14,
+            fontWeight: 600,
+          },
+        },
+      },
+    ],
+  } : null;
+
+  // Activities by Academic Year Chart
+  const activitiesByYearOption = activityOverview?.byAcademicYear?.length > 0 ? {
+    ...ECHARTS_TITLE_STYLE,
+    title: {
+      text: "Phân bổ theo năm học",
+      left: "center",
+      ...ECHARTS_TITLE_STYLE.textStyle,
+    },
+    tooltip: {
+      trigger: "axis",
+      axisPointer: { type: "shadow" },
+      textStyle: ECHARTS_TEXT_STYLE,
+    },
+    legend: {
+      data: ["Số sự kiện", "Số người tham gia"],
+      bottom: 0,
+      textStyle: ECHARTS_TEXT_STYLE,
+    },
+    grid: {
+      left: "3%",
+      right: "4%",
+      bottom: "15%",
+      containLabel: true,
+    },
+    xAxis: {
+      type: "category",
+      data: activityOverview.byAcademicYear.map((item) => item.academicYearName),
+      axisLabel: ECHARTS_TEXT_STYLE,
+    },
+    yAxis: {
+      type: "value",
+      axisLabel: ECHARTS_TEXT_STYLE,
+    },
+    series: [
+      {
+        name: "Số sự kiện",
+        type: "bar",
+        data: activityOverview.byAcademicYear.map((item) => item.activityCount),
+        itemStyle: { 
+          color: ECHARTS_COLORS[1],
+          borderRadius: [4, 4, 0, 0],
+        },
+      },
+      {
+        name: "Số người tham gia",
+        type: "bar",
+        data: activityOverview.byAcademicYear.map((item) => item.totalParticipants),
+        itemStyle: { 
+          color: ECHARTS_COLORS[0],
+          borderRadius: [4, 4, 0, 0],
+        },
+      },
+    ],
+  } : null;
 
   return (
     <div className="space-y-6">
@@ -858,61 +1002,46 @@ function ActivitiesTab({ activityOverview }) {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* By Type */}
-        {activityOverview.byType && activityOverview.byType.length > 0 && (
+        {/* Activity Status */}
           <Card>
-            <CardHeader>
-              <CardTitle>Phân loại theo loại sự kiện</CardTitle>
-            </CardHeader>
-            <CardContent className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={activityOverview.byType}
-                    dataKey="count"
-                    nameKey="type"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label
-                  >
-                    {activityOverview.byType.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+          <CardContent className="p-6">
+            <ReactECharts
+              option={activityStatusOption}
+              style={{ height: "400px", width: "100%" }}
+              opts={{ renderer: "svg" }}
+            />
             </CardContent>
           </Card>
-        )}
 
-        {/* By Academic Year */}
-        {activityOverview.byAcademicYear && activityOverview.byAcademicYear.length > 0 && (
+        {/* Activities by Type */}
+        {activitiesByTypeOption && (
           <Card>
-            <CardHeader>
-              <CardTitle>Phân bổ theo năm học</CardTitle>
-            </CardHeader>
-            <CardContent className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={activityOverview.byAcademicYear}>
-                  <XAxis dataKey="academicYearName" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="activityCount" fill="#f97316" name="Số sự kiện" />
-                  <Bar dataKey="totalParticipants" fill="#3b82f6" name="Số người tham gia" />
-                </BarChart>
-              </ResponsiveContainer>
+            <CardContent className="p-6">
+              <ReactECharts
+                option={activitiesByTypeOption}
+                style={{ height: "400px", width: "100%" }}
+                opts={{ renderer: "svg" }}
+              />
             </CardContent>
           </Card>
         )}
       </div>
 
+      {/* Activities by Academic Year */}
+      {activitiesByYearOption && (
+        <Card>
+          <CardContent className="p-6">
+            <ReactECharts
+              option={activitiesByYearOption}
+              style={{ height: "400px", width: "100%" }}
+              opts={{ renderer: "svg" }}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Top Activities */}
-      {activityOverview.topActivitiesByParticipants &&
-        activityOverview.topActivitiesByParticipants.length > 0 && (
+      {activityOverview?.topActivitiesByParticipants?.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Top sự kiện có nhiều người tham gia nhất</CardTitle>
@@ -949,261 +1078,125 @@ function ActivitiesTab({ activityOverview }) {
             </CardContent>
           </Card>
         )}
-
-      {/* Activity Detail Section */}
-      <Card className="border-2 border-orange-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-orange-600" />
-            Thống kê chi tiết theo sự kiện
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Activity Selector */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Chọn sự kiện để xem thống kê chi tiết
-            </label>
-            <CustomSelect
-              value={selectedActivityId ? selectedActivityId.toString() : ""}
-              onValueChange={(value) => {
-                if (value) {
-                  setSelectedActivityId(parseInt(value));
-                } else {
-                  setSelectedActivityId(null);
-                }
-              }}
-              placeholder="Chọn sự kiện"
-              options={activities.map((activity) => ({
-                value: activity.id.toString(),
-                label: `${activity.title} (${activity.startDate ? new Date(activity.startDate).toLocaleDateString("vi-VN") : "N/A"})`,
-              }))}
-              className="w-full"
-            />
-          </div>
-
-          {/* Activity Detail Statistics */}
-          {loading ? (
-            <LoadingCard text="Đang tải thống kê chi tiết..." />
-          ) : activityDetailStats ? (
-            <div className="space-y-6">
-              {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
-                  <CardContent className="p-6">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {activityDetailStats.totalRegistered}
-                    </div>
-                    <div className="text-sm text-gray-600">Tổng số đăng ký</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-green-50 to-green-100">
-                  <CardContent className="p-6">
-                    <div className="text-2xl font-bold text-green-600">
-                      {activityDetailStats.actualParticipants}
-                    </div>
-                    <div className="text-sm text-gray-600">Người tham gia thực tế</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
-                  <CardContent className="p-6">
-                    <div className="text-2xl font-bold text-orange-600">
-                      {activityDetailStats.participationRate?.toFixed(1)}%
-                    </div>
-                    <div className="text-sm text-gray-600">Tỷ lệ tham gia</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
-                  <CardContent className="p-6">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {activityDetailStats.totalRewardPoints?.toLocaleString() || 0}
-                    </div>
-                    <div className="text-sm text-gray-600">Tổng điểm thưởng</div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Chart: Registered vs Actual Participants */}
-              {activityDetailStats.registeredVsActual && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Biểu đồ: Đăng ký vs Tham gia thực tế</CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={[
-                          {
-                            name: "Đăng ký",
-                            value: activityDetailStats.totalRegistered,
-                          },
-                          {
-                            name: "Tham gia thực tế",
-                            value: activityDetailStats.actualParticipants,
-                          },
-                        ]}
-                      >
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="value" fill="#f97316" name="Số lượng" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          ) : selectedActivityId ? (
-            <div className="text-center text-gray-500 py-8">
-              Không có dữ liệu thống kê cho sự kiện này
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
     </div>
   );
 }
 
-// Academic Year Tab Component
-function AcademicYearTab({ selectedAcademicYear, onExportExcel }) {
-  const { loading, getAcademicYearStatistics } = useStatisticsApi();
-  const [stats, setStats] = useState(null);
-
-  useEffect(() => {
-    if (selectedAcademicYear) {
-      loadStats();
-    } else {
-      setStats(null);
-    }
-  }, [selectedAcademicYear]);
-
-  useEffect(() => {
-    if (stats) {
-      // Store stats for export
-      window.currentAcademicYearStats = stats;
-    }
-  }, [stats]);
-
-  const loadStats = async () => {
-    try {
-      const data = await getAcademicYearStatistics(selectedAcademicYear);
-      setStats(data);
-    } catch (error) {
-      console.error("Error loading academic year statistics:", error);
-    }
-  };
-
-  if (loading) {
-    return <LoadingCard text="Đang tải thống kê năm học..." />;
+// Users Tab Component
+function UsersTab({ dashboardStats }) {
+  if (!dashboardStats) {
+    return <div className="text-center text-gray-500 py-12">Chưa có dữ liệu</div>;
   }
 
-  if (!stats) {
-    return (
-      <div className="text-center text-gray-500 py-12">
-        Vui lòng chọn năm học để xem thống kê
-      </div>
-    );
-  }
+  // User Distribution Chart
+  const userDistributionOption = dashboardStats?.userCounts ? {
+    ...ECHARTS_TITLE_STYLE,
+    title: {
+      text: "Phân bổ người dùng",
+      left: "center",
+      ...ECHARTS_TITLE_STYLE.textStyle,
+    },
+    tooltip: {
+      trigger: "item",
+      textStyle: ECHARTS_TEXT_STYLE,
+      formatter: "{a} <br/>{b}: {c} ({d}%)",
+    },
+    legend: {
+      orient: "vertical",
+      left: "left",
+      textStyle: ECHARTS_TEXT_STYLE,
+    },
+    series: [
+      {
+        name: "Người dùng",
+        type: "pie",
+        radius: "60%",
+        itemStyle: {
+          borderRadius: 8,
+          borderColor: "#fff",
+          borderWidth: 2,
+        },
+        label: {
+          ...ECHARTS_TEXT_STYLE,
+        },
+        data: [
+          {
+            value: dashboardStats.userCounts.students || 0,
+            name: "Học sinh",
+            itemStyle: { color: ECHARTS_COLORS[0] },
+          },
+          {
+            value: dashboardStats.userCounts.teachers || 0,
+            name: "Giáo viên",
+            itemStyle: { color: ECHARTS_COLORS[1] },
+          },
+        ],
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 8,
+            shadowOffsetX: 0,
+            shadowColor: "rgba(0, 0, 0, 0.2)",
+          },
+          label: {
+            ...ECHARTS_TEXT_STYLE,
+            fontSize: 14,
+            fontWeight: 600,
+          },
+        },
+      },
+    ],
+  } : null;
 
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-6">
-            <div className="text-2xl font-bold">{stats.totalClasses}</div>
-            <div className="text-sm text-gray-600">Tổng số lớp</div>
+            <div className="text-3xl font-bold">{dashboardStats.userCounts?.totalUsers || 0}</div>
+            <div className="text-sm text-gray-600">Tổng người dùng</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
-            <div className="text-2xl font-bold">{stats.totalStudents}</div>
-            <div className="text-sm text-gray-600">Tổng số học sinh</div>
+            <div className="text-3xl font-bold text-blue-600">
+              {dashboardStats.userCounts?.students || 0}
+            </div>
+            <div className="text-sm text-gray-600">Học sinh</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
-            <div className="text-2xl font-bold">{stats.totalActivities}</div>
-            <div className="text-sm text-gray-600">Tổng số sự kiện</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold">{stats.activeClubs}</div>
-            <div className="text-sm text-gray-600">Câu lạc bộ hoạt động</div>
+            <div className="text-3xl font-bold text-purple-600">
+              {dashboardStats.userCounts?.teachers || 0}
+            </div>
+            <div className="text-sm text-gray-600">Giáo viên</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Monthly Activities */}
-      {stats.monthlyActivities && stats.monthlyActivities.length > 0 && (
+      {/* User Distribution Chart */}
+      {userDistributionOption && (
         <Card>
-          <CardHeader>
-            <CardTitle>Hoạt động theo tháng</CardTitle>
-          </CardHeader>
-          <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.monthlyActivities}>
-                <XAxis dataKey="monthName" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="activityCount" fill="#f97316" name="Số sự kiện" />
-                <Bar dataKey="participantCount" fill="#3b82f6" name="Số người tham gia" />
-                <Bar dataKey="totalPointsAwarded" fill="#22c55e" name="Tổng điểm" />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent className="p-6">
+            <ReactECharts
+              option={userDistributionOption}
+              style={{ height: "400px", width: "100%" }}
+              opts={{ renderer: "svg" }}
+            />
           </CardContent>
         </Card>
       )}
 
-      {/* Top Classes and Students */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {stats.topActiveClasses && stats.topActiveClasses.length > 0 && (
+      {/* Top Active Students */}
+      {dashboardStats?.topActiveStudents?.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Top lớp tích cực nhất</CardTitle>
+            <CardTitle>Top 10 học sinh tích cực nhất</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {stats.topActiveClasses.map((cls, index) => (
-                  <div
-                    key={cls.classGroupId}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <div className="font-medium">{cls.classGroupName}</div>
-                        <div className="text-sm text-gray-500">
-                          {cls.activityCount} sự kiện
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-green-600">
-                        {cls.totalPointsAwarded?.toLocaleString()}
-                      </div>
-                      <div className="text-xs text-gray-500">điểm</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {stats.topActiveStudents && stats.topActiveStudents.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Top học sinh tích cực nhất</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {stats.topActiveStudents.map((student, index) => (
+              {dashboardStats.topActiveStudents.map((student, index) => (
                   <div
                     key={student.userId}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -1227,68 +1220,6 @@ function AcademicYearTab({ selectedAcademicYear, onExportExcel }) {
                     </div>
                   </div>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Comparison with Previous Year */}
-      {stats.comparisonWithPreviousYear && (
-        <Card>
-          <CardHeader>
-            <CardTitle>So sánh với năm học trước</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-sm text-gray-600">Số lớp</div>
-                <div
-                  className={`text-2xl font-bold ${
-                    (stats.comparisonWithPreviousYear.classCountChangePercent || 0) >= 0
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {stats.comparisonWithPreviousYear.classCountChangePercent?.toFixed(1) || 0}%
-                </div>
-              </div>
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-sm text-gray-600">Số học sinh</div>
-                <div
-                  className={`text-2xl font-bold ${
-                    (stats.comparisonWithPreviousYear.studentCountChangePercent || 0) >= 0
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {stats.comparisonWithPreviousYear.studentCountChangePercent?.toFixed(1) || 0}%
-                </div>
-              </div>
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-sm text-gray-600">Số sự kiện</div>
-                <div
-                  className={`text-2xl font-bold ${
-                    (stats.comparisonWithPreviousYear.activityCountChangePercent || 0) >= 0
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {stats.comparisonWithPreviousYear.activityCountChangePercent?.toFixed(1) || 0}%
-                </div>
-              </div>
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-sm text-gray-600">Số người tham gia</div>
-                <div
-                  className={`text-2xl font-bold ${
-                    (stats.comparisonWithPreviousYear.participantCountChangePercent || 0) >= 0
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {stats.comparisonWithPreviousYear.participantCountChangePercent?.toFixed(1) || 0}%
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -1297,63 +1228,352 @@ function AcademicYearTab({ selectedAcademicYear, onExportExcel }) {
   );
 }
 
-// Class Group Tab Component
-function ClassGroupTab({ selectedAcademicYear, onExportExcel }) {
+// Points Tab Component
+function PointsTab({ dashboardStats, selectedAcademicYear }) {
   const { loading, getClassGroupStatistics } = useStatisticsApi();
   const [classGroups, setClassGroups] = useState([]);
   const [selectedClassGroup, setSelectedClassGroup] = useState(null);
-  const [stats, setStats] = useState(null);
+  const [classStats, setClassStats] = useState(null);
+  const [isLoadingClassStats, setIsLoadingClassStats] = useState(false);
+  const loadClassStatsTimeoutRef = useRef(null);
+  const retryTimeoutRef = useRef(null);
+  const currentRequestRef = useRef(null); // Track current request để cancel nếu cần
 
   useEffect(() => {
     loadClassGroups();
   }, [selectedAcademicYear]);
 
   useEffect(() => {
-    if (selectedClassGroup) {
-      loadStats();
+    // Clear tất cả timeout và cancel request đang chờ
+    if (loadClassStatsTimeoutRef.current) {
+      clearTimeout(loadClassStatsTimeoutRef.current);
+      loadClassStatsTimeoutRef.current = null;
     }
-  }, [selectedClassGroup, selectedAcademicYear]);
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    // Cancel request đang chờ nếu có
+    if (currentRequestRef.current) {
+      currentRequestRef.current = null;
+    }
 
-  useEffect(() => {
-    if (stats) {
-      // Store stats for export
-      window.currentClassGroupStats = stats;
+    if (selectedClassGroup && !isLoadingClassStats) {
+      // Debounce để tránh gọi API quá nhanh (có thể gây lỗi backend threading)
+      loadClassStatsTimeoutRef.current = setTimeout(() => {
+        loadClassStatistics();
+      }, 500); // Tăng delay lên 500ms để đảm bảo không gọi quá nhanh
+    } else if (!selectedClassGroup) {
+      setClassStats(null);
     }
-  }, [stats]);
+
+    // Cleanup timeout khi unmount hoặc dependencies thay đổi
+    return () => {
+      if (loadClassStatsTimeoutRef.current) {
+        clearTimeout(loadClassStatsTimeoutRef.current);
+        loadClassStatsTimeoutRef.current = null;
+      }
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClassGroup, selectedAcademicYear]);
 
   const loadClassGroups = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await ClassGroupService.getAll(token);
-      const data = response?.data?.items || [];
-      const filtered = selectedAcademicYear
-        ? data.filter((cg) => cg.academicYearId === selectedAcademicYear)
-        : data;
-      setClassGroups(filtered);
+      if (!token) {
+        console.error("No token found");
+        return;
+      }
+      
+      console.log("Loading class groups, selectedAcademicYear:", selectedAcademicYear);
+      
+      // Load tất cả lớp hoặc filter theo năm học nếu có
+      let response;
+      if (selectedAcademicYear) {
+        // Filter theo năm học
+        const filterDto = {
+          academicYearId: selectedAcademicYear,
+          isDeleted: false,
+        };
+        console.log("Filtering classes with:", filterDto);
+        response = await ClassGroupService.filter(filterDto, token);
+      } else {
+        console.log("Loading all classes");
+        response = await ClassGroupService.list({ pageNumber: 1, pageSize: 1000 }, token);
+      }
+      
+      console.log("Class groups response:", response);
+      const data = response?.data?.items || response?.data || [];
+      console.log("Class groups data:", data);
+      setClassGroups(data);
     } catch (error) {
       console.error("Error loading class groups:", error);
+      console.error("Error response:", error.response?.data);
+      // Fallback: thử load tất cả lớp
+      try {
+        const token = localStorage.getItem("token");
+        const response = await ClassGroupService.list({ pageNumber: 1, pageSize: 1000 }, token);
+        const data = response?.data?.items || [];
+        console.log("Fallback class groups:", data);
+        setClassGroups(data);
+      } catch (fallbackError) {
+        console.error("Error loading class groups (fallback):", fallbackError);
+        setClassGroups([]);
+      }
     }
   };
 
-  const loadStats = async () => {
+  // Format class name with grade: "10A1"
+  const formatClassName = (classGroup) => {
+    if (!classGroup) return "";
+    const grade = classGroup.grade || "";
+    const name = classGroup.name || "";
+    return grade ? `${grade}${name}` : name;
+  };
+
+  const loadClassStatistics = async (retryCount = 0) => {
+    // Tránh gọi API nhiều lần cùng lúc (có thể gây lỗi DbContext threading ở backend)
+    if (isLoadingClassStats) {
+      console.log("Already loading class statistics, skipping...");
+      return;
+    }
+
+    // Kiểm tra nếu selectedClassGroup không hợp lệ
+    if (!selectedClassGroup) {
+      setClassStats(null);
+      return;
+    }
+
+    // Kiểm tra nếu đã có request khác đang chờ
+    if (currentRequestRef.current) {
+      console.log("Another request is pending, skipping...");
+      return;
+    }
+
     try {
-      const data = await getClassGroupStatistics(
-        selectedClassGroup,
-        selectedAcademicYear
-      );
-      setStats(data);
+      setIsLoadingClassStats(true);
+      const requestId = Date.now();
+      currentRequestRef.current = requestId;
+      
+      console.log("Loading class statistics for:", selectedClassGroup, "academicYear:", selectedAcademicYear);
+      
+      // Chỉ truyền academicYearId nếu nó khác với classGroupId (tránh nhầm lẫn)
+      // Và chỉ khi thực sự cần filter theo năm học
+      const academicYearIdToUse = selectedAcademicYear && selectedAcademicYear !== selectedClassGroup 
+        ? selectedAcademicYear 
+        : null;
+      
+      const data = await getClassGroupStatistics(selectedClassGroup, academicYearIdToUse);
+      
+      // Kiểm tra xem request này có còn hợp lệ không (có thể đã có request mới)
+      if (currentRequestRef.current !== requestId) {
+        console.log("Request is outdated, ignoring response");
+        return;
+      }
+      
+      console.log("Class statistics data:", data);
+      setClassStats(data);
+      currentRequestRef.current = null;
     } catch (error) {
-      console.error("Error loading class group statistics:", error);
+      // Kiểm tra xem request này có còn hợp lệ không
+      const requestId = currentRequestRef.current;
+      if (!requestId) {
+        console.log("Request was cancelled, ignoring error");
+        return;
+      }
+      
+      console.error("Error loading class statistics:", error);
+      const errorMessage = error?.response?.data?.message || error?.message || "";
+      
+      // Nếu là lỗi backend threading và chưa retry quá 1 lần, thử lại với delay
+      if (errorMessage.includes("second operation") && retryCount < 1) {
+        const delay = 2000; // Delay 2 giây để backend có thời gian xử lý
+        console.log(`Retrying class statistics load (attempt ${retryCount + 1}/1) after ${delay}ms...`);
+        setIsLoadingClassStats(false);
+        currentRequestRef.current = null;
+        
+        // Clear timeout cũ nếu có
+        if (retryTimeoutRef.current) {
+          clearTimeout(retryTimeoutRef.current);
+        }
+        
+        retryTimeoutRef.current = setTimeout(() => {
+          retryTimeoutRef.current = null;
+          // Chỉ retry nếu vẫn còn selectedClassGroup
+          if (selectedClassGroup) {
+            loadClassStatistics(retryCount + 1);
+          }
+        }, delay);
+        return;
+      }
+      
+      console.error("Error details:", error.response?.data || error.message);
+      setClassStats(null);
+      currentRequestRef.current = null;
+    } finally {
+      setIsLoadingClassStats(false);
     }
   };
+
+  if (!dashboardStats) {
+    return <div className="text-center text-gray-500 py-12">Chưa có dữ liệu</div>;
+  }
+
+  // Points Distribution Chart
+  const pointsDistributionOption = dashboardStats?.pointsByAcademicYear?.length > 0 ? {
+    ...ECHARTS_TITLE_STYLE,
+    title: {
+      text: "Phân bổ điểm theo năm học",
+      left: "center",
+      ...ECHARTS_TITLE_STYLE.textStyle,
+    },
+    tooltip: {
+      trigger: "axis",
+      textStyle: ECHARTS_TEXT_STYLE,
+      formatter: (params) => {
+        const param = params[0];
+        return `${param.name}<br/>${param.seriesName}: ${param.value.toLocaleString()} điểm`;
+      },
+    },
+    grid: {
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
+      containLabel: true,
+    },
+    xAxis: {
+      type: "category",
+      data: dashboardStats.pointsByAcademicYear.map((item) => item.academicYearName),
+      axisLabel: ECHARTS_TEXT_STYLE,
+    },
+    yAxis: {
+      type: "value",
+      name: "Tổng điểm",
+      nameTextStyle: ECHARTS_TEXT_STYLE,
+      axisLabel: ECHARTS_TEXT_STYLE,
+    },
+    series: [
+      {
+        name: "Tổng điểm",
+        type: "bar",
+        data: dashboardStats.pointsByAcademicYear.map((item) => item.totalPoints),
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: ECHARTS_COLORS[2] },
+            { offset: 1, color: ECHARTS_COLORS[2] + "CC" },
+          ]),
+          borderRadius: [4, 4, 0, 0],
+        },
+        label: {
+          show: true,
+          position: "top",
+          formatter: (params) => params.value.toLocaleString(),
+          ...ECHARTS_TEXT_STYLE,
+        },
+      },
+    ],
+  } : null;
+
+  // Student Points Chart (if class selected)
+  const studentPointsOption = classStats?.studentPointsDistribution?.length > 0 ? {
+    ...ECHARTS_TITLE_STYLE,
+    title: {
+      text: `Phân bổ điểm học sinh - ${formatClassName(classGroups.find(c => c.id === selectedClassGroup))}`,
+      left: "center",
+      ...ECHARTS_TITLE_STYLE.textStyle,
+    },
+    tooltip: {
+      trigger: "axis",
+      textStyle: ECHARTS_TEXT_STYLE,
+      formatter: (params) => {
+        const param = params[0];
+        return `${param.name}<br/>${param.seriesName}: ${param.value.toLocaleString()} điểm`;
+      },
+    },
+    grid: {
+      left: "3%",
+      right: "4%",
+      bottom: "15%",
+      containLabel: true,
+    },
+    xAxis: {
+      type: "category",
+      data: classStats.studentPointsDistribution.map((item) => item.fullName),
+      axisLabel: { 
+        rotate: 45,
+        ...ECHARTS_TEXT_STYLE,
+      },
+    },
+    yAxis: {
+      type: "value",
+      name: "Tổng điểm",
+      nameTextStyle: ECHARTS_TEXT_STYLE,
+      axisLabel: ECHARTS_TEXT_STYLE,
+    },
+    series: [
+      {
+        name: "Tổng điểm",
+        type: "bar",
+        data: classStats.studentPointsDistribution.map((item) => item.totalPoints || 0),
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: ECHARTS_COLORS[0] },
+            { offset: 1, color: ECHARTS_COLORS[0] + "CC" },
+          ]),
+          borderRadius: [4, 4, 0, 0],
+        },
+        label: {
+          show: true,
+          position: "top",
+          formatter: (params) => params.value.toLocaleString(),
+          ...ECHARTS_TEXT_STYLE,
+        },
+      },
+    ],
+  } : null;
 
   return (
     <div className="space-y-6">
+      {/* Summary Card */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-4xl font-bold text-green-600 mb-2">
+            {dashboardStats.totalPointsAwarded?.toLocaleString() || 0}
+          </div>
+          <div className="text-lg text-gray-600">Tổng điểm đã trao trong hệ thống</div>
+        </CardContent>
+      </Card>
+
+      {/* Points Distribution Chart */}
+      {pointsDistributionOption && (
+        <Card>
+          <CardContent className="p-6">
+            <ReactECharts
+              option={pointsDistributionOption}
+              style={{ height: "400px", width: "100%" }}
+              opts={{ renderer: "svg" }}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Class Selector */}
       <Card>
         <CardHeader>
-          <CardTitle>Chọn lớp để xem thống kê</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="w-5 h-5 text-orange-600" />
+            Thống kê điểm theo lớp
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Chọn lớp để xem thống kê điểm từng học sinh
+            </label>
           <CustomSelect
             value={selectedClassGroup?.toString() || ""}
             onValueChange={(value) => {
@@ -1361,114 +1581,427 @@ function ClassGroupTab({ selectedAcademicYear, onExportExcel }) {
                 setSelectedClassGroup(parseInt(value));
               } else {
                 setSelectedClassGroup(null);
+                  setClassStats(null);
               }
             }}
             placeholder="Chọn lớp"
             options={classGroups.map((cg) => ({
               value: cg.id.toString(),
-              label: cg.name,
+              label: formatClassName(cg),
             }))}
             className="w-full"
           />
-        </CardContent>
-      </Card>
+          </div>
 
+          {/* Class Statistics */}
       {loading ? (
         <LoadingCard text="Đang tải thống kê lớp..." />
-      ) : stats ? (
+          ) : classStats ? (
         <div className="space-y-6">
-          {/* Summary Cards */}
+              {/* Class Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
+                <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
               <CardContent className="p-6">
-                <div className="text-2xl font-bold">{stats.totalStudents}</div>
-                <div className="text-sm text-gray-600">Số học sinh</div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {classStats.totalStudents || 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Tổng số học sinh</div>
               </CardContent>
             </Card>
-            <Card>
+                <Card className="bg-gradient-to-br from-green-50 to-green-100">
               <CardContent className="p-6">
-                <div className="text-2xl font-bold">{stats.totalActivitiesParticipated}</div>
-                <div className="text-sm text-gray-600">Sự kiện đã tham gia</div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {classStats.totalPointsAwarded?.toLocaleString() || 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Tổng điểm</div>
               </CardContent>
             </Card>
-            <Card>
+                <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
               <CardContent className="p-6">
-                <div className="text-2xl font-bold text-green-600">
-                  {stats.totalPointsAwarded?.toLocaleString()}
+                    <div className="text-2xl font-bold text-purple-600">
+                      {classStats.averagePoints?.toFixed(1) || 0}
                 </div>
-                <div className="text-sm text-gray-600">Tổng điểm</div>
+                    <div className="text-sm text-gray-600">Điểm trung bình</div>
               </CardContent>
             </Card>
-            <Card>
+                <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
               <CardContent className="p-6">
-                <div className="text-2xl font-bold">{stats.participationRate?.toFixed(1)}%</div>
-                <div className="text-sm text-gray-600">Tỷ lệ tham gia</div>
+                    <div className="text-2xl font-bold text-orange-600">
+                      {classStats.totalActivitiesParticipated || 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Sự kiện đã tham gia</div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Ranking */}
-          {stats.rankingInAcademicYear && (
+              {/* Student Points Chart */}
+              {studentPointsOption && (
+                <Card>
+                  <CardContent className="p-6">
+                    <ReactECharts
+                      option={studentPointsOption}
+                      style={{ height: "400px", width: "100%" }}
+                      opts={{ renderer: "svg" }}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Student Points Table */}
+              {classStats?.studentPointsDistribution?.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Xếp hạng lớp trong năm học</CardTitle>
+                    <CardTitle>Bảng điểm từng học sinh</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-orange-600">
-                    #{stats.rankingInAcademicYear}
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+                            <th className="px-4 py-3 text-left font-semibold">STT</th>
+                            <th className="px-4 py-3 text-left font-semibold">Họ và tên</th>
+                            <th className="px-4 py-3 text-center font-semibold">Tổng điểm</th>
+                            <th className="px-4 py-3 text-center font-semibold">Số sự kiện</th>
+                            <th className="px-4 py-3 text-center font-semibold">Điểm TB/sự kiện</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {classStats.studentPointsDistribution
+                            .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0))
+                            .map((student, index) => {
+                              const avgPointsPerActivity = student.activityCount > 0 
+                                ? ((student.totalPoints || 0) / student.activityCount).toFixed(1)
+                                : "0";
+                              return (
+                                <tr
+                                  key={student.userId || index}
+                                  className={`border-b hover:bg-gray-50 transition-colors ${
+                                    index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                  }`}
+                                >
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                                        index === 0 ? "bg-yellow-100 text-yellow-700" :
+                                        index === 1 ? "bg-gray-100 text-gray-700" :
+                                        index === 2 ? "bg-orange-100 text-orange-700" :
+                                        "bg-blue-50 text-blue-600"
+                                      }`}>
+                                        {index + 1}
+                                      </span>
                   </div>
-                  <div className="text-gray-600 mt-2">
-                    Trong tổng số {stats.totalClassesInAcademicYear} lớp
-                  </div>
+                                  </td>
+                                  <td className="px-4 py-3 font-medium text-gray-900">
+                                    {student.fullName}
+                                  </td>
+                                  <td className="px-4 py-3 text-center">
+                                    <span className="font-bold text-green-600 text-lg">
+                                      {student.totalPoints?.toLocaleString() || 0}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-gray-600">
+                                    {student.activityCount || 0}
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-gray-600">
+                                    {avgPointsPerActivity}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
                 </div>
               </CardContent>
             </Card>
           )}
+            </div>
+          ) : selectedClassGroup ? (
+            <div className="text-center text-gray-500 py-8">
+              Không có dữ liệu thống kê cho lớp này
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
 
-          {/* Top Reward Activities */}
-          {stats.topRewardActivities && stats.topRewardActivities.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Top sự kiện lớp đạt giải</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {stats.topRewardActivities.map((activity, index) => (
-                    <div
-                      key={activity.activityId}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <div className="font-medium">{activity.activityTitle}</div>
-                          <div className="text-sm text-gray-500">
-                            {activity.rank && `Giải ${activity.rank}`}
-                          </div>
-                        </div>
+      {/* Top Students of School */}
+      {dashboardStats?.topActiveStudents?.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Top học sinh có điểm cao nhất của trường</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {dashboardStats.topActiveStudents
+                .sort((a, b) => (b.totalPointsAwarded || 0) - (a.totalPointsAwarded || 0))
+                .slice(0, 20)
+                .map((student, index) => (
+                  <div
+                    key={student.userId}
+                    className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-gray-700"
+                        style={{
+                          backgroundColor: 
+                            index === 0 ? "#FFED99" : // Yellow for rank 1
+                            index === 1 ? "#E6E6E6" : // Grey for rank 2
+                            index === 2 ? "#F9CC99" : // Orange for rank 3
+                            "#ADD8E6" // Light blue for rank 4+
+                        }}
+                      >
+                        {index + 1}
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-green-600">
-                          {activity.pointsAwarded?.toLocaleString()}
+                      <div>
+                        <div className="font-medium text-gray-900">{student.fullName}</div>
+                        <div className="text-sm text-gray-500">
+                          {student.activityCount || 0} sự kiện
                         </div>
-                        <div className="text-xs text-gray-500">điểm</div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    <div className="text-right">
+                      <div 
+                        className="font-bold text-lg"
+                        style={{
+                          color: index === 0 ? "#4CAF50" : "#696969" // Green for rank 1, grey for others
+                        }}
+                      >
+                        {student.totalPointsAwarded?.toLocaleString() || 0}
+                      </div>
+                      <div className="text-xs text-gray-500">điểm</div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Top Classes by Points */}
+      {dashboardStats?.topActiveClasses?.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Top lớp có điểm cao nhất</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {dashboardStats.topActiveClasses
+                .sort((a, b) => (b.totalPointsAwarded || 0) - (a.totalPointsAwarded || 0))
+                .slice(0, 10)
+                .map((cls, index) => (
+                  <div
+                    key={cls.classGroupId}
+                    className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-gray-700"
+                        style={{
+                          backgroundColor: 
+                            index === 0 ? "#FFED99" : // Yellow for rank 1
+                            index === 1 ? "#E6E6E6" : // Grey for rank 2
+                            index === 2 ? "#F9CC99" : // Orange for rank 3
+                            "#ADD8E6" // Light blue for rank 4+
+                        }}
+                      >
+                        {index + 1}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {(() => {
+                            // Tìm lớp trong classGroups để lấy grade
+                            const fullClass = classGroups.find(cg => cg.id === cls.classGroupId);
+                            return fullClass ? formatClassName(fullClass) : cls.classGroupName;
+                          })()}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {cls.activityCount || 0} sự kiện
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div 
+                        className="font-bold text-lg"
+                        style={{
+                          color: index === 0 ? "#4CAF50" : "#696969" // Green for rank 1, grey for others
+                        }}
+                      >
+                        {cls.totalPointsAwarded?.toLocaleString() || 0}
+                      </div>
+                      <div className="text-xs text-gray-500">điểm</div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
         </div>
-      ) : (
-        <div className="text-center text-gray-500 py-12">
-          Vui lòng chọn lớp để xem thống kê
+  );
+}
+
+// Trends Tab Component
+function TrendsTab({ dashboardStats, activityOverview }) {
+  if (!dashboardStats && !activityOverview) {
+    return <div className="text-center text-gray-500 py-12">Chưa có dữ liệu</div>;
+  }
+
+  // Activity Timeline Trend
+  const activityTrendOption = dashboardStats?.activityTimeline?.length > 0 ? {
+    ...ECHARTS_TITLE_STYLE,
+    title: {
+      text: "Xu hướng hoạt động theo thời gian",
+      left: "center",
+      ...ECHARTS_TITLE_STYLE.textStyle,
+    },
+    tooltip: {
+      trigger: "axis",
+      axisPointer: { type: "cross" },
+      textStyle: ECHARTS_TEXT_STYLE,
+    },
+    legend: {
+      data: ["Số sự kiện", "Số người tham gia"],
+      bottom: 0,
+      textStyle: ECHARTS_TEXT_STYLE,
+    },
+    grid: {
+      left: "3%",
+      right: "4%",
+      bottom: "15%",
+      containLabel: true,
+    },
+    xAxis: {
+      type: "category",
+      data: dashboardStats.activityTimeline.map((item) => item.monthYear),
+      axisLabel: { 
+        rotate: 45,
+        ...ECHARTS_TEXT_STYLE,
+      },
+    },
+    yAxis: [
+      {
+        type: "value",
+        name: "Số sự kiện",
+        position: "left",
+        nameTextStyle: ECHARTS_TEXT_STYLE,
+        axisLabel: ECHARTS_TEXT_STYLE,
+      },
+      {
+        type: "value",
+        name: "Số người tham gia",
+        position: "right",
+        nameTextStyle: ECHARTS_TEXT_STYLE,
+        axisLabel: ECHARTS_TEXT_STYLE,
+      },
+    ],
+    series: [
+      {
+        name: "Số sự kiện",
+        type: "line",
+        smooth: true,
+        data: dashboardStats.activityTimeline.map((item) => item.activityCount),
+        itemStyle: { color: ECHARTS_COLORS[0] },
+        lineStyle: {
+          width: 3,
+          type: "solid",
+        },
+        symbol: "circle",
+        symbolSize: 6,
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: ECHARTS_COLORS[0] + "80" },
+            { offset: 1, color: ECHARTS_COLORS[0] + "10" },
+          ]),
+        },
+        yAxisIndex: 0,
+      },
+      {
+        name: "Số người tham gia",
+        type: "line",
+        smooth: true,
+        data: dashboardStats.activityTimeline.map((item) => item.participantCount),
+        itemStyle: { color: ECHARTS_COLORS[1] },
+        lineStyle: {
+          width: 3,
+          type: "solid",
+        },
+        symbol: "circle",
+        symbolSize: 6,
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: ECHARTS_COLORS[1] + "80" },
+            { offset: 1, color: ECHARTS_COLORS[1] + "10" },
+          ]),
+        },
+        yAxisIndex: 1,
+      },
+    ],
+  } : null;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-orange-600" />
+            Phân tích xu hướng
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-600 mb-6">
+            Phân tích xu hướng hoạt động và tham gia của người dùng theo thời gian để đưa ra các
+            quyết định chiến lược.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Activity Trend Chart */}
+      {activityTrendOption && (
+        <Card>
+          <CardContent className="p-6">
+            <ReactECharts
+              option={activityTrendOption}
+              style={{ height: "500px", width: "100%" }}
+              opts={{ renderer: "svg" }}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Trend Analysis */}
+      {dashboardStats?.activityTimeline?.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Nhận định xu hướng</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <h4 className="font-semibold text-blue-900 mb-2">Xu hướng sự kiện</h4>
+                <p className="text-sm text-blue-800">
+                  {dashboardStats.activityTimeline.length > 0
+                    ? `Trong ${dashboardStats.activityTimeline.length} tháng gần đây, hệ thống đã tổ chức ${dashboardStats.activityTimeline.reduce(
+                        (sum, item) => sum + item.activityCount,
+                        0
+                      )} sự kiện.`
+                    : "Chưa có dữ liệu đủ để phân tích xu hướng."}
+                </p>
         </div>
+              <div className="p-4 bg-green-50 rounded-lg">
+                <h4 className="font-semibold text-green-900 mb-2">Xu hướng tham gia</h4>
+                <p className="text-sm text-green-800">
+                  {dashboardStats.activityTimeline.length > 0
+                    ? `Tổng số người tham gia: ${dashboardStats.activityTimeline.reduce(
+                        (sum, item) => sum + item.participantCount,
+                        0
+                      ).toLocaleString()} người.`
+                    : "Chưa có dữ liệu đủ để phân tích xu hướng."}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
 }
-

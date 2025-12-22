@@ -18,10 +18,12 @@ export const useStatisticsApi = () => {
         return response?.data;
       } catch (error) {
         console.error("Error fetching activity overview statistics:", error);
-        toast.error(
-          error?.response?.data?.message ||
-            "Không thể tải thống kê tổng quan sự kiện"
-        );
+        if (toast.showError) {
+          toast.showError(
+            error?.response?.data?.message ||
+              "Không thể tải thống kê tổng quan sự kiện"
+          );
+        }
         throw error;
       } finally {
         setLoading(false);
@@ -42,10 +44,12 @@ export const useStatisticsApi = () => {
         return response?.data;
       } catch (error) {
         console.error("Error fetching activity detail statistics:", error);
-        toast.error(
-          error?.response?.data?.message ||
-            "Không thể tải thống kê chi tiết sự kiện"
-        );
+        if (toast.showError) {
+          toast.showError(
+            error?.response?.data?.message ||
+              "Không thể tải thống kê chi tiết sự kiện"
+          );
+        }
         throw error;
       } finally {
         setLoading(false);
@@ -66,10 +70,12 @@ export const useStatisticsApi = () => {
         return response?.data;
       } catch (error) {
         console.error("Error fetching academic year statistics:", error);
-        toast.error(
-          error?.response?.data?.message ||
-            "Không thể tải thống kê năm học"
-        );
+        if (toast.showError) {
+          toast.showError(
+            error?.response?.data?.message ||
+              "Không thể tải thống kê năm học"
+          );
+        }
         throw error;
       } finally {
         setLoading(false);
@@ -91,9 +97,9 @@ export const useStatisticsApi = () => {
         return response?.data;
       } catch (error) {
         console.error("Error fetching class group statistics:", error);
-        toast.error(
-          error?.response?.data?.message || "Không thể tải thống kê lớp"
-        );
+        // Không hiển thị toast cho lỗi này vì có thể là lỗi backend threading
+        // Chỉ log để debug
+        console.warn("Class statistics error (may be backend threading issue):", error?.response?.data?.message || "Không thể tải thống kê lớp");
         throw error;
       } finally {
         setLoading(false);
@@ -114,9 +120,11 @@ export const useStatisticsApi = () => {
         return response?.data;
       } catch (error) {
         console.error("Error fetching dashboard statistics:", error);
-        toast.error(
-          error?.response?.data?.message || "Không thể tải thống kê dashboard"
-        );
+        if (toast.showError) {
+          toast.showError(
+            error?.response?.data?.message || "Không thể tải thống kê dashboard"
+          );
+        }
         throw error;
       } finally {
         setLoading(false);

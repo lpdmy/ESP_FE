@@ -669,3 +669,703 @@ export const exportStatisticsToExcel = (statsData, academicYearName = "Tất c�
   return exportStatisticsToExcelAdvanced(statsData, academicYearName, tabName);
 };
 
+/**
+ * Generate analysis content for statistics report
+ * Tạo nội dung phân tích cho báo cáo thống kê
+ */
+const generateAnalysisContent = (element, statsData = {}, reportType = "overview") => {
+  const analysis = {
+    statDescriptions: [],
+    chartAnalyses: [],
+    rankingComments: [],
+    conclusion: ""
+  };
+
+  // Extract statistics from element
+  const statCards = element.querySelectorAll('.stat-card, [class*="stat"]');
+  statCards.forEach(card => {
+    const valueEl = card.querySelector('[class*="text-2xl"], [class*="text-3xl"], .stat-value');
+    const labelEl = card.querySelector('[class*="text-sm"], [class*="text-gray"], .stat-label');
+    
+    if (valueEl && labelEl) {
+      const label = labelEl.textContent.trim();
+      const value = valueEl.textContent.trim();
+      
+      // Generate description based on label
+      let description = "";
+      if (label.toLowerCase().includes('người dùng') || label.toLowerCase().includes('user')) {
+        description = "Phản ánh quy mô hệ thống tại thời điểm báo cáo.";
+      } else if (label.toLowerCase().includes('lớp') || label.toLowerCase().includes('class')) {
+        description = "Tổng số lớp học đang hoạt động trong hệ thống.";
+      } else if (label.toLowerCase().includes('sự kiện') || label.toLowerCase().includes('hoạt động') || label.toLowerCase().includes('activity')) {
+        description = "Tổng số sự kiện và hoạt động đã được tạo trong hệ thống.";
+      } else if (label.toLowerCase().includes('điểm') || label.toLowerCase().includes('point')) {
+        description = "Thể hiện mức độ tham gia và tương tác của người học.";
+      } else if (label.toLowerCase().includes('tham gia') || label.toLowerCase().includes('participation')) {
+        description = "Tỷ lệ người học tham gia các hoạt động so với tổng số đăng ký.";
+      } else {
+        description = "Chỉ số quan trọng phản ánh hoạt động của hệ thống.";
+      }
+      
+      analysis.statDescriptions.push({ label, value, description });
+    }
+  });
+
+  // Extract chart analyses
+  const charts = element.querySelectorAll('.chart-container, [class*="chart"], svg');
+  charts.forEach((chart, index) => {
+    const titleEl = chart.querySelector('.chart-title, [class*="CardTitle"], h3, h4');
+    const title = titleEl ? titleEl.textContent.trim() : `Biểu đồ ${index + 1}`;
+    
+    // Generate analysis based on chart type
+    let analysisText = "";
+    if (title.toLowerCase().includes('timeline') || title.toLowerCase().includes('theo thời gian')) {
+      analysisText = "Xu hướng hoạt động theo thời gian cho thấy mức độ ổn định hoặc biến động của hệ thống.";
+    } else if (title.toLowerCase().includes('điểm') || title.toLowerCase().includes('point')) {
+      analysisText = "Phân bố điểm số phản ánh mức độ tích cực tham gia của các đơn vị.";
+    } else if (title.toLowerCase().includes('phân loại') || title.toLowerCase().includes('type')) {
+      analysisText = "Cơ cấu phân loại cho thấy sự đa dạng trong các loại hoạt động.";
+    } else {
+      analysisText = "Dữ liệu thể hiện xu hướng và phân bố của chỉ số được phân tích.";
+    }
+    
+    analysis.chartAnalyses.push({ title, analysis: analysisText });
+  });
+
+  // Extract ranking tables
+  const rankingTables = element.querySelectorAll('table, .ranking-item, [class*="ranking"]');
+  rankingTables.forEach((table, index) => {
+    const rows = table.querySelectorAll('tr, .ranking-item, [class*="flex items-center"]');
+    if (rows.length > 0) {
+      const topValue = rows[0]?.querySelector('td:last-child, .ranking-value')?.textContent || "";
+      const totalRows = rows.length;
+      
+      let comment = "";
+      if (totalRows >= 10) {
+        comment = `Nhóm dẫn đầu chiếm phần lớn tổng điểm. Sự chênh lệch rõ rệt giữa top đầu và các đơn vị còn lại. Một số đơn vị có tham gia nhưng chưa phát sinh điểm đáng kể.`;
+      } else {
+        comment = `Phân bố điểm số tập trung vào một số đơn vị. Cần khuyến khích sự tham gia đồng đều hơn.`;
+      }
+      
+      analysis.rankingComments.push({ index, comment });
+    }
+  });
+
+  // Generate conclusion
+  const totalUsers = statsData.dashboardStats?.userCounts?.totalUsers || 0;
+  const totalActivities = statsData.dashboardStats?.activityCounts?.totalActivities || 0;
+  const totalPoints = statsData.dashboardStats?.totalPointsAwarded || 0;
+  
+  let conclusion = "";
+  if (reportType === "overview") {
+    conclusion = `Hệ thống hiện có ${totalUsers} người dùng và ${totalActivities} sự kiện đã được tạo. Tổng điểm đã trao là ${totalPoints.toLocaleString()} điểm. `;
+    if (totalActivities > 0 && totalPoints > 0) {
+      const avgPoints = Math.round(totalPoints / totalActivities);
+      conclusion += `Trung bình mỗi sự kiện trao ${avgPoints.toLocaleString()} điểm. `;
+    }
+    conclusion += `Định hướng cải thiện: tăng số lượng sự kiện, khuyến khích các lớp ít tham gia tích cực hơn.`;
+  } else {
+    conclusion = `Báo cáo phản ánh tình hình hoạt động của hệ thống trong kỳ báo cáo. Cần tiếp tục duy trì và phát triển các hoạt động hiệu quả.`;
+  }
+  
+  analysis.conclusion = conclusion;
+
+  return analysis;
+};
+
+/**
+ * Process content for PDF export - add analysis and descriptions
+ * Xử lý nội dung để thêm phân tích và mô tả
+ */
+const processContentForPDF = (element, analysis) => {
+  const clonedElement = element.cloneNode(true);
+  
+  // Add descriptions to stat cards
+  analysis.statDescriptions.forEach((stat, index) => {
+    const statCards = clonedElement.querySelectorAll('.stat-card, [class*="stat"]');
+    if (statCards[index]) {
+      const card = statCards[index];
+      const labelEl = card.querySelector('.stat-label, [class*="text-sm"]');
+      if (labelEl) {
+        const descEl = document.createElement('div');
+        descEl.className = 'stat-description';
+        descEl.style.cssText = 'font-size: 9pt; color: #666666; margin-top: 6px; font-style: italic; line-height: 1.4;';
+        descEl.textContent = stat.description;
+        labelEl.parentNode.insertBefore(descEl, labelEl.nextSibling);
+      }
+    }
+  });
+  
+  // Add analysis to charts
+  analysis.chartAnalyses.forEach((chartAnalysis, index) => {
+    const charts = clonedElement.querySelectorAll('.chart-container, [class*="chart"]');
+    if (charts[index]) {
+      const chart = charts[index];
+      const analysisEl = document.createElement('div');
+      analysisEl.className = 'chart-analysis';
+      analysisEl.style.cssText = 'font-size: 9pt; color: #333333; margin-top: 12px; padding-top: 10px; border-top: 1px solid #e5e5e5; line-height: 1.5;';
+      analysisEl.textContent = chartAnalysis.analysis;
+      chart.appendChild(analysisEl);
+    }
+  });
+  
+  // Add comments to ranking tables
+  analysis.rankingComments.forEach((comment, index) => {
+    const tables = clonedElement.querySelectorAll('table, .ranking-list');
+    if (tables[index]) {
+      const table = tables[index];
+      const commentEl = document.createElement('div');
+      commentEl.className = 'ranking-comment';
+      commentEl.style.cssText = 'margin-top: 15px; padding: 12px; background: #f8f8f8; border-left: 3px solid #1e3a5f; font-size: 9pt; color: #333333; line-height: 1.6;';
+      commentEl.innerHTML = `<strong>Nhận xét:</strong><ul style="margin-top: 8px; padding-left: 20px;">${comment.comment.split('.').filter(s => s.trim()).map(s => `<li>${s.trim()}.</li>`).join('')}</ul>`;
+      table.parentNode.insertBefore(commentEl, table.nextSibling);
+    }
+  });
+  
+  return clonedElement.innerHTML;
+};
+
+/**
+ * Export statistics to PDF with professional administrative/business report style
+ * Phong cách hành chính/chuyên nghiệp: tối giản, nghiêm túc, trung tính
+ * Tập trung vào mật độ thông tin và giá trị phân tích
+ * @param {string} elementId - ID of the element to print
+ * @param {string} filename - Name of the PDF file
+ * @param {Object} options - Additional options (academicYear, reportType, statsData, etc.)
+ */
+export const exportStatisticsToPDFProfessional = (
+  elementId, 
+  filename = "BaoCaoThongKe", 
+  options = {}
+) => {
+  try {
+    const element = document.getElementById(elementId);
+    if (!element) {
+      throw new Error(`Element with ID ${elementId} not found`);
+    }
+
+    // Create a new window for printing
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      throw new Error("Không thể mở cửa sổ in. Vui lòng cho phép popup.");
+    }
+    
+    const currentDate = new Date().toLocaleDateString("vi-VN", {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    const reportDate = new Date().toLocaleDateString("vi-VN", {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    
+    const academicYear = options.academicYear || "Tất cả năm học";
+    const reportType = options.reportType || "Tổng quan";
+    const statsData = options.statsData || {};
+    
+    // Generate analysis content
+    const analysis = generateAnalysisContent(element, statsData, reportType);
+    
+    // Process element content to add analysis
+    const processedContent = processContentForPDF(element, analysis);
+    
+    // Get the HTML content with professional administrative styling
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${filename}</title>
+          <meta charset="UTF-8">
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+          <style>
+            @page {
+              margin: 1.8cm 1.5cm 2.2cm 1.5cm;
+              size: A4;
+              @bottom-center {
+                content: counter(page);
+                font-family: 'Inter', 'Roboto', 'Arial', sans-serif;
+                font-size: 10px;
+                color: #666666;
+              }
+            }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
+            body {
+              font-family: 'Inter', 'Roboto', 'Noto Sans', 'Arial', sans-serif;
+              padding: 0;
+              margin: 0;
+              color: #000000;
+              background: #ffffff;
+              line-height: 1.6;
+              font-size: 11pt;
+            }
+            
+            /* Cover Page - Professional Administrative Style */
+            .cover-page {
+              page-break-after: always;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              text-align: center;
+              padding: 60px 40px;
+              background: #ffffff;
+              border: 1px solid #e5e5e5;
+            }
+            .cover-title {
+              font-size: 28pt;
+              font-weight: 700;
+              color: #000000;
+              margin-bottom: 20px;
+              letter-spacing: 1px;
+              line-height: 1.3;
+              text-transform: uppercase;
+            }
+            .cover-subtitle {
+              font-size: 14pt;
+              color: #333333;
+              margin-bottom: 40px;
+              font-weight: 400;
+              line-height: 1.5;
+            }
+            .cover-meta {
+              margin-top: 60px;
+              font-size: 11pt;
+              color: #666666;
+              font-weight: 400;
+              border-top: 1px solid #e5e5e5;
+              padding-top: 20px;
+              width: 100%;
+              max-width: 500px;
+            }
+            .cover-meta-item {
+              margin-bottom: 8px;
+            }
+            
+            /* Footer - Professional Style */
+            .footer {
+              position: fixed;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              height: 40px;
+              background: #ffffff;
+              color: #666666;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 0 20px;
+              font-size: 9pt;
+              border-top: 1px solid #e5e5e5;
+              font-weight: 400;
+              z-index: 1000;
+            }
+            .footer-left {
+              font-weight: 500;
+              color: #333333;
+            }
+            .footer-center {
+              color: #666666;
+            }
+            .footer-right {
+              color: #666666;
+            }
+            
+            /* Content - Compact Layout */
+            .content {
+              margin-top: 0;
+              margin-bottom: 40px;
+              padding: 0;
+            }
+            
+            /* Report Header - Minimal Professional - Compact */
+            .report-header {
+              text-align: center;
+              margin-bottom: 20px;
+              padding: 20px 15px;
+              background: #ffffff;
+              border: 1px solid #e5e5e5;
+              border-bottom: 2px solid #1e3a5f;
+            }
+            .report-title {
+              color: #000000;
+              margin-bottom: 10px;
+              font-size: 18pt;
+              font-weight: 700;
+              letter-spacing: 0.5px;
+            }
+            .report-meta {
+              color: #666666;
+              font-size: 10pt;
+              margin: 5px 0;
+              font-weight: 400;
+            }
+            
+            /* Statistics Cards - Minimal Professional - Compact Layout */
+            .stats-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+              gap: 12px;
+              margin-bottom: 20px;
+            }
+            .stat-card {
+              background: #ffffff;
+              border: 1px solid #e5e5e5;
+              border-left: 3px solid #1e3a5f;
+              padding: 15px;
+              margin-bottom: 12px;
+              page-break-inside: avoid;
+            }
+            .stat-value {
+              font-size: 24pt;
+              font-weight: 700;
+              color: #000000;
+              margin-bottom: 5px;
+              line-height: 1.2;
+            }
+            .stat-label {
+              font-size: 10pt;
+              color: #666666;
+              font-weight: 400;
+              text-transform: none;
+              letter-spacing: 0;
+            }
+            .stat-subvalue {
+              font-size: 9pt;
+              color: #666666;
+              margin-top: 8px;
+              font-weight: 400;
+              padding-top: 8px;
+              border-top: 1px solid #f0f0f0;
+            }
+            .stat-description {
+              font-size: 9pt;
+              color: #666666;
+              margin-top: 6px;
+              font-style: italic;
+              line-height: 1.4;
+            }
+            
+            /* Tables - Professional Administrative Style */
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 25px;
+              font-size: 10pt;
+              background: #ffffff;
+              border: 1px solid #e5e5e5;
+            }
+            th, td {
+              border: 1px solid #e5e5e5;
+              padding: 10px 12px;
+              text-align: left;
+            }
+            th {
+              background: #f8f8f8;
+              color: #000000;
+              font-weight: 600;
+              font-size: 10pt;
+              text-transform: none;
+              letter-spacing: 0;
+              border-bottom: 2px solid #1e3a5f;
+            }
+            tr:nth-child(even) {
+              background-color: #fafafa;
+            }
+            tr:nth-child(odd) {
+              background-color: #ffffff;
+            }
+            td {
+              color: #333333;
+              font-weight: 400;
+            }
+            
+            /* Charts - Minimal Professional - Compact */
+            .chart-container {
+              margin-bottom: 18px;
+              page-break-inside: avoid;
+              background: #ffffff;
+              border: 1px solid #e5e5e5;
+              padding: 15px;
+            }
+            .chart-title {
+              font-size: 12pt;
+              font-weight: 600;
+              color: #000000;
+              margin-bottom: 12px;
+              padding-bottom: 6px;
+              border-bottom: 1px solid #e5e5e5;
+            }
+            .chart-image {
+              width: 100%;
+              height: auto;
+              border: 1px solid #e5e5e5;
+            }
+            .chart-caption {
+              font-size: 9pt;
+              color: #666666;
+              margin-top: 10px;
+              font-style: italic;
+              text-align: center;
+            }
+            .chart-analysis {
+              font-size: 9pt;
+              color: #333333;
+              margin-top: 12px;
+              padding-top: 10px;
+              border-top: 1px solid #e5e5e5;
+              line-height: 1.5;
+            }
+            .ranking-comment {
+              margin-top: 15px;
+              padding: 12px;
+              background: #f8f8f8;
+              border-left: 3px solid #1e3a5f;
+              font-size: 9pt;
+              color: #333333;
+              line-height: 1.6;
+            }
+            .ranking-comment ul {
+              margin-top: 8px;
+              padding-left: 20px;
+            }
+            .ranking-comment li {
+              margin-bottom: 4px;
+            }
+            /* Conclusion Page */
+            .conclusion-page {
+              page-break-before: always;
+              padding: 30px 20px;
+            }
+            .conclusion-title {
+              font-size: 14pt;
+              font-weight: 700;
+              color: #000000;
+              margin-bottom: 20px;
+              padding-bottom: 10px;
+              border-bottom: 2px solid #1e3a5f;
+            }
+            .conclusion-content {
+              font-size: 10pt;
+              color: #333333;
+              line-height: 1.8;
+              margin-bottom: 25px;
+            }
+            .conclusion-section {
+              margin-bottom: 20px;
+            }
+            .conclusion-section-title {
+              font-size: 11pt;
+              font-weight: 600;
+              color: #000000;
+              margin-bottom: 10px;
+            }
+            .conclusion-section-content {
+              font-size: 10pt;
+              color: #333333;
+              line-height: 1.7;
+              padding-left: 15px;
+            }
+            
+            /* Cards - Minimal Professional - Compact */
+            .card {
+              background: #ffffff;
+              border: 1px solid #e5e5e5;
+              margin-bottom: 15px;
+              page-break-inside: avoid;
+            }
+            .card-header {
+              padding: 12px 15px;
+              border-bottom: 1px solid #e5e5e5;
+              background: #f8f8f8;
+            }
+            .card-title {
+              font-size: 12pt;
+              font-weight: 600;
+              color: #000000;
+              margin: 0;
+            }
+            .card-content {
+              padding: 15px;
+            }
+            
+            /* Lists & Rankings - Professional Table Style */
+            .ranking-list {
+              list-style: none;
+              padding: 0;
+              margin: 0;
+            }
+            .ranking-item {
+              padding: 12px 15px;
+              border-bottom: 1px solid #f0f0f0;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+            .ranking-item:last-child {
+              border-bottom: none;
+            }
+            .ranking-number {
+              font-weight: 600;
+              color: #1e3a5f;
+              margin-right: 15px;
+              min-width: 30px;
+            }
+            .ranking-name {
+              flex: 1;
+              color: #333333;
+              font-weight: 400;
+            }
+            .ranking-value {
+              color: #000000;
+              font-weight: 600;
+              text-align: right;
+            }
+            
+            /* Typography */
+            h1, h2, h3, h4, h5, h6 {
+              color: #000000;
+              font-weight: 600;
+              margin-bottom: 15px;
+              margin-top: 25px;
+            }
+            h1 {
+              font-size: 16pt;
+              border-bottom: 2px solid #1e3a5f;
+              padding-bottom: 8px;
+            }
+            h2 {
+              font-size: 14pt;
+              border-bottom: 1px solid #e5e5e5;
+              padding-bottom: 6px;
+            }
+            h3 {
+              font-size: 12pt;
+            }
+            p {
+              color: #333333;
+              margin-bottom: 10px;
+            }
+            
+            /* Remove all decorative elements */
+            .no-print,
+            button,
+            .btn,
+            [class*="gradient"],
+            [class*="shadow"],
+            [style*="gradient"],
+            [style*="shadow"] {
+              /* Keep functionality but remove visual effects */
+            }
+            
+            /* Print specific */
+            @media print {
+              .no-print {
+                display: none !important;
+              }
+              .cover-page {
+                page-break-after: always;
+              }
+              .card, .chart-container, .stat-card {
+                page-break-inside: avoid;
+              }
+              body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .footer {
+                display: flex !important;
+              }
+              /* Các section React dùng class này để buộc ngắt trang A4 */
+              .print-page-break {
+                page-break-after: always;
+                break-after: page;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <!-- Cover Page -->
+          <div class="cover-page">
+            <div class="cover-title">BÁO CÁO THỐNG KÊ<br/>HỆ THỐNG</div>
+            <div class="cover-subtitle">${reportType}</div>
+            <div class="cover-meta">
+              <div class="cover-meta-item"><strong>Năm học:</strong> ${academicYear}</div>
+              <div class="cover-meta-item"><strong>Ngày xuất báo cáo:</strong> ${currentDate}</div>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div class="footer">
+            <span class="footer-left">Báo cáo thống kê hệ thống</span>
+            <span class="footer-center">${reportDate}</span>
+            <span class="footer-right">Trang <span class="page-number"></span></span>
+          </div>
+          
+          <!-- Content -->
+          <div class="content">
+            ${processedContent}
+          </div>
+          
+          <!-- Conclusion Page -->
+          <div class="conclusion-page">
+            <div class="conclusion-title">KẾT LUẬN</div>
+            <div class="conclusion-content">
+              <div class="conclusion-section">
+                <div class="conclusion-section-title">Tổng kết</div>
+                <div class="conclusion-section-content">
+                  ${analysis.conclusion}
+                </div>
+              </div>
+              <div class="conclusion-section">
+                <div class="conclusion-section-title">Định hướng cải thiện</div>
+                <div class="conclusion-section-content">
+                  <ul style="margin: 0; padding-left: 20px;">
+                    <li>Tăng số lượng sự kiện và hoạt động để khuyến khích sự tham gia của người học.</li>
+                    <li>Khuyến khích các lớp ít tham gia tích cực hơn thông qua các chương trình hỗ trợ và động viên.</li>
+                    <li>Phân tích sâu hơn về nguyên nhân chênh lệch điểm số giữa các đơn vị để có biện pháp điều chỉnh phù hợp.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <script>
+            // Update page numbers
+            window.addEventListener('load', function() {
+              const pages = document.querySelectorAll('.page-number');
+              let pageNum = 1;
+              pages.forEach(function(page) {
+                page.textContent = pageNum++;
+              });
+            });
+          </script>
+        </body>
+      </html>
+    `;
+    
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    
+    // Wait for content to load, then print
+    setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+    }, 500);
+    
+    return true;
+  } catch (error) {
+    console.error("Error exporting to PDF:", error);
+    throw error;
+  }
+};
+

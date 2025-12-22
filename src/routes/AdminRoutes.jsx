@@ -2,7 +2,6 @@ import { Route } from "react-router-dom";
 import UserManagementPage from "@/pages/Admin/UserManagementPage";
 import ClassManagementPage from "@/pages/Admin/ClassManagementPage";
 import ClubManagementPage from "@/pages/Admin/ClubManagementPage";
-import DashboardPage from "@/pages/Admin/DashboardPage";
 import ImportStudentsPage from "@/pages/Admin/ImportStudentsPage";
 import { ROLE } from "@/common/constants/roles";
 import ProtectedRoute from "./ProtectedRoute";
@@ -16,15 +15,21 @@ import AISchedulePage from "@/pages/Admin/Activities/AISchedulePage";
 import ClassDetailPage from "@/pages/Admin/ClassDetailPage";
 import ModerationManagementPage from "@/pages/Admin/ModerationPage";
 import StatisticsPage from "@/pages/Admin/StatisticsPage";
+import StatisticsReportPage from "@/pages/Admin/StatisticsReportPage";
 export const adminRoutes = [
   <Route
-    element={<ProtectedRoute allowedRoles={[ROLE.ADMIN, ROLE.STAFF]} />}
+    element={
+      <ProtectedRoute
+        allowedRoles={[ROLE.ADMIN, ROLE.STAFF]}
+        requiredPermissions={["VIEW_STATISTICS"]}
+      />
+    }
     key="admin-dashboard-route"
   >
     <Route
       key="admin-dashboard"
       path={ROUTES.ADMIN.MAIN}
-      element={<DashboardPage />}
+      element={<StatisticsPage />}
     />
   </Route>,
 
@@ -178,7 +183,7 @@ export const adminRoutes = [
     <Route
       key="statistics"
       path={ROUTES.ADMIN.STATISTICS}
-      element={<StatisticsPage />}
+      element={<StatisticsReportPage />}
     />
   </Route>,
 ];
