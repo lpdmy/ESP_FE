@@ -9,16 +9,36 @@ import { connectNotificationHub } from '@/features/notifications/services/signal
 export default function SystemAnnouncementProvider({ children }) {
   const [showModal, setShowModal] = useState(false);
   const [hasCheckedOnce, setHasCheckedOnce] = useState(false);
-  const [shouldCheckAnnouncements, setShouldCheckAnnouncements] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
   
   const { user } = useSelector(state => state.user);
   const { publicAnnouncements, getPublicAnnouncements, getUnviewedAnnouncements } = useSystemAnnouncements();
   const location = useLocation();
 
+  // Get check status from localStorage
+  const getCheckStatus = () => {
+    if (!user?.id) return false;
+    const checkKey = `announcement_checked_${user.id}`;
+    const sessionKey = `announcement_session_${user.id}`;
+    const currentSession = sessionStorage.getItem('sessionId') || Date.now().toString();
+    
+    // Check if checked in this session
+    const checkedInSession = sessionStorage.getItem(checkKey) === currentSession;
+    const lastSession = sessionStorage.getItem(sessionKey);
+    
+    // If new session or never checked, allow check
+    if (!lastSession || lastSession !== currentSession) {
+      sessionStorage.setItem(sessionKey, currentSession);
+      return false; // Allow check
+    }
+    
+    return checkedInSession;
+  };
+
   // Check if user should see announcements when they log in
   useEffect(() => {
     // Only check if user is actually logged in and haven't checked yet
-    if (user && user.id && !hasCheckedOnce) {
+    if (user && user.id && !hasCheckedOnce && !isChecking) {
       // Skip if on admin pages
       if (location.pathname.startsWith('/admin')) {
         setHasCheckedOnce(true);
@@ -26,7 +46,6 @@ export default function SystemAnnouncementProvider({ children }) {
       }
       
       // Only show modal for Students and Teachers, not Admins
-      // Backend returns role as number: 0 = Admin, 2 = Teacher, 4 = Student
       const isAdmin = user.role === ROLE.ADMIN || 
                      user.role === 0 ||
                      user.role === 'Admin' ||
@@ -38,28 +57,42 @@ export default function SystemAnnouncementProvider({ children }) {
         return;
       }
       
+      // Check if already checked in this session
+      if (getCheckStatus()) {
+        setHasCheckedOnce(true);
+        return;
+      }
+      
+      setIsChecking(true);
       // Trigger announcement fetch
       getPublicAnnouncements();
-      setShouldCheckAnnouncements(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, hasCheckedOnce, location.pathname]);
 
-  // Watch for publicAnnouncements to be loaded and check for unviewed
+  // Watch for publicAnnouncements to be loaded and check for unviewed (only once)
   useEffect(() => {
-    if (shouldCheckAnnouncements && publicAnnouncements.length > 0 && !hasCheckedOnce) {
+    if (isChecking && publicAnnouncements.length > 0 && !hasCheckedOnce && user?.id) {
       // Get unviewed announcements for this user
-      const unviewed = getUnviewedAnnouncements(user?.id);
+      const unviewed = getUnviewedAnnouncements(user.id);
       
       if (unviewed && unviewed.length > 0) {
         setShowModal(true);
       }
       
+      // Mark as checked in this session
+      const currentSession = sessionStorage.getItem('sessionId') || Date.now().toString();
+      if (!sessionStorage.getItem('sessionId')) {
+        sessionStorage.setItem('sessionId', currentSession);
+      }
+      const checkKey = `announcement_checked_${user.id}`;
+      sessionStorage.setItem(checkKey, currentSession);
+      
       setHasCheckedOnce(true);
-      setShouldCheckAnnouncements(false);
+      setIsChecking(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldCheckAnnouncements, publicAnnouncements, hasCheckedOnce]);
+  }, [isChecking, publicAnnouncements, hasCheckedOnce, user?.id]);
 
   // Listen for urgent announcement notifications via SignalR
   useEffect(() => {
@@ -97,7 +130,7 @@ export default function SystemAnnouncementProvider({ children }) {
       // Refresh public announcements to get the latest data
       await getPublicAnnouncements();
       
-      // Show modal immediately
+      // Show modal immediately for urgent announcements (bypass session check)
       setShowModal(true);
     };
 
@@ -113,12 +146,22 @@ export default function SystemAnnouncementProvider({ children }) {
     if (!user) {
       setShowModal(false);
       setHasCheckedOnce(false);
-      setShouldCheckAnnouncements(false);
+      setIsChecking(false);
     }
   }, [user]);
 
   const handleCloseModal = () => {
     setShowModal(false);
+    // Mark as checked when user closes modal
+    if (user?.id) {
+      const currentSession = sessionStorage.getItem('sessionId') || Date.now().toString();
+      if (!sessionStorage.getItem('sessionId')) {
+        sessionStorage.setItem('sessionId', currentSession);
+      }
+      const checkKey = `announcement_checked_${user.id}`;
+      sessionStorage.setItem(checkKey, currentSession);
+      setHasCheckedOnce(true);
+    }
   };
 
   return (

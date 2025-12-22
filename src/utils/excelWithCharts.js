@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { convertChartsToImages } from './chartExportUtils';
+import { convertChartsToImages, convertEChartsToImages } from './chartExportUtils';
 
 /**
  * Export statistics to Excel with chart images
@@ -380,6 +380,87 @@ const prepareDataSheets = (statsData, tabName) => {
           "Họ tên": student.fullName,
           "Tổng điểm": student.totalPoints,
           "Số sự kiện": student.activityCount,
+        })),
+      });
+    }
+  } else if (tabName === "users" && statsData.dashboardStats) {
+    const { dashboardStats } = statsData;
+    
+    sheets.push({
+      name: "Tổng quan người dùng",
+      data: [
+        { "Chỉ số": "Tổng người dùng", "Giá trị": dashboardStats.userCounts?.totalUsers || 0 },
+        { "Chỉ số": "Học sinh", "Giá trị": dashboardStats.userCounts?.students || 0 },
+        { "Chỉ số": "Giáo viên", "Giá trị": dashboardStats.userCounts?.teachers || 0 },
+        { "Chỉ số": "Admin", "Giá trị": dashboardStats.userCounts?.admins || 0 },
+      ],
+    });
+    
+    if (dashboardStats.topActiveStudents && dashboardStats.topActiveStudents.length > 0) {
+      sheets.push({
+        name: "Top học sinh tích cực",
+        data: dashboardStats.topActiveStudents.map((student, index) => ({
+          "Xếp hạng": index + 1,
+          "Họ tên": student.fullName,
+          "Số sự kiện": student.activityCount,
+          "Tổng điểm": student.totalPointsAwarded,
+        })),
+      });
+    }
+  } else if (tabName === "points" && statsData.dashboardStats) {
+    const { dashboardStats } = statsData;
+    
+    sheets.push({
+      name: "Tổng quan điểm thưởng",
+      data: [
+        { "Chỉ số": "Tổng điểm đã trao", "Giá trị": dashboardStats.totalPointsAwarded || 0 },
+      ],
+    });
+    
+    if (dashboardStats.pointsByAcademicYear && dashboardStats.pointsByAcademicYear.length > 0) {
+      sheets.push({
+        name: "Điểm theo năm học",
+        data: dashboardStats.pointsByAcademicYear.map((item) => ({
+          "Năm học": item.academicYearName,
+          "Tổng điểm": item.totalPoints,
+        })),
+      });
+    }
+    
+    if (dashboardStats.topActiveClasses && dashboardStats.topActiveClasses.length > 0) {
+      sheets.push({
+        name: "Top lớp có điểm cao nhất",
+        data: dashboardStats.topActiveClasses
+          .sort((a, b) => (b.totalPointsAwarded || 0) - (a.totalPointsAwarded || 0))
+          .slice(0, 10)
+          .map((cls, index) => ({
+            "Xếp hạng": index + 1,
+            "Tên lớp": cls.classGroupName,
+            "Số sự kiện": cls.activityCount,
+            "Tổng điểm": cls.totalPointsAwarded,
+          })),
+      });
+    }
+  } else if (tabName === "trends" && statsData.dashboardStats) {
+    const { dashboardStats, activityOverview } = statsData;
+    
+    sheets.push({
+      name: "Phân tích xu hướng",
+      data: [
+        { "Chỉ số": "Tổng số tháng phân tích", "Giá trị": dashboardStats.activityTimeline?.length || 0 },
+        { "Chỉ số": "Tổng sự kiện", "Giá trị": dashboardStats.activityTimeline?.reduce((sum, item) => sum + item.activityCount, 0) || 0 },
+        { "Chỉ số": "Tổng người tham gia", "Giá trị": dashboardStats.activityTimeline?.reduce((sum, item) => sum + item.participantCount, 0) || 0 },
+      ],
+    });
+    
+    if (dashboardStats.activityTimeline && dashboardStats.activityTimeline.length > 0) {
+      sheets.push({
+        name: "Xu hướng theo thời gian",
+        data: dashboardStats.activityTimeline.map((item) => ({
+          "Tháng/Năm": item.monthYear,
+          "Số sự kiện": item.activityCount,
+          "Số người tham gia": item.participantCount,
+          "Điểm đã trao": item.pointsAwarded || 0,
         })),
       });
     }

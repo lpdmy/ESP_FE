@@ -64,7 +64,7 @@ export default function NotificationModal({ isOpen, onClose }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/20 z-40"
+            className="fixed inset-0 bg-black/20 z-[60]"
           />
 
           {/* Modal */}
@@ -73,7 +73,7 @@ export default function NotificationModal({ isOpen, onClose }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed top-20 right-4 z-50 w-80 sm:w-96 bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden"
+            className="fixed top-20 right-4 z-[70] w-80 sm:w-96 bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden"
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-orange-500 to-yellow-500 p-4 flex items-center justify-between">

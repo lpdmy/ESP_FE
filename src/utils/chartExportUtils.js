@@ -1,6 +1,7 @@
 /**
  * Utility functions to export charts as images
  */
+import * as echarts from 'echarts';
 
 /**
  * Convert SVG element to image data URL
@@ -132,6 +133,163 @@ export const convertChartsToImages = async (container) => {
       }
     } catch (error) {
       console.error('Error converting chart:', error);
+      // Continue with other charts
+    }
+  }
+  
+  return charts;
+};
+
+/**
+ * Convert ECharts instance to image data URL
+ * @param {HTMLElement} echartsContainer - Container element containing ECharts
+ * @returns {Promise<string>} Data URL of the image
+ */
+export const echartsToImage = async (echartsContainer) => {
+  try {
+    // Find the ECharts instance
+    const echartsInstance = echarts.getInstanceByDom(echartsContainer);
+    
+    if (!echartsInstance) {
+      throw new Error('ECharts instance not found');
+    }
+    
+    // Get chart as data URL (PNG format, high quality)
+    const dataURL = echartsInstance.getDataURL({
+      type: 'png',
+      pixelRatio: 2, // Higher quality
+      backgroundColor: '#ffffff'
+    });
+    
+    return dataURL;
+  } catch (error) {
+    console.error('Error converting ECharts to image:', error);
+    // Fallback to html2canvas
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(echartsContainer, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+      });
+      return canvas.toDataURL('image/png', 1.0);
+    } catch (canvasError) {
+      throw new Error('Failed to convert ECharts to image: ' + canvasError.message);
+    }
+  }
+};
+
+/**
+ * Find and convert all ECharts in a container to images
+ * @param {HTMLElement} container - Container element
+ * @returns {Promise<Array<{element: HTMLElement, imageData: string, title: string}>>}
+ */
+export const convertEChartsToImages = async (container) => {
+  const charts = [];
+  
+  // Find all ECharts containers - ReactECharts creates divs with canvas or svg inside
+  // Look for divs that contain canvas or svg elements (ECharts renders)
+  const possibleContainers = container.querySelectorAll('div[style*="height"], div[class*="echarts"], canvas, svg');
+  
+  for (const element of possibleContainers) {
+    try {
+      // Find the actual container (parent div that contains the chart)
+      let echartsContainer = element;
+      if (element.tagName === 'CANVAS' || element.tagName === 'SVG') {
+        echartsContainer = element.parentElement;
+      }
+      
+      // Skip if we've already processed this container
+      if (echartsContainer.dataset.processed) {
+        continue;
+      }
+      echartsContainer.dataset.processed = 'true';
+      
+      // Try to get ECharts instance
+      const echartsInstance = echarts.getInstanceByDom(echartsContainer);
+      
+      // If no instance found, try finding canvas/svg inside
+      if (!echartsInstance) {
+        const canvas = echartsContainer.querySelector('canvas');
+        const svg = echartsContainer.querySelector('svg');
+        if (canvas) {
+          const instance = echarts.getInstanceByDom(canvas.parentElement);
+          if (instance) {
+            // Find the parent card/container for title
+            const card = echartsContainer.closest('[class*="Card"], .card');
+            const titleElement = card?.querySelector('[class*="CardTitle"], h3, h4, .chart-title');
+            const title = titleElement?.textContent || card?.querySelector('h3, h4')?.textContent || 'Biểu đồ';
+            
+            try {
+              const imageData = instance.getDataURL({
+                type: 'png',
+                pixelRatio: 2,
+                backgroundColor: '#ffffff'
+              });
+              charts.push({
+                element: canvas.parentElement,
+                imageData,
+                title,
+                type: 'echarts'
+              });
+              continue;
+            } catch (error) {
+              console.warn('ECharts getDataURL failed:', error);
+            }
+          }
+        }
+      } else {
+        // Found instance, get title and convert
+        const card = echartsContainer.closest('[class*="Card"], .card');
+        const titleElement = card?.querySelector('[class*="CardTitle"], h3, h4, .chart-title');
+        const title = titleElement?.textContent || card?.querySelector('h3, h4')?.textContent || 'Biểu đồ';
+        
+        try {
+          const imageData = echartsInstance.getDataURL({
+            type: 'png',
+            pixelRatio: 2,
+            backgroundColor: '#ffffff'
+          });
+          charts.push({
+            element: echartsContainer,
+            imageData,
+            title,
+            type: 'echarts'
+          });
+          continue;
+        } catch (error) {
+          console.warn('ECharts getDataURL failed:', error);
+        }
+      }
+      
+      // Fallback to html2canvas
+      const card = echartsContainer.closest('[class*="Card"], .card');
+      const titleElement = card?.querySelector('[class*="CardTitle"], h3, h4, .chart-title');
+      const title = titleElement?.textContent || card?.querySelector('h3, h4')?.textContent || 'Biểu đồ';
+      
+      try {
+        const html2canvas = (await import('html2canvas')).default;
+        const canvas = await html2canvas(echartsContainer, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+        });
+        const imageData = canvas.toDataURL('image/png', 1.0);
+        charts.push({
+          element: echartsContainer,
+          imageData,
+          title,
+          type: 'canvas'
+        });
+      } catch (canvasError) {
+        console.error('Canvas conversion failed:', canvasError);
+      }
+    } catch (error) {
+      console.error('Error converting ECharts:', error);
       // Continue with other charts
     }
   }

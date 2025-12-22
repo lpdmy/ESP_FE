@@ -6,54 +6,99 @@ import { CLUB_MESSAGES } from '../constants/messages/club'
 import { COMMENT_MESSAGE } from '../constants/messages/comment'
 import { STAFF_MESSAGE } from '../constants/messages/staff'
 import { JURY_MESSAGE } from '../constants/messages/jury'
+import { ROLE } from '@/common/constants/roles'
+import { store } from '@/store'
+
+// Helper function to check if user is admin
+const checkIsAdmin = () => {
+  try {
+    const state = store.getState()
+    const user = state?.user?.user
+    const pathname = window.location.pathname
+    
+    if (!user) return false
+    
+    const isAdminRole = user.role === ROLE.ADMIN || 
+                       user.role === 0 ||
+                       user.role === 'Admin' ||
+                       user.roles?.includes('Admin') || 
+                       user.roles?.some(role => role.name === 'Admin' || role === 0)
+    
+    const isAdminPage = pathname.startsWith('/admin')
+    
+    return isAdminRole || isAdminPage
+  } catch {
+    return false
+  }
+}
+
+// Get toast style based on role
+const getToastStyle = () => {
+  if (checkIsAdmin()) {
+    return {
+      backgroundColor: '#3b82f6', // Blue-500
+      color: '#ffffff'
+    }
+  }
+  return {}
+}
 
 export const useToast = () => {
+
   const showSuccess = (message, options = {}) => {
-    return toast.success(message, {
+    const toastOptions = {
       position: "top-right",
       autoClose: 3000,
       hideProgressBar: false,
       closeOnClick: true,
       pauseOnHover: true,
       draggable: true,
+      style: getToastStyle(),
       ...options
-    })
+    }
+    return toast.success(message, toastOptions)
   }
 
   const showError = (message, options = {}) => {
-    return toast.error(message, {
+    const toastOptions = {
       position: "top-right",
       autoClose: 5000,
       hideProgressBar: false,
       closeOnClick: true,
       pauseOnHover: true,
       draggable: true,
+      style: getToastStyle(),
       ...options
-    })
+    }
+    return toast.error(message, toastOptions)
   }
 
   const showInfo = (message, options = {}) => {
-    return toast.info(message, {
+    const toastOptions = {
       position: "top-right",
       autoClose: 4000,
       hideProgressBar: false,
       closeOnClick: true,
       pauseOnHover: true,
       draggable: true,
+      style: getToastStyle(),
       ...options
-    })
+    }
+    return toast.info(message, toastOptions)
   }
 
   const showWarning = (message, options = {}) => {
-    return toast.warning(message, {
+    const toastOptions = {
       position: "top-right",
       autoClose: 4000,
       hideProgressBar: false,
       closeOnClick: true,
       pauseOnHover: true,
       draggable: true,
+      style: getToastStyle(),
       ...options
-    })
+    }
+    return toast.warning(message, toastOptions)
   }
 
   const dismiss = (toastId) => {
