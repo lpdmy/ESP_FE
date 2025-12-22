@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "@/features/landing/components/Sidebar";
 import { Card, CardContent } from "@/common/components/ui/card";
@@ -105,7 +105,6 @@ const mapActivityToEvent = (activity) => {
 
   // Get points from MyActivityResponseDto (already mapped by backend)
   const yourPoints = activity.starPoints || 0;
-
   // Format time from startDate
   const time = startDate
     ? `${startDate.toLocaleTimeString("vi-VN", {
@@ -172,7 +171,7 @@ export default function MyEventsPage() {
   const [error, setError] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize] = useState(50); // Get all activities for now
-
+  const [imagePreview, setImagePreview] = useState(null);
   // Submission states
   const [submission, setSubmission] = useState(null);
   const [submissionLoading, setSubmissionLoading] = useState(false);
@@ -182,7 +181,7 @@ export default function MyEventsPage() {
   const [submissionId, setSubmissionId] = useState("");
   const [showSubmissionForm, setShowSubmissionForm] = useState(false);
   const [existingAttachments, setExistingAttachments] = useState([]); // Keep track of existing attachments when editing
-
+  const fileInputRef = useRef(null);
   // Fetch activities based on active tab
   useEffect(() => {
     const fetchActivities = async () => {
@@ -324,8 +323,11 @@ export default function MyEventsPage() {
   };
 
   const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files);
-    setSelectedFiles(files);
+    const file = e.target.files[0];
+    if (!file) return;
+    setSelectedFiles([file]);
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
   };
 
   const handleSubmitSubmission = async () => {
@@ -435,7 +437,11 @@ export default function MyEventsPage() {
       day: "numeric",
     });
   };
-
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
   const formatTime = (timeString) => {
     if (!timeString) return "";
     return timeString;
@@ -1199,60 +1205,52 @@ export default function MyEventsPage() {
                                 </div>
                               </div>
                             )}
-
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                              <input
-                                type="file"
-                                multiple
-                                onChange={handleFileSelect}
-                                className="hidden"
-                                id="submission-file-input"
-                              />
-                              <label
-                                htmlFor="submission-file-input"
-                                className="cursor-pointer flex flex-col items-center justify-center"
-                              >
-                                <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                                <p className="text-sm text-gray-600">
-                                  {selectedFiles.length > 0
-                                    ? `${selectedFiles.length} file mới đã chọn`
-                                    : submission
-                                    ? "Chọn thêm file mới (tùy chọn)"
-                                    : "Chọn file để nộp bài"}
-                                </p>
-                                <p className="text-xs text-gray-400 mt-1">
-                                  Có thể chọn nhiều file (PDF, Word, Image,
-                                  Video)
-                                </p>
-                              </label>
-                            </div>
-                            {selectedFiles.length > 0 && (
-                              <div className="mt-2 space-y-1">
-                                <p className="text-xs text-gray-500 mb-1">
-                                  File mới:
-                                </p>
-                                {selectedFiles.map((file, index) => (
-                                  <div
-                                    key={index}
-                                    className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept="image/*"
+                              onChange={handleFileSelect}
+                              className="hidden"
+                              id="submission-file-input"
+                            />
+                            {imagePreview ? (
+                              <div className="relative w-full flex justify-center">
+                                <div className="relative max-w-sm">
+                                  <img
+                                    src={imagePreview}
+                                    alt="Preview"
+                                    className="rounded-lg border object-contain max-h-64"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedFiles([]);
+                                      setImagePreview(null);
+                                      if (fileInputRef.current) {
+                                        fileInputRef.current.value = "";
+                                      }
+                                    }}
+                                    className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-red-50"
+                                    title="Xóa ảnh"
                                   >
-                                    <span className="flex items-center gap-2">
-                                      <FileText className="w-4 h-4" />
-                                      {file.name}
-                                    </span>
-                                    <button
-                                      onClick={() => {
-                                        const newFiles = selectedFiles.filter(
-                                          (_, i) => i !== index
-                                        );
-                                        setSelectedFiles(newFiles);
-                                      }}
-                                      className="text-red-500 hover:text-red-700"
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                ))}
+                                    <X className="w-4 h-4 text-red-500" />
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex justify-center">
+                                <label
+                                  htmlFor="submission-file-input"
+                                  className="cursor-pointer flex flex-col items-center justify-center"
+                                >
+                                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                                  <p className="text-sm text-gray-600">
+                                    Chọn ảnh để nộp bài
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    PNG, JPG, JPEG
+                                  </p>
+                                </label>
                               </div>
                             )}
                           </div>

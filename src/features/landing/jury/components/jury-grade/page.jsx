@@ -338,7 +338,7 @@ export default function Grading() {
 
                       <div className="flex flex-col gap-2">
                         <Input
-                          type="number"
+                          type="text"
                           min={0}
                           max={100}
                           value={grades[c.key] ?? 0}
