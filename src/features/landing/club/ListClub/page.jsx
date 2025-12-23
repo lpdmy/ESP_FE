@@ -123,14 +123,6 @@ export default function ClubList() {
                 </Button>
               </a>
             )}
-            {isTeacher && (
-                <Button className="btn-primary flex items-center gap-2"
-                onClick={() => setIsModalOpen(true)}
-                >
-                  <Plus className="w-4 h-4" />
-                  Lời mời cố vấn
-                </Button>
-            )}
             <MentorInvitationModal 
              isOpen={isModalOpen}
              onClose={() => setIsModalOpen(false)}
