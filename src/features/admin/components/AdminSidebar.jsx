@@ -45,7 +45,7 @@ const navigation = [
     requiredPermissions: ["MANAGE_CLASSES"],
   },
   {
-    name: "Điểm thưởng và Phần thưởng",
+    name: "Điểm thưởng",
     href: "/admin/rewards",
     icon: Star,
     requiredPermissions: ["MANAGE_REWARDS"],

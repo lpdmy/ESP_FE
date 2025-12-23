@@ -16,7 +16,7 @@ export default function StatisticsReportPage() {
 
   const handleFilterChange = async (request) => {
     try {
-      setReportData(null); // Clear previous data while loading
+      setReportData(null);
       setSelectedAcademicYear(request.academicYear);
       const data = await getAcademicYearReport(request);
       setReportData(data);
@@ -29,10 +29,7 @@ export default function StatisticsReportPage() {
 
   const handleExportPDF = async (request) => {
     try {
-      // Wait a bit for charts to render and export
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Include chart images in request
       const requestWithCharts = {
         ...request,
         weeklyTrendChartImage: chartImages.weeklyTrendChart || null,
@@ -56,18 +53,16 @@ export default function StatisticsReportPage() {
 
   return (
     <AdminPageLayout>
-      <div className="space-y-8 pb-8" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-        {/* Header Section */}
+      <div className="space-y-8 pb-8">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
             Báo cáo thống kê năm học
           </h1>
-          <p className="text-base text-gray-600 leading-relaxed">
-            Phân tích và xuất báo cáo thống kê điểm số, hoạt động theo năm học một cách trực quan và chi tiết
+          <p className="text-base text-gray-600">
+            Phân tích và xuất báo cáo thống kê điểm số, hoạt động theo năm học
           </p>
         </div>
 
-        {/* Sticky Control Bar */}
         <div className="sticky top-4 z-10">
           <StatisticsFilterPanel
             onFilterChange={handleFilterChange}
@@ -77,7 +72,6 @@ export default function StatisticsReportPage() {
           />
         </div>
 
-        {/* Quick Insight Cards - Show immediately when year is selected */}
         {selectedAcademicYear && (
           <QuickInsightCards
             overview={reportData?.overview}
@@ -86,7 +80,6 @@ export default function StatisticsReportPage() {
           />
         )}
 
-        {/* Main Content - Statistics Preview */}
         <div className="transition-all duration-300 ease-in-out">
           <StatisticsPreview
             reportData={reportData}
