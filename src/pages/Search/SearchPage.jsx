@@ -97,7 +97,6 @@ export default function SearchPage() {
       });
       
       setResults(searchResults.data?.results || {});
-      console.log(searchResults.data.results)
     } catch (error) {
       console.error('Search error:', error);
       toast.error('Có lỗi xảy ra khi tìm kiếm');

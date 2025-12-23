@@ -48,8 +48,8 @@ export default function CancelMentorInviteDialog({
 
           <Button
             className="bg-red-600 hover:bg-red-700 text-white"
-            onClick={() => {
-              onConfirm();
+            onClick={async () => {
+              await onConfirm();
               onClose();
             }}
             disabled={loading}

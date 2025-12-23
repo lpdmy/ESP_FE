@@ -138,6 +138,8 @@ export default function ClubManage() {
   const [mentorInvite, setMentorInvite] = useState({});
   const [loading, setLoading] = useState(false);
   const { isOpen, openDialog, closeDialog } = useDialog();
+  const [isKickModalOpen, setIsKickModalOpen] = useState(false);
+  const [memberToKick, setMemberToKick] = useState(null);
   const filteredMembers =
     clubInfo?.members?.filter(
       (member) =>
@@ -222,8 +224,16 @@ export default function ClubManage() {
   const handleMentorInvitaion = async () => {
     try {
       const response = await getClubMentorInvitation(id);
-      setMentorInvite(response.data);
-    } catch (error) {}
+      // Nếu không có invitation hoặc invitation không còn Pending, set về null
+      if (!response.data || (response.data.status && response.data.status !== "Pending")) {
+        setMentorInvite({});
+      } else {
+        setMentorInvite(response.data);
+      }
+    } catch (error) {
+      // Nếu có lỗi hoặc không tìm thấy, reset về empty object
+      setMentorInvite({});
+    }
   };
   const handleInviteMentor = async (mentorid) => {
     try {
@@ -242,8 +252,12 @@ export default function ClubManage() {
   const handleCancelInvite = async () => {
     try {
       setLoading(true);
-      cancelInviteMentor(mentorInvite.id);
-      handleMentorInvitaion()
+      await cancelInviteMentor(mentorInvite.id);
+      // Reload cả mentor invitation và club detail để cập nhật UI
+      setMentorInvite({});
+      toast.showSuccess("Đã hủy lời mời cố vấn thành công");
+    } catch (error) {
+      toast.showError("Không thể hủy lời mời cố vấn");
     } finally {
       setLoading(false);
     }
@@ -254,9 +268,22 @@ export default function ClubManage() {
       const response = await kickClub(payload);
       toast.kickClubSuccess();
       handleGetClubDetail();
+      setIsKickModalOpen(false);
+      setMemberToKick(null);
     } catch (error) {
       toast.kickClubFail();
     }
+  };
+
+  const openKickModal = (member) => {
+    setMemberToKick(member);
+    setIsKickModalOpen(true);
+    setOpenMenuId(null);
+  };
+
+  const closeKickModal = () => {
+    setIsKickModalOpen(false);
+    setMemberToKick(null);
   };
   const handleApprovePost = async (id) => {
     try {
@@ -493,10 +520,7 @@ export default function ClubManage() {
                           {openMenuId === member.userId && (
                             <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] overflow-hidden animate-in fade-in zoom-in-95">
                               <button
-                                onClick={() => {
-                                  handleKick(member.userId);
-                                  setOpenMenuId(null);
-                                }}
+                                onClick={() => openKickModal(member)}
                                 className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition"
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
@@ -1295,6 +1319,33 @@ export default function ClubManage() {
         onConfirm={handleCancelInvite}
         mentorName={mentorInvite.name}
       />
+
+      {/* Modal xác nhận xóa thành viên */}
+      {isKickModalOpen && memberToKick && (
+        <Dialog open={isKickModalOpen} onOpenChange={closeKickModal}>
+          <DialogContent className="!bg-white">
+            <DialogHeader>
+              <DialogTitle>Xác nhận xóa thành viên</DialogTitle>
+              <DialogDescription>
+                Bạn có chắc chắn muốn xóa thành viên <strong>{memberToKick.fullName}</strong> khỏi câu lạc bộ? 
+                Hành động này không thể hoàn tác.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={closeKickModal} className="rounded-lg">
+                Hủy
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => handleKick(memberToKick.userId)}
+                className="!text-white rounded-lg bg-red-500 hover:bg-red-700"
+              >
+                Xác nhận xóa
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

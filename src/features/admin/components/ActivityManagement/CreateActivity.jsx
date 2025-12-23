@@ -164,8 +164,7 @@ export default function CreateActivity() {
     const subTypeMap = {
       SportsFestival: "Hội thao",
       CreativeContest: "Cuộc thi sáng tạo",
-      SeminarWorkshop: "Hội thảo",
-      Other: "Khác"
+      SeminarWorkshop: "Hội thảo"
     }
     return subTypeMap[subType] || subType
   }
@@ -1710,7 +1709,14 @@ export default function CreateActivity() {
                 </Label>
                 <SimpleSelect
                   value={formData.subType}
-                  onValueChange={(value) => setFormData({ ...formData, subType: value })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, subType: value })
+                    // Tự động tắt grading và xóa criteria khi chọn SeminarWorkshop
+                    if (value === "SeminarWorkshop") {
+                      setGradingEnabled(false)
+                      setGradingCriteria([])
+                    }
+                  }}
                   placeholder="Chọn phân loại"
                   options={subTypes}
                 />
@@ -2374,19 +2380,21 @@ export default function CreateActivity() {
                 </div>
               </div>
 
-              {/* Grading Criteria Section */}
-              <GradingCriteriaSection
-                enabled={gradingEnabled}
-                onEnabledChange={(newEnabled) => {
-                  setGradingEnabled(newEnabled)
-                  // Clear criteria when disabled
-                  if (!newEnabled) {
-                    setGradingCriteria([])
-                  }
-                }}
-                onCriteriaChange={setGradingCriteria}
-                initialCriteria={gradingCriteria}
-              />
+              {/* Grading Criteria Section - Ẩn cho SeminarWorkshop */}
+              {formData.subType === "CreativeContest" && (
+                <GradingCriteriaSection
+                  enabled={gradingEnabled}
+                  onEnabledChange={(newEnabled) => {
+                    setGradingEnabled(newEnabled)
+                    // Clear criteria when disabled
+                    if (!newEnabled) {
+                      setGradingCriteria([])
+                    }
+                  }}
+                  onCriteriaChange={setGradingCriteria}
+                  initialCriteria={gradingCriteria}
+                />
+              )}
 
               {!formData.subType && (
                 <div className="text-center py-12 text-gray-500">Vui lòng chọn phân loại hoạt động ở trên</div>
