@@ -10,6 +10,7 @@ import { Checkbox } from "@/common/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -312,15 +313,16 @@ export default function AISchedule() {
     [formData.startDate, formData.preferredStartTime, formData.matchDuration, formData.availableLocations]
   )
 
-  // Load activity data
+  // Load activity data - dùng endpoint tối ưu chỉ lấy các trường cần thiết
   const loadActivity = useCallback(async () => {
       if (!params.id) return
       
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
+        // Dùng getScheduleInfo thay vì getActivityById để tối ưu performance
         const response = await executeApiCall(
-          activityService.getActivityById.bind(activityService),
+          activityService.getScheduleInfo.bind(activityService),
           [params.id, token],
           { setLoading }
         )
@@ -1352,10 +1354,15 @@ export default function AISchedule() {
 
   const handleSubmitMatchResult = async (match, overrideState = null) => {
     const current = overrideState || matchResults[match.id] || {}
+    
+    // Tự động set markAsCompleted = true khi có winnerClassGroupId
+    const hasWinner = current.winnerClassGroupId != null
+    const markAsCompleted = hasWinner ? true : !!current.markAsCompleted
+    
     const payload = {
       score1: Number(current.score1 ?? 0),
       score2: Number(current.score2 ?? 0),
-      markAsCompleted: !!current.markAsCompleted,
+      markAsCompleted: markAsCompleted,
       winnerClassGroupId: current.winnerClassGroupId ? Number(current.winnerClassGroupId) : null,
       // Nếu backend hỗ trợ, các field dưới có thể được map thêm
       penaltyScore1: current.penaltyScore1 ?? null,
@@ -1376,6 +1383,7 @@ export default function AISchedule() {
         {}
       )
       toast.success(`Đã cập nhật kết quả trận #${match.matchNumber}`)
+      // Refresh bracket để hiển thị đội thắng vào vòng trong
       if (formData.sportId) {
         await fetchOfficialBracket(formData.sportId)
       }
@@ -1594,7 +1602,7 @@ export default function AISchedule() {
       score1: localScore1,
       score2: localScore2,
       winnerClassGroupId: winnerId,
-      markAsCompleted: true,
+      markAsCompleted: true, // Tự động đánh dấu hoàn thành khi có winner
       penaltyScore1: localPenalty1,
       penaltyScore2: localPenalty2,
       penaltySummary,
@@ -1610,6 +1618,10 @@ export default function AISchedule() {
 
     await handleSubmitMatchResult(match, overrideState)
     onClose()
+    // Refresh bracket để hiển thị đội thắng vào vòng trong
+    if (formData.sportId) {
+      await fetchOfficialBracket(formData.sportId)
+    }
   }
 
   return (
@@ -1961,7 +1973,7 @@ export default function AISchedule() {
           </Button>
           <div className="flex items-center gap-3 mb-2">
             <Sparkles className="w-8 h-8 text-purple-600" />
-            <h1 className="text-3xl font-bold text-gray-900">AI Tạo lịch thi đấu</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Tạo lịch thi đấu tự động</h1>
           </div>
           <p className="text-gray-600 mt-1">Sử dụng AI để tự động tạo lịch thi đấu tối ưu</p>
         </div>
@@ -2351,22 +2363,6 @@ export default function AISchedule() {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="userNotes">
-                  Ghi chú cho AI (tùy chọn)
-                </Label>
-                <Textarea
-                  id="userNotes"
-                  value={formData.userNotes}
-                  onChange={(e) => setFormData({ ...formData, userNotes: e.target.value })}
-                  placeholder="Ví dụ: Ưu tiên buổi sáng, tránh giờ cao điểm, cuối tuần tốt hơn..."
-                  rows={3}
-                  className="mt-2"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  💡 AI sẽ đánh giá và ưu tiên các slot dựa trên ghi chú của bạn
-                </p>
-              </div>
 
               <Button
                 onClick={handleGenerate}
@@ -3073,6 +3069,49 @@ export default function AISchedule() {
               className="bg-orange-500 hover:bg-orange-600 text-white"
             >
               Điều chỉnh thông tin
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog xác nhận áp dụng lịch */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận áp dụng lịch thi đấu</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn áp dụng lịch thi đấu này không? Hành động này sẽ tạo các trận đấu trong hệ thống.
+            </DialogDescription>
+          </DialogHeader>
+          {pendingPayload && (
+            <div className="space-y-2 py-4">
+              <p className="text-sm text-gray-600">
+                Số trận đấu sẽ được tạo: <strong>{pendingPayload.matches?.length || 0}</strong>
+              </p>
+              {pendingPayload.isPublished && (
+                <p className="text-sm text-orange-600">
+                  ⚠️ Lịch sẽ được đánh dấu là đã công bố chính thức
+                </p>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmDialogOpen(false)
+                setPendingPayload(null)
+              }}
+              disabled={isApplyingSchedule}
+            >
+              Hủy
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={doApplySchedule}
+              disabled={isApplyingSchedule}
+            >
+              {isApplyingSchedule ? "Đang áp dụng..." : "Xác nhận áp dụng"}
             </Button>
           </DialogFooter>
         </DialogContent>

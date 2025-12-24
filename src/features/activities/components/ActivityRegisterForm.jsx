@@ -134,8 +134,9 @@ export default function ActivityRegisterForm() {
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
+        // Dùng getRegisterInfo thay vì getActivityById để tối ưu performance
         const response = await executeApiCall(
-          activityService.getActivityById.bind(activityService),
+          activityService.getRegisterInfo.bind(activityService),
           [params.id, token],
           { setLoading: () => {} }
         )
@@ -1141,16 +1142,14 @@ export default function ActivityRegisterForm() {
       setIsRegistered(false)
       toast.showSuccess("Đã hủy đăng ký tham gia hoạt động.")
       
-      // Refresh activity data
       const response = await executeApiCall(
-        activityService.getActivityById.bind(activityService),
+        activityService.getRegisterInfo.bind(activityService),
         [activity.id, token],
         { setLoading: () => {} }
       )
       const data = response?.data?.data || response?.data
       setActivity(data)
       
-      // Update isRegistered after refresh
       if (data?.participants && currentUser?.id) {
         const userParticipation = data.participants.find(
           (p) => p.userId === currentUser.id && !p.isDeleted
@@ -1165,7 +1164,6 @@ export default function ActivityRegisterForm() {
     }
   }
 
-  // Kiểm tra có thể hủy đăng ký không (trước thời hạn đăng ký)
   const canCancelRegistration = useMemo(() => {
     if (!activity?.endRegisterDate || !isRegistered) return false
     const now = new Date()
@@ -1174,7 +1172,6 @@ export default function ActivityRegisterForm() {
   }, [activity?.endRegisterDate, isRegistered])
 
   const handleConfirmSubmit = async () => {
-    // Validate lại một lần nữa trước khi submit
     const validation = validateForm()
     if (!validation.isValid) {
     setShowConfirmModal(false)
@@ -1199,7 +1196,6 @@ export default function ActivityRegisterForm() {
           return
         }
 
-        // Chuẩn bị dữ liệu đăng ký cho từng môn
         const registrations = Object.entries(selectedSports)
           .filter(([_, studentIds]) => studentIds && studentIds.length > 0)
           .map(([sportId, studentIds]) => {

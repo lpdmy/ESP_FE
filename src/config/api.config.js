@@ -238,6 +238,10 @@ export const API_CONFIG = {
   ACTIVITY: {
     GET_ALL: "/activity",
     GET_BY_ID: "/activity/{id}",
+    GET_SCHEDULE_INFO: "/activity/{id}/schedule-info",
+    GET_REGISTER_INFO: "/activity/{id}/register-info",
+    GET_VIEW_INFO: "/activity/{id}/view-info",
+    GET_PARTICIPANTS: "/activity/{id}/participants",
     GET_LIST_ITEMS: "/activity/list-items",
     CREATE: "/activity",
     UPDATE: "/activity",

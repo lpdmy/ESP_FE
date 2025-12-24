@@ -72,6 +72,65 @@ export class ActivityService extends ApiService {
   }
 
   /**
+   * Get lightweight activity info for schedule generation - chỉ lấy các trường cần thiết
+   * Tối ưu performance bằng cách chỉ query các trường cần thiết
+   * @param {number|string} id - Activity ID
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with lightweight activity schedule info
+   */
+  async getScheduleInfo(id, token) {
+    return this.get(
+      API_CONFIG.ACTIVITY.GET_SCHEDULE_INFO.replace('{id}', id),
+      token
+    );
+  }
+
+  /**
+   * Get lightweight activity info for registration form - chỉ lấy các trường cần thiết
+   * Tối ưu performance bằng cách chỉ query các trường cần thiết
+   * @param {number|string} id - Activity ID
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with lightweight activity register info
+   */
+  async getRegisterInfo(id, token) {
+    return this.get(
+      API_CONFIG.ACTIVITY.GET_REGISTER_INFO.replace('{id}', id),
+      token
+    );
+  }
+
+  /**
+   * Get lightweight activity info for view detail - chỉ lấy các trường cần thiết
+   * Tối ưu performance bằng cách chỉ query các trường cần thiết
+   * @param {number|string} id - Activity ID
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with lightweight activity view info
+   */
+  async getViewInfo(id, token) {
+    return this.get(
+      API_CONFIG.ACTIVITY.GET_VIEW_INFO.replace('{id}', id),
+      token
+    );
+  }
+
+  /**
+   * Get participants with paging and optional class filter
+   * @param {number|string} id - Activity ID
+   * @param {number} pageNumber - Page number (default: 1)
+   * @param {number} pageSize - Page size (default: 20)
+   * @param {number|null} classGroupId - Optional class group ID to filter (for SportsFestival)
+   * @param {string} token - Authentication token
+   * @returns {Promise} Response with paginated participants
+   */
+  async getParticipants(id, pageNumber = 1, pageSize = 20, classGroupId = null, token) {
+    let endpoint = `${API_CONFIG.ACTIVITY.GET_PARTICIPANTS.replace('{id}', id)}?pageNumber=${pageNumber}&pageSize=${pageSize}`;
+    if (classGroupId) {
+      endpoint += `&classGroupId=${classGroupId}`;
+    }
+    return this.get(endpoint, token);
+  }
+
+  /**
    * Create a new activity
    * @param {Object} activityData - Activity data (CreateActivityDto)
    * @param {string} token - Authentication token

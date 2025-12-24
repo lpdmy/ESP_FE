@@ -52,11 +52,6 @@ import { uploadImage } from "@common/utils/upload";
 import { useStarPointApi } from "@/features/admin/hooks/useStarPointApi";
 import { REWARD_ACTION_LABELS } from "./enums/rewardActionType";
 import { LoadingCard } from "@/common/components/ui/loading";
-import {
-  getStatusLabel,
-  isPendingStatus,
-  convertStatusFromBE,
-} from "./enums/redemptionStatus";
 const rewardOptions = Object.values(REWARD_CATEGORY).map((value) => ({
   value: value.toString(),
   label: REWARD_CATEGORY_LABELS[value],
@@ -148,7 +143,7 @@ export default function RewardsManagement() {
       const queryParams = {
         pageNumber: currentPage,
         pageSize: itemsPerPage,
-        status: pickupFilter === "all" ? undefined : convertStatusFromBE(pickupFilter),
+        status: pickupFilter === "all" ? undefined : Number(pickupFilter),
         category: undefined,
         queryString: pickupSearch || undefined,
       };
@@ -883,24 +878,24 @@ export default function RewardsManagement() {
                                 : "N/A"}
                             </TableCell>
                             <TableCell>
-                              {isPendingStatus(pickup.status) ? (
+                              {pickup.status === 0 ? (
                                 <Badge
                                   variant="outline"
                                   className="bg-yellow-50 text-yellow-700 border-yellow-200"
                                 >
-                                  {getStatusLabel(pickup.status)}
+                                  Chưa nhận
                                 </Badge>
                               ) : (
                                 <Badge
                                   variant="outline"
                                   className="bg-green-50 text-green-700 border-green-200"
                                 >
-                                  {getStatusLabel(pickup.status)}
+                                  Đã nhận
                                 </Badge>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
-                              {isPendingStatus(pickup.status) ? (
+                              {pickup.status === 0 ? (
                                 <Button
                                   variant="indigo"
                                   onClick={() => {

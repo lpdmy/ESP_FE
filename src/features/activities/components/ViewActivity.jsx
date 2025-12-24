@@ -436,6 +436,19 @@ export default function ViewActivity() {
   const [sportRostersPageSize] = useState(10);
   const [sportRostersTotalCount, setSportRostersTotalCount] = useState(0);
   const [sportRostersTotalPages, setSportRostersTotalPages] = useState(0);
+  
+  // Tab management - lazy load data cho từng tab
+  const [activeTab, setActiveTab] = useState("overview");
+  const [loadedTabs, setLoadedTabs] = useState(new Set(["overview"])); // Tab overview load ngay
+  
+  // Participants state với paging
+  const [participants, setParticipants] = useState([]);
+  const [participantsPageNumber, setParticipantsPageNumber] = useState(1);
+  const [participantsPageSize] = useState(20);
+  const [participantsTotalPages, setParticipantsTotalPages] = useState(1);
+  const [participantsTotalCount, setParticipantsTotalCount] = useState(0);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [selectedClassGroupId, setSelectedClassGroupId] = useState(null); // Filter theo lớp cho hội thao
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -503,8 +516,6 @@ export default function ViewActivity() {
     };
   };
 
-  // Helper function to get class name (grade + name) - giống AISchedule.jsx
-  // Luôn lấy từ classGroups đã load từ API
   const getClassName = useCallback(
     (classGroupId) => {
       if (!classGroupId) return "Chờ kết quả";
@@ -520,56 +531,42 @@ export default function ViewActivity() {
       });
 
       if (!classGroup) {
-        // Nếu không tìm thấy, trả về fallback (sẽ được update khi classGroups load xong)
         return `Lớp ${classGroupId}`;
       }
 
-      // Lấy grade và name từ classGroup
       const grade = classGroup.grade != null ? String(classGroup.grade) : "";
       const name = classGroup.name || "";
 
-      // Format: grade + name (ví dụ: "10A1")
       if (grade && name) {
         return `${grade}${name}`;
       }
 
-      // Nếu không có grade, chỉ trả về name
       if (name) {
         return name;
       }
 
-      // Fallback
       return `Lớp ${classGroupId}`;
     },
     [classGroups]
   );
 
-  // Helper function to format className with grade
-  // Backend đã format sẵn ClassGroup1Name và ClassGroup2Name thành "grade + name" (ví dụ: "10A1")
-  // Nếu className từ backend đã có format (có số ở đầu), dùng luôn
-  // Nếu chưa có, dùng getClassName để format từ classGroups
   const formatClassNameWithGrade = useCallback(
     (className, classGroupId) => {
-      // Backend đã format sẵn: nếu className có số ở đầu (ví dụ: "10A1"), dùng luôn
       if (className && /^\d/.test(className)) {
         return className;
       }
 
-      // Nếu className chưa có format và có classGroupId, dùng getClassName để format
       if (classGroupId) {
         const formatted = getClassName(classGroupId);
-        // Nếu getClassName trả về format đúng (có số), dùng nó
         if (formatted && /^\d/.test(formatted)) {
           return formatted;
         }
       }
 
-      // Nếu không có className hoặc là fallback, trả về
       if (!className || className === "Chờ kết quả" || className === "Lớp ?") {
         return classGroupId ? getClassName(classGroupId) : "Chờ kết quả";
       }
 
-      // Trả về className gốc
       return className;
     },
     [getClassName]
@@ -578,14 +575,11 @@ export default function ViewActivity() {
   const normalizeParticipants = (list) => {
     if (!Array.isArray(list)) return [];
     return list.map((participant) => {
-      // Format className: Grade + className (ví dụ: "10A1")
-      // Kiểm tra xem className đã có Grade ở đầu chưa (tránh duplicate như "1010A1")
       const grade = participant?.grade || participant?.Grade;
       const className = participant?.classGroupName || "Chờ kết quả";
 
       let formattedClassName = className;
       if (grade && className !== "Chờ kết quả") {
-        // Kiểm tra xem className đã bắt đầu bằng Grade chưa
         const gradeStr = String(grade);
         if (!className.startsWith(gradeStr)) {
           formattedClassName = `${grade}${className}`;
@@ -600,8 +594,8 @@ export default function ViewActivity() {
           participant?.userName ||
           "Người tham gia",
         className: formattedClassName,
-        classGroupName: participant?.classGroupName, // Giữ lại để dùng khi cần
-        classGroupId: participant?.classGroupId || null, // QUAN TRỌNG: Giữ lại classGroupId
+        classGroupName: participant?.classGroupName, 
+        classGroupId: participant?.classGroupId || null, 
         grade: grade,
         groupCode: participant?.groupCode || null,
         isLeader: participant?.isLeader || false,
@@ -609,7 +603,7 @@ export default function ViewActivity() {
         sportName: participant?.sportName || null,
         registrationMetadata: participant?.registrationMetadata || "",
         avatar: participant?.userAvatarUrl,
-        isDeleted: participant?.isDeleted || false, // QUAN TRỌNG: Giữ lại isDeleted
+        isDeleted: participant?.isDeleted || false, 
       };
     });
   };
@@ -628,7 +622,6 @@ export default function ViewActivity() {
       }
     };
 
-    // Use setTimeout to avoid immediate trigger
     const timeoutId = setTimeout(() => {
       document.addEventListener("mousedown", handleClickOutside);
     }, 0);
@@ -651,8 +644,9 @@ export default function ViewActivity() {
     const token = localStorage.getItem("token");
     setLoading(true);
     try {
+      // Dùng getViewInfo thay vì getActivityById để tối ưu performance
       const response = await executeApiCall(
-        activityService.getActivityById.bind(activityService),
+        activityService.getViewInfo.bind(activityService),
         [params.id, token],
         { setLoading: () => {}, setError }
       );
@@ -858,6 +852,128 @@ export default function ViewActivity() {
   useEffect(() => {
     fetchActivity();
   }, [fetchActivity]);
+
+  // Load participants ngay khi activity được load để check registration status
+  useEffect(() => {
+    const checkUserRegistration = async () => {
+      if (!activity?.id || !currentUser?.id) return;
+      
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        // Load participants với pageSize lớn để tìm user hiện tại
+        const response = await executeApiCall(
+          activityService.getParticipants.bind(activityService),
+          [activity.id, 1, 100, null, token], // Load 100 participants để check
+          { setLoading: () => {} }
+        );
+        
+        if (response?.data?.data) {
+          const participants = response.data.data || [];
+          // Check xem currentUser có trong participants không
+          const userParticipant = participants.find(
+            (p) => p.userId === currentUser.id && !p.isDeleted
+          );
+          
+          if (userParticipant) {
+            setIsRegistered(true);
+            // Cập nhật activity.participants nếu chưa có
+            if (!activity.participants || activity.participants.length === 0) {
+              const normalized = normalizeParticipants(participants);
+              setActivity(prev => ({
+                ...prev,
+                participants: normalized
+              }));
+            }
+          }
+        }
+      } catch (err) {
+        // Silent fail - không ảnh hưởng đến UI
+        console.error("Error checking registration status:", err);
+      }
+    };
+
+    // Nếu activity.participants không có hoặc rỗng, check từ API
+    // Hoặc nếu có participants nhưng không tìm thấy user, cũng check lại
+    if (activity?.id && currentUser?.id) {
+      const hasUserInParticipants = activity.participants?.some(
+        (p) => p.userId === currentUser.id && !p.isDeleted
+      );
+      
+      if (!activity.participants || activity.participants.length === 0 || !hasUserInParticipants) {
+        checkUserRegistration();
+      }
+    }
+  }, [activity?.id, activity?.participants, currentUser?.id]);
+
+  // Lazy load data cho từng tab
+  useEffect(() => {
+    if (!activity?.id) return;
+
+    const loadTabData = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      // Nếu tab đã load rồi, skip
+      if (loadedTabs.has(activeTab)) {
+        // Nếu là tab participants và page/filter thay đổi, reload
+        if (activeTab === "participants") {
+          setLoadingParticipants(true);
+          try {
+            const response = await executeApiCall(
+              activityService.getParticipants.bind(activityService),
+              [activity.id, participantsPageNumber, participantsPageSize, selectedClassGroupId, token],
+              { setLoading: setLoadingParticipants }
+            );
+            
+            if (response?.data) {
+              const paginationData = response.data;
+              const normalized = normalizeParticipants(paginationData.data || []);
+              setParticipants(normalized);
+              setParticipantsTotalPages(paginationData.totalPages || 1);
+              setParticipantsTotalCount(paginationData.totalCount || 0);
+            }
+          } catch (error) {
+            console.error("Error loading participants:", error);
+          } finally {
+            setLoadingParticipants(false);
+          }
+        }
+        return;
+      }
+
+      try {
+        if (activeTab === "participants") {
+          setLoadingParticipants(true);
+          const response = await executeApiCall(
+            activityService.getParticipants.bind(activityService),
+            [activity.id, participantsPageNumber, participantsPageSize, selectedClassGroupId, token],
+            { setLoading: setLoadingParticipants }
+          );
+          
+          if (response?.data) {
+            const paginationData = response.data;
+            const normalized = normalizeParticipants(paginationData.data || []);
+            setParticipants(normalized);
+            setParticipantsTotalPages(paginationData.totalPages || 1);
+            setParticipantsTotalCount(paginationData.totalCount || 0);
+          }
+        }
+        // Có thể thêm logic load cho các tab khác ở đây nếu cần
+        
+        setLoadedTabs(prev => new Set([...prev, activeTab]));
+      } catch (error) {
+        console.error(`Error loading ${activeTab} tab:`, error);
+      } finally {
+        if (activeTab === "participants") {
+          setLoadingParticipants(false);
+        }
+      }
+    };
+
+    loadTabData();
+  }, [activeTab, activity?.id, loadedTabs, participantsPageNumber, participantsPageSize, selectedClassGroupId]);
 
   // Load classGroups từ participants (chỉ khi cần, không load tất cả)
   // Backend đã format sẵn ClassGroup1Name và ClassGroup2Name thành "grade + name" trong bracket response
@@ -1632,15 +1748,19 @@ export default function ViewActivity() {
   // Logic: now (VN time) <= endRegisterDate (VN time) - có thể hủy trước khi hết hạn đăng ký
   // API trả về date string đã là VN time rồi, không cần convert thêm
   const canCancelRegistration = useMemo(() => {
-    if (!activity?.endRegisterDate || !isRegistered) {
+    if (!isRegistered) {
       return false;
+    }
+    // Nếu không có endRegisterDate, mặc định cho phép hủy
+    if (!activity?.endRegisterDate) {
+      return true;
     }
     const nowUTC = new Date();
     const nowVN = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000); // Convert now sang VN time
 
     // API trả về date string đã là VN time rồi, parse trực tiếp (không convert thêm)
     const endRegisterDateVN = parseDateFromAPI(activity.endRegisterDate);
-    if (!endRegisterDateVN) return false;
+    if (!endRegisterDateVN) return true; // Nếu không parse được, mặc định cho phép hủy
 
     // Có thể hủy nếu hiện tại <= endRegisterDate (so sánh trong VN time)
     const canCancel = nowVN <= endRegisterDateVN;
@@ -1668,18 +1788,17 @@ export default function ViewActivity() {
             <CheckCircle className="w-5 h-5" />
             <span className="font-medium">Đã đăng ký tham gia</span>
           </div>
-          {canCancelRegistration && (
-            <Button
-              variant="outline"
-              className="w-full border-red-300 text-red-600 hover:bg-red-50"
-              disabled={isPreview || isCancelling}
-              onClick={handleCancelRegister}
-            >
-              {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
-            </Button>
-          )}
+          {/* Luôn hiển thị nút hủy, chỉ disable khi hết thời hạn */}
+          <Button
+            variant="outline"
+            className="w-full border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isPreview || isCancelling || !canCancelRegistration}
+            onClick={handleCancelRegister}
+          >
+            {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
+          </Button>
           {!canCancelRegistration && (
-            <p className="text-sm text-gray-500 text-center">
+            <p className="text-xs text-gray-500 text-center">
               Đã hết thời hạn hủy đăng ký
             </p>
           )}
@@ -1706,49 +1825,13 @@ export default function ViewActivity() {
             </p>
           </div>
         )}
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button
-              className="w-full btn-primary"
-              disabled={isPreview || !canRegister}
-            >
-              Đăng ký tham gia
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Đăng ký tham gia hoạt động</DialogTitle>
-              <DialogDescription>
-                Vui lòng cho biết lý do bạn muốn tham gia hoạt động này
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="reason">Lý do tham gia</Label>
-                <Textarea
-                  id="reason"
-                  placeholder="Ví dụ: Tôi muốn rèn luyện sức khỏe và giao lưu với bạn bè..."
-                  value={registrationReason}
-                  onChange={(e) => setRegistrationReason(e.target.value)}
-                  rows={4}
-                  disabled={isPreview}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" disabled={isRegistering}>
-                Hủy
-              </Button>
-              <Button
-                onClick={handleRegister}
-                className="btn-primary"
-                disabled={isPreview || isRegistering || !canRegister}
-              >
-                {isRegistering ? "Đang đăng ký..." : "Xác nhận đăng ký"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button
+          className="w-full btn-primary"
+          disabled={isPreview || !canRegister || isRegistering}
+          onClick={handleRegister}
+        >
+          {isRegistering ? "Đang đăng ký..." : "Đăng ký tham gia"}
+        </Button>
       </div>
     );
   };
@@ -1764,18 +1847,17 @@ export default function ViewActivity() {
             <CheckCircle className="w-5 h-5" />
             <span className="font-medium">Đã đăng ký tham gia theo nhóm</span>
           </div>
-          {canCancelRegistration && (
-            <Button
-              variant="outline"
-              className="w-full border-red-300 text-red-600 hover:bg-red-50"
-              disabled={isPreview || isCancelling}
-              onClick={handleCancelRegister}
-            >
-              {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
-            </Button>
-          )}
+          {/* Luôn hiển thị nút hủy, chỉ disable khi hết thời hạn */}
+          <Button
+            variant="outline"
+            className="w-full border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isPreview || isCancelling || !canCancelRegistration}
+            onClick={handleCancelRegister}
+          >
+            {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
+          </Button>
           {!canCancelRegistration && (
-            <p className="text-sm text-gray-500 text-center">
+            <p className="text-xs text-gray-500 text-center">
               Đã hết thời hạn hủy đăng ký
             </p>
           )}
@@ -1832,18 +1914,17 @@ export default function ViewActivity() {
             <CheckCircle className="w-5 h-5" />
             <span className="font-medium">Đã đăng ký tham gia</span>
           </div>
-          {canCancelRegistration && (
-            <Button
-              variant="outline"
-              className="w-full border-red-300 text-red-600 hover:bg-red-50"
-              disabled={isPreview || isCancelling}
-              onClick={handleCancelRegister}
-            >
-              {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
-            </Button>
-          )}
+          {/* Luôn hiển thị nút hủy, chỉ disable khi hết thời hạn */}
+          <Button
+            variant="outline"
+            className="w-full border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isPreview || isCancelling || !canCancelRegistration}
+            onClick={handleCancelRegister}
+          >
+            {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
+          </Button>
           {!canCancelRegistration && (
-            <p className="text-sm text-gray-500 text-center">
+            <p className="text-xs text-gray-500 text-center">
               Đã hết thời hạn hủy đăng ký
             </p>
           )}
@@ -1885,11 +1966,11 @@ export default function ViewActivity() {
             <Button
               className="w-full btn-primary"
               disabled={
-                isPreview || !canRegister || isRegistered || isRegistering
+                isPreview || !canRegister || isRegistered
               }
-              onClick={handleRegister}
+              onClick={() => navigate(ROUTES.ACTIVITY.REGISTER_ACTIVITY.replace(":id", params.id))}
             >
-              {isRegistering ? "Đang đăng ký..." : "Đăng ký cá nhân"}
+              Đăng ký cá nhân
             </Button>
             <p className="text-xs text-gray-500 text-center">
               Đăng ký cho bản thân
@@ -1899,13 +1980,13 @@ export default function ViewActivity() {
 
         {/* Option 2: Đăng ký nhóm */}
         <div className="space-y-2">
-          <Button
-            className="w-full btn-primary border-2 border-orange-500 bg-white text-orange-600 hover:bg-orange-50"
-            disabled={isPreview || !canRegister}
-            onClick={handleOpenGroupDialog}
-          >
-            Đăng ký theo nhóm
-          </Button>
+        <Button
+          className="w-full btn-primary border-2 border-orange-500 bg-white text-orange-600 hover:bg-orange-50"
+          disabled={isPreview || !canRegister}
+          onClick={() => navigate(ROUTES.ACTIVITY.REGISTER_ACTIVITY.replace(":id", params.id))}
+        >
+          Đăng ký theo nhóm
+        </Button>
           <p className="text-xs text-gray-500 text-center">
             {minMembers === 1
               ? `Tạo nhóm từ ${minMembers}${
@@ -1933,18 +2014,17 @@ export default function ViewActivity() {
             <CheckCircle className="w-5 h-5" />
             <span className="font-medium">Đã đăng ký tham gia hội thao</span>
           </div>
-          {canCancelRegistration && (
-            <Button
-              variant="outline"
-              className="w-full border-red-300 text-red-600 hover:bg-red-50"
-              disabled={isPreview || isCancelling}
-              onClick={handleCancelRegister}
-            >
-              {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
-            </Button>
-          )}
+          {/* Luôn hiển thị nút hủy, chỉ disable khi hết thời hạn */}
+          <Button
+            variant="outline"
+            className="w-full border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isPreview || isCancelling || !canCancelRegistration}
+            onClick={handleCancelRegister}
+          >
+            {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
+          </Button>
           {!canCancelRegistration && (
-            <p className="text-sm text-gray-500 text-center">
+            <p className="text-xs text-gray-500 text-center">
               Đã hết thời hạn hủy đăng ký
             </p>
           )}
@@ -1971,77 +2051,15 @@ export default function ViewActivity() {
             </p>
           </div>
         )}
-        {currentUser?.role?.toLowerCase() === "teacher" && (
-          <div className="space-y-2">
-            <Label>Chọn môn thi đấu</Label>
-            <SimpleSelect
-              value={selectedSportId}
-              onValueChange={(v) => setSelectedSportId(Number(v))}
-              placeholder="Chọn môn thi đấu"
-              options={activity.sports.map((s) => ({
-                value: String(s.id),
-                label: s.name,
-              }))}
-            />
-            {currentSport?.maxMembers && (
-              <p className="text-xs text-gray-500">
-                Mỗi môn tối đa {currentSport.maxMembers} thành viên.
-              </p>
-            )}
-          </div>
-        )}
-        {currentUser?.role?.toLowerCase() === "teacher" && (
-          <div className="space-y-2">
-            <Label>Chọn học sinh của lớp</Label>
-
-            <div className="border rounded-lg p-3 max-h-64 overflow-y-auto space-y-2">
-              {isClassLoading ? (
-                <p className="text-sm text-gray-500">
-                  Đang tải danh sách lớp...
-                </p>
-              ) : classStudents.length ? (
-                classStudents.map((student) => (
-                  <label
-                    key={student.id}
-                    className="flex items-center gap-2 text-sm"
-                  >
-                    <Checkbox
-                      checked={selectedSportMembers.includes(student.id)}
-                      onCheckedChange={() =>
-                        handleToggleSportMember(student.id)
-                      }
-                      disabled={sportSubmitting || !canRegister}
-                    />
-                    <span className="font-medium">{student.fullName}</span>
-                  </label>
-                ))
-              ) : (
-                <div className="text-sm text-gray-500">
-                  Chưa có danh sách lớp.{" "}
-                  <button
-                    className="text-orange-600 underline"
-                    onClick={ensureClassData}
-                  >
-                    Tải lại
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
         <Button
           className="w-full btn-primary"
-          onClick={handleSubmitSportRegistration}
+          onClick={() => navigate(ROUTES.ACTIVITY.REGISTER_ACTIVITY.replace(":id", params.id))}
           disabled={
             isPreview ||
-            sportSubmitting ||
-            !selectedSportId ||
-            selectedSportMembers.length === 0 ||
-            isClassLoading ||
             !canRegister
           }
         >
-          {sportSubmitting ? "Đang đăng ký..." : "Đăng ký môn thi đấu"}
+          Đăng ký môn thi đấu
         </Button>
       </div>
     );
@@ -2225,18 +2243,17 @@ export default function ViewActivity() {
       {/* Nút Nộp bài (nếu có) */}
       {renderSubmitButton()}
 
-      {canCancelRegistration && (
-        <Button
-          variant="outline"
-          className="w-full border-red-300 text-red-600 hover:bg-red-50"
-          onClick={handleCancelRegister}
-          disabled={isPreview || isCancelling}
-        >
-          {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
-        </Button>
-      )}
+      {/* Luôn hiển thị nút hủy, chỉ disable khi hết thời hạn */}
+      <Button
+        variant="outline"
+        className="w-full border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        onClick={handleCancelRegister}
+        disabled={isPreview || isCancelling || !canCancelRegistration}
+      >
+        {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
+      </Button>
       {!canCancelRegistration && (
-        <p className="text-sm text-gray-500 text-center">
+        <p className="text-xs text-gray-500 text-center">
           Đã hết thời hạn hủy đăng ký
         </p>
       )}
@@ -2260,8 +2277,6 @@ export default function ViewActivity() {
     return isRegistered ? renderRegisteredStatus() : renderSimpleRegistration();
   };
 
-  // Use participants from activity data or empty array
-  const participants = activity?.participants || [];
   const isCreativeContest = activity?.subType === "CreativeContest";
   const isSportsFestival = activity?.subType === "SportsFestival";
   const groupSettings = getGroupSettings(activity?.registrationSettings);
@@ -2274,8 +2289,8 @@ export default function ViewActivity() {
       : 0;
 
   // Kiểm tra quyền đăng ký: 
-  // - Giáo viên: được đăng ký hội thao và hội thảo
-  // - Học sinh: được đăng ký các hoạt động ngoài hội thao (bao gồm hội thảo)
+  // - Giáo viên: được đăng ký hội thao, hội thảo và cuộc thi sáng tạo
+  // - Học sinh: được đăng ký các hoạt động ngoài hội thao (bao gồm hội thảo và cuộc thi sáng tạo)
   // Và kiểm tra xem còn trong thời hạn đăng ký không
   const isSeminarWorkshop = activity?.subType === "SeminarWorkshop" || activity?.subType === "Seminar";
   const canRegister = useMemo(() => {
@@ -2290,15 +2305,13 @@ export default function ViewActivity() {
     const isStudent = userRole === "student";
 
     if (isTeacher) {
-      // Giáo viên được đăng ký hội thao và hội thảo
-      return isSportsFestival || isSeminarWorkshop;
+      return isSportsFestival || isSeminarWorkshop || isCreativeContest;
     }
     if (isStudent) {
-      // Học sinh được đăng ký các hoạt động ngoài hội thao (bao gồm hội thảo)
       return !isSportsFestival;
     }
     return true; // Default allow for other roles
-  }, [currentUser?.role, activity, isSportsFestival, isSeminarWorkshop, isRegistrationOpen]);
+  }, [currentUser?.role, activity, isSportsFestival, isSeminarWorkshop, isCreativeContest, isRegistrationOpen]);
 
   const groupRegistrations = useMemo(() => {
     if (!activity?.participants) return [];
@@ -3348,7 +3361,7 @@ export default function ViewActivity() {
 
           {/* Center Content - Tabs */}
           <div className="lg:col-span-6">
-            <Tabs defaultValue="overview" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-4 mb-2">
                 <TabsTrigger value="overview">Tổng quan</TabsTrigger>
                 <TabsTrigger value="participants">Người tham gia</TabsTrigger>
@@ -4066,52 +4079,148 @@ export default function ViewActivity() {
 
                 <Card className="glass hover-lift !bg-white/100">
                   <CardHeader>
-                    <CardTitle>
-                      Danh sách người tham gia ({participants.length})
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>
+                        Danh sách người tham gia ({participantsTotalCount || participants.length})
+                      </CardTitle>
+                      {isSportsFestival && classGroups.length > 0 && (
+                        <Select
+                          value={selectedClassGroupId ? String(selectedClassGroupId) : "all"}
+                          onValueChange={(value) => {
+                            setSelectedClassGroupId(value === "all" ? null : Number(value));
+                            setParticipantsPageNumber(1); // Reset về trang 1 khi filter
+                          }}
+                        >
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Chọn lớp" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Tất cả các lớp</SelectItem>
+                            {classGroups.map((cg) => {
+                              const id = typeof cg.id === 'number' ? cg.id : parseInt(cg.id);
+                              const label = cg.grade ? `${cg.grade}${cg.name}` : cg.name;
+                              return (
+                                <SelectItem key={cg.id} value={String(id)}>
+                                  {label}
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {participants.map((participant) => (
-                        <div
-                          key={participant.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarImage
-                                src={participant.avatar || PLACEHOLDER_AVATAR}
-                              />
-                              <AvatarFallback>
-                                {participant.fullName
-                                  ? participant.fullName.charAt(0).toUpperCase()
-                                  : "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-semibold">
-                                {participant.fullName}
-                              </p>
-                              {/* <p className="text-sm text-gray-600">
-                                {participant.className || "Chờ kết quả"}
-                              </p> */}
-                              {participant.groupCode && (
-                                <p className="text-xs text-orange-600">
-                                  Nhóm:{" "}
-                                  {participant.registrationMetadata ||
-                                    "Nhóm chưa đặt tên"}
-                                </p>
-                              )}
-                              {participant.sportName && (
-                                <p className="text-xs text-blue-600">
-                                  Môn: {participant.sportName}
-                                </p>
-                              )}
+                    {loadingParticipants ? (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-gray-500">Đang tải danh sách người tham gia...</p>
+                      </div>
+                    ) : participants.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-gray-500">Chưa có người tham gia nào.</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-3">
+                          {participants.map((participant) => (
+                            <div
+                              key={participant.id}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                            >
+                              <div className="flex items-center gap-3">
+                                <Avatar>
+                                  <AvatarImage
+                                    src={participant.avatar || PLACEHOLDER_AVATAR}
+                                  />
+                                  <AvatarFallback>
+                                    {participant.fullName
+                                      ? participant.fullName.charAt(0).toUpperCase()
+                                      : "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-semibold">
+                                    {participant.fullName}
+                                  </p>
+                                  {participant.className && (
+                                    <p className="text-sm text-gray-600">
+                                      {participant.className}
+                                    </p>
+                                  )}
+                                  {participant.groupCode && (
+                                    <p className="text-xs text-orange-600">
+                                      Nhóm:{" "}
+                                      {participant.registrationMetadata ||
+                                        "Nhóm chưa đặt tên"}
+                                    </p>
+                                  )}
+                                  {participant.sportName && (
+                                    <p className="text-xs text-blue-600">
+                                      Môn: {participant.sportName}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Pagination Controls */}
+                        {participantsTotalPages > 1 && (
+                          <div className="flex items-center justify-between pt-4 border-t mt-4">
+                            <div className="text-sm text-gray-600">
+                              Trang {participantsPageNumber} / {participantsTotalPages}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setParticipantsPageNumber(prev => Math.max(1, prev - 1))}
+                                disabled={participantsPageNumber === 1 || loadingParticipants}
+                              >
+                                <ArrowLeft className="w-4 h-4 mr-1" />
+                                Trước
+                              </Button>
+                              <div className="flex items-center gap-1">
+                                {Array.from({ length: Math.min(5, participantsTotalPages) }, (_, i) => {
+                                  let pageNum;
+                                  if (participantsTotalPages <= 5) {
+                                    pageNum = i + 1;
+                                  } else if (participantsPageNumber <= 3) {
+                                    pageNum = i + 1;
+                                  } else if (participantsPageNumber >= participantsTotalPages - 2) {
+                                    pageNum = participantsTotalPages - 4 + i;
+                                  } else {
+                                    pageNum = participantsPageNumber - 2 + i;
+                                  }
+                                  return (
+                                    <Button
+                                      key={pageNum}
+                                      variant={participantsPageNumber === pageNum ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => setParticipantsPageNumber(pageNum)}
+                                      disabled={loadingParticipants}
+                                      className="min-w-[40px]"
+                                    >
+                                      {pageNum}
+                                    </Button>
+                                  );
+                                })}
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setParticipantsPageNumber(prev => Math.min(participantsTotalPages, prev + 1))}
+                                disabled={participantsPageNumber >= participantsTotalPages || loadingParticipants}
+                              >
+                                Sau
+                                <ArrowRight className="w-4 h-4 ml-1" />
+                              </Button>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        )}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -4253,12 +4362,17 @@ export default function ViewActivity() {
                                       </div>
                                       <div className="space-y-2">
                                         {(round.matches || []).map((match) => {
-                                          const isCompleted =
-                                            match.status === 2;
-                                          const isOngoing = match.status === 1;
+                                          // Chỉ coi là có tỉ số khi cả hai score đều không null/undefined
+                                          // Và không phải là 0-0 mặc định (chưa set tỉ số)
+                                          // Nếu status === 2 (đã kết thúc) thì 0-0 có thể là tỉ số thật, nên vẫn hiển thị
                                           const hasScores =
                                             match.score1 != null &&
-                                            match.score2 != null;
+                                            match.score2 != null &&
+                                            (match.status === 2 || match.score1 !== 0 || match.score2 !== 0);
+                                          // Nếu có tỉ số thì coi như đã kết thúc
+                                          const isCompleted =
+                                            match.status === 2 || hasScores;
+                                          const isOngoing = match.status === 1 && !hasScores;
                                           const matchDate = match.matchDate
                                             ? new Date(match.matchDate)
                                             : null;
