@@ -124,7 +124,7 @@ export default function AssignJurySection({ activityId }) {
   const handleImprovedRandomForAll = async (numberOfJury) => {
     try {
       await improvedRandomAssign({ activityId, numberOfJury });
-      toast.showSuccess("Phân công ngẫu nhiên (cải tiến) thành công!");
+      toast.showSuccess("Phân công ngẫu nhiên thành công!");
       handleLoadSubmission();
       handleLoadJury();
     } catch (error) {

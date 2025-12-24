@@ -30,7 +30,7 @@ export default function ImprovedRandomAssignDialog({ isOpen, onClose, onConfirm 
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Phân công giám khảo ngẫu nhiên (Cải tiến)</DialogTitle>
+          <DialogTitle>Phân công giám khảo ngẫu nhiên</DialogTitle>
           <DialogDescription>
             Hệ thống sẽ tự động phân công giám khảo với các quy tắc thông minh.
           </DialogDescription>
