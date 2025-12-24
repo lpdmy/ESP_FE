@@ -219,6 +219,14 @@ export function useClubApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
+  const restoreClub = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.restoreClub.bind(clubService),
+      [token, id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
   const approveInvitation = useRef(async (id) => {
     const token = localStorage.getItem("token");
     return executeApiCall(
@@ -276,5 +284,6 @@ export function useClubApi() {
     getClubMentorInvitation: getClubMentorInvitation.current,
     cancelInviteMentor,
     getListClubAdmin : getListClubAdmin.current,
+    restoreClub : restoreClub.current,
   };
 }

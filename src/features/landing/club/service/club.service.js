@@ -138,6 +138,10 @@ export class ClubService extends ApiService {
     const url = `${API_CONFIG.CLUB.CLUB_DELETE}/${id}`;
     return this.delete(url, null, token);
   }
+  async restoreClub(token, id) {
+    const url = `${API_CONFIG.CLUB.CLUB_DELETE}/${id}`;
+    return this.put(url, null, token);
+  }
   async approveInvitation(token, id) {
     const url = `${API_CONFIG.CLUB.CLUB_INVITE_MENTOR}?id=${id}`;
     return this.put(url, null, token);
