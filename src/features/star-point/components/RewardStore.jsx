@@ -22,7 +22,7 @@ import {
   Clock,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { REWARD_CATEGORY, REWARD_CATEGORY_LABELS } from "@/features/admin/components/StarPointManagement/enums/rewardCategory";
+import { REWARD_CATEGORY, REWARD_CATEGORY_LABELS, convertCategoryFromBE, getCategoryLabel } from "@/features/admin/components/StarPointManagement/enums/rewardCategory";
 import { set } from "date-fns";
 import { subtractPoints } from "@/store/star-point/pointSlice";
 import { LoadingCard } from "@/common/components/ui/loading";
@@ -76,7 +76,9 @@ export default function RewardStore() {
 
   const filteredRewards = rewards.filter((reward) => {
     if (selectedCategory === "all") return true;
-    return reward.category.toString() === selectedCategory;
+    // Convert category từ BE (có thể là string hoặc number) sang FE number để so sánh
+    const feCategory = convertCategoryFromBE(reward.category);
+    return feCategory.toString() === selectedCategory;
   });
 
   const handleExchange = async (reward) => {

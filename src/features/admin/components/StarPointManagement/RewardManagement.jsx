@@ -34,112 +34,34 @@ import {
   TableRow,
 } from "@/common/components/ui/table";
 import {
-  Star,
   Gift,
-  Trophy,
   Settings,
   Plus,
   Edit,
   Trash2,
-  Users,
-  TrendingUp,
   Package,
 } from "lucide-react";
 import {
   REWARD_CATEGORY,
   REWARD_CATEGORY_LABELS,
+  convertCategoryFromBE,
+  convertCategoryToBE,
+  getCategoryLabel,
 } from "@/features/admin/components/StarPointManagement/enums/rewardCategory"; // import file của bạn
 import { uploadImage } from "@common/utils/upload";
 import { useStarPointApi } from "@/features/admin/hooks/useStarPointApi";
 import { REWARD_ACTION_LABELS } from "./enums/rewardActionType";
 import { LoadingCard } from "@/common/components/ui/loading";
+import {
+  getStatusLabel,
+  isPendingStatus,
+  convertStatusFromBE,
+} from "./enums/redemptionStatus";
 const rewardOptions = Object.values(REWARD_CATEGORY).map((value) => ({
   value: value.toString(),
   label: REWARD_CATEGORY_LABELS[value],
 }));
 
-const leaderboard = [
-  { rank: 1, name: "Nguyễn Văn An", points: 2850, change: "+50" },
-  { rank: 2, name: "Trần Thị Bình", points: 2720, change: "+30" },
-  { rank: 3, name: "Lê Minh Đức", points: 2650, change: "-10" },
-  { rank: 4, name: "Phạm Thu Hà", points: 2580, change: "+20" },
-  { rank: 5, name: "Hoàng Văn Nam", points: 2450, change: "+15" },
-];
-
-const redeemedRewards = [
-  {
-    id: 1,
-    studentName: "Nguyễn Văn An",
-    studentId: "HS001234",
-    rewardName: "Voucher Shopee 50k",
-    quantity: 1,
-    redemptionDate: "2024-01-15",
-    status: "pending", // pending or picked_up
-  },
-  {
-    id: 2,
-    studentName: "Trần Thị Bình",
-    studentId: "HS001235",
-    rewardName: "Áo thun EduSphere",
-    quantity: 1,
-    redemptionDate: "2024-01-14",
-    status: "picked_up",
-  },
-  {
-    id: 3,
-    studentName: "Lê Minh Đức",
-    studentId: "HS001236",
-    rewardName: "Sách lập trình",
-    quantity: 2,
-    redemptionDate: "2024-01-13",
-    status: "pending",
-  },
-  {
-    id: 4,
-    studentName: "Phạm Thu Hà",
-    studentId: "HS001237",
-    rewardName: "Voucher Grab 30k",
-    quantity: 3,
-    redemptionDate: "2024-01-12",
-    status: "picked_up",
-  },
-  {
-    id: 5,
-    studentName: "Hoàng Văn Nam",
-    studentId: "HS001238",
-    rewardName: "Tai nghe Bluetooth",
-    quantity: 1,
-    redemptionDate: "2024-01-11",
-    status: "pending",
-  },
-  {
-    id: 6,
-    studentName: "Đỗ Thị Lan",
-    studentId: "HS001239",
-    rewardName: "Voucher Shopee 50k",
-    quantity: 2,
-    redemptionDate: "2024-01-10",
-    status: "pending",
-  },
-  {
-    id: 7,
-    studentName: "Vũ Minh Tuấn",
-    studentId: "HS001240",
-    rewardName: "Áo thun EduSphere",
-    quantity: 1,
-    redemptionDate: "2024-01-09",
-    status: "picked_up",
-  },
-  {
-    id: 8,
-    studentName: "Bùi Thu Hương",
-    studentId: "HS001241",
-    rewardName: "Sách lập trình",
-    quantity: 1,
-    redemptionDate: "2024-01-08",
-    status: "pending",
-  },
-];
 // ================= MAIN COMPONENT =================
 export default function RewardsManagement() {
   const [isRuleDialogOpen, setIsRuleDialogOpen] = useState(false);
@@ -192,7 +114,6 @@ export default function RewardsManagement() {
 
   const [loadingRules, setLoadingRules] = useState(false);
   const [loadingRewards, setLoadingRewards] = useState(false);
-  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
 
   const [loadingCreateReward, setLoadingCreateReward] = useState(false);
   const [loadingUpdateReward, setLoadingUpdateReward] = useState(false);
@@ -227,7 +148,7 @@ export default function RewardsManagement() {
       const queryParams = {
         pageNumber: currentPage,
         pageSize: itemsPerPage,
-        status: pickupFilter === "all" ? undefined : pickupFilter,
+        status: pickupFilter === "all" ? undefined : convertStatusFromBE(pickupFilter),
         category: undefined,
         queryString: pickupSearch || undefined,
       };
@@ -288,11 +209,13 @@ export default function RewardsManagement() {
   // Edit Reward
   const handleEditRewardClick = (reward) => {
     setEditingReward(reward);
+    // Convert category từ BE (có thể là string hoặc number) sang FE number rồi sang string cho select
+    const feCategory = convertCategoryFromBE(reward.category);
     setRewardForm({
       name: reward.name,
       pointCost: reward.pointCost,
       stock: reward.stock,
-      category: reward.category,
+      category: feCategory.toString(),
       imageUrl: reward.imageUrl,
     });
     setImageUrl(reward.imageUrl);
@@ -303,16 +226,19 @@ export default function RewardsManagement() {
     try {
       setLoadingUpdateReward(true);
       let finalImageUrl = rewardForm.imageUrl;
-      rewardForm.category = Number(rewardForm.category);
       if (selectedFile) {
         setUploading(true);
         finalImageUrl = await uploadImage(selectedFile);
         setUploading(false);
       }
+      // Convert category từ FE number sang BE string
+      const beCategory = convertCategoryToBE(Number(rewardForm.category));
       await updateReward(editingReward.id, {
         ...rewardForm,
+        category: beCategory,
         imageUrl: finalImageUrl,
         pointCost: Number(rewardForm.pointCost),
+        stock: Number(rewardForm.stock),
       });
       const resp = await getAllRewards();
       setRewards(resp.data);
@@ -338,16 +264,19 @@ export default function RewardsManagement() {
     try {
       setLoadingCreateReward(true);
       let finalImageUrl = "";
-      rewardForm.category = Number(rewardForm.category);
       if (selectedFile) {
         setUploading(true);
         finalImageUrl = await uploadImage(selectedFile);
         setUploading(false);
       }
+      // Convert category từ FE number sang BE string
+      const beCategory = convertCategoryToBE(Number(rewardForm.category));
       await createReward({
         ...rewardForm,
+        category: beCategory,
         imageUrl: finalImageUrl,
         pointCost: Number(rewardForm.pointCost),
+        stock: Number(rewardForm.stock),
       });
       const resp = await getAllRewards();
       setRewards(resp.data);
@@ -428,11 +357,10 @@ export default function RewardsManagement() {
 
       {/* Tabs */}
       <Tabs defaultValue="rules" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="rules">Quy tắc điểm thưởng</TabsTrigger>
           <TabsTrigger value="rewards">Kho phần thưởng</TabsTrigger>
           <TabsTrigger value="pickups">Nhận thưởng</TabsTrigger>
-          <TabsTrigger value="leaderboard">Bảng xếp hạng</TabsTrigger>
         </TabsList>
 
         {/* Tab: Quy tắc điểm */}
@@ -684,7 +612,7 @@ export default function RewardsManagement() {
                       <div>
                         <CardTitle className="text-lg">{reward.name}</CardTitle>
                         <Badge variant="outline" className="mt-1">
-                          {REWARD_CATEGORY_LABELS[reward.category]}
+                          {getCategoryLabel(reward.category)}
                         </Badge>
                       </div>
                       <div className="flex gap-1">
@@ -948,31 +876,31 @@ export default function RewardsManagement() {
                             </TableCell>
                             <TableCell>{pickup.quantity}</TableCell>
                             <TableCell>
-                              {pickup.status !== 0
+                              {pickup.redeemedAt
                                 ? new Date(
                                     pickup.redeemedAt
                                   ).toLocaleDateString("vi-VN")
                                 : "N/A"}
                             </TableCell>
                             <TableCell>
-                              {pickup.status === 0 ? (
+                              {isPendingStatus(pickup.status) ? (
                                 <Badge
                                   variant="outline"
                                   className="bg-yellow-50 text-yellow-700 border-yellow-200"
                                 >
-                                  Chưa nhận
+                                  {getStatusLabel(pickup.status)}
                                 </Badge>
                               ) : (
                                 <Badge
                                   variant="outline"
                                   className="bg-green-50 text-green-700 border-green-200"
                                 >
-                                  Đã nhận
+                                  {getStatusLabel(pickup.status)}
                                 </Badge>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
-                              {pickup.status === 0 ? (
+                              {isPendingStatus(pickup.status) ? (
                                 <Button
                                   variant="indigo"
                                   onClick={() => {
@@ -1122,57 +1050,6 @@ export default function RewardsManagement() {
           </Dialog>
         </TabsContent>
 
-        {/* Tab: Bảng xếp hạng */}
-        <TabsContent value="leaderboard">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-yellow-600" /> Bảng xếp hạng
-                điểm thưởng
-              </CardTitle>
-              <CardDescription>Top người dùng có điểm cao nhất</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {leaderboard.map((user) => (
-                <div
-                  key={user.rank}
-                  className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
-                        user.rank === 1
-                          ? "bg-yellow-500"
-                          : user.rank === 2
-                          ? "bg-gray-400"
-                          : user.rank === 3
-                          ? "bg-orange-500"
-                          : "bg-blue-500"
-                      }`}
-                    >
-                      {user.rank}
-                    </div>
-                    <div>
-                      <p className="font-medium">{user.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {user.points} điểm
-                      </p>
-                    </div>
-                  </div>
-                  <Badge
-                    className={`${
-                      user.change.startsWith("+")
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {user.change}
-                  </Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
