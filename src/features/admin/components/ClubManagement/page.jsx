@@ -63,6 +63,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  RotateCcw
 } from "lucide-react";
 import ClubDetailModal from "@/features/landing/club/Modal/ClubDetailModal/page";
 import { useClubApi } from "@/features/landing/club/hooks/useClubApi";
@@ -72,10 +73,10 @@ import ConfirmDeleteDialog from "./DeleteModal/page";
 export default function ClubClassManagement() {
   const toast = useToast();
   const {
-  isOpen: isOpenDialog,
-  openDialog,
-  closeDialog: closeDeleteDialog
-} = useDialog();
+    isOpen: isOpenDialog,
+    openDialog,
+    closeDialog: closeDeleteDialog,
+  } = useDialog();
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedClub, setSelectedClub] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -93,7 +94,7 @@ export default function ClubClassManagement() {
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  const [deleteId,setDeleteId] = useState(0)
+  const [deleteId, setDeleteId] = useState(0);
   const [formData, setFormData] = useState({
     name: "",
     type: "Câu lạc bộ",
@@ -105,7 +106,8 @@ export default function ClubClassManagement() {
     category: "",
     meetingTime: "",
   });
-  const { getListClubAdmin, getClubCategory, deleteClub } = useClubApi();
+  const { getListClubAdmin, getClubCategory, deleteClub, restoreClub } =
+    useClubApi();
   const handleSort = (field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -178,8 +180,7 @@ export default function ClubClassManagement() {
         { label: "Tất cả", value: "Tất cả" },
         ...formattedOptions,
       ]);
-    } catch (err) {
-    }
+    } catch (err) {}
   };
   useEffect(() => {
     handleListCategory();
@@ -234,7 +235,15 @@ export default function ClubClassManagement() {
       toast.deleteClubFail();
     }
   };
-
+  const handleRestoreClub = async (id) => {
+    try {
+      await restoreClub(id);
+      toast.showSuccess("Khôi phục thành công");
+      handleListClub();
+    } catch (err) {
+      toast.showError("Khôi phục thất bại");
+    }
+  };
   const SortHeader = ({ field, children }) => (
     <TableHead
       className="cursor-pointer hover:bg-gray-50 select-none"
@@ -524,17 +533,30 @@ export default function ClubClassManagement() {
                                     club={selectedClub}
                                   />
                                   {/* Xóa câu lạc bộ */}
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setOpenMenuId(null);
-                                      openDialog();
-                                      setDeleteId(item.id)
-                                    }}
-                                    className="text-red-600 hover:bg-red-50 focus:bg-red-50 flex items-center"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4 text-red-600" />
-                                    Tạm ngừng câu lạc bộ
-                                  </DropdownMenuItem>
+                                  {item.isDeleted ? (
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setOpenMenuId(null);
+                                        handleRestoreClub(item.id);
+                                      }}
+                                      className="text-green-600 hover:bg-green-50 focus:bg-green-50 flex items-center"
+                                    >
+                                      <RotateCcw className="mr-2 h-4 w-4 text-green-600" />
+                                      Khôi phục câu lạc bộ
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setOpenMenuId(null);
+                                        openDialog();
+                                        setDeleteId(item.id);
+                                      }}
+                                      className="text-red-600 hover:bg-red-50 focus:bg-red-50 flex items-center"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                                      Tạm ngừng câu lạc bộ
+                                    </DropdownMenuItem>
+                                  )}
                                 </DropdownMenuContent>
                               )}
                             </DropdownMenu>
