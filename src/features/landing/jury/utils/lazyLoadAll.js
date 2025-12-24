@@ -25,11 +25,23 @@ export const lazyLoadAllPages = async (loadPageFunction, pageSize = 100) => {
       const response = await loadPageFunction(currentPage, pageSize);
       
       // Xử lý response có thể có cấu trúc khác nhau
-      const pageData = response?.data?.data || response?.data || [];
+      // ResponseDto<PaginationResponseDto<T>> có cấu trúc: { data: { data: Array, totalCount: number } }
+      // Nên cần truy cập response.data.data để lấy mảng dữ liệu
+      let pageData = [];
+      if (response?.data?.data && Array.isArray(response.data.data)) {
+        // Cấu trúc: ResponseDto<PaginationResponseDto<T>>
+        pageData = response.data.data;
+      } else if (Array.isArray(response?.data)) {
+        // Cấu trúc: ResponseDto<T[]> (trường hợp không có pagination)
+        pageData = response.data;
+      } else if (Array.isArray(response)) {
+        // Trường hợp response trực tiếp là mảng
+        pageData = response;
+      }
       
       // Lấy totalCount từ page đầu tiên
       if (totalCount === null && response?.data?.totalCount !== undefined) {
-        totalCount = response?.data?.totalCount;
+        totalCount = response.data.totalCount;
       }
       
       if (Array.isArray(pageData) && pageData.length > 0) {

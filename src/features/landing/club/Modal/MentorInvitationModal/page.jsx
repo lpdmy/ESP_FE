@@ -8,6 +8,14 @@ import {
   AvatarImage,
   AvatarFallback,
 } from "@/common/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/common/components/ui/dialog";
 import { useClubApi } from "../../hooks/useClubApi";
 export default function MentorInvitationModal({
   isOpen,
@@ -18,6 +26,8 @@ export default function MentorInvitationModal({
   if (!isOpen) return null;
 
   const [invitations, setInvitation] = useState([]);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [inviteToReject, setInviteToReject] = useState(null);
 
   const { getInvitation } = useClubApi();
   const handleInvitation = async () => {
@@ -31,6 +41,24 @@ export default function MentorInvitationModal({
   useEffect(()=>{
     handleInvitation()
   },[])
+
+  const handleRejectClick = (invite) => {
+    setInviteToReject(invite);
+    setIsRejectModalOpen(true);
+  };
+
+  const handleConfirmReject = () => {
+    if (inviteToReject) {
+      onReject(inviteToReject.id);
+      setIsRejectModalOpen(false);
+      setInviteToReject(null);
+    }
+  };
+
+  const handleCancelReject = () => {
+    setIsRejectModalOpen(false);
+    setInviteToReject(null);
+  };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 pointer-events-auto border border-gray-200">
@@ -98,7 +126,7 @@ export default function MentorInvitationModal({
                     size="sm"
                     variant="outline"
                     className="text-red-600 border-red-400 hover:bg-red-50 flex items-center gap-1"
-                    onClick={() => onReject(invite.id)}
+                    onClick={() => handleRejectClick(invite)}
                   >
                     <XCircle className="w-4 h-4" />
                     Từ chối
@@ -116,6 +144,31 @@ export default function MentorInvitationModal({
           </Button>
         </div>
       </div>
+
+      {/* Modal xác nhận từ chối */}
+      <Dialog open={isRejectModalOpen} onOpenChange={handleCancelReject}>
+        <DialogContent className="!bg-white">
+          <DialogHeader>
+            <DialogTitle>Xác nhận từ chối lời mời</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn từ chối lời mời làm cố vấn từ câu lạc bộ{" "}
+              <strong>{inviteToReject?.clubName}</strong>? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelReject} className="rounded-lg">
+              Hủy
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmReject}
+              className="!text-white rounded-lg bg-red-500 hover:bg-red-700"
+            >
+              Xác nhận từ chối
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

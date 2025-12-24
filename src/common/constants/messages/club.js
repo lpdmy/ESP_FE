@@ -16,6 +16,7 @@ export const CLUB_MESSAGES = {
     CHANGE_ROLE:"Chuyển chức vụ thành công",
     DELETE_CLUB:"Tạm ngừng câu lạc bộ thành công",
     APPROVE_INVITAION:"Chấp nhận lời mời làm cố vấn thành công",
+    REJECT_MENTOR_INVITATION:"Bạn đã từ chối lời mời làm cố vấn cho câu lạc bộ này",
   },
   ERROR:{
     CREATE_CLUB_JOIN:"Tạo yêu cầu tham gia câu lạc bộ không thành công",

@@ -169,6 +169,7 @@ export const useToast = () => {
   const recoveryStaffFail =()=>showSuccess(STAFF_MESSAGE.ERROR.RECOVERY)
   const approveInvitationSuccess =()=>showSuccess(CLUB_MESSAGES.SUCCESS.APPROVE_INVITAION)
   const approveInvitationFail =()=>showError(CLUB_MESSAGES.ERROR.APPROVE_INVITAION)
+  const rejectMentorInvitation =()=>showInfo(CLUB_MESSAGES.SUCCESS.REJECT_MENTOR_INVITATION)
   const addJurySuccess = () =>showSuccess(JURY_MESSAGE.SUCCESS.ADD)
   const addJuryFail = () =>showError(JURY_MESSAGE.ERROR.ADD)
   const deleteJuryFail = () =>showError(JURY_MESSAGE.ERROR.DELETE)
@@ -247,6 +248,7 @@ export const useToast = () => {
     recoveryStaffFail,
     approveInvitationSuccess,
     approveInvitationFail,
+    rejectMentorInvitation,
     addJurySuccess,
     addJuryFail,
     deleteJuryFail,

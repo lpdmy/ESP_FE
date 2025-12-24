@@ -51,6 +51,7 @@ import JoinClubModal from "../Modal/JoinClubModal/page";
 import { useToast } from "@/common/hooks/useToast";
 import { ROUTES } from "@/common/constants/routes";
 import { LeaveClubDialogConfirm } from "../Modal/LeaveClubModal/page";
+import { RespondMentorInvitationModal } from "../Modal/RespondMentorInvitationModal/page";
 const clubActivities = [];
 import CreatePostInput from "../../post/CreatePostInput";
 import CreatePostModal from "../../post/CreatePostModal";
@@ -64,6 +65,11 @@ export default function ClubDetail() {
     isOpen: isLeaveDialogOpen,
     openDialog: openLeaveDialog,
     closeDialog: closeLeaveDialog,
+  } = useDialog();
+  const {
+    isOpen: isRespondMentorModalOpen,
+    openDialog: openRespondMentorModal,
+    closeDialog: closeRespondMentorModal,
   } = useDialog();
   const navigate = useNavigate();
   const toast = useToast();
@@ -112,6 +118,11 @@ export default function ClubDetail() {
     roleValue === ROLE.TEACHER || roleValue === "TEACHER";
   const isStudent =
     roleValue === ROLE.STUDENT || roleValue === "STUDENT";
+  
+  // Kiểm tra xem người dùng hiện tại đã là cố vấn trong câu lạc bộ chưa
+  const isCurrentUserMentor = clubDetail.members?.some(
+    (member) => member.userId === currentUserId && member.role === "Mentor"
+  );
   const handleClubDetail = async () => {
     try {
       const response = await getClubDetail(clubid);
@@ -212,10 +223,18 @@ export default function ClubDetail() {
     try {
       await approveInvitation(clubid);
       toast.approveInvitationSuccess();
-      handleClubDetail()
+      // Cập nhật state để ẩn nút phản hồi
+      setClubDetail((prev) => ({ ...prev, isMentorInvite: false }));
+      handleClubDetail();
     } catch (error) {
       toast.approveInvitationFail();
     }
+  };
+
+  const handleRejectMentorInvite = () => {
+    toast.rejectMentorInvitation();
+    // Cập nhật state để ẩn nút phản hồi
+    setClubDetail((prev) => ({ ...prev, isMentorInvite: false }));
   };
 
   useEffect(() => {
@@ -318,6 +337,7 @@ export default function ClubDetail() {
               onConfirm={() => {
                 handleLeaveClub();
               }}
+              isPresident={isPresident}
             />
           </div>
         </div>
@@ -370,18 +390,18 @@ export default function ClubDetail() {
                   </div>
                 </CardContent>
               </Card>
-              {(isTeacher && clubDetail.isMentorInvite) ||
+              {(isTeacher && clubDetail.isMentorInvite && !isCurrentUserMentor) ||
               (isStudent && !isJoined) ? (
                 <Card className="glass sticky bottom-6 !bg-white">
                   <CardContent>
                     <div className="flex flex-col gap-2">
-                      {(user?.role === 2 || user?.role === "Teacher") && clubDetail.isMentorInvite ? (
+                      {(user?.role === 2 || user?.role === "Teacher") && clubDetail.isMentorInvite && !isCurrentUserMentor ? (
                         <Button
                           className="w-full bg-orange-400 hover:bg-orange-600 text-white flex items-center gap-2"
-                          onClick={handleAcceptMentorInvite}
+                          onClick={openRespondMentorModal}
                         >
                           <CheckCircle className="w-4 h-4" />
-                          Chấp nhận lời mời làm cố vấn
+                          Phản hồi
                         </Button>
                       ) : isRequestToJoin ? (
                         <Button
@@ -410,6 +430,12 @@ export default function ClubDetail() {
             open={isDialogOpen}
             onClose={closeDialog}
             onSubmit={handleSubmit}
+          />
+          <RespondMentorInvitationModal
+            open={isRespondMentorModalOpen}
+            onOpenChange={closeRespondMentorModal}
+            onAccept={handleAcceptMentorInvite}
+            onReject={handleRejectMentorInvite}
           />
           {/* Center Content - Tabs */}
           <div className="lg:col-span-6 ">

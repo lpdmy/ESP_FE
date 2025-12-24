@@ -86,6 +86,11 @@ export default function Grading() {
       return ungradedList.length;
     } catch (error) {
       console.error("❌ Lỗi khi load assignments:", error);
+      console.error("Chi tiết lỗi:", {
+        message: error.message,
+        statusCode: error.statusCode,
+        stack: error.stack
+      });
       toast.showError("Không thể tải danh sách bài chấm. Vui lòng thử lại.");
       return 0;
     } finally {
@@ -121,6 +126,20 @@ export default function Grading() {
       (criterias.length || 1)
   );
 
+  // Hàm lấy màu dựa trên điểm số
+  const getScoreColor = (score) => {
+    if (score >= 70) return "text-green-600"; // Xanh lá cho 70-100
+    if (score >= 30) return "text-yellow-600"; // Vàng cho 30-69
+    return "text-red-600"; // Đỏ cho 0-29
+  };
+
+  // Hàm lấy màu slider dựa trên điểm số
+  const getSliderColor = (score) => {
+    if (score >= 70) return "accent-green-600"; // Xanh lá cho 70-100
+    if (score >= 30) return "accent-yellow-600"; // Vàng cho 30-69
+    return "accent-red-600"; // Đỏ cho 0-29
+  };
+
   const buildGradePayload = () => {
     const scores = {};
     criterias.forEach((c) => {
@@ -138,14 +157,19 @@ export default function Grading() {
   const handleSubmitGrade = async () => {
     const payload = buildGradePayload();
     try {
-      await gradingSubmission(payload);
+      const response = await gradingSubmission(payload);
+      // Response có thể là { statusCode: 200, message: "...", data: "..." }
+      // Không cần parse data vì chỉ cần biết thành công hay không
       toast.showSuccess("Chấm điểm thành công");
+      return true;
     } catch (error) {
+      console.error("❌ Lỗi khi chấm điểm:", error);
       if (error.statusCode == 400) {
-        toast.showError(error.message);
+        toast.showError(error.message || "Chấm điểm không thành công");
       } else {
-        toast.showError("Chấm điểm không thành công");
+        toast.showError(error.message || "Chấm điểm không thành công");
       }
+      throw error; // Re-throw để caller biết có lỗi
     }
   };
 
@@ -340,12 +364,14 @@ export default function Grading() {
                 )}
                 {!isLoading &&
                   hasPending &&
-                  criterias.map((c) => (
+                  criterias.map((c) => {
+                    const currentScore = grades[c.key] ?? 0;
+                    return (
                     <div key={c.key}>
                       <div className="flex items-center justify-between mb-2">
                         <Label className="font-semibold">{c.label}</Label>
-                        <span className="text-2xl font-bold text-orange-600">
-                          {grades[c.key]}
+                          <span className={`text-2xl font-bold ${getScoreColor(currentScore)}`}>
+                            {currentScore}
                         </span>
                       </div>
 
@@ -354,7 +380,7 @@ export default function Grading() {
                           type="text"
                           min={0}
                           max={100}
-                          value={grades[c.key] ?? 0}
+                            value={currentScore}
                           className="w-24"
                           disabled={isCurrentAssignmentGraded || isLoading}
                           onChange={(e) => {
@@ -366,27 +392,40 @@ export default function Grading() {
                             setGrades({ ...grades, [c.key]: safe });
                           }}
                         />
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={grades[c.key] ?? 0}
-                          disabled={isCurrentAssignmentGraded || isLoading}
-                          onChange={(e) =>
-                            setGrades({
-                              ...grades,
-                              [c.key]: Number(e.target.value),
-                            })
-                          }
-                          className="w-full accent-orange-600"
-                        />
+                               <input
+  type="range"
+  min="0"
+  max="100"
+  value={currentScore}
+  disabled={isCurrentAssignmentGraded || isLoading}
+  onChange={(e) =>
+    setGrades({
+      ...grades,
+      [c.key]: Number(e.target.value),
+    })
+  }
+  style={{
+    background: `linear-gradient(
+      to right,
+      ${currentScore >= 70
+        ? "#16a34a"
+        : currentScore >= 30
+        ? "#ca8a04"
+        : "#dc2626"} ${currentScore}%,
+      #e5e7eb ${currentScore}%
+    )`,
+  }}
+  className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+/>
+
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                 <div className="pt-4 border-t flex justify-between">
                   <Label className="font-semibold text-lg">Điểm tổng hợp</Label>
-                  <span className="text-3xl font-bold text-orange-600">
+                  <span className={`text-3xl font-bold ${hasPending ? getScoreColor(overallScore) : "text-gray-400"}`}>
                     {hasPending ? overallScore : "--"}
                   </span>
                 </div>
@@ -476,12 +515,21 @@ export default function Grading() {
             <Button
               className="bg-gradient-orange text-white"
               onClick={async () => {
-                await handleSubmitGrade();
-                setOpenConfirm(false);
-                const remainingCount = await syncAssignments(true);
-                if (remainingCount > 0) {
-                  // Còn bài, scroll lên đầu trang
-                  window.scrollTo({ top: 0, behavior: "smooth" });
+                try {
+                  const success = await handleSubmitGrade();
+                  if (success) {
+                    setOpenConfirm(false);
+                    // Đợi một chút để đảm bảo backend đã cập nhật xong
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    const remainingCount = await syncAssignments(true);
+                    if (remainingCount > 0) {
+                      // Còn bài, scroll lên đầu trang
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }
+                } catch (error) {
+                  // Lỗi đã được xử lý trong handleSubmitGrade
+                  console.error("❌ Lỗi trong quá trình chấm điểm:", error);
                 }
               }}
             >
