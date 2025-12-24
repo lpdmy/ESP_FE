@@ -246,6 +246,7 @@ export default function ClubManage() {
       handleMentorInvitaion()
     } finally {
       setLoading(false);
+      
     }
   };
   const handleKick = async (userid) => {

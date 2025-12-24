@@ -54,7 +54,8 @@ import { lazyLoadAllPages } from "../../utils/lazyLoadAll";
 export default function JurySubmissions() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getJuryAssign, getJuryAssignNotGrade, getJuryAssignGrade } = useJuryApi();
+  const { getJuryAssign, getJuryAssignNotGrade, getJuryAssignGrade } =
+    useJuryApi();
   const [pageNumber, setPageNumber] = useState(1);
   const [pageNumberNotGrade, setPageNumberNotGrade] = useState(1);
   const [pageSizeNotGrade, setPageSizeNotGrade] = useState(10);
@@ -104,7 +105,7 @@ export default function JurySubmissions() {
   const hanldeLoadJurySubmissionGrade = async () => {
     setIsLoadingGrade(true);
     try {
-      const response = await  getJuryAssignGrade(
+      const response = await getJuryAssignGrade(
         id,
         searhTerm,
         pageSizeGrade,
@@ -121,7 +122,8 @@ export default function JurySubmissions() {
     try {
       // Sử dụng Lazy Loading để load tất cả pages tự động
       return await lazyLoadAllPages(
-        (pageNumber, pageSize) => getJuryAssignNotGrade(id, searhTerm, pageSize, pageNumber),
+        (pageNumber, pageSize) =>
+          getJuryAssignNotGrade(id, searhTerm, pageSize, pageNumber),
         100 // PageSize hợp lý, không quá lớn
       );
     } catch (err) {
@@ -130,17 +132,17 @@ export default function JurySubmissions() {
     }
   };
 
-  const handleNavigateGrade = async () => {
+  const handleNavigateGrade = async (assignmentId) => {
     try {
-      // Load tất cả submissions chưa chấm để đảm bảo có dữ liệu
-    const allSubmissions = await loadAllJurySubmissionsNotGrade();
-      
-      // Navigate đến trang chấm điểm
-      // Trang grade sẽ tự động load lại dữ liệu từ API
-    navigate(`/jury/grade/${id}`);
+      await loadAllJurySubmissionsNotGrade();
+
+      navigate(`/jury/grade/${id}`, {
+        state: { assignmentId },
+      });
     } catch (error) {
-      // Vẫn navigate để user có thể thấy trang, trang sẽ tự load
-      navigate(`/jury/grade/${id}`);
+      navigate(`/jury/grade/${id}`, {
+        state: { assignmentId },
+      });
     }
   };
 
@@ -187,7 +189,7 @@ export default function JurySubmissions() {
       hanldeLoadJurySubmissionGrade();
     }, 1000);
     return () => clearTimeout(delay);
-  }, [pageNumberGrade ]);
+  }, [pageNumberGrade]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-50">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -296,8 +298,13 @@ export default function JurySubmissions() {
                                   <AvatarImage src="/placeholder.svg?height=24&width=24" />
                                   <AvatarFallback>
                                     {submission.submission.submissionCode
-                                      ? submission.submission.submissionCode.replace("SUB-", "")
-                                      : submission.submission.orderNumber || submission.submission.id || "?"}
+                                      ? submission.submission.submissionCode.replace(
+                                          "SUB-",
+                                          ""
+                                        )
+                                      : submission.submission.orderNumber ||
+                                        submission.submission.id ||
+                                        "?"}
                                   </AvatarFallback>
                                 </Avatar>
                                 <span>
@@ -361,73 +368,96 @@ export default function JurySubmissions() {
                               <div className="space-y-4 py-4">
                                 {/* Bài nộp - Hiển thị tất cả attachments */}
                                 <div className="space-y-3">
-                                  <h4 className="font-semibold text-lg">Bài nộp</h4>
-                                  {submission.submission?.attachments && submission.submission.attachments.length > 0 ? (
+                                  <h4 className="font-semibold text-lg">
+                                    Bài nộp
+                                  </h4>
+                                  {submission.submission?.attachments &&
+                                  submission.submission.attachments.length >
+                                    0 ? (
                                     <div className="space-y-3">
-                                      {submission.submission.attachments.map((attachment, index) => (
-                                        <div key={index} className="border rounded-lg overflow-hidden">
-                                          {attachment.fileType === "image" ? (
-                                            <div className="relative w-full group">
+                                      {submission.submission.attachments.map(
+                                        (attachment, index) => (
+                                          <div
+                                            key={index}
+                                            className="border rounded-lg overflow-hidden"
+                                          >
+                                            {attachment.fileType === "image" ? (
+                                              <div className="relative w-full group">
+                                                <a
+                                                  href={attachment.url}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="block cursor-pointer hover:opacity-90 transition-opacity"
+                                                >
+                                                  <img
+                                                    src={attachment.url}
+                                                    alt={
+                                                      attachment.fileName ||
+                                                      `Ảnh ${index + 1}`
+                                                    }
+                                                    className="w-full h-auto max-h-96 object-contain bg-gray-100 rounded-lg"
+                                                  />
+                                                </a>
+                                                {attachment.fileName && (
+                                                  <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {attachment.fileName} -
+                                                    Click để xem full size
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ) : attachment.fileType ===
+                                              "video" ? (
+                                              <div className="relative w-full aspect-video bg-black">
+                                                <video
+                                                  src={attachment.url}
+                                                  controls
+                                                  className="w-full h-full"
+                                                >
+                                                  Trình duyệt của bạn không hỗ
+                                                  trợ video.
+                                                </video>
+                                              </div>
+                                            ) : attachment.fileType ===
+                                              "audio" ? (
+                                              <div className="p-4 bg-gray-50">
+                                                <div className="flex items-center gap-3 mb-2">
+                                                  <span className="text-sm font-medium">
+                                                    {attachment.fileName ||
+                                                      `Audio ${index + 1}`}
+                                                  </span>
+                                                </div>
+                                                <audio
+                                                  src={attachment.url}
+                                                  controls
+                                                  className="w-full"
+                                                >
+                                                  Trình duyệt của bạn không hỗ
+                                                  trợ audio.
+                                                </audio>
+                                              </div>
+                                            ) : (
                                               <a
                                                 href={attachment.url}
+                                                download
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="block cursor-pointer hover:opacity-90 transition-opacity"
+                                                className="flex flex-col items-center justify-center w-full p-6 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
                                               >
-                                                <img
-                                                  src={attachment.url}
-                                                  alt={attachment.fileName || `Ảnh ${index + 1}`}
-                                                  className="w-full h-auto max-h-96 object-contain bg-gray-100 rounded-lg"
-                                                />
+                                                <Download className="w-8 h-8 text-orange-600 mb-2" />
+                                                <span className="text-orange-700 font-medium text-center">
+                                                  {attachment.fileName ||
+                                                    `File ${index + 1}`}
+                                                </span>
+                                                <span className="text-xs text-gray-500 mt-1">
+                                                  {attachment.fileType
+                                                    ? `Loại: ${attachment.fileType}`
+                                                    : "Tải xuống"}
+                                                </span>
                                               </a>
-                                              {attachment.fileName && (
-                                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                                                  {attachment.fileName} - Click để xem full size
-                                                </div>
-                                              )}
-                                            </div>
-                                          ) : attachment.fileType === "video" ? (
-                                            <div className="relative w-full aspect-video bg-black">
-                                              <video
-                                                src={attachment.url}
-                                                controls
-                                                className="w-full h-full"
-                                              >
-                                                Trình duyệt của bạn không hỗ trợ video.
-                                              </video>
-                                            </div>
-                                          ) : attachment.fileType === "audio" ? (
-                                            <div className="p-4 bg-gray-50">
-                                              <div className="flex items-center gap-3 mb-2">
-                                                <span className="text-sm font-medium">{attachment.fileName || `Audio ${index + 1}`}</span>
-                                              </div>
-                                              <audio
-                                                src={attachment.url}
-                                                controls
-                                                className="w-full"
-                                              >
-                                                Trình duyệt của bạn không hỗ trợ audio.
-                                              </audio>
-                                            </div>
-                                          ) : (
-                                            <a
-                                              href={attachment.url}
-                                              download
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="flex flex-col items-center justify-center w-full p-6 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
-                                            >
-                                              <Download className="w-8 h-8 text-orange-600 mb-2" />
-                                              <span className="text-orange-700 font-medium text-center">
-                                                {attachment.fileName || `File ${index + 1}`}
-                                              </span>
-                                              <span className="text-xs text-gray-500 mt-1">
-                                                {attachment.fileType ? `Loại: ${attachment.fileType}` : "Tải xuống"}
-                                              </span>
-                                            </a>
-                                          )}
-                                        </div>
-                                      ))}
+                                            )}
+                                          </div>
+                                        )
+                                      )}
                                     </div>
                                   ) : (
                                     <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -444,13 +474,15 @@ export default function JurySubmissions() {
                           {/* QUAN TRỌNG: submission.scoreTemp kiểm tra assignment của chính user hiện tại
                               Mỗi giám khảo có assignment riêng, nên chỉ cần check assignment của chính họ
                               Các giám khảo khác chấm cùng bài KHÔNG ảnh hưởng đến việc hiển thị nút này */}
-                          {submission.scoreTemp !== null || (submission.totalScore && submission.totalScore > 0) ? (
+                          {submission.scoreTemp !== null ||
+                          (submission.totalScore &&
+                            submission.totalScore > 0) ? (
                             <div className="ml-auto">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="gap-2 bg-transparent"
-                                onClick={()=>handleViewScore(submission)}
+                                onClick={() => handleViewScore(submission)}
                               >
                                 <Eye className="h-4 w-4" />
                                 Xem điểm
@@ -461,7 +493,7 @@ export default function JurySubmissions() {
                               <Button
                                 size="sm"
                                 className="bg-gradient-to-r from-orange-500 to-yellow-500 gap-2 text-white"
-                                onClick={handleNavigateGrade}
+                                onClick={() => handleNavigateGrade(submission.id)}
                               >
                                 <Star className="h-4 w-4" />
                                 Chấm điểm
@@ -579,8 +611,13 @@ export default function JurySubmissions() {
                                   <AvatarImage src="/placeholder.svg?height=24&width=24" />
                                   <AvatarFallback>
                                     {submission.submission.submissionCode
-                                      ? submission.submission.submissionCode.replace("SUB-", "")
-                                      : submission.submission.orderNumber || submission.submission.id || "?"}
+                                      ? submission.submission.submissionCode.replace(
+                                          "SUB-",
+                                          ""
+                                        )
+                                      : submission.submission.orderNumber ||
+                                        submission.submission.id ||
+                                        "?"}
                                   </AvatarFallback>
                                 </Avatar>
                                 <span>
@@ -591,25 +628,28 @@ export default function JurySubmissions() {
                                     : `Bài #${submission.submission.id}`}
                                 </span>
                               </div>
-                              {submission.submission.class && submission.submission.class.name && (
-                                <>
-                              <span>•</span>
-                                  <span>
-                                    {formatToVietnamTime(
-                                      submission.submission.createdAt
-                                    )}
-                                  </span>
-                                </>
-                              )}
-                              {(!submission.submission.class || !submission.submission.class.name) && (
-                              <span>•</span>
-                              )}
-                              {(!submission.submission.class || !submission.submission.class.name) && (
-                              <span>
-                                {formatToVietnamTime(
-                                  submission.submission.createdAt
+                              {submission.submission.class &&
+                                submission.submission.class.name && (
+                                  <>
+                                    <span>•</span>
+                                    <span>
+                                      {formatToVietnamTime(
+                                        submission.submission.createdAt
+                                      )}
+                                    </span>
+                                  </>
                                 )}
-                              </span>
+                              {(!submission.submission.class ||
+                                !submission.submission.class.name) && (
+                                <span>•</span>
+                              )}
+                              {(!submission.submission.class ||
+                                !submission.submission.class.name) && (
+                                <span>
+                                  {formatToVietnamTime(
+                                    submission.submission.createdAt
+                                  )}
+                                </span>
                               )}
                             </div>
                             <p className="text-muted-foreground line-clamp-2 mb-4">
@@ -688,13 +728,15 @@ export default function JurySubmissions() {
                           {/* QUAN TRỌNG: submission.scoreTemp kiểm tra assignment của chính user hiện tại
                               Mỗi giám khảo có assignment riêng, nên chỉ cần check assignment của chính họ
                               Các giám khảo khác chấm cùng bài KHÔNG ảnh hưởng đến việc hiển thị nút này */}
-                          {submission.scoreTemp !== null || (submission.totalScore && submission.totalScore > 0) ? (
+                          {submission.scoreTemp !== null ||
+                          (submission.totalScore &&
+                            submission.totalScore > 0) ? (
                             <div className="ml-auto">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="gap-2 bg-transparent"
-                                onClick={()=>handleViewScore(submission)}
+                                onClick={() => handleViewScore(submission)}
                               >
                                 <Eye className="h-4 w-4" />
                                 Xem điểm
@@ -825,8 +867,13 @@ export default function JurySubmissions() {
                                   <AvatarImage src="/placeholder.svg?height=24&width=24" />
                                   <AvatarFallback>
                                     {submission.submission.submissionCode
-                                      ? submission.submission.submissionCode.replace("SUB-", "")
-                                      : submission.submission.orderNumber || submission.submission.id || "?"}
+                                      ? submission.submission.submissionCode.replace(
+                                          "SUB-",
+                                          ""
+                                        )
+                                      : submission.submission.orderNumber ||
+                                        submission.submission.id ||
+                                        "?"}
                                   </AvatarFallback>
                                 </Avatar>
                                 <span>
@@ -837,25 +884,28 @@ export default function JurySubmissions() {
                                     : `Bài #${submission.submission.id}`}
                                 </span>
                               </div>
-                              {submission.submission.class && submission.submission.class.name && (
-                                <>
-                              <span>•</span>
-                                  <span>
-                                    {formatToVietnamTime(
-                                      submission.submission.createdAt
-                                    )}
-                                  </span>
-                                </>
-                              )}
-                              {(!submission.submission.class || !submission.submission.class.name) && (
-                              <span>•</span>
-                              )}
-                              {(!submission.submission.class || !submission.submission.class.name) && (
-                              <span>
-                                {formatToVietnamTime(
-                                  submission.submission.createdAt
+                              {submission.submission.class &&
+                                submission.submission.class.name && (
+                                  <>
+                                    <span>•</span>
+                                    <span>
+                                      {formatToVietnamTime(
+                                        submission.submission.createdAt
+                                      )}
+                                    </span>
+                                  </>
                                 )}
-                              </span>
+                              {(!submission.submission.class ||
+                                !submission.submission.class.name) && (
+                                <span>•</span>
+                              )}
+                              {(!submission.submission.class ||
+                                !submission.submission.class.name) && (
+                                <span>
+                                  {formatToVietnamTime(
+                                    submission.submission.createdAt
+                                  )}
+                                </span>
                               )}
                             </div>
                             <p className="text-muted-foreground line-clamp-2 mb-4">
@@ -892,7 +942,9 @@ export default function JurySubmissions() {
                               <DialogHeader>
                                 <DialogTitle>{submission.title}</DialogTitle>
                                 <DialogDescription>
-                                  {submission.submission.userFullNameWithClass || submission.submission.userFullName}
+                                  {submission.submission
+                                    .userFullNameWithClass ||
+                                    submission.submission.userFullName}
                                 </DialogDescription>
                               </DialogHeader>
                               <div className="space-y-4 py-4">
@@ -930,13 +982,15 @@ export default function JurySubmissions() {
                           {/* QUAN TRỌNG: submission.scoreTemp kiểm tra assignment của chính user hiện tại
                               Mỗi giám khảo có assignment riêng, nên chỉ cần check assignment của chính họ
                               Các giám khảo khác chấm cùng bài KHÔNG ảnh hưởng đến việc hiển thị nút này */}
-                          {submission.scoreTemp !== null || (submission.totalScore && submission.totalScore > 0) ? (
+                          {submission.scoreTemp !== null ||
+                          (submission.totalScore &&
+                            submission.totalScore > 0) ? (
                             <div className="ml-auto">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="gap-2 bg-transparent"
-                                onClick={()=>handleViewScore(submission)}
+                                onClick={() => handleViewScore(submission)}
                               >
                                 <Eye className="h-4 w-4" />
                                 Xem điểm
@@ -1034,8 +1088,7 @@ export default function JurySubmissions() {
                 variant="outline"
                 onClick={() => setPageNumberGrade(pageNumberGrade + 1)}
                 disabled={
-                  pageNumberGrade ===
-                  Math.ceil(totalCountGrade / pageSizeGrade)
+                  pageNumberGrade === Math.ceil(totalCountGrade / pageSizeGrade)
                 }
               >
                 Tiếp
@@ -1056,19 +1109,19 @@ export default function JurySubmissions() {
                 ? `Bài #${selectedScore.submission.orderNumber}`
                 : selectedScore?.title || "Bài đã chấm"}
             </DialogTitle>
-            <DialogDescription>
-              Điểm đã chấm cho bài này.
-            </DialogDescription>
+            <DialogDescription>Điểm đã chấm cho bài này.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {/* Điểm số */}
             <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
-              <span className="text-sm font-semibold text-muted-foreground">Tổng điểm</span>
+              <span className="text-sm font-semibold text-muted-foreground">
+                Tổng điểm
+              </span>
               <span className="text-3xl font-bold text-orange-600">
                 {selectedScore?.totalScore ?? "--"}
               </span>
             </div>
-            
+
             {/* Nhận xét */}
             {selectedScore?.comment && (
               <div className="space-y-2">
@@ -1078,76 +1131,86 @@ export default function JurySubmissions() {
                 </p>
               </div>
             )}
-            
+
             {/* Bài nộp - Hiển thị tất cả attachments */}
             <div className="space-y-3">
               <h4 className="font-semibold text-lg">Bài nộp</h4>
-              {selectedScore?.submission?.attachments && selectedScore.submission.attachments.length > 0 ? (
+              {selectedScore?.submission?.attachments &&
+              selectedScore.submission.attachments.length > 0 ? (
                 <div className="space-y-3">
-                  {selectedScore.submission.attachments.map((attachment, index) => (
-                    <div key={index} className="border rounded-lg overflow-hidden">
-                      {attachment.fileType === "image" ? (
-                        <div className="relative w-full group">
+                  {selectedScore.submission.attachments.map(
+                    (attachment, index) => (
+                      <div
+                        key={index}
+                        className="border rounded-lg overflow-hidden"
+                      >
+                        {attachment.fileType === "image" ? (
+                          <div className="relative w-full group">
+                            <a
+                              href={attachment.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block cursor-pointer hover:opacity-90 transition-opacity"
+                            >
+                              <img
+                                src={attachment.url}
+                                alt={attachment.fileName || `Ảnh ${index + 1}`}
+                                className="w-full h-auto max-h-96 object-contain bg-gray-100 rounded-lg"
+                              />
+                            </a>
+                            {attachment.fileName && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                {attachment.fileName} - Click để xem full size
+                              </div>
+                            )}
+                          </div>
+                        ) : attachment.fileType === "video" ? (
+                          <div className="relative w-full aspect-video bg-black">
+                            <video
+                              src={attachment.url}
+                              controls
+                              className="w-full h-full"
+                            >
+                              Trình duyệt của bạn không hỗ trợ video.
+                            </video>
+                          </div>
+                        ) : attachment.fileType === "audio" ? (
+                          <div className="p-4 bg-gray-50">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="text-sm font-medium">
+                                {attachment.fileName || `Audio ${index + 1}`}
+                              </span>
+                            </div>
+                            <audio
+                              src={attachment.url}
+                              controls
+                              className="w-full"
+                            >
+                              Trình duyệt của bạn không hỗ trợ audio.
+                            </audio>
+                          </div>
+                        ) : (
                           <a
                             href={attachment.url}
+                            download
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="block cursor-pointer hover:opacity-90 transition-opacity"
+                            className="flex flex-col items-center justify-center w-full p-6 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
                           >
-                            <img
-                              src={attachment.url}
-                              alt={attachment.fileName || `Ảnh ${index + 1}`}
-                              className="w-full h-auto max-h-96 object-contain bg-gray-100 rounded-lg"
-                            />
+                            <Download className="w-8 h-8 text-orange-600 mb-2" />
+                            <span className="text-orange-700 font-medium text-center">
+                              {attachment.fileName || `File ${index + 1}`}
+                            </span>
+                            <span className="text-xs text-gray-500 mt-1">
+                              {attachment.fileType
+                                ? `Loại: ${attachment.fileType}`
+                                : "Tải xuống"}
+                            </span>
                           </a>
-                          {attachment.fileName && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                              {attachment.fileName} - Click để xem full size
-          </div>
-                          )}
-                        </div>
-                      ) : attachment.fileType === "video" ? (
-                        <div className="relative w-full aspect-video bg-black">
-                          <video
-                            src={attachment.url}
-                            controls
-                            className="w-full h-full"
-                          >
-                            Trình duyệt của bạn không hỗ trợ video.
-                          </video>
-                        </div>
-                      ) : attachment.fileType === "audio" ? (
-                        <div className="p-4 bg-gray-50">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-sm font-medium">{attachment.fileName || `Audio ${index + 1}`}</span>
-                          </div>
-                          <audio
-                            src={attachment.url}
-                            controls
-                            className="w-full"
-                          >
-                            Trình duyệt của bạn không hỗ trợ audio.
-                          </audio>
-                        </div>
-                      ) : (
-                        <a
-                          href={attachment.url}
-                          download
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex flex-col items-center justify-center w-full p-6 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
-                        >
-                          <Download className="w-8 h-8 text-orange-600 mb-2" />
-                          <span className="text-orange-700 font-medium text-center">
-                            {attachment.fileName || `File ${index + 1}`}
-                          </span>
-                          <span className="text-xs text-gray-500 mt-1">
-                            {attachment.fileType ? `Loại: ${attachment.fileType}` : "Tải xuống"}
-                          </span>
-                        </a>
-                      )}
-                    </div>
-                  ))}
+                        )}
+                      </div>
+                    )
+                  )}
                 </div>
               ) : (
                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -1157,7 +1220,7 @@ export default function JurySubmissions() {
                 </div>
               )}
             </div>
-            
+
             {/* Thông tin bài nộp */}
             {selectedScore?.submission?.title && (
               <div className="space-y-2 pt-4 border-t">
@@ -1169,7 +1232,7 @@ export default function JurySubmissions() {
             )}
           </div>
           <div className="flex justify-end pt-4">
-            <Button variant="outline" onClick={()=>setOpenScore(false)}>
+            <Button variant="outline" onClick={() => setOpenScore(false)}>
               Đóng
             </Button>
           </div>
