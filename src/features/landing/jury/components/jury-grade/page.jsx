@@ -60,8 +60,12 @@ export default function Grading() {
           100
         ),
       ]);
-      setGradedSubmissions(gradedList);
-      setSubmissions(ungradedList);
+      console.log("✅ Fetch thành công:", {
+        ungraded: ungradedList.length,
+        graded: gradedList.length
+      });
+      setGradedSubmissions(gradedList || []);
+      setSubmissions(ungradedList || []);
       setCurrentSubmission((prev) => {
         if (!ungradedList.length) return 0;
         return Math.min(prev, ungradedList.length - 1);
@@ -73,6 +77,11 @@ export default function Grading() {
       return ungradedList.length;
     } catch (error) {
       console.error("❌ Lỗi khi load assignments:", error);
+      console.error("Chi tiết lỗi:", {
+        message: error.message,
+        statusCode: error.statusCode,
+        stack: error.stack
+      });
       toast.showError("Không thể tải danh sách bài chấm. Vui lòng thử lại.");
       return 0;
     } finally {
@@ -139,14 +148,19 @@ export default function Grading() {
   const handleSubmitGrade = async () => {
     const payload = buildGradePayload();
     try {
-      await gradingSubmission(payload);
+      const response = await gradingSubmission(payload);
+      // Response có thể là { statusCode: 200, message: "...", data: "..." }
+      // Không cần parse data vì chỉ cần biết thành công hay không
       toast.showSuccess("Chấm điểm thành công");
+      return true;
     } catch (error) {
+      console.error("❌ Lỗi khi chấm điểm:", error);
       if (error.statusCode == 400) {
-        toast.showError(error.message);
+        toast.showError(error.message || "Chấm điểm không thành công");
       } else {
-        toast.showError("Chấm điểm không thành công");
+        toast.showError(error.message || "Chấm điểm không thành công");
       }
+      throw error; // Re-throw để caller biết có lỗi
     }
   };
 
@@ -492,12 +506,21 @@ export default function Grading() {
             <Button
               className="bg-gradient-orange text-white"
               onClick={async () => {
-                await handleSubmitGrade();
-                setOpenConfirm(false);
-                const remainingCount = await syncAssignments(true);
-                if (remainingCount > 0) {
-                  // Còn bài, scroll lên đầu trang
-                  window.scrollTo({ top: 0, behavior: "smooth" });
+                try {
+                  const success = await handleSubmitGrade();
+                  if (success) {
+                    setOpenConfirm(false);
+                    // Đợi một chút để đảm bảo backend đã cập nhật xong
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    const remainingCount = await syncAssignments(true);
+                    if (remainingCount > 0) {
+                      // Còn bài, scroll lên đầu trang
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }
+                } catch (error) {
+                  // Lỗi đã được xử lý trong handleSubmitGrade
+                  console.error("❌ Lỗi trong quá trình chấm điểm:", error);
                 }
               }}
             >
