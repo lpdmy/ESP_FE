@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/common/components/ui/card"
 import { Button } from "@/common/components/ui/button"
 import { Badge } from "@/common/components/ui/badge"
+import { useToast } from "@/common/hooks/useToast"
 import {
     Dialog,
     DialogContent,
@@ -13,11 +14,19 @@ import {
 import { useStarPointApi } from "@/features/admin/hooks/useStarPointApi"
 import { ArrowLeft, Gift, Package, CheckCircle2, Clock } from "lucide-react"
 import { Link } from "react-router-dom"
-import { REWARD_CATEGORY_LABELS } from "@/features/admin/components/StarPointManagement/enums/rewardCategory"
+import { REWARD_CATEGORY_LABELS, getCategoryLabel } from "@/features/admin/components/StarPointManagement/enums/rewardCategory"
+import {
+  getStatusLabel,
+  isPendingStatus,
+  isReceivedStatus,
+  convertStatusFromBE,
+  REDEMPTION_STATUS,
+} from "@/features/admin/components/StarPointManagement/enums/redemptionStatus"
 import { ROUTES } from "@/common/constants/routes"
 import { LoadingCard } from "@/common/components/ui/loading"
 
 export default function MyRedemptions() {
+    const toast = useToast()
     const [redemptions, setRedemptions] = useState([])
     const [selectedRedemption, setSelectedRedemption] = useState(null)
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
@@ -51,22 +60,15 @@ export default function MyRedemptions() {
             await pickupRedemption(selectedRedemption.id)
 
             setRedemptions((prev) =>
-                prev.map((r) => (r.id === selectedRedemption.id ? { ...r, status: "received" } : r))
+                prev.map((r) => (r.id === selectedRedemption.id ? { ...r, status: REDEMPTION_STATUS.RECEIVED } : r))
             )
 
-            toast({
-                title: "Đã xác nhận!",
-                description: "Vui lòng đến văn phòng Đoàn trường để nhận phần thưởng nếu cần.",
-            })
+            toast.showSuccess("Đã xác nhận! Vui lòng đến văn phòng Đoàn trường để nhận phần thưởng nếu cần.")
 
             setConfirmDialogOpen(false)
             setSelectedRedemption(null)
         } catch (err) {
-            toast({
-                title: "Lỗi",
-                description: "Không thể xác nhận nhận thưởng. Vui lòng thử lại.",
-                variant: "destructive",
-            })
+            toast.showError("Không thể xác nhận nhận thưởng. Vui lòng thử lại.")
         } finally {
             setPickingUp(false)
         }
@@ -77,8 +79,8 @@ export default function MyRedemptions() {
         setConfirmDialogOpen(true)
     }
 
-    const pendingCount = redemptions.filter((r) => r.status === 0).length
-    const receivedCount = redemptions.filter((r) => r.status === 1).length
+    const pendingCount = redemptions.filter((r) => isPendingStatus(r.status)).length
+    const receivedCount = redemptions.filter((r) => isReceivedStatus(r.status)).length
     const totalPoints = redemptions.reduce((sum, r) => sum + (r.totalPointsSpent || 0), 0)
 
     return (
@@ -165,10 +167,10 @@ export default function MyRedemptions() {
                                                 className="w-full h-48 object-cover rounded-t-lg"
                                             />
                                             <Badge
-                                                className={`absolute top-3 right-3 ${redemption.status === 0 ? "bg-orange-500 text-white" : "bg-green-500 text-white"
+                                                className={`absolute top-3 right-3 ${isPendingStatus(redemption.status) ? "bg-orange-500 text-white" : "bg-green-500 text-white"
                                                     }`}
                                             >
-                                                {redemption.status === 0 ? "Chưa nhận" : "Đã nhận"}
+                                                {getStatusLabel(redemption.status)}
                                             </Badge>
                                         </div>
 
@@ -184,17 +186,17 @@ export default function MyRedemptions() {
 
                                                 <div className="flex items-center justify-between text-sm">
                                                     <span className="text-gray-500">Danh mục:</span>
-                                                    <Badge variant="secondary">{REWARD_CATEGORY_LABELS[redemption.reward.category]}</Badge>
+                                                    <Badge variant="secondary">{getCategoryLabel(redemption.reward.category)}</Badge>
                                                 </div>
 
                                                 <div className="flex items-center justify-between text-sm">
                                                     <span className="text-gray-500">Ngày đổi:</span>
                                                     <span className="text-gray-700">
-                                                        {redemption.status !== 0 ? new Date(redemption.redeemedAt).toLocaleDateString("vi-VN") : "N/A"}
+                                                        {!isPendingStatus(redemption.status) && redemption.redeemedAt ? new Date(redemption.redeemedAt).toLocaleDateString("vi-VN") : "N/A"}
                                                     </span>
                                                 </div>
 
-                                                {redemption.status === "pending" && (
+                                                {isPendingStatus(redemption.status) && (
                                                     <Button
                                                         className="w-full bg-gradient-orange text-white hover:opacity-90 mt-2"
                                                         onClick={() => openConfirmDialog(redemption)}
@@ -204,7 +206,7 @@ export default function MyRedemptions() {
                                                     </Button>
                                                 )}
 
-                                                {redemption.status === "received" && (
+                                                {isReceivedStatus(redemption.status) && (
                                                     <div className="flex items-center justify-center gap-2 text-green-600 mt-2 py-2">
                                                         <CheckCircle2 className="w-5 h-5" />
                                                         <span className="font-medium">Đã nhận thưởng</span>
@@ -243,7 +245,7 @@ export default function MyRedemptions() {
                             {selectedRedemption && (
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                                        <Image
+                                        <img
                                             src={selectedRedemption.reward.imageUrl || "/placeholder.svg"}
                                             alt={selectedRedemption.rewardName}
                                             width={80}
