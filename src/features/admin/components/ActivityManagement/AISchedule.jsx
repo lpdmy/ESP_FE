@@ -154,6 +154,8 @@ export default function AISchedule() {
   const [slotWarnings, setSlotWarnings] = useState([])
   const [slotConflicts, setSlotConflicts] = useState([])
   const [dateValidationErrors, setDateValidationErrors] = useState({})
+  const [applyConflictsDialogOpen, setApplyConflictsDialogOpen] = useState(false)
+  const [applyConflicts, setApplyConflicts] = useState([])
   const handleBracketMatchClick = useCallback((match) => setSelectedBracketMatch(match), [])
   const [formData, setFormData] = useState({
     sportId: null,
@@ -1312,19 +1314,15 @@ export default function AISchedule() {
       if (status === 409 && Array.isArray(conflictPayload) && conflictPayload.length > 0) {
         console.error("Schedule conflicts from backend:", conflictPayload)
         
-        // Hiển thị conflicts chi tiết
-        const conflictMessages = conflictPayload.map(c => {
-          const matchInfo = `Match #${c.matchNumber} (${c.matchDate} ${c.startTime}-${c.endTime})`
-          return `${matchInfo}: ${c.message}`
-        })
+        // Lưu conflicts và hiển thị trong dialog
+        setApplyConflicts(conflictPayload)
+        setApplyConflictsDialogOpen(true)
         
+        // Hiển thị toast ngắn gọn
         toast.error(
-          `Phát hiện ${conflictPayload.length} xung đột lịch thi đấu:\n${conflictMessages.slice(0, 3).join('\n')}${conflictMessages.length > 3 ? `\n... và ${conflictMessages.length - 3} xung đột khác` : ''}`,
-          { autoClose: 10000 }
+          `Phát hiện ${conflictPayload.length} xung đột lịch thi đấu. Vui lòng xem chi tiết.`,
+          { autoClose: 5000 }
         )
-        
-        // Log tất cả conflicts để debug
-        console.error("All conflicts:", conflictPayload)
       } else {
         const message =
           error?.response?.data?.message ||
@@ -2395,23 +2393,6 @@ export default function AISchedule() {
         <div className="flex-1 space-y-6">
         {generatedSchedule ? (
             <>
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-4">
-                <Card className="bg-blue-50">
-                  <CardContent className="p-4 text-center">
-                    <Calendar className="w-8 h-8 mx-auto text-blue-600 mb-2" />
-                    <p className="text-sm text-gray-600">Tổng sự kiện</p>
-                    <p className="text-2xl font-bold text-blue-600">{generatedSchedule.stats.totalEvents}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-green-50">
-                  <CardContent className="p-4 text-center">
-                    <Clock className="w-8 h-8 mx-auto text-green-600 mb-2" />
-                    <p className="text-sm text-gray-600">Xung đột đã giải quyết</p>
-                    <p className="text-2xl font-bold text-green-600">{generatedSchedule.stats.conflictsResolved}</p>
-                  </CardContent>
-                </Card>
-              </div>
 
               {/* Schedule (AI preview) */}
               <Card>
@@ -3112,6 +3093,111 @@ export default function AISchedule() {
               disabled={isApplyingSchedule}
             >
               {isApplyingSchedule ? "Đang áp dụng..." : "Xác nhận áp dụng"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog hiển thị conflicts khi áp dụng lịch */}
+      <Dialog open={applyConflictsDialogOpen} onOpenChange={setApplyConflictsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
+              Xung đột lịch thi đấu
+            </DialogTitle>
+            <DialogDescription>
+              Phát hiện {applyConflicts.length} xung đột khi áp dụng lịch thi đấu. Vui lòng xem chi tiết và điều chỉnh.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800">
+                Không thể áp dụng lịch thi đấu do phát hiện {applyConflicts.length} xung đột. 
+                Vui lòng xem chi tiết bên dưới và điều chỉnh lịch thi đấu trước khi thử lại.
+              </p>
+            </div>
+
+            {/* Hiển thị conflicts chi tiết */}
+            {applyConflicts.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                  Chi tiết các xung đột:
+                </h3>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-96 overflow-y-auto">
+                  <ul className="space-y-2 list-disc list-inside">
+                    {applyConflicts.map((conflict, idx) => {
+                      // Xử lý an toàn các properties
+                      const matchNumber = conflict.matchNumber || conflict.matchNumber || 'N/A'
+                      const matchDate = conflict.matchDate || conflict.matchDate || null
+                      const startTime = conflict.startTime || conflict.startTime || null
+                      const endTime = conflict.endTime || conflict.endTime || null
+                      const conflictType = conflict.conflictType || conflict.conflictType || 'Unknown'
+                      const message = conflict.message || conflict.message || conflict.reason || 'Xung đột lịch thi đấu'
+                      const classGroupId = conflict.classGroupId || conflict.classGroupId || null
+                      const activityId = conflict.activityId || conflict.activityId || null
+
+                      // Format thông tin match
+                      let matchInfo = `Match #${matchNumber}`
+                      if (matchDate && startTime && endTime) {
+                        try {
+                          const dateStr = new Date(matchDate).toLocaleDateString('vi-VN')
+                          matchInfo += ` (${dateStr} ${startTime}-${endTime})`
+                        } catch (e) {
+                          matchInfo += ` (${matchDate} ${startTime}-${endTime})`
+                        }
+                      }
+
+                      // Format conflict type
+                      const conflictTypeLabel = conflictType === 'ClassScheduleConflict' 
+                        ? 'Xung đột lịch học' 
+                        : conflictType === 'ActivityConflict'
+                        ? 'Xung đột hoạt động'
+                        : conflictType
+
+                      return (
+                        <li key={idx} className="text-sm text-gray-700">
+                          <span className="font-medium">{matchInfo}</span>
+                          {': '}
+                          <span className="text-red-600">{conflictTypeLabel}</span>
+                          {message && ` - ${message}`}
+                          {classGroupId && (
+                            <span className="text-gray-500"> (Lớp: {classGroupId})</span>
+                          )}
+                          {activityId && activityId !== params.id && (
+                            <span className="text-gray-500"> (Hoạt động: #{activityId})</span>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setApplyConflictsDialogOpen(false)}
+            >
+              Đóng
+            </Button>
+            <Button
+              onClick={() => {
+                setApplyConflictsDialogOpen(false)
+                // Scroll to form để user có thể điều chỉnh
+                const formElement = document.querySelector('[data-slot="schedule-form"]')
+                if (formElement) {
+                  formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  setIsFormCollapsed(false)
+                }
+              }}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              Điều chỉnh lịch
             </Button>
           </DialogFooter>
         </DialogContent>
