@@ -260,6 +260,7 @@ export default function ClubManage() {
       toast.showError("Không thể hủy lời mời cố vấn");
     } finally {
       setLoading(false);
+      
     }
   };
   const handleKick = async (userid) => {

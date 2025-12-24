@@ -41,6 +41,8 @@ export default function Grading() {
   const [openScore, setOpenScore] = useState(false);
   const [openImage, setOpenImage] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
+  const targetAssignmentId = location.state?.assignmentId;
+  const [initialized, setInitialized] = useState(false);
   const syncAssignments = async (shouldNavigate = false) => {
     try {
       setIsLoading(true);
@@ -60,16 +62,23 @@ export default function Grading() {
           100
         ),
       ]);
-      console.log("✅ Fetch thành công:", {
-        ungraded: ungradedList.length,
-        graded: gradedList.length
-      });
-      setGradedSubmissions(gradedList || []);
-      setSubmissions(ungradedList || []);
-      setCurrentSubmission((prev) => {
-        if (!ungradedList.length) return 0;
-        return Math.min(prev, ungradedList.length - 1);
-      });
+      setGradedSubmissions(gradedList);
+      setSubmissions(ungradedList);
+      if (!initialized) {
+        setCurrentSubmission(() => {
+          if (!ungradedList.length) return 0;
+          if (targetAssignmentId) {
+            const index = ungradedList.findIndex(
+              (item) => item.id === targetAssignmentId
+            );
+            if (index !== -1) return index;
+          }
+          return 0;
+        });
+        setInitialized(true);
+      } else {
+        setCurrentSubmission((prev) => Math.min(prev, ungradedList.length - 1));
+      }
       if (shouldNavigate && ungradedList.length === 0) {
         navigate(`/jury/submission/${params.id}`);
       }
