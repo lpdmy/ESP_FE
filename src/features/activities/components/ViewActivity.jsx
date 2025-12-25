@@ -2041,26 +2041,6 @@ export default function ViewActivity() {
             </p>
           </div>
         )}
-        {!canRegister && isRegistrationOpen && (
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              {currentUser?.role?.toLowerCase() === "teacher" ||
-              currentUser?.role?.toLowerCase() === "admin"
-                ? "Giáo viên chỉ được đăng ký tham gia hội thao."
-                : "Học sinh không thể đăng ký tham gia hội thao."}
-            </p>
-          </div>
-        )}
-        <Button
-          className="w-full btn-primary"
-          onClick={() => navigate(ROUTES.ACTIVITY.REGISTER_ACTIVITY.replace(":id", params.id))}
-          disabled={
-            isPreview ||
-            !canRegister
-          }
-        >
-          Đăng ký môn thi đấu
-        </Button>
       </div>
     );
   };
@@ -2724,33 +2704,7 @@ export default function ViewActivity() {
               <Card className="glass sticky top-6 !bg-white">
                 <CardContent className="p-6 space-y-4">
                   {isSportsFestival ? (
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-orange-600 mb-2">
-                        {registeredClassesForSportsFestival.length} lớp
-                      </div>
-                      <p className="text-sm text-gray-600 mb-3">
-                        Lớp đã đăng ký tham gia
-                      </p>
-                      {registeredClassesForSportsFestival.length > 0 ? (
-                        <div className="flex flex-wrap gap-2 justify-center max-h-32 overflow-y-auto">
-                          {registeredClassesForSportsFestival.map(
-                            (className, idx) => (
-                              <Badge
-                                key={idx}
-                                variant="outline"
-                                className="text-xs bg-orange-50 text-orange-700 border-orange-200"
-                              >
-                                {className}
-                              </Badge>
-                            )
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-500">
-                          Chưa có lớp nào đăng ký
-                        </p>
-                      )}
-                    </div>
+                    <div></div>
                   ) : (
                     <div className="text-center">
                       <div className="text-3xl font-bold text-orange-600 mb-1 flex items-center justify-center gap-1">
