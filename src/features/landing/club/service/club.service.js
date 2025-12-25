@@ -30,6 +30,20 @@ export class ClubService extends ApiService {
     const url = API_CONFIG.CLUB.CLUB_DETAIL.replace("{id}", id);
     return this.get(url, token);
   }
+  
+  async getClubDetailOptimized(token, id) {
+    const url = API_CONFIG.CLUB.CLUB_DETAIL_OPTIMIZED.replace("{id}", id);
+    return this.get(url, token);
+  }
+  
+  async getClubMembers(token, id, pageNumber = 1, pageSize = 20, search = "") {
+    let url = API_CONFIG.CLUB.CLUB_MEMBERS.replace("{id}", id);
+    url += `?PageNumber=${pageNumber}&PageSize=${pageSize}`;
+    if (search && search.trim() !== "") {
+      url += `&search=${encodeURIComponent(search.trim())}`;
+    }
+    return this.get(url, token);
+  }
   async getClubJoinRequest(
     token,
     id,

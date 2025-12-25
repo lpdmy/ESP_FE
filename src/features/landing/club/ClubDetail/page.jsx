@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -33,6 +33,8 @@ import {
   X,
   Info,
   CheckCircle,
+  ArrowLeft,
+  ArrowRight,
 } from "lucide-react";
 import { Input } from "@/common/components/ui/input";
 import {
@@ -80,7 +82,8 @@ export default function ClubDetail() {
   const [loadingAction, setLoadingAction] = useState(false);
   const [clubDetail, setClubDetail] = useState({});
   const {
-    getClubDetail,
+    getClubDetailOptimized,
+    getClubMembers,
     createClubJoinRequest,
     getClubPost,
     cancelJoinRequest,
@@ -101,10 +104,18 @@ export default function ClubDetail() {
   const payload = { clubId: clubid, classId: null };
   const [searchMemberTerm, setSearchMemberTerm] = useState("");
   const [post, setPost] = useState([]);
-  const filteredMembers =
-    clubDetail?.members?.filter((member) =>
-      member.fullName.toLowerCase().includes(searchMemberTerm.toLowerCase())
-    ) || [];
+  
+  // Members state với pagination
+  const [members, setMembers] = useState([]);
+  const [membersPageNumber, setMembersPageNumber] = useState(1);
+  const [membersPageSize] = useState(20);
+  const [membersTotalCount, setMembersTotalCount] = useState(0);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [hasMoreMembers, setHasMoreMembers] = useState(true);
+  const membersScrollRef = useRef(null);
+  
+  // Members đã được filter từ server, không cần filter lại client-side
+  const filteredMembers = members;
   const getTruncatedText = (text, maxLength = 120) => {
     if (!text) return "";
     if (text.length <= maxLength) return text;
@@ -122,23 +133,101 @@ export default function ClubDetail() {
     roleValue === ROLE.STUDENT || roleValue === "STUDENT";
   
   // Kiểm tra xem người dùng hiện tại đã là cố vấn trong câu lạc bộ chưa
-  const isCurrentUserMentor = clubDetail.members?.some(
+  const isCurrentUserMentor = members.some(
     (member) => member.userId === currentUserId && member.role === "Mentor"
   );
+  
+  // Fetch club detail (không có members)
   const handleClubDetail = async () => {
     try {
       setIsLoading(true);
-      const response = await getClubDetail(clubid);
-      setClubDetail(response.data);
-      SetIsJoined(response.data.isMember);
-      setIsRequestToJoin(response.data.isRequestToJoin);
-      SetIsPresident(response.data.isPresident);
+      const response = await getClubDetailOptimized(clubid);
+      const data = response?.data?.data || response?.data;
+      setClubDetail(data);
+      SetIsJoined(data.isMember);
+      setIsRequestToJoin(data.isRequestToJoin);
+      SetIsPresident(data.isPresident);
     } catch (error) {
       toast.loadClubFail();
     } finally {
       setIsLoading(false);
     }
   };
+  
+  // Fetch members với lazy loading (infinite scroll)
+  const handleLoadMembers = useCallback(async (append = false, showLoading = true) => {
+    if (!clubid || loadingMembers) return;
+    
+    // Nếu append và không còn data thì không load
+    if (append && !hasMoreMembers) return;
+    
+    try {
+      if (showLoading) setLoadingMembers(true);
+      
+      // Tính page number để load
+      let pageToLoad;
+      if (append) {
+        // Khi append, load page tiếp theo
+        pageToLoad = membersPageNumber;
+      } else {
+        // Khi reset, load từ page 1
+        pageToLoad = 1;
+      }
+      
+      const response = await getClubMembers(clubid, pageToLoad, membersPageSize, searchMemberTerm);
+      const paginationData = response?.data;
+      
+      if (paginationData) {
+        const membersList = paginationData.data || [];
+        const totalCount = paginationData.totalCount ?? 0;
+        const totalPages = paginationData.totalPages ?? 1;
+        
+        if (append) {
+          // Append thêm members vào danh sách hiện có
+          setMembers(prev => [...prev, ...membersList]);
+          setMembersPageNumber(prev => prev + 1);
+        } else {
+          // Reset danh sách (khi search hoặc load lần đầu)
+          setMembers(membersList);
+          setMembersPageNumber(2); // Set về 2 vì đã load page 1
+        }
+        
+        setMembersTotalCount(totalCount);
+        // Kiểm tra xem còn data không: page hiện tại < totalPages và đã load đủ số lượng
+        const nextPage = append ? pageToLoad + 1 : 2;
+        setHasMoreMembers(nextPage <= totalPages && membersList.length === membersPageSize);
+      } else {
+        if (!append) {
+          setMembers([]);
+          setMembersTotalCount(0);
+        }
+        setHasMoreMembers(false);
+      }
+    } catch (error) {
+      console.error("Error loading members:", error);
+      setHasMoreMembers(false);
+    } finally {
+      if (showLoading) setLoadingMembers(false);
+    }
+  }, [clubid, membersPageNumber, membersPageSize, searchMemberTerm, hasMoreMembers, loadingMembers, getClubMembers]);
+  
+  // Infinite scroll handler
+  useEffect(() => {
+    const scrollContainer = membersScrollRef.current;
+    if (!scrollContainer) return;
+    
+    const handleScroll = () => {
+      if (!hasMoreMembers || loadingMembers) return;
+      
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      if (scrollHeight - scrollTop - clientHeight < 100) {
+        handleLoadMembers(true, true);
+      }
+    };
+    
+    scrollContainer.addEventListener('scroll', handleScroll);
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, [hasMoreMembers, loadingMembers, handleLoadMembers]);
   const getProfileRoute = (user) => {
     const role = Number(user?.userRole);
     switch (role) {
@@ -151,7 +240,6 @@ export default function ClubDetail() {
   const handleCloseUpdateModal = () => {
     setIsUpdateModalOpen(false);
     setSelectedPost(null);
-    // Reload danh sách bài đăng sau khi update (không hiển thị loading)
     handleClubPost(false);
   };
 
@@ -165,10 +253,9 @@ export default function ClubDetail() {
   };
   const handleConfirmDelete = async (postId) => {
     try {
-      // Reload danh sách bài đăng sau khi xóa (không hiển thị loading)
       await handleClubPost(false);
-      setIsDeleteModalOpen(false);
-      setSelectedPost(null);
+    setIsDeleteModalOpen(false);
+    setSelectedPost(null);
     } catch (error) {
       console.error("Error deleting post:", error);
     }
@@ -221,7 +308,6 @@ export default function ClubDetail() {
   };
   const handleCreatePost = async (newPost) => {
     try {
-      // Reload danh sách bài đăng sau khi tạo thành công (không hiển thị loading)
       await handleClubPost(false);
       setIsCreatePostModalOpen(false);
     } catch (error) {
@@ -235,6 +321,7 @@ export default function ClubDetail() {
       const response = await createClubJoinRequest(payload);
       toast.createClubJoinRequestSuccess();
       await handleClubDetail();
+      await handleLoadMembers(false); // Reload members sau khi join
     } catch (error) {
       console.error("Error submitting join request:", error);
     } finally {
@@ -246,6 +333,7 @@ export default function ClubDetail() {
       setLoadingAction(true);
       await leaveClub(clubid);
       await handleClubDetail();
+      await handleLoadMembers(false); // Reload members sau khi leave
       toast.leaveClubSuccess();
     } catch (error) {
       console.error("Error leaving club:", error);
@@ -261,9 +349,9 @@ export default function ClubDetail() {
       setLoadingAction(true);
       await approveInvitation(clubid);
       toast.approveInvitationSuccess();
-      // Cập nhật state để ẩn nút phản hồi
       setClubDetail((prev) => ({ ...prev, isMentorInvite: false }));
       await handleClubDetail();
+      await handleLoadMembers(false); 
     } catch (error) {
       toast.approveInvitationFail();
     } finally {
@@ -278,11 +366,12 @@ export default function ClubDetail() {
   };
 
   useEffect(() => {
+    if (!clubid) return;
     const loadData = async () => {
-      await Promise.all([handleClubDetail(), handleClubPost()]);
+      await Promise.all([handleClubDetail(), handleClubPost(), handleLoadMembers()]);
     };
     loadData();
-  }, []);
+  }, [clubid]);
   if (isLoading) {
     return <LoadingOverlay isLoading={isLoading} />;
   }
@@ -452,8 +541,8 @@ export default function ClubDetail() {
                             </>
                           ) : (
                             <>
-                              <X className="w-4 h-4" />
-                              Hủy yêu cầu
+                          <X className="w-4 h-4" />
+                          Hủy yêu cầu
                             </>
                           )}
                         </Button>
@@ -669,39 +758,64 @@ export default function ClubDetail() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="w-5 h-5 text-orange-500" />
-                    Thành viên ({clubDetail.members?.length || 0})
+                    Thành viên ({clubDetail.memberCount || membersTotalCount || 0})
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="max-h-[calc(100vh-450px)] overflow-y-auto">
+                <CardContent className="max-h-[calc(100vh-450px)] overflow-y-auto overflow-x-hidden" ref={membersScrollRef}>
                   <div className="space-y-3">
                     <Input
                       placeholder="Tìm kiếm thành viên..."
-                      className="max-w-xs border-gray-300 "
+                      className="max-w-xs border-gray-300"
                       value={searchMemberTerm}
-                      onChange={(e) => setSearchMemberTerm(e.target.value)}
+                      onChange={(e) => {
+                        setSearchMemberTerm(e.target.value);
+                      }}
                     />
-                    {filteredMembers?.map((m) => (
+                    {!loadingMembers && filteredMembers.length === 0 ? (
+                      <div className="text-center py-4 text-gray-500 text-sm">
+                        {searchMemberTerm ? "Không tìm thấy thành viên" : "Chưa có thành viên"}
+                      </div>
+                    ) : (
+                      <>
+                        {filteredMembers.map((m) => (
                       <div
                         key={m.userId}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 transition-colors"
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 transition-colors cursor-pointer"
                         onClick={() => navigate(getProfileRoute(m))}
                       >
-                        <Avatar className="w-10 h-10">
+                            <Avatar className="w-10 h-10 flex-shrink-0">
                           <AvatarImage
                             src={m.avatarUrl || "/placeholder.svg"}
                           />
-                          <AvatarFallback>{m.fullName[0]}</AvatarFallback>
+                              <AvatarFallback>{m.fullName?.[0] || "?"}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-sm truncate">
                             {m.fullName}
                           </div>
-                          <div className="text-xs text-gray-500">
+                              <div className="text-xs text-gray-500 truncate">
                             {handleChangeRole(m.role)}
                           </div>
                         </div>
                       </div>
                     ))}
+                        
+                        {/* Loading indicator khi load more */}
+                        {loadingMembers && (
+                          <div className="text-center py-4">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500 mx-auto"></div>
+                            <p className="text-sm text-gray-500 mt-2">Đang tải thêm...</p>
+                          </div>
+                        )}
+                        
+                        {/* End of list indicator */}
+                        {!hasMoreMembers && filteredMembers.length > 0 && (
+                          <div className="text-center py-2 text-xs text-gray-400">
+                            Đã hiển thị tất cả {membersTotalCount} thành viên
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -46,6 +46,22 @@ export function useClubApi() {
       { setLoading: setSaveLoading, setError }
     );
   });
+  const getClubDetailOptimized = useRef(async (id) => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.getClubDetailOptimized.bind(clubService),
+      [token, id],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
+  const getClubMembers = useRef(async (id, pageNumber = 1, pageSize = 20, search = "") => {
+    const token = localStorage.getItem("token");
+    return executeApiCall(
+      clubService.getClubMembers.bind(clubService),
+      [token, id, pageNumber, pageSize, search],
+      { setLoading: setSaveLoading, setError }
+    );
+  });
   const getClubCategory = useRef(async () => {
     const token = localStorage.getItem("token");
     return executeApiCall(
@@ -259,6 +275,8 @@ export function useClubApi() {
     getListClub: getListClub.current,
     getClubCategory: getClubCategory.current,
     getClubDetail: getClubDetail.current,
+    getClubDetailOptimized: getClubDetailOptimized.current,
+    getClubMembers: getClubMembers.current,
     getClubJoinRequest: getClubJoinRequest.current,
     createClubJoinRequest: createClubJoinRequest.current,
     approveJoinRequest: approveJoinRequest.current,
