@@ -4622,7 +4622,7 @@ export default function ViewActivity() {
                             </TableCell>
 
                             <TableCell className="text-right font-bold text-orange-600">
-                              {item.score.toFixed(2)}
+                              {item.score.toFixed(0)}
                             </TableCell>
                           </TableRow>
                         ))}

@@ -341,6 +341,7 @@ const getGroupSettings = (registrationSettings) => {
 
 export default function ActivitiesList() {
   const toast = useToast();
+  const [hasSubmitted,setHasSubmitted] = useState(true)
   const [activities, setActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(true);
   const [loadingCarousel, setLoadingCarousel] = useState(true);
@@ -453,7 +454,7 @@ export default function ActivitiesList() {
         }
 
         setActivities(validActivities);
-
+        
         if (pagination) {
           setTotalCount(pagination.totalCount);
           // Tính totalPages từ totalCount và pageSize để đảm bảo chính xác
@@ -1308,7 +1309,7 @@ function ActivityListItem({ activity }) {
                   variant="outline"
                   className="h-11 rounded-xl border-red-300 text-red-600 hover:bg-red-50 w-full disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleCancelRegistration}
-                  disabled={isCancelling || !canCancelRegistration}
+                  disabled={isCancelling || !canCancelRegistration || activity.hasSubmitted}
                   title={!canCancelRegistration ? "Đã hết thời hạn hủy đăng ký" : ""}
                 >
                   {isCancelling ? "Đang hủy..." : "Hủy đăng ký"}
