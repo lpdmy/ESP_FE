@@ -57,6 +57,18 @@ const rewardOptions = Object.values(REWARD_CATEGORY).map((value) => ({
   label: REWARD_CATEGORY_LABELS[value],
 }));
 
+// Helper function to normalize redemption status to number (0 = Pending, 1 = PickedUp)
+const normalizeRedemptionStatus = (status) => {
+  if (typeof status === 'string') {
+    // Handle string: "Pending", "PickedUp", "0", "1"
+    if (status === 'Pending' || status === '0') return 0;
+    if (status === 'PickedUp' || status === '1') return 1;
+    return parseInt(status, 10) || 0;
+  }
+  // Handle number: 0 or 1
+  return status === 0 ? 0 : 1;
+};
+
 // ================= MAIN COMPONENT =================
 export default function RewardsManagement() {
   const [isRuleDialogOpen, setIsRuleDialogOpen] = useState(false);
@@ -878,7 +890,7 @@ export default function RewardsManagement() {
                                 : "N/A"}
                             </TableCell>
                             <TableCell>
-                              {pickup.status === 0 ? (
+                              {normalizeRedemptionStatus(pickup.status) === 0 ? (
                                 <Badge
                                   variant="outline"
                                   className="bg-yellow-50 text-yellow-700 border-yellow-200"
@@ -895,7 +907,7 @@ export default function RewardsManagement() {
                               )}
                             </TableCell>
                             <TableCell className="text-right">
-                              {pickup.status === 0 ? (
+                              {normalizeRedemptionStatus(pickup.status) === 0 ? (
                                 <Button
                                   variant="indigo"
                                   onClick={() => {

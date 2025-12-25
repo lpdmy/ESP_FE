@@ -11,7 +11,7 @@ import {
   useDialog
 } from "@/common/components/ui/dialog"; // Đường dẫn có thể thay đổi tuỳ vào vị trí bạn import
 
-export default function JoinClubModal({ open, onClose, onSubmit }) {
+export default function JoinClubModal({ open, onClose, onSubmit, loading = false }) {
   const [reasonToJoin, setReason] = useState("");
   const [experience, setExperience] = useState("");
 
@@ -63,15 +63,20 @@ export default function JoinClubModal({ open, onClose, onSubmit }) {
         <DialogFooter className="mt-6 flex justify-end w-full max-w-md">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400"
+            disabled={loading}
+            className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Huỷ
           </button>
           <button
             onClick={handleSubmit}
-            className="px-4 py-2 rounded-lg bg-orange-600 text-white hover:bg-orange-700 ml-2"
+            disabled={loading}
+            className="px-4 py-2 rounded-lg bg-orange-600 text-white hover:bg-orange-700 ml-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Gửi yêu cầu
+            {loading && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            )}
+            {loading ? "Đang gửi..." : "Gửi yêu cầu"}
           </button>
         </DialogFooter>
       </DialogContent>

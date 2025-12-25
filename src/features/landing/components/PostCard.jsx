@@ -126,36 +126,35 @@ export default function PostCard({
   const formatTime = (time) => {
     if (!time) return "Chưa cập nhật";
 
-    // Normalize time input to avoid invalid date / wrong timezone
+    // Parse date từ backend (assume UTC nếu không có timezone indicator)
     let parsed = new Date(time);
-    if (typeof time === "string" && isNaN(parsed.getTime())) {
-      // If backend sends ISO without timezone, assume UTC
-      parsed = new Date(`${time}Z`);
+    
+    // Nếu parse fail, thử thêm 'Z' để force UTC
+    if (isNaN(parsed.getTime()) && typeof time === "string" && !time.includes('Z') && !time.includes('+')) {
+      parsed = new Date(time + 'Z');
     }
+    
     if (isNaN(parsed.getTime())) return "Chưa cập nhật";
     if (parsed.getFullYear() < 2000) return "Chưa cập nhật";
 
-    const postTimeInVN = new Date(
-      parsed.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
-    );
-    if (isNaN(postTimeInVN.getTime())) return "Chưa cập nhật";
-    if (postTimeInVN.getFullYear() < 2000) return "Chưa cập nhật";
+    // Lấy UTC time từ parsed date (backend trả về UTC)
+    const postTimeUTC = parsed.getTime();
+    const nowUTC = Date.now();
 
-    const formatDateTime = (date) => {
-      const pad = (val) => String(val).padStart(2, "0");
-      return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(
-        date.getDate()
-      )}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
-    };
-
-    const nowInVN = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
-    );
-
-    const diffMs = nowInVN - postTimeInVN;
+    // Tính diff trực tiếp (cả 2 đều UTC)
+    const diffMs = nowUTC - postTimeUTC;
     const diffMins = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    const formatDateTime = (utcTimestamp) => {
+      // Convert UTC timestamp sang VN time để hiển thị
+      const vnDate = new Date(utcTimestamp + 7 * 60 * 60 * 1000);
+      const pad = (val) => String(val).padStart(2, "0");
+      return `${pad(vnDate.getHours())}:${pad(vnDate.getMinutes())} ${pad(
+        vnDate.getDate()
+      )}/${pad(vnDate.getMonth() + 1)}/${vnDate.getFullYear()}`;
+    };
 
     if (diffMins < 5) return "Mới xong";
     if (diffMins < 60) return `${diffMins} phút trước`;
@@ -164,7 +163,7 @@ export default function PostCard({
     if (diffDays === 2) return "2 ngày trước";
     if (diffDays === 3) return "3 ngày trước";
 
-    return formatDateTime(postTimeInVN);
+    return formatDateTime(postTimeUTC);
   };
 
   const prevMedia = () => {

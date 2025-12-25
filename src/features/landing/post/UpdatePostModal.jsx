@@ -81,7 +81,7 @@ const PRIVACY_OPTIONS = [
   },
 ];
 
-const UpdatePostModal = ({ isOpen, onClose, post,payload }) => {
+const UpdatePostModal = ({ isOpen, onClose, post, payload, onUpdate }) => {
   const user = useSelector((state) => state.user.user);
   const { updatePost, saveLoading } = usePostApi();
   const { showSuccess, showError } = useToast();
@@ -282,8 +282,8 @@ const simulateIndividualUpload = async (file) => {
     };
     await updatePost(payload);
     showSuccess("Cập nhật bài đăng thành công");
+    onUpdate && onUpdate(); // Callback để reload danh sách
     onClose();
-    window.location.reload();
   } catch (err) {
     const msg =
       err?.response?.data?.message ||

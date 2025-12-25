@@ -97,37 +97,46 @@ export default function PostCard({
   };
 
   const formatDate = (dateString) => {
-  if (!dateString) return 'Không xác định'
+    if (!dateString) return 'Không xác định'
 
-  const date = new Date(dateString)
-  if (isNaN(date.getTime())) return 'Không xác định'
+    // Parse date từ backend (assume UTC nếu không có timezone indicator)
+    let date = new Date(dateString)
+    
+    // Nếu parse fail, thử thêm 'Z' để force UTC
+    if (isNaN(date.getTime()) && typeof dateString === 'string' && !dateString.includes('Z') && !dateString.includes('+')) {
+      date = new Date(dateString + 'Z')
+    }
+    
+    if (isNaN(date.getTime())) return 'Không xác định'
 
-  // Chuyển sang UTC+7
-  const utc7Date = new Date(date.getTime() + 7 * 60 * 60 * 1000)
-  const now = new Date()
-  const utc7Now = new Date(now.getTime() + 7 * 60 * 60 * 1000)
+    // Lấy UTC time từ date (backend trả về UTC)
+    const postTimeUTC = date.getTime()
+    const nowUTC = Date.now()
 
-  const diffInMs = utc7Now.getTime() - utc7Date.getTime()
-  const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
-  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
-  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
+    // Tính diff trực tiếp (cả 2 đều UTC)
+    const diffInMs = nowUTC - postTimeUTC
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
 
-  if (diffInMinutes < 1) {
-    return 'Vừa xong'
-  } else if (diffInMinutes < 60) {
-    return `${diffInMinutes} phút trước`
-  } else if (diffInHours < 24) {
-    return `${diffInHours} giờ trước`
-  } else if (diffInDays < 7) {
-    return `${diffInDays} ngày trước`
-  } else {
-    return utc7Date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    })
+    if (diffInMinutes < 1) {
+      return 'Vừa xong'
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes} phút trước`
+    } else if (diffInHours < 24) {
+      return `${diffInHours} giờ trước`
+    } else if (diffInDays < 7) {
+      return `${diffInDays} ngày trước`
+    } else {
+      // Format date hiển thị (convert sang VN time để hiển thị)
+      const vnDate = new Date(postTimeUTC + 7 * 60 * 60 * 1000)
+      return vnDate.toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    }
   }
-}
 
 
 

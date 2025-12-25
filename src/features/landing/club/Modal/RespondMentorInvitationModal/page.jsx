@@ -9,7 +9,7 @@ import {
 import { Button } from "@/common/components/ui/button";
 import { CheckCircle, X } from "lucide-react";
 
-export function RespondMentorInvitationModal({ open, onOpenChange, onAccept, onReject }) {
+export function RespondMentorInvitationModal({ open, onOpenChange, onAccept, onReject, loading = false }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent onClose={() => onOpenChange(false)}
@@ -28,7 +28,8 @@ export function RespondMentorInvitationModal({ open, onOpenChange, onAccept, onR
               onReject?.();
               onOpenChange(false);
             }} 
-            className="rounded rounded-lg flex items-center gap-2"
+            disabled={loading}
+            className="rounded rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="w-4 h-4" />
             Từ chối
@@ -38,10 +39,20 @@ export function RespondMentorInvitationModal({ open, onOpenChange, onAccept, onR
               onAccept?.();
               onOpenChange(false);
             }}
-            className="rounded rounded-lg bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2"
+            disabled={loading}
+            className="rounded rounded-lg bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <CheckCircle className="w-4 h-4" />
-            Chấp nhận
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Đang xử lý...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                Chấp nhận
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

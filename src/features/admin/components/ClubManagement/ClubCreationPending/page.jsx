@@ -185,7 +185,15 @@ export default function ClubApprovalPage() {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    
     const date = new Date(dateString);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return "N/A";
+    }
+    
     return date.toLocaleDateString("vi-VN", {
       year: "numeric",
       month: "long",
@@ -407,7 +415,7 @@ export default function ClubApprovalPage() {
                   <div>
                     <p className="text-gray-500">Ngày gửi yêu cầu</p>
                     <p className="font-medium text-gray-900">
-                      {formatDate(selectedRequest.requestedAt)}
+                      {formatDate(selectedRequest.createdAt)}
                     </p>
                   </div>
                 </div>

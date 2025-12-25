@@ -9,7 +9,7 @@ import {
 import { Button } from "@/common/components/ui/button";
 import { AlertCircle } from "lucide-react";
 
-export function LeaveClubDialogConfirm({ open, onOpenChange, onConfirm, isPresident = false }) {
+export function LeaveClubDialogConfirm({ open, onOpenChange, onConfirm, isPresident = false, loading = false }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent onClose={() => onOpenChange(false)}
@@ -39,7 +39,12 @@ export function LeaveClubDialogConfirm({ open, onOpenChange, onConfirm, isPresid
         </DialogHeader>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded rounded-lg">
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)} 
+            className="rounded rounded-lg"
+            disabled={loading}
+          >
             {isPresident ? "Đóng" : "Hủy"}
           </Button>
           {!isPresident && (
@@ -49,9 +54,13 @@ export function LeaveClubDialogConfirm({ open, onOpenChange, onConfirm, isPresid
                 onConfirm?.();
                 onOpenChange(false);
               }}
-              className="!text-white rounded rounded-lg bg-red-500 hover:text-white hover:bg-red-700"
+              disabled={loading}
+              className="!text-white rounded rounded-lg bg-red-500 hover:text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Xác nhận rời
+              {loading && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              )}
+              {loading ? "Đang xử lý..." : "Xác nhận rời"}
             </Button>
           )}
         </DialogFooter>

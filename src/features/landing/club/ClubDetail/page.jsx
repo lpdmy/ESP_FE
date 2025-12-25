@@ -76,6 +76,8 @@ export default function ClubDetail() {
   const params = useParams();
   const clubid = params.id;
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingPosts, setLoadingPosts] = useState(false);
+  const [loadingAction, setLoadingAction] = useState(false);
   const [clubDetail, setClubDetail] = useState({});
   const {
     getClubDetail,
@@ -125,6 +127,7 @@ export default function ClubDetail() {
   );
   const handleClubDetail = async () => {
     try {
+      setIsLoading(true);
       const response = await getClubDetail(clubid);
       setClubDetail(response.data);
       SetIsJoined(response.data.isMember);
@@ -132,6 +135,8 @@ export default function ClubDetail() {
       SetIsPresident(response.data.isPresident);
     } catch (error) {
       toast.loadClubFail();
+    } finally {
+      setIsLoading(false);
     }
   };
   const getProfileRoute = (user) => {
@@ -146,6 +151,8 @@ export default function ClubDetail() {
   const handleCloseUpdateModal = () => {
     setIsUpdateModalOpen(false);
     setSelectedPost(null);
+    // Reload danh sách bài đăng sau khi update (không hiển thị loading)
+    handleClubPost(false);
   };
 
   const handleDeletePost = (post) => {
@@ -156,28 +163,45 @@ export default function ClubDetail() {
     setIsDeleteModalOpen(false);
     setSelectedPost(null);
   };
-  const handleConfirmDelete = (postId) => {
-    setPost((prev) => prev.filter((p) => p.id !== postId));
-    setIsDeleteModalOpen(false);
-    setSelectedPost(null);
+  const handleConfirmDelete = async (postId) => {
+    try {
+      // Reload danh sách bài đăng sau khi xóa (không hiển thị loading)
+      await handleClubPost(false);
+      setIsDeleteModalOpen(false);
+      setSelectedPost(null);
+    } catch (error) {
+      console.error("Error deleting post:", error);
+    }
   };
   const handleEditPost = (post) => {
     setSelectedPost(post);
     setIsUpdateModalOpen(true);
   };
-  const handleClubPost = async () => {
+  const handleClubPost = async (showLoading = true) => {
     try {
+      if (showLoading) {
+        setLoadingPosts(true);
+      }
       const response = await getClubPost(clubid);
       const data = response.data;
       setPosts(data);
     } catch (error) {
+      console.error("Error loading posts:", error);
+    } finally {
+      if (showLoading) {
+        setLoadingPosts(false);
+      }
     }
   };
   const handleCancelRequest = async () => {
     try {
+      setLoadingAction(true);
       await cancelJoinRequest(clubid);
-      handleClubDetail();
+      await handleClubDetail();
     } catch (err) {
+      console.error("Error canceling request:", err);
+    } finally {
+      setLoadingAction(false);
     }
   };
   const handleChangeRole = (vaitro) => {
@@ -197,37 +221,53 @@ export default function ClubDetail() {
   };
   const handleCreatePost = async (newPost) => {
     try {
+      // Reload danh sách bài đăng sau khi tạo thành công (không hiển thị loading)
+      await handleClubPost(false);
+      setIsCreatePostModalOpen(false);
     } catch (error) {
+      console.error("Error creating post:", error);
     }
   };
   const handleSubmit = async ({ reasonToJoin, experience }) => {
     try {
+      setLoadingAction(true);
       const payload = { clubid, reasonToJoin, experience };
       const response = await createClubJoinRequest(payload);
       toast.createClubJoinRequestSuccess();
-      handleClubDetail();
+      await handleClubDetail();
     } catch (error) {
+      console.error("Error submitting join request:", error);
+    } finally {
+      setLoadingAction(false);
     }
   };
   const handleLeaveClub = async () => {
     try {
+      setLoadingAction(true);
       await leaveClub(clubid);
-      handleClubDetail();
+      await handleClubDetail();
       toast.leaveClubSuccess();
-    } catch (error) {}
+    } catch (error) {
+      console.error("Error leaving club:", error);
+    } finally {
+      setLoadingAction(false);
+    }
   };
   const handleRegister = (activityId) => {
     setRegisteredActivities([...registeredActivities, activityId]);
   };
   const handleAcceptMentorInvite = async () => {
     try {
+      setLoadingAction(true);
       await approveInvitation(clubid);
       toast.approveInvitationSuccess();
       // Cập nhật state để ẩn nút phản hồi
       setClubDetail((prev) => ({ ...prev, isMentorInvite: false }));
-      handleClubDetail();
+      await handleClubDetail();
     } catch (error) {
       toast.approveInvitationFail();
+    } finally {
+      setLoadingAction(false);
     }
   };
 
@@ -238,15 +278,10 @@ export default function ClubDetail() {
   };
 
   useEffect(() => {
-    handleClubDetail();
-    handleClubPost();
-  }, []);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000); // 3000 ms = 3 giây
-
-    return () => clearTimeout(timer);
+    const loadData = async () => {
+      await Promise.all([handleClubDetail(), handleClubPost()]);
+    };
+    loadData();
   }, []);
   if (isLoading) {
     return <LoadingOverlay isLoading={isLoading} />;
@@ -338,6 +373,7 @@ export default function ClubDetail() {
                 handleLeaveClub();
               }}
               isPresident={isPresident}
+              loading={loadingAction}
             />
           </div>
         </div>
@@ -407,9 +443,19 @@ export default function ClubDetail() {
                         <Button
                           className="w-full bg-red-500 hover:bg-red-600 text-white flex items-center gap-2"
                           onClick={handleCancelRequest}
+                          disabled={loadingAction}
                         >
-                          <X className="w-4 h-4" />
-                          Hủy yêu cầu
+                          {loadingAction ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Đang xử lý...
+                            </>
+                          ) : (
+                            <>
+                              <X className="w-4 h-4" />
+                              Hủy yêu cầu
+                            </>
+                          )}
                         </Button>
                       ) : (
                         <Button
@@ -430,12 +476,14 @@ export default function ClubDetail() {
             open={isDialogOpen}
             onClose={closeDialog}
             onSubmit={handleSubmit}
+            loading={loadingAction}
           />
           <RespondMentorInvitationModal
             open={isRespondMentorModalOpen}
             onOpenChange={closeRespondMentorModal}
             onAccept={handleAcceptMentorInvite}
             onReject={handleRejectMentorInvite}
+            loading={loadingAction}
           />
           {/* Center Content - Tabs */}
           <div className="lg:col-span-6 ">
@@ -524,7 +572,12 @@ export default function ClubDetail() {
                 {isJoined && (
                   <CreatePostInput onOpenModal={handleOpenCreatePostModal} />
                 )}
-                {posts.length === 0 ? (
+                {loadingPosts ? (
+                  <div className="text-center py-10">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-2"></div>
+                    <p className="text-gray-500">Đang tải bài đăng...</p>
+                  </div>
+                ) : posts.length === 0 ? (
                   <div className="text-center py-10 text-gray-500 bg-white rounded-lg shadow-sm">
                     <Users className="w-6 h-6 mx-auto mb-2 text-gray-400" />
                     <p>Hiện tại chưa có bài đăng nào trong câu lạc bộ.</p>
@@ -674,6 +727,7 @@ export default function ClubDetail() {
         onClose={handleCloseUpdateModal}
         post={selectedPost}
         payload={payload}
+        onUpdate={handleClubPost}
       />
     </div>
   );
